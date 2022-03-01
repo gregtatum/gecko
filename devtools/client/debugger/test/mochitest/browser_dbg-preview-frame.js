@@ -3,6 +3,9 @@
  * file, You can obtain one at <http://mozilla.org/MPL/2.0/>. */
 
 // Test hovering in a selected frame
+
+"use strict";
+
 add_task(async function() {
   const dbg = await initDebugger("doc-script-switching.html");
 
@@ -34,10 +37,7 @@ function waitForSelectedFrame(dbg, displayName) {
   return waitForState(dbg, state => {
     const frame = getVisibleSelectedFrame();
 
-    return (
-      frame?.displayName == displayName &&
-      getInScopeLines(frame.location)
-    );
+    return frame?.displayName == displayName && getInScopeLines(frame.location);
   });
 }
 

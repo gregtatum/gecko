@@ -3,6 +3,9 @@
  * file, You can obtain one at <http://mozilla.org/MPL/2.0/>. */
 
 // Testing quick open
+
+"use strict";
+
 add_task(async function() {
   const dbg = await initDebugger("doc-script-switching.html");
 
@@ -97,16 +100,7 @@ function assertColumn(dbg, columnNumber) {
   if (value === undefined) {
     value = null;
   }
-  is(
-    value,
-    columnNumber,
-    `goto column is ${columnNumber}`
-  );
-}
-
-function waitForSymbols(dbg, url) {
-  const source = findSource(dbg, url);
-  return waitForState(dbg, state => dbg.selectors.getSymbols(state, source.id));
+  is(value, columnNumber, `goto column is ${columnNumber}`);
 }
 
 function resultCount(dbg) {

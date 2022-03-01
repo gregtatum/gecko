@@ -345,20 +345,23 @@ void FFmpegVideoDecoder<LIBAV_VER>::PtsCorrectionContext::Reset() {
 
 #ifdef MOZ_WAYLAND_USE_VAAPI
 void FFmpegVideoDecoder<LIBAV_VER>::InitHWDecodingPrefs() {
+  if (!mEnableHardwareDecoding) {
+    FFMPEG_LOG("VAAPI is disabled by parent decoder module.");
+    return;
+  }
   bool isHardwareWebRenderUsed = mImageAllocator &&
                                  (mImageAllocator->GetCompositorBackendType() ==
                                   layers::LayersBackend::LAYERS_WR) &&
                                  !mImageAllocator->UsingSoftwareWebRender();
   if (!isHardwareWebRenderUsed) {
     mEnableHardwareDecoding = false;
-    FFMPEG_LOG("Hardware WebRender is off, disabled DMABuf & VAAPI.");
+    FFMPEG_LOG("Hardware WebRender is off, VAAPI is disabled");
     return;
   }
 
-  if (mEnableHardwareDecoding &&
-      !widget::GetDMABufDevice()->IsDMABufVAAPIEnabled()) {
+  if (!widget::GetDMABufDevice()->IsDMABufVAAPIEnabled()) {
     mEnableHardwareDecoding = false;
-    FFMPEG_LOG("VA-API is disabled by pref.");
+    FFMPEG_LOG("VA-API is disabled by preference.");
   }
 }
 #endif
@@ -377,6 +380,8 @@ FFmpegVideoDecoder<LIBAV_VER>::FFmpegVideoDecoder(
       mImageContainer(aImageContainer),
       mInfo(aConfig),
       mLowLatency(aLowLatency) {
+  FFMPEG_LOG("FFmpegVideoDecoder::FFmpegVideoDecoder MIME %s Codec ID %d",
+             aConfig.mMimeType.get(), mCodecID);
   // Use a new MediaByteBuffer as the object will be modified during
   // initialization.
   mExtraData = new MediaByteBuffer;
@@ -542,8 +547,6 @@ FFmpegVideoDecoder<LIBAV_VER>::CreateEmptyPlanarYCbCrData(
                                  &paddedYSize.height);
   data.mYSize = gfx::IntSize{paddedYSize.Width(), paddedYSize.Height()};
   data.mYStride = data.mYSize.Width() * bytesPerChannel;
-  data.mCroppedYSize = Some(
-      gfx::IntSize{aCodecContext->coded_width, aCodecContext->coded_height});
 
   MOZ_ASSERT(
       IsColorFormatSupportedForUsingCustomizedBuffer(aCodecContext->pix_fmt));
@@ -560,7 +563,6 @@ FFmpegVideoDecoder<LIBAV_VER>::CreateEmptyPlanarYCbCrData(
   data.mCbCrSize =
       gfx::IntSize{paddedCbCrSize.Width(), paddedCbCrSize.Height()};
   data.mCbCrStride = data.mCbCrSize.Width() * bytesPerChannel;
-  data.mCroppedCbCrSize = Some(gfx::IntSize{uvDims.Width(), uvDims.Height()});
 
   // Setting other attributes
   data.mPicSize =
@@ -585,9 +587,8 @@ FFmpegVideoDecoder<LIBAV_VER>::CreateEmptyPlanarYCbCrData(
       "Created plane data, YSize=(%d, %d), CbCrSize=(%d, %d), "
       "CroppedYSize=(%d, %d), CroppedCbCrSize=(%d, %d), ColorDepth=%hhu",
       data.mYSize.Width(), data.mYSize.Height(), data.mCbCrSize.Width(),
-      data.mCbCrSize.Height(), data.mCroppedYSize->Width(),
-      data.mCroppedYSize->Height(), data.mCroppedCbCrSize->Width(),
-      data.mCroppedCbCrSize->Height(), static_cast<uint8_t>(data.mColorDepth));
+      data.mCbCrSize.Height(), data.mPicSize.Width(), data.mPicSize.Height(),
+      uvDims.Width(), uvDims.Height(), static_cast<uint8_t>(data.mColorDepth));
   return data;
 }
 

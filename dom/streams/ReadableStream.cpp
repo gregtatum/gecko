@@ -71,22 +71,11 @@ inline void ImplCycleCollectionUnlink(
 namespace mozilla::dom {
 
 // Only needed for refcounted objects.
-NS_IMPL_CYCLE_COLLECTION_CLASS(ReadableStream)
-NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(ReadableStream)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK(mGlobal, mController, mReader,
-                                  mErrorAlgorithm, mNativeUnderlyingSource)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK_PRESERVED_WRAPPER
-  tmp->mStoredError.setNull();
-NS_IMPL_CYCLE_COLLECTION_UNLINK_END
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(ReadableStream)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mGlobal, mController, mReader,
-                                    mErrorAlgorithm, mNativeUnderlyingSource)
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
-
-NS_IMPL_CYCLE_COLLECTION_TRACE_BEGIN(ReadableStream)
-  NS_IMPL_CYCLE_COLLECTION_TRACE_PRESERVED_WRAPPER
-  NS_IMPL_CYCLE_COLLECTION_TRACE_JS_MEMBER_CALLBACK(mStoredError)
-NS_IMPL_CYCLE_COLLECTION_TRACE_END
+NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE_WITH_JS_MEMBERS(ReadableStream,
+                                                      (mGlobal, mController,
+                                                       mReader, mErrorAlgorithm,
+                                                       mNativeUnderlyingSource),
+                                                      (mStoredError))
 
 NS_IMPL_CYCLE_COLLECTING_ADDREF(ReadableStream)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(ReadableStream)
@@ -531,6 +520,47 @@ bool IsReadableStreamLocked(ReadableStream* aStream) {
   return aStream->Locked();
 }
 
+// https://streams.spec.whatwg.org/#rs-pipe-through
+MOZ_CAN_RUN_SCRIPT already_AddRefed<ReadableStream> ReadableStream::PipeThrough(
+    const ReadableWritablePair& aTransform, const StreamPipeOptions& aOptions,
+    ErrorResult& aRv) {
+  // Step 1: If ! IsReadableStreamLocked(this) is true, throw a TypeError
+  // exception.
+  if (IsReadableStreamLocked(this)) {
+    aRv.ThrowTypeError("Cannot pipe from a locked stream.");
+    return nullptr;
+  }
+
+  // Step 2: If ! IsWritableStreamLocked(transform["writable"]) is true, throw a
+  // TypeError exception.
+  if (IsWritableStreamLocked(aTransform.mWritable)) {
+    aRv.ThrowTypeError("Cannot pipe to a locked stream.");
+    return nullptr;
+  }
+
+  // Step 3: Let signal be options["signal"] if it exists, or undefined
+  // otherwise.
+  RefPtr<AbortSignal> signal =
+      aOptions.mSignal.WasPassed() ? &aOptions.mSignal.Value() : nullptr;
+
+  // Step 4: Let promise be ! ReadableStreamPipeTo(this, transform["writable"],
+  // options["preventClose"], options["preventAbort"], options["preventCancel"],
+  // signal).
+  RefPtr<WritableStream> writable = aTransform.mWritable;
+  RefPtr<Promise> promise = ReadableStreamPipeTo(
+      this, writable, aOptions.mPreventClose, aOptions.mPreventAbort,
+      aOptions.mPreventCancel, signal, aRv);
+  if (aRv.Failed()) {
+    return nullptr;
+  }
+
+  // Step 5: Set promise.[[PromiseIsHandled]] to true.
+  MOZ_ALWAYS_TRUE(promise->SetAnyPromiseIsHandled());
+
+  // Step 6: Return transform["readable"].
+  return do_AddRef(aTransform.mReadable.get());
+};
+
 // https://streams.spec.whatwg.org/#readable-stream-get-num-read-requests
 double ReadableStreamGetNumReadRequests(ReadableStream* aStream) {
   // Step 1.
@@ -862,7 +892,7 @@ already_AddRefed<Promise> ReadableStream::PipeTo(
   // Step 2. If !IsWritableStreamLocked(destination) is true, return a promise
   //         rejected with a TypeError exception.
   if (IsWritableStreamLocked(&aDestination)) {
-    aRv.ThrowTypeError("Can not pipe to a locked stream.");
+    aRv.ThrowTypeError("Cannot pipe to a locked stream.");
     return nullptr;
   }
 

@@ -4,9 +4,11 @@
 
 // Tests that keyboard navigation into and out of debugger code editor
 
+"use strict";
+
 add_task(async function() {
   const dbg = await initDebugger("doc-scripts.html", "simple2.js");
-  let doc = dbg.win.document;
+  const doc = dbg.win.document;
 
   await selectSource(dbg, "simple2.js");
 

@@ -45,7 +45,7 @@
 #include "builtin/WeakSetObject.h"
 #include "debugger/DebugAPI.h"
 #include "frontend/CompilationStencil.h"
-#include "gc/FinalizationRegistry.h"
+#include "gc/FinalizationObservers.h"
 #include "gc/FreeOp.h"
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
 #include "js/friend/WindowProxy.h"    // js::ToWindowProxyIfWindow
@@ -1097,7 +1097,7 @@ void GlobalObjectData::trace(JSTracer* trc, GlobalObject* global) {
                     "self-hosting-script-source");
 
   if (finalizationRegistryData) {
-    finalizationRegistryData->trace(trc, global);
+    finalizationRegistryData->trace(trc);
   }
 }
 

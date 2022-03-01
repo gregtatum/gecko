@@ -337,7 +337,7 @@ void nsDisplaySliderMarks::PaintMarks(nsDisplayListBuilder* aDisplayListBuilder,
           markRect, appUnitsPerDevPixel);
       dRect.Inflate(0, increasePixels);
       wr::LayoutRect layoutRect = wr::ToLayoutRect(dRect);
-      aBuilder->PushRect(layoutRect, layoutRect, BackfaceIsHidden(),
+      aBuilder->PushRect(layoutRect, layoutRect, BackfaceIsHidden(), false,
                          wr::ToColorF(fillColor));
     }
   }
@@ -500,7 +500,7 @@ void nsSliderFrame::BuildDisplayListForChildren(
 
       // This is a bit of a hack. Collect up all descendant display items
       // and merge them into a single Content() list.
-      nsDisplayList masterList;
+      nsDisplayList masterList(aBuilder);
       masterList.AppendToTop(tempLists.BorderBackground());
       masterList.AppendToTop(tempLists.BlockBorderBackgrounds());
       masterList.AppendToTop(tempLists.Floats());

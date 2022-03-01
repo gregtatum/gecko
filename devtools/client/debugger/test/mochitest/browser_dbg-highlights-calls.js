@@ -4,6 +4,9 @@
 
 // This test checks to see if command button highlights and unhighlights
 // calls when debugger is paused.
+
+"use strict";
+
 add_task(async function() {
   await pushPref("devtools.debugger.features.command-click", true);
   const dbg = await initDebugger("doc-command-click.html", "simple4.js");
@@ -22,6 +25,8 @@ add_task(async function() {
   const calls = dbg.win.document.querySelectorAll(".highlight-function-calls");
   is(calls.length, 2);
   pressKey(dbg, "commandKeyUp");
-  const nocalls = dbg.win.document.querySelectorAll(".highlight-function-calls");
+  const nocalls = dbg.win.document.querySelectorAll(
+    ".highlight-function-calls"
+  );
   is(nocalls.length, 0);
 });

@@ -4,12 +4,11 @@
 
 // Tests that clicking a function in outline panel, the editor highlights the correct location.
 // Tests that outline panel can sort functions alphabetically.
+
+"use strict";
+
 add_task(async function() {
   const dbg = await initDebugger("doc-scripts.html", "simple1.js");
-  const {
-    selectors: { getSelectedSource },
-    getState,
-  } = dbg;
 
   await selectSource(dbg, "simple1.js", 1);
 

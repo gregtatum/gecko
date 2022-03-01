@@ -3,6 +3,9 @@
  * file, You can obtain one at <http://mozilla.org/MPL/2.0/>. */
 
 // Test enabling and disabling a breakpoint using the check boxes
+
+"use strict";
+
 add_task(async function() {
   const dbg = await initDebugger("doc-scripts.html", "simple2.js");
 
@@ -32,12 +35,14 @@ add_task(async function() {
   await addBreakpoint(dbg, "simple2.js", 3);
   await addBreakpoint(dbg, "simple2.js", 5);
 
-  assertEmptyLines(dbg, [1, 2]);
   assertBreakpointSnippet(dbg, 3, "return x + y;");
 
   rightClickElement(dbg, "breakpointItem", 2);
   await waitForContextMenu(dbg);
-  const disableBreakpointDispatch = waitForDispatch(dbg.store, "SET_BREAKPOINT");
+  const disableBreakpointDispatch = waitForDispatch(
+    dbg.store,
+    "SET_BREAKPOINT"
+  );
   selectContextMenuItem(dbg, selectors.breakpointContextMenu.disableSelf);
   await disableBreakpointDispatch;
 

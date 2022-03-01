@@ -4,8 +4,14 @@
 
 // Tests adding and removing tabs
 
+"use strict";
+
 add_task(async function() {
-  const dbg = await initDebugger("doc-scripts.html", "simple1.js", "simple2.js");
+  const dbg = await initDebugger(
+    "doc-scripts.html",
+    "simple1.js",
+    "simple2.js"
+  );
 
   await selectSource(dbg, "simple1.js");
   await selectSource(dbg, "simple2.js");
@@ -23,7 +29,11 @@ add_task(async function() {
 });
 
 add_task(async function() {
-  const dbg = await initDebugger("doc-scripts.html", "simple1.js", "simple2.js");
+  const dbg = await initDebugger(
+    "doc-scripts.html",
+    "simple1.js",
+    "simple2.js"
+  );
 
   await selectSource(dbg, "simple1.js");
   await selectSource(dbg, "simple2.js");

@@ -451,6 +451,10 @@ class GCRuntime {
 
   bool isShutdownGC() const { return gcOptions() == JS::GCOptions::Shutdown; }
 
+#ifdef DEBUG
+  bool isShuttingDown() const { return hadShutdownGC; }
+#endif
+
   bool initSweepActions();
 
   void setGrayRootsTracer(JSGrayRootsTracer traceOp, void* data);
@@ -489,8 +493,10 @@ class GCRuntime {
   bool registerWithFinalizationRegistry(JSContext* cx, HandleObject target,
                                         HandleObject record);
   void queueFinalizationRegistryForCleanup(FinalizationQueueObject* queue);
+
   void nukeFinalizationRecordWrapper(JSObject* wrapper,
                                      FinalizationRecordObject* record);
+  void nukeWeakRefWrapper(JSObject* wrapper, WeakRefObject* record);
 
   void setFullCompartmentChecks(bool enable);
 
@@ -716,6 +722,8 @@ class GCRuntime {
   friend class AutoCallGCCallbacks;
   void maybeCallGCCallback(JSGCStatus status, JS::GCReason reason);
 
+  void startCollection(JS::GCReason reason);
+
   void purgeRuntime();
   [[nodiscard]] bool beginPreparePhase(JS::GCReason reason,
                                        AutoGCSession& session);
@@ -787,8 +795,8 @@ class GCRuntime {
   void sweepUniqueIds();
   void sweepDebuggerOnMainThread(JSFreeOp* fop);
   void sweepJitDataOnMainThread(JSFreeOp* fop);
-  void sweepFinalizationRegistriesOnMainThread();
-  void traceWeakFinalizationRegistryEdges(JSTracer* trc, Zone* zone);
+  void sweepFinalizationObserversOnMainThread();
+  void traceWeakFinalizationObserverEdges(JSTracer* trc, Zone* zone);
   void sweepWeakRefs();
   IncrementalProgress endSweepingSweepGroup(JSFreeOp* fop, SliceBudget& budget);
   IncrementalProgress performSweepActions(SliceBudget& sliceBudget);
@@ -1051,6 +1059,11 @@ class GCRuntime {
 
   /* Whether any sweeping will take place in the separate GC helper thread. */
   MainThreadData<bool> sweepOnBackgroundThread;
+
+#ifdef DEBUG
+  /* Shutdown has started. Further collections must be shutdown collections. */
+  MainThreadData<bool> hadShutdownGC;
+#endif
 
   /* Singly linked list of zones to be swept in the background. */
   HelperThreadLockData<ZoneList> backgroundSweepZones;

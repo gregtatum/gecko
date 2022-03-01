@@ -4,8 +4,14 @@
 
 // Tests removing tabs with keyboard shortcuts
 
+"use strict";
+
 add_task(async function() {
-  const dbg = await initDebugger("doc-scripts.html", "simple1.js", "simple2.js");
+  const dbg = await initDebugger(
+    "doc-scripts.html",
+    "simple1.js",
+    "simple2.js"
+  );
 
   await selectSource(dbg, "simple1.js");
   await selectSource(dbg, "simple2.js");

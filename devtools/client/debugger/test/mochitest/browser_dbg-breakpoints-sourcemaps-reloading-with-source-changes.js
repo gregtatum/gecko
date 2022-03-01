@@ -7,6 +7,8 @@
  * source content changes of reload.
  */
 
+"use strict";
+
 const testServer = createVersionizedHttpTestServer("sourcemaps-reload");
 const TEST_URL = testServer.urlFor("index.html");
 
@@ -38,15 +40,24 @@ add_task(async function testReloadingStableOriginalSource() {
   info("Check that breakpoint is on the first line within the function `foo`");
   assertTextContentOnLine(dbg, 6, expectedOriginalFileContentOnBreakpointLine);
 
-  info("Check that the breakpoint is displayed in correct location in bundle.js (generated source)")
+  info(
+    "Check that the breakpoint is displayed in correct location in bundle.js (generated source)"
+  );
   await selectSource(dbg, "bundle.js");
   await assertBreakpoint(dbg, 82);
-  assertTextContentOnLine(dbg, 82, expectedGeneratedFileContentOnBreakpointLine);
+  assertTextContentOnLine(
+    dbg,
+    82,
+    expectedGeneratedFileContentOnBreakpointLine
+  );
 
   await closeTab(dbg, "bundle.js");
 
   info("Reload with a new version of the file");
-  const waitUntilNewBreakpointIsSet = waitForDispatch(dbg.store, "SET_BREAKPOINT");
+  const waitUntilNewBreakpointIsSet = waitForDispatch(
+    dbg.store,
+    "SET_BREAKPOINT"
+  );
   testServer.switchToNextVersion();
   await reload(dbg, "bundle.js", "original.js");
   await waitUntilNewBreakpointIsSet;
@@ -68,10 +79,14 @@ add_task(async function testReloadingStableOriginalSource() {
   await assertPausedAtSourceAndLine(dbg, originalSource.id, 9);
   await assertBreakpoint(dbg, 9);
 
-  info("Check that though the breakpoint has moved, it is still on the first line within the function `foo`")
+  info(
+    "Check that though the breakpoint has moved, it is still on the first line within the function `foo`"
+  );
   assertTextContentOnLine(dbg, 9, expectedOriginalFileContentOnBreakpointLine);
 
-  info("Check that the breakpoint is displayed in correct location in bundle.js (generated source)")
+  info(
+    "Check that the breakpoint is displayed in correct location in bundle.js (generated source)"
+  );
   await selectSource(dbg, "bundle.js");
   // This scrolls the line into view so the content
   // on the line is rendered and avaliable for dom querying.
@@ -80,7 +95,11 @@ add_task(async function testReloadingStableOriginalSource() {
   const generatedSource = findSource(dbg, "bundle.js");
   await assertPausedAtSourceAndLine(dbg, generatedSource.id, 82);
   await assertBreakpoint(dbg, 82);
-  assertTextContentOnLine(dbg, 82, expectedGeneratedFileContentOnBreakpointLine);
+  assertTextContentOnLine(
+    dbg,
+    82,
+    expectedGeneratedFileContentOnBreakpointLine
+  );
 
   await closeTab(dbg, "bundle.js");
 
@@ -104,7 +123,7 @@ add_task(async function testReloadingStableOriginalSource() {
 
   // There will initially be zero breakpoints, but wait to make sure none are
   // installed while syncing.
-  await waitForTime(1000);
+  await wait(1000);
 
   assertNotPaused(dbg);
   is(dbg.selectors.getBreakpointCount(dbg), 0, "No breakpoints");
@@ -120,7 +139,10 @@ add_task(async function testReloadingStableOriginalSource() {
 add_task(async function testReloadingReplacedOriginalSource() {
   testServer.backToFirstVersion();
 
-  const dbg = await initDebuggerWithAbsoluteURL(TEST_URL, "removed-original.js");
+  const dbg = await initDebuggerWithAbsoluteURL(
+    TEST_URL,
+    "removed-original.js"
+  );
 
   info("Add initial breakpoint");
   await selectSource(dbg, "removed-original.js");
@@ -141,7 +163,9 @@ add_task(async function testReloadingReplacedOriginalSource() {
 
   await resume(dbg);
 
-  info("Reload, which should remove the original file and a add a new original file which will replace its content in the  generated file");
+  info(
+    "Reload, which should remove the original file and a add a new original file which will replace its content in the  generated file"
+  );
   const syncBp = waitForDispatch(dbg.store, "SET_BREAKPOINT");
   testServer.switchToNextVersion();
   await reload(dbg);
@@ -162,7 +186,9 @@ add_task(async function testReloadingReplacedOriginalSource() {
   is(breakpoint.location.line, 2);
   is(breakpoint.generatedLocation.line, 78);
 
-  info("Reload a last time to remove both original and generated sources entirely");
+  info(
+    "Reload a last time to remove both original and generated sources entirely"
+  );
   testServer.switchToNextVersion();
   await reload(dbg);
 
@@ -170,9 +196,15 @@ add_task(async function testReloadingReplacedOriginalSource() {
   await wait(1000);
 
   info("Assert that sources and breakpoints are gone and we aren't paused");
-  ok(!sourceExists(dbg, "removed-original.js"), "removed-original is not present");
+  ok(
+    !sourceExists(dbg, "removed-original.js"),
+    "removed-original is not present"
+  );
   ok(!sourceExists(dbg, "new-original.js"), "new-original is not present");
-  ok(!sourceExists(dbg, "replaced-bundle.js"), "replaced-bundle is not present");
-	assertNotPaused(dbg);
+  ok(
+    !sourceExists(dbg, "replaced-bundle.js"),
+    "replaced-bundle is not present"
+  );
+  assertNotPaused(dbg);
   is(dbg.selectors.getBreakpointCount(), 0, "We no longer have any breakpoint");
 });

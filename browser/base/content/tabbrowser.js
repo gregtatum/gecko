@@ -62,17 +62,15 @@
       // content. We want to be controlling the background color of the
       // tabbrowser at that level and not here, but presently we do not support
       // theming or non-default colors for PINEBUILD.
-      if (!AppConstants.PINEBUILD) {
-        if (Services.prefs.getBoolPref("browser.display.use_system_colors")) {
-          this.tabpanels.style.backgroundColor =
-            "-moz-default-background-color";
-        } else if (
-          Services.prefs.getIntPref("browser.display.document_color_use") == 2
-        ) {
-          this.tabpanels.style.backgroundColor = Services.prefs.getCharPref(
-            "browser.display.background_color"
-          );
-        }
+      if (
+        !AppConstants.PINEBUILD &&
+        Services.prefs.getIntPref("browser.display.document_color_use") == 2
+      ) {
+        this.tabpanels.style.backgroundColor = Services.prefs.getBoolPref(
+          "browser.display.use_system_colors"
+        )
+          ? "canvas"
+          : Services.prefs.getCharPref("browser.display.background_color");
       }
 
       this._setFindbarData();
@@ -5364,6 +5362,11 @@
         return;
       }
 
+      // Skip if chrome code has cancelled this:
+      if (aEvent.defaultPreventedByChrome) {
+        return;
+      }
+
       // Don't check if the event was already consumed because tab
       // navigation should always work for better user experience.
 
@@ -5453,6 +5456,11 @@
 
       // Skip this only if something has explicitly cancelled it.
       if (aEvent.defaultCancelled) {
+        return;
+      }
+
+      // Skip if chrome code has cancelled this:
+      if (aEvent.defaultPreventedByChrome) {
         return;
       }
 

@@ -525,8 +525,8 @@ static bool PaintMaskSurface(const PaintFramesParams& aParams,
     // maskFrame == nullptr means we get an image mask.
     if (maskFrame) {
       SVGMaskFrame::MaskParams params(
-          maskContext, aParams.frame, cssPxToDevPxMatrix, aOpacity,
-          svgReset->mMask.mLayers[i].mMaskMode, aParams.imgParams);
+          maskContext->GetDrawTarget(), aParams.frame, cssPxToDevPxMatrix,
+          aOpacity, svgReset->mMask.mLayers[i].mMaskMode, aParams.imgParams);
       RefPtr<SourceSurface> svgMask = maskFrame->GetMaskForMaskedFrame(params);
       if (svgMask) {
         Matrix tmp = aMaskDT->GetTransform();
@@ -583,7 +583,7 @@ static MaskPaintResult CreateAndPaintMaskSurface(
         SVGUtils::GetCSSPxToDevPxMatrix(aParams.frame);
     paintResult.opacityApplied = true;
     SVGMaskFrame::MaskParams params(
-        &ctx, aParams.frame, cssPxToDevPxMatrix, aOpacity,
+        ctx.GetDrawTarget(), aParams.frame, cssPxToDevPxMatrix, aOpacity,
         svgReset->mMask.mLayers[0].mMaskMode, aParams.imgParams);
     paintResult.maskSurface = aMaskFrames[0]->GetMaskForMaskedFrame(params);
     paintResult.maskTransform = ctx.CurrentMatrix();
@@ -728,10 +728,6 @@ bool SVGIntegrationUtils::PaintMask(const PaintFramesParams& aParams,
     // not have to copy the content of maskTarget before painting
     // clip-path into it.
     maskTarget = maskTarget->CreateClippedDrawTarget(Rect(), SurfaceFormat::A8);
-    // XXX: We set the transform to identity because that's what the code that
-    // previously used CreateSimilarSurface was implicitly doing. However, it's
-    // not obvious to me why that's the right thing to do.
-    maskTarget->SetTransform(Matrix());
   }
 
   nsIFrame* firstFrame =
@@ -758,24 +754,29 @@ bool SVGIntegrationUtils::PaintMask(const PaintFramesParams& aParams,
     MoveContextOriginToUserSpace(firstFrame, aParams);
 
     basicShapeSR.SetContext(&ctx);
-    CSSClipPathInstance::ApplyBasicShapeOrPathClip(
-        ctx, frame, SVGUtils::GetCSSPxToDevPxMatrix(frame));
+    gfxMatrix mat = SVGUtils::GetCSSPxToDevPxMatrix(frame);
     if (!maskUsage.shouldGenerateMaskLayer) {
       // Only have basic-shape clip-path effect. Fill clipped region by
       // opaque white.
       ctx.SetDeviceColor(DeviceColor::MaskOpaqueWhite());
+      RefPtr<Path> path = CSSClipPathInstance::CreateClipPathForFrame(
+          ctx.GetDrawTarget(), frame, mat);
+      ctx.SetPath(path);
       ctx.Fill();
 
       return true;
     }
+    CSSClipPathInstance::ApplyBasicShapeOrPathClip(ctx, frame, mat);
   }
 
-  // Paint mask onto ctx.
+  // Paint mask into maskTarget.
   if (maskUsage.shouldGenerateMaskLayer) {
     matSR.Restore();
     matSR.SetContext(&ctx);
 
-    EffectOffsets offsets = MoveContextOriginToUserSpace(frame, aParams);
+    EffectOffsets offsets = ComputeEffectOffset(frame, aParams);
+    maskTarget->SetTransform(maskTarget->GetTransform().PreTranslate(
+        ToPoint(offsets.offsetToUserSpaceInDevPx)));
     aOutIsMaskComplete = PaintMaskSurface(
         aParams, maskTarget, shouldPushOpacity ? 1.0 : maskUsage.opacity,
         firstFrame->Style(), maskFrames, offsets.offsetToUserSpace);
@@ -795,8 +796,7 @@ bool SVGIntegrationUtils::PaintMask(const PaintFramesParams& aParams,
     SVGObserverUtils::GetAndObserveClipPath(firstFrame, &clipPathFrame);
     RefPtr<SourceSurface> maskSurface =
         maskUsage.shouldGenerateMaskLayer ? maskTarget->Snapshot() : nullptr;
-    clipPathFrame->PaintClipMask(ctx, frame, cssPxToDevPxMatrix, maskSurface,
-                                 ctx.CurrentMatrix());
+    clipPathFrame->PaintClipMask(ctx, frame, cssPxToDevPxMatrix, maskSurface);
   }
 
   return true;
@@ -860,7 +860,6 @@ void PaintMaskAndClipPathInternal(const PaintFramesParams& aParams,
   if (shouldGenerateMask) {
     gfxContextMatrixAutoSaveRestore matSR;
 
-    Matrix maskTransform;
     RefPtr<SourceSurface> maskSurface;
     bool opacityApplied = false;
 
@@ -882,10 +881,6 @@ void PaintMaskAndClipPathInternal(const PaintFramesParams& aParams,
       maskSurface = paintResult.maskSurface;
       if (maskSurface) {
         shouldPushMask = true;
-        // We want the mask to be untransformed so use the inverse of the
-        // current transform as the maskTransform to compensate.
-        maskTransform = context.CurrentMatrix();
-        maskTransform.Invert();
 
         opacityApplied = paintResult.opacityApplied;
       }
@@ -897,14 +892,10 @@ void PaintMaskAndClipPathInternal(const PaintFramesParams& aParams,
 
       MoveContextOriginToUserSpace(firstFrame, aParams);
       RefPtr<SourceSurface> clipMaskSurface = clipPathFrame->GetClipMask(
-          context, frame, cssPxToDevPxMatrix, maskSurface, maskTransform);
+          context, frame, cssPxToDevPxMatrix, maskSurface);
 
       if (clipMaskSurface) {
         maskSurface = clipMaskSurface;
-        // We want the mask to be untransformed so use the inverse of the
-        // current transform as the maskTransform to compensate.
-        maskTransform = context.CurrentMatrix();
-        maskTransform.Invert();
       } else {
         // Either entire surface is clipped out, or gfx buffer allocation
         // failure in SVGClipPathFrame::GetClipMask.
@@ -925,6 +916,11 @@ void PaintMaskAndClipPathInternal(const PaintFramesParams& aParams,
     }
 
     if (shouldPushMask) {
+      // We want the mask to be untransformed so use the inverse of the
+      // current transform as the maskTransform to compensate.
+      Matrix maskTransform = context.CurrentMatrix();
+      maskTransform.Invert();
+
       context.PushGroupForBlendBack(gfxContentType::COLOR_ALPHA,
                                     opacityApplied ? 1.0 : maskUsage.opacity,
                                     maskSurface, maskTransform);
@@ -1184,9 +1180,7 @@ bool PaintFrameCallback::operator()(gfxContext* aContext,
   aContext->Save();
 
   // Clip to aFillRect so that we don't paint outside.
-  aContext->NewPath();
-  aContext->Rectangle(aFillRect);
-  aContext->Clip();
+  aContext->Clip(aFillRect);
 
   gfxMatrix invmatrix = aTransform;
   if (!invmatrix.Invert()) {
