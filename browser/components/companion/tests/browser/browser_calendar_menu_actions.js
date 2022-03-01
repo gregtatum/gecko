@@ -94,6 +94,8 @@ add_task(async function testRunningLateXss() {
       {
         summary: `My XSS event" onclick="alert('hi')""`,
         attendees: [{ email: "uhoh@example.com", isSelf: false }],
+        organizer: { email: "organizer@example.com", isSelf: true },
+        creator: { email: "creator@example.com", isSelf: true },
       },
     ];
 
