@@ -12,6 +12,7 @@ with Files("*TextInput*"):
     BUG_COMPONENT = ("Core", "DOM: UI Events & Focus Handling")
 
 XPIDL_SOURCES += [
+    "nsIOCR.idl",
     "nsPIWidgetCocoa.idl",
 ]
 
@@ -64,6 +65,7 @@ UNIFIED_SOURCES += [
     "nsMenuItemX.mm",
     "nsMenuUtilsX.mm",
     "nsMenuX.mm",
+    "nsOCR.mm",
     "nsPrintDialogX.mm",
     "nsPrintSettingsServiceX.mm",
     "nsPrintSettingsX.mm",
