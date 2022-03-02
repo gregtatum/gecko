@@ -6,6 +6,17 @@
 
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+XPCOMUtils.defineLazyGetter(globalThis, "logConsole", function() {
+  return console.createInstance({
+    prefix: "notifications.js",
+    maxLogLevelPref: "browser.pinebuild.notifications.logLevel",
+  });
+});
+
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
@@ -13,16 +24,18 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 let notificationTimers = new Set();
 
 async function isActiveWindow() {
+  let result;
   if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
-    let result = await window.CompanionUtils.sendQuery(
-      "Companion:IsActiveWindow"
-    );
-    return result;
+    result = await window.CompanionUtils.sendQuery("Companion:IsActiveWindow");
+  } else {
+    result = !!Services.focus.activeWindow;
   }
-  return !!Services.focus.activeWindow;
+  logConsole.debug("isActiveWindow", result);
+  return result;
 }
 
 async function showNotification(event) {
+  logConsole.debug("showNotification");
   let notificationLevel = Services.prefs.getIntPref(
     "browser.pinebuild.companion.notifications.level"
   );
@@ -32,6 +45,7 @@ async function showNotification(event) {
     notificationLevel == 0 ||
     (notificationLevel == 2 && (await isActiveWindow()))
   ) {
+    logConsole.debug("Not showing notification");
     return;
   }
 
@@ -41,6 +55,7 @@ async function showNotification(event) {
     endTime
   )}`;
 
+  logConsole.debug("Creating notification");
   let notification = new Notification(event.summary, {
     body: dateString,
     icon: "chrome://branding/content/icon64.png",
@@ -66,6 +81,7 @@ async function showNotification(event) {
 }
 
 function processEvents(events) {
+  logConsole.debug("processEvents");
   for (let timer of notificationTimers) {
     clearTimeout(timer);
   }
@@ -84,6 +100,7 @@ function processEvents(events) {
     let inAMinute = now + 60 * 1000;
 
     if (notificationTime > now && notificationTime < inAMinute) {
+      logConsole.debug("Adding timer for", event.summary);
       notificationTimers.add(
         setTimeout(showNotification, notificationTime - now, event)
       );
@@ -107,6 +124,7 @@ let observer = {
 };
 
 export function initNotifications() {
+  logConsole.debug("initNotifications");
   if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
     document.addEventListener("refresh-events", function(e) {
       processEvents(e.detail.events);
