@@ -22,6 +22,7 @@ export class RelativeTime extends MozLitElement {
       formattedTimeMessageId: { type: String },
       formattedTimeMessageArgs: { type: Object },
       isHappeningNow: { type: Boolean },
+      isHidden: { type: Boolean },
     };
   }
 
@@ -89,22 +90,25 @@ export class RelativeTime extends MozLitElement {
   getFormattedRelativeTime(hours, minutes) {
     let l10n = { args: { hours, minutes } };
 
-    if (!hours) {
+    if (hours || minutes > 15) {
+      if (this.isHappeningNow) {
+        l10n.id = "companion-happening-now";
+      } else {
+        this.isHidden = true;
+      }
+    } else if (minutes > 10) {
       l10n.id = this.isHappeningNow
-        ? "companion-happening-now-minutes"
+        ? "companion-ending-soon"
+        : "companion-up-next";
+    } else if (minutes > 5) {
+      l10n.id = this.isHappeningNow
+        ? "companion-ending-soon"
+        : "companion-starting-soon";
+    } else {
+      l10n.id = this.isHappeningNow
+        ? "companion-almost-over"
         : "companion-until-event-minutes";
-    } else if (hours && this.isHappeningNow) {
-      l10n.id =
-        minutes > 0
-          ? "companion-happening-now-both"
-          : "companion-happening-now-hours";
-    } else if (hours && !this.isHappeningNow) {
-      l10n.id =
-        minutes > 0
-          ? "companion-until-event-both"
-          : "companion-until-event-hours";
     }
-
     return l10n;
   }
 
@@ -132,6 +136,7 @@ export class RelativeTime extends MozLitElement {
           "event-relative-time": true,
           "event-is-happening-now": this.isHappeningNow,
         })}
+        ?hidden=${this.isHidden}
         data-l10n-id=${this.formattedTimeMessageId}
         data-l10n-args=${JSON.stringify(this.formattedTimeMessageArgs)}
       ></span>

@@ -3,8 +3,7 @@
 
 "use strict";
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-const ONE_HOUR = 1000 * 60 * 60;
+const ONE_MINUTE = 60 * 1000;
 
 const { generateEventTimes } = PinebuildTestUtils;
 
@@ -14,7 +13,128 @@ add_task(async function setup() {
   });
 });
 
-add_task(async function testRelativeTimeMinutesBeforeEvent() {
+add_task(async function testRelativeTimeThirtyMinutesBeforeEvent() {
+  await CompanionHelper.whenReady(async helper => {
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
+    let events = [
+      {
+        summary: "My meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    info("Test time stamp fifteen minutes before event.");
+    await helper.overrideRelativeTime(start, -30 * ONE_MINUTE);
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.hasAttribute("hidden"),
+        true,
+        "RelativeTime should be hidden"
+      );
+    });
+  });
+});
+
+add_task(async function testRelativeTimeFifteenMinutesBeforeEvent() {
+  await CompanionHelper.whenReady(async helper => {
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
+    let events = [
+      {
+        summary: "My meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    info("Test time stamp fifteen minutes before event.");
+    await helper.overrideRelativeTime(start, -(15 * ONE_MINUTE));
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.getAttribute("data-l10n-id"),
+        "companion-up-next",
+        "RelativeTime has correct localization id"
+      );
+      let args = relativeTimeContent.getAttribute("data-l10n-args");
+      is(JSON.parse(args).minutes, 15, "Should be 15 minutes until the event.");
+    });
+  });
+});
+
+add_task(async function testRelativeTimeTenMinutesBeforeEvent() {
+  await CompanionHelper.whenReady(async helper => {
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
+    let events = [
+      {
+        summary: "My meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    info("Test time stamp ten minutes before event.");
+    await helper.overrideRelativeTime(start, -(10 * ONE_MINUTE));
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.getAttribute("data-l10n-id"),
+        "companion-starting-soon",
+        "RelativeTime has correct localization id"
+      );
+      let args = relativeTimeContent.getAttribute("data-l10n-args");
+      is(JSON.parse(args).minutes, 10, "Should be 10 minutes until the event.");
+    });
+  });
+});
+
+add_task(async function testRelativeTimeFiveMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes(0, 30, new Date());
 
@@ -27,7 +147,7 @@ add_task(async function testRelativeTimeMinutesBeforeEvent() {
     ];
 
     info("Test time stamp five minutes before event.");
-    await helper.overrideRelativeTime(start, -FIVE_MINUTES);
+    await helper.overrideRelativeTime(start, -(5 * ONE_MINUTE));
     await helper.setCalendarEvents(events);
 
     await helper.runCompanionTask(async () => {
@@ -49,14 +169,13 @@ add_task(async function testRelativeTimeMinutesBeforeEvent() {
         "companion-until-event-minutes",
         "RelativeTime has correct localization id"
       );
-
       let args = relativeTimeContent.getAttribute("data-l10n-args");
-      is(JSON.parse(args).minutes, 5, "Should be in five minutes.");
+      is(JSON.parse(args).minutes, 5, "Should be 5 minutes until the event.");
     });
   });
 });
 
-add_task(async function testRelativeTimeMinutesAfterEvent() {
+add_task(async function testRelativeTimeEventStarted() {
   await CompanionHelper.whenReady(async helper => {
     let { start, end } = generateEventTimes(0, 30, new Date());
 
@@ -68,14 +187,15 @@ add_task(async function testRelativeTimeMinutesAfterEvent() {
       },
     ];
 
-    info("Test time stamp five minutes after event.");
-    await helper.overrideRelativeTime(start, FIVE_MINUTES);
+    info("Test event started.");
+    await helper.overrideRelativeTime(start, 0);
     await helper.setCalendarEvents(events);
 
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
       );
+
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
       let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
         return event.shadowRoot.querySelector("relative-time");
@@ -84,25 +204,65 @@ add_task(async function testRelativeTimeMinutesAfterEvent() {
       let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
         ".event-relative-time"
       );
+
       is(
         relativeTimeContent.getAttribute("data-l10n-id"),
-        "companion-happening-now-minutes",
+        "companion-happening-now",
         "RelativeTime has correct localization id"
       );
+    });
+  });
+});
 
+add_task(async function testRelativeTimeFifteenMinutesBeforeEventEnds() {
+  await CompanionHelper.whenReady(async helper => {
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
+    let events = [
+      {
+        summary: "My meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    info("Test time stamp fifteen minutes before event ends.");
+    await helper.overrideRelativeTime(start, 15 * ONE_MINUTE);
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.getAttribute("data-l10n-id"),
+        "companion-ending-soon",
+        "RelativeTime has correct localization id"
+      );
       let args = relativeTimeContent.getAttribute("data-l10n-args");
       is(
         JSON.parse(args).minutes,
-        25,
-        "Should be 25 minutes left of the event."
+        15,
+        "Should be 15 minutes until the event ends."
       );
     });
   });
 });
 
-add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
+add_task(async function testRelativeTimeTenMinutesBeforeEventEnds() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(1, 30, new Date());
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
     let events = [
       {
         summary: "My meeting",
@@ -111,14 +271,15 @@ add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
       },
     ];
 
-    info("Test time stamp five minutes after event.");
-    await helper.overrideRelativeTime(start, FIVE_MINUTES);
+    info("Test time stamp ten minutes before event ends.");
+    await helper.overrideRelativeTime(start, 20 * ONE_MINUTE);
     await helper.setCalendarEvents(events);
 
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
       );
+
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
       let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
         return event.shadowRoot.querySelector("relative-time");
@@ -127,26 +288,26 @@ add_task(async function testRelativeTimeHoursAndMinutesAfterEvent() {
       let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
         ".event-relative-time"
       );
+
       is(
         relativeTimeContent.getAttribute("data-l10n-id"),
-        "companion-happening-now-both",
+        "companion-ending-soon",
         "RelativeTime has correct localization id"
       );
-
       let args = relativeTimeContent.getAttribute("data-l10n-args");
-      is(JSON.parse(args).hours, 1, "Should be 1 hour left of the event.");
       is(
         JSON.parse(args).minutes,
-        25,
-        "Should be 25 minutes left of the event."
+        10,
+        "Should be 10 minutes until the event ends."
       );
     });
   });
 });
 
-add_task(async function testRelativeTimeHoursBeforeEvent() {
+add_task(async function testRelativeTimeFiveMinutesBeforeEventEnds() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(1, 30, new Date());
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
     let events = [
       {
         summary: "My meeting",
@@ -155,14 +316,15 @@ add_task(async function testRelativeTimeHoursBeforeEvent() {
       },
     ];
 
-    info("Test time stamp an hour before event.");
-    await helper.overrideRelativeTime(start, -ONE_HOUR);
+    info("Test time stamp five minutes before event ends.");
+    await helper.overrideRelativeTime(start, 25 * ONE_MINUTE);
     await helper.setCalendarEvents(events);
 
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
       );
+
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
       let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
         return event.shadowRoot.querySelector("relative-time");
@@ -171,57 +333,56 @@ add_task(async function testRelativeTimeHoursBeforeEvent() {
       let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
         ".event-relative-time"
       );
+
       is(
         relativeTimeContent.getAttribute("data-l10n-id"),
-        "companion-until-event-hours",
+        "companion-almost-over",
         "RelativeTime has correct localization id"
       );
-
       let args = relativeTimeContent.getAttribute("data-l10n-args");
-      is(JSON.parse(args).hours, 1, "Should be 1 hour before.");
-    });
-  });
-});
-
-add_task(async function testRelativeTimeHoursAndMinutesBeforeEvent() {
-  await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(1, 30, new Date());
-    let events = [
-      {
-        summary: "My meeting",
-        startDate: start,
-        endDate: end,
-      },
-    ];
-
-    info("Test time stamp an hour and five minutes before event.");
-    await helper.overrideRelativeTime(start, -(ONE_HOUR + FIVE_MINUTES));
-    await helper.setCalendarEvents(events);
-
-    await helper.runCompanionTask(async () => {
-      let calendarEventList = content.document.querySelector(
-        "calendar-event-list"
-      );
-      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
-      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector("relative-time");
-      });
-
-      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
-        ".event-relative-time"
-      );
-      is(
-        relativeTimeContent.getAttribute("data-l10n-id"),
-        "companion-until-event-both",
-        "RelativeTime has correct localization id"
-      );
-
-      let args = relativeTimeContent.getAttribute("data-l10n-args");
-      is(JSON.parse(args).hours, 1, "Should be 1 hour before.");
       is(
         JSON.parse(args).minutes,
         5,
-        "Remaining minutes before event should be 5."
+        "Should be 5 minutes until the event ends."
+      );
+    });
+  });
+});
+
+add_task(async function testRelativeTimeAfterEventEnds() {
+  await CompanionHelper.whenReady(async helper => {
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
+    let events = [
+      {
+        summary: "My meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    info("Test time stamp after event ends.");
+    await helper.overrideRelativeTime(start, 31 * ONE_MINUTE);
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.getAttribute("data-l10n-id"),
+        "companion-event-finished",
+        "RelativeTime has correct localization id"
       );
     });
   });

@@ -94,6 +94,11 @@ companion-happening-now-minutes =
        *[other] Now ({ $minutes } mins left)
     }
 
+companion-up-next = Up next
+companion-starting-soon = Starting soon
+companion-happening-now = Happening now
+companion-ending-soon = Ending soon
+companion-almost-over = Almost over
 companion-event-finished = Finished
 
 # This is used to show the number of minutes between two events indicating that
