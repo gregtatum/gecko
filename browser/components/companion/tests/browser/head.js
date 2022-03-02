@@ -243,8 +243,8 @@ class WorkshopHelper {
       {},
       this.fakeServer.domainInfo
     );
-
     this.account = account;
+    return this.account;
   }
 
   async addCalendarEvents(eventsData) {
@@ -658,6 +658,21 @@ class CompanionHelper {
         )
       );
     }
+  }
+
+  async createAccount() {
+    if (this.workshopEnabled) {
+      const account = await this.workshopHelper.createAccount();
+      return account;
+    }
+
+    const MOCK_SERVICE = "testservice";
+    await this.loginToTestService(MOCK_SERVICE);
+    registerCleanupFunction(async () => {
+      await this.logoutFromTestService(MOCK_SERVICE);
+    });
+    const service = OnlineServices.getServices(MOCK_SERVICE)[0];
+    return { name: service.getAccountAddress() };
   }
 }
 

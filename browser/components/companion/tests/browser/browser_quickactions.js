@@ -109,3 +109,43 @@ add_task(async function test_createdoc() {
 
   await validateQuickAction(action);
 });
+
+add_task(async function test_connectedAccountNavigation() {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
+    await SpecialPowers.pushPrefEnv({
+      set: [
+        [
+          "browser.pinebuild.quickactions.testURL",
+          "https://example.com/help?authuser={email}",
+        ],
+        [
+          "browser.pinebuild.companion.test-services",
+          JSON.stringify([
+            {
+              icon: "chrome://browser/content/companion/googleAccount.png",
+              name: "Test service",
+              services: "Test connected accounts",
+              domains: ["www.example.com", "test2.example.com"],
+              type: "testservice",
+            },
+          ]),
+        ],
+      ],
+    });
+    await CompanionHelper.whenReady(async helper => {
+      const account = await helper.createAccount();
+
+      info("Bring up createdoc quick action.");
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        value: "document",
+      });
+
+      info("Validate account details included in URL on navigation.");
+      await assertActionOpensUrl(
+        `https://example.com/help?authuser=${encodeURIComponent(account.name)}`,
+        win
+      );
+    }, win);
+  });
+});

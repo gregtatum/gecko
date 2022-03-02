@@ -45,15 +45,15 @@
     if (!fn) {
       fn = obj;
       obj = undefined;
-      if (!(fn instanceof Function)) {
+      if (!(typeof fn === 'function')) {
         throw new Error('You did not provide a function!');
       }
     } else {
       if (typeof(fn) === 'string') {
-        if (!(obj[fn] instanceof Function)) {
+        if (!(typeof obj[fn] === 'function')) {
           throw new Error(`String ${fn} does not reference a function on obj!`);
         }
-      } else if (!(fn instanceof Function)) {
+      } else if (!(typeof fn === 'function')) {
         throw new Error('fn is neither a function or a string!');
       }
     }

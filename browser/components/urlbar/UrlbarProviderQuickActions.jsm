@@ -25,6 +25,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
   UrlbarView: "resource:///modules/UrlbarView.jsm",
   KeywordTree: "resource:///modules/UrlbarQuickSuggest.jsm",
+  WorkshopParentAccess: "resource:///modules/WorkshopParentAccess.jsm",
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -44,21 +45,22 @@ const GOOGLE_ACTION_URLS = {
   meeting: "https://calendar.google.com/calendar/u/{email}/r/eventedit",
 };
 
-const formatGoogleURL = (type, fallbackURL) => {
-  let url = Cu.isInAutomation
-    ? Services.prefs.getStringPref("browser.pinebuild.quickactions.testURL", "")
-    : fallbackURL;
-  // Force call to load() in OnlineService to retrieve stored service data
-  OnlineServices.getAllServices();
-  if (OnlineServices.hasService("google")) {
-    const service = OnlineServices.getServices("google")[0];
-    const email = service.getAccountAddress();
-    url = GOOGLE_ACTION_URLS[type].replace(
-      "{email}",
-      type === "meeting" ? email : encodeURIComponent(email)
+const formatGoogleURL = (type, fallbackURL, email = "") => {
+  let url = fallbackURL;
+
+  if (Cu.isInAutomation) {
+    url = Services.prefs.getStringPref(
+      "browser.pinebuild.quickactions.testURL",
+      ""
     );
+  } else if (email) {
+    url = GOOGLE_ACTION_URLS[type];
   }
-  return url;
+
+  return url.replace(
+    "{email}",
+    type === "meeting" ? email : encodeURIComponent(email)
+  );
 };
 
 // These prefs are relative to the `browser.urlbar` branch.
@@ -73,6 +75,7 @@ const COMMANDS = {
     icon: "chrome://browser/content/urlbar/quickactions/gmail.svg",
     label: "Go to Inbox",
     title: "Gmail",
+    serviceType: "google",
     hide(isDefault) {
       if (isDefault) {
         return !OnlineServices.getMailCount("google");
@@ -82,8 +85,8 @@ const COMMANDS = {
     showBadge() {
       return !!OnlineServices.getMailCount("google");
     },
-    callback: () => {
-      const url = formatGoogleURL("email", "https://gmail.com");
+    callback: email => {
+      const url = formatGoogleURL("email", "https://gmail.com", email);
       UrlbarUtils.openUrl(url);
     },
   },
@@ -91,6 +94,7 @@ const COMMANDS = {
     commands: ["inbox", "email", "outlook", "check outlook"],
     icon: "chrome://browser/content/urlbar/quickactions/outlook.svg",
     label: "Go to Inbox",
+    serviceType: "microsoft",
     callback: () => {
       let inboxURL = OnlineServices.getInboxURL("microsoft");
       UrlbarUtils.openUrl(inboxURL);
@@ -111,8 +115,9 @@ const COMMANDS = {
     icon: "chrome://browser/content/urlbar/quickactions/createmeeting.svg",
     label: "Schedule a meeting",
     title: "Google Calendar",
-    callback: () => {
-      const url = formatGoogleURL("meeting", "https://meeting.new");
+    serviceType: "google",
+    callback: email => {
+      const url = formatGoogleURL("meeting", "https://meeting.new", email);
       UrlbarUtils.openUrl(url);
     },
   },
@@ -121,8 +126,9 @@ const COMMANDS = {
     icon: "chrome://browser/content/urlbar/quickactions/createslides.svg",
     label: "Create Google slides",
     title: "Google Slides",
-    callback: () => {
-      const url = formatGoogleURL("slides", "https://slides.new");
+    serviceType: "google",
+    callback: email => {
+      const url = formatGoogleURL("slides", "https://slides.new", email);
       UrlbarUtils.openUrl(url);
     },
   },
@@ -131,8 +137,9 @@ const COMMANDS = {
     icon: "chrome://browser/content/urlbar/quickactions/createsheet.svg",
     label: "Create a Google Sheet",
     title: "Google Sheets",
-    callback: () => {
-      const url = formatGoogleURL("sheets", "https://sheets.new");
+    serviceType: "google",
+    callback: email => {
+      const url = formatGoogleURL("sheets", "https://sheets.new", email);
       UrlbarUtils.openUrl(url);
     },
   },
@@ -141,8 +148,9 @@ const COMMANDS = {
     icon: "chrome://browser/content/urlbar/quickactions/createdoc.svg",
     label: "Create a Google doc",
     title: "Google Docs",
-    callback: () => {
-      const url = formatGoogleURL("docs", "https://docs.new");
+    serviceType: "google",
+    callback: email => {
+      const url = formatGoogleURL("docs", "https://docs.new", email);
       UrlbarUtils.openUrl(url);
     },
   },
@@ -378,10 +386,17 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     }
     results.length =
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
+
+    let accountAddress;
+    if (results.some(key => COMMANDS?.[key]?.serviceType === "google")) {
+      accountAddress = await this.getAccountAddress("google");
+    }
+
     const result = new UrlbarResult(
       UrlbarUtils.RESULT_TYPE.DYNAMIC,
       UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
+        accountAddress,
         results,
         dynamicType: DYNAMIC_TYPE_NAME,
       }
@@ -389,6 +404,32 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     result.suggestedIndex = this.getSuggestedIndex();
     result.searchString = queryContext.searchString;
     addCallback(this, result);
+  }
+
+  async getAccountAddress(accountType) {
+    if (this.accountAddress) {
+      return this.accountAddress;
+    }
+
+    if (WorkshopParentAccess.workshopEnabled) {
+      const account = await WorkshopParentAccess.getAccountByType(accountType);
+      this.accountAddress = account?.name;
+      return account?.name || "";
+    }
+
+    // Force call to load() in OnlineService to retrieve stored service data
+    OnlineServices.getAllServices();
+    if (Cu.isInAutomation) {
+      accountType = "testservice";
+    }
+    if (OnlineServices.hasService(accountType)) {
+      const service = OnlineServices.getServices(accountType)[0];
+      const email = service.getAccountAddress();
+      this.accountAddress = email;
+      return email || "";
+    }
+
+    return "";
   }
 
   getViewUpdate(result) {
@@ -435,13 +476,17 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     }
   }
 
-  async pickResult(results, itemPicked) {
+  async pickResult(resultPicked, itemPicked) {
     let result = COMMANDS[itemPicked.dataset.key];
+    let email = resultPicked.payload.accountAddress;
+
     if (result.url) {
       UrlbarUtils.openUrl(result.url);
     } else {
-      result.callback();
+      result.callback(email);
     }
+
+    this.accountAddress = null;
   }
 
   /**

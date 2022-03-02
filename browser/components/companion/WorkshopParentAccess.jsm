@@ -7,31 +7,40 @@
 var EXPORTED_SYMBOLS = ["WorkshopParentAccess"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
-const workshopEnabled = Services.prefs.getBoolPref(
-  "browser.pinebuild.workshop.enabled",
-  false
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-const WorkshopParentAccess = {
-  workshopAPI: null,
-  async getWorkshopAPI() {
-    if (!this.workshopAPI) {
-      await this.init();
-      return this.workshopAPI;
-    }
+XPCOMUtils.defineLazyModuleGetters(this, {
+  AsyncShutdown: "resource://gre/modules/AsyncShutdown.jsm",
+});
 
-    return this.workshopAPI;
+const WorkshopParentAccess = {
+  _initPromise: null,
+  _serviceByAPI: {
+    mapi: "microsoft",
+    gapi: "google",
   },
-  async init() {
-    if (workshopEnabled) {
-      const windowlessBrowser = Services.appShell.createWindowlessBrowser(
+  workshopEnabled: Services.prefs.getBoolPref(
+    "browser.pinebuild.workshop.enabled",
+    false
+  ),
+  workshopAPI: null,
+  init() {
+    if (!this._initPromise) {
+      this._initPromise = this._initInternal();
+    }
+    return this._initPromise;
+  },
+  async _initInternal() {
+    if (this.workshopEnabled && !this.workshopAPI) {
+      this.windowlessBrowser = Services.appShell.createWindowlessBrowser(
         true,
         0
       );
 
       const system = Services.scriptSecurityManager.getSystemPrincipal();
-      const chromeShell = windowlessBrowser.docShell.QueryInterface(
+      const chromeShell = this.windowlessBrowser.docShell.QueryInterface(
         Ci.nsIWebNavigation
       );
       chromeShell.createAboutBlankContentViewer(system, system);
@@ -51,6 +60,23 @@ const WorkshopParentAccess = {
       });
 
       this.workshopAPI = Cu.waiveXrays(win.WORKSHOP_API);
+
+      AsyncShutdown.profileBeforeChange.addBlocker(
+        "WorkshopParentAccess: close windowless browser and drop reference",
+        () => {
+          this.windowlessBrowser.close();
+          this.windowlessBrowser = null;
+        }
+      );
     }
+  },
+  async getAccountByType(accountType) {
+    await this.init();
+
+    await this.workshopAPI.promisedLatestOnce("accountsLoaded");
+
+    return this.workshopAPI.accounts?.items.find(
+      account => this._serviceByAPI[account.type] === accountType
+    );
   },
 };

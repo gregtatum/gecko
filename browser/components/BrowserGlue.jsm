@@ -1518,6 +1518,11 @@ BrowserGlue.prototype = {
         "resource:///modules/WorkshopBootstrap.jsm"
       );
       WorkshopBootstrap.createHiddenWindow();
+
+      const { WorkshopParentAccess } = ChromeUtils.import(
+        "resource:///modules/WorkshopParentAccess.jsm"
+      );
+      WorkshopParentAccess.init();
     }
 
     Services.obs.notifyObservers(null, "browser-ui-startup-complete");

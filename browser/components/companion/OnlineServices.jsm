@@ -653,6 +653,10 @@ class TestService {
   toJSON() {
     return { type: this.app };
   }
+
+  getAccountAddress() {
+    return "test-user@example.com";
+  }
 }
 
 const ServiceInstances = new Set();
