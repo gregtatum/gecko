@@ -12,4 +12,5 @@ These pages contain documentation for Mozilla's Cross-Platform Component Object 
    huntingleaks
    collections
    xpidl
+   writing-xpcom-interface
    dmd
