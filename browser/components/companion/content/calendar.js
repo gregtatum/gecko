@@ -73,9 +73,7 @@ window.gCalendarEventListener = {
     switch (type) {
       case "Companion:RegisterCalendarEvents": {
         this._calendarEvents = detail.events;
-        if (!workshopEnabled) {
-          this.dispatchRefreshEventsEvent();
-        }
+        this.dispatchRefreshEventsEvent();
         break;
       }
       case "Companion:SignIn": {
