@@ -61,6 +61,9 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // active view if the the view utilizes OpenSearch.
   ["contextualSearch.enabled", false],
 
+  // Whether best match results can be blocked.
+  ["bestMatch.blockingEnabled", false],
+
   // Whether the best match feature is enabled.
   ["bestMatch.enabled", true],
 
