@@ -15,6 +15,7 @@
  */
 
 import mapi_accountInit from "./tasks/account_init";
+import mapi_accountCleanup from "./tasks/account_cleanup";
 import mapi_syncFolderList from "./tasks/sync_folder_list";
 
 import mapi_syncConv from "./tasks/cal_sync_conv";
@@ -28,6 +29,7 @@ import CommonIdentityModify from "../../tasks/identity_modify";
 import CommonNewTracking from "../../tasks/new_tracking";
 
 export default [
+  mapi_accountCleanup,
   mapi_accountInit,
   mapi_syncFolderList,
 

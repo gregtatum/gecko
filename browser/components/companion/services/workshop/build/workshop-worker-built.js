@@ -10996,9 +10996,11 @@ var WorkshopBackend = (() => {
       init_logic();
       init_date();
       init_id_conversions();
+      init_engine_glue();
       GapiCalFolderSyncStateHelper = class {
         constructor(ctx, rawSyncState, accountId, folderId, why) {
           logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
+          const [min, max] = engineBackEndFacts.get("gapi").syncRangeInDays;
           if (!rawSyncState) {
             logic(ctx, "creatingDefaultSyncState", {});
             rawSyncState = {
@@ -11006,8 +11008,8 @@ var WorkshopBackend = (() => {
               etag: null,
               inboxFeedCacheState: null,
               calUpdatedTS: null,
-              rangeOldestTS: makeDaysAgo(15),
-              rangeNewestTS: makeDaysAgo(-60)
+              rangeOldestTS: makeDaysAgo(-min),
+              rangeNewestTS: makeDaysAgo(-max)
             };
           }
           this._accountId = accountId;
@@ -11152,7 +11154,7 @@ var WorkshopBackend = (() => {
                 continue;
               }
               const results = allResults[i].value;
-              if (!results) {
+              if (!results || !results.items) {
                 continue;
               }
               const folder = folders[i];
@@ -11179,6 +11181,85 @@ var WorkshopBackend = (() => {
                 tasks: syncState.tasksToSchedule
               }
             });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/task_mixins/mix_account_cleanup.js
+  var MixinAccountCleanup, mix_account_cleanup_default;
+  var init_mix_account_cleanup = __esm({
+    "src/backend/task_mixins/mix_account_cleanup.js"() {
+      init_logic();
+      init_util();
+      init_date();
+      MixinAccountCleanup = {
+        name: "account_cleanup",
+        args: ["accountId"],
+        plan(ctx, rawTask) {
+          let plannedTask = shallowClone2(rawTask);
+          const { accountId } = rawTask;
+          plannedTask.resources = [`happy!${accountId}`];
+          plannedTask.priorityTags = [`view:account:${accountId}`];
+          plannedTask.relPriority = -99999;
+          return ctx.finishTask({
+            taskState: plannedTask
+          });
+        },
+        async execute(ctx, req) {
+          const messagesByAccount = new Map([[req.accountId, null]]);
+          await ctx.read({
+            messagesByAccount
+          });
+          const messages = messagesByAccount.get(req.accountId);
+          const syncDate = NOW();
+          logic(ctx, "accountCleanup", { syncDate });
+          const minDate = makeDaysAgo(-this.daysAgo);
+          const tooOldMessages = [];
+          for (const message of messages) {
+            if (message.endDate < minDate) {
+              tooOldMessages.push(message);
+            }
+          }
+          const additionalDeletions = this.getAdditionalDeletions(tooOldMessages);
+          logic(ctx, "accountCleanupEnd", {
+            deletedMessagesNumber: tooOldMessages.length
+          });
+          await ctx.finishTask({
+            mutations: {
+              deletedMessages: tooOldMessages,
+              ...additionalDeletions
+            }
+          });
+        }
+      };
+      mix_account_cleanup_default = MixinAccountCleanup;
+    }
+  });
+
+  // src/backend/accounts/gapi/tasks/account_cleanup.js
+  var account_cleanup_default;
+  var init_account_cleanup = __esm({
+    "src/backend/accounts/gapi/tasks/account_cleanup.js"() {
+      init_id_conversions();
+      init_task_definer();
+      init_mix_account_cleanup();
+      init_engine_glue();
+      account_cleanup_default = task_definer_default.defineSimpleTask([
+        mix_account_cleanup_default,
+        {
+          get daysAgo() {
+            const [min] = engineBackEndFacts.get("gapi").syncRangeInDays;
+            return min;
+          },
+          getAdditionalDeletions(messages) {
+            const umidNames = new Map();
+            for (const { id } of messages) {
+              const uniqueId = getUmidWithinFolderForMessageId(id);
+              umidNames.set(uniqueId, null);
+            }
+            return { umidNames };
           }
         }
       ]);
@@ -11898,12 +11979,12 @@ var WorkshopBackend = (() => {
             };
             let results;
             const handleError = ({ e, error }) => {
-              logic(ctx, "syncError", { error: e.message || error });
+              logic(ctx, "syncError", { error: e?.message || error });
               changes.atomicClobbers.folders.set(req.folderId, {
                 lastAttemptedSyncAt: syncDate,
                 failedSyncsSinceLastSuccessfulSync: folderInfo.failedSyncsSinceLastSuccessfulSync + 1
               });
-              if (e.problem) {
+              if (e?.problem) {
                 changes.atomicClobbers.accounts = prepareChangeForProblems(account, e.problem);
               }
               syncState.syncToken = null;
@@ -12193,6 +12274,7 @@ var WorkshopBackend = (() => {
   var init_gapi_tasks = __esm({
     "src/backend/accounts/gapi/gapi_tasks.js"() {
       init_account_init();
+      init_account_cleanup();
       init_sync_folder_list2();
       init_cal_sync_conv();
       init_sync_refresh2();
@@ -12201,6 +12283,7 @@ var WorkshopBackend = (() => {
       init_folder_modify();
       init_identity_modify();
       gapi_tasks_default = [
+        account_cleanup_default,
         account_init_default,
         sync_folder_list_default2,
         cal_sync_conv_default,
@@ -12220,16 +12303,18 @@ var WorkshopBackend = (() => {
       init_logic();
       init_date();
       init_id_conversions();
+      init_engine_glue();
       MapiCalFolderSyncStateHelper = class {
         constructor(ctx, rawSyncState, accountId, folderId, why) {
           logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
+          const [min, max] = engineBackEndFacts.get("gapi").syncRangeInDays;
           if (!rawSyncState) {
             logic(ctx, "creatingDefaultSyncState", {});
             rawSyncState = {
               syncUrl: null,
               calUpdatedTS: null,
-              rangeOldestTS: makeDaysAgo(15),
-              rangeNewestTS: makeDaysAgo(-60)
+              rangeOldestTS: makeDaysAgo(-min),
+              rangeNewestTS: makeDaysAgo(-max)
             };
           }
           this._accountId = accountId;
@@ -12388,6 +12473,28 @@ var WorkshopBackend = (() => {
                 tasks: syncState.tasksToSchedule
               }
             });
+          }
+        }
+      ]);
+    }
+  });
+
+  // src/backend/accounts/mapi/tasks/account_cleanup.js
+  var account_cleanup_default2;
+  var init_account_cleanup2 = __esm({
+    "src/backend/accounts/mapi/tasks/account_cleanup.js"() {
+      init_task_definer();
+      init_mix_account_cleanup();
+      init_engine_glue();
+      account_cleanup_default2 = task_definer_default.defineSimpleTask([
+        mix_account_cleanup_default,
+        {
+          get daysAgo() {
+            const [min] = engineBackEndFacts.get("gapi").syncRangeInDays;
+            return min;
+          },
+          getAdditionalDeletions(messages) {
+            return {};
           }
         }
       ]);
@@ -13246,6 +13353,7 @@ var WorkshopBackend = (() => {
   var init_mapi_tasks = __esm({
     "src/backend/accounts/mapi/mapi_tasks.js"() {
       init_account_init2();
+      init_account_cleanup2();
       init_sync_folder_list3();
       init_cal_sync_conv2();
       init_cal_sync_refresh();
@@ -13255,6 +13363,7 @@ var WorkshopBackend = (() => {
       init_identity_modify();
       init_new_tracking();
       mapi_tasks_default = [
+        account_cleanup_default2,
         account_init_default2,
         sync_folder_list_default3,
         cal_sync_conv_default2,
@@ -13738,6 +13847,315 @@ var WorkshopBackend = (() => {
         identity_modify_default,
         new_tracking_default
       ];
+    }
+  });
+
+  // src/backend/engine_glue.js
+  var configuratorModules, validatorModules, accountModules, engineTaskMappings, engineHacks, engineBackEndFacts, engineFrontEndAccountMeta, engineFrontEndFolderMeta;
+  var init_engine_glue = __esm({
+    "src/backend/engine_glue.js"() {
+      configuratorModules = new Map([
+        [
+          "feed",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_configurator(), configurator_exports));
+            return mod.default;
+          }
+        ],
+        [
+          "gapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_configurator2(), configurator_exports2));
+            return mod.default;
+          }
+        ],
+        [
+          "mapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_configurator3(), configurator_exports3));
+            return mod.default;
+          }
+        ],
+        [
+          "testservice",
+          async function() {
+            return () => ({
+              userDetails: "",
+              credentials: "",
+              typeFields: {},
+              connInfoFields: {},
+              kind: "calendar"
+            });
+          }
+        ],
+        [
+          "ical",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_configurator4(), configurator_exports4));
+            return mod.default;
+          }
+        ]
+      ]);
+      validatorModules = new Map([
+        [
+          "feed",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_validator(), validator_exports));
+            return mod.default;
+          }
+        ],
+        [
+          "gapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_validator2(), validator_exports2));
+            return mod.default;
+          }
+        ],
+        [
+          "mapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_validator3(), validator_exports3));
+            return mod.default;
+          }
+        ],
+        [
+          "testservice",
+          async function() {
+            return () => ({
+              engineFields: {
+                engine: "gapi",
+                engineData: {}
+              },
+              receiveProtoConn: null
+            });
+          }
+        ],
+        [
+          "ical",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_validator4(), validator_exports4));
+            return mod.default;
+          }
+        ]
+      ]);
+      accountModules = new Map([
+        [
+          "feed",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_account3(), account_exports3));
+            return mod.default;
+          }
+        ],
+        [
+          "gapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_account(), account_exports));
+            return mod.default;
+          }
+        ],
+        [
+          "mapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
+            return mod.default;
+          }
+        ],
+        [
+          "testservice",
+          async function() {
+            return class WorkshopTestService {
+              get __isTestService() {
+                return true;
+              }
+              toString() {
+                return "[WorkshopTestService testservice]";
+              }
+              async __acquire() {
+                return this;
+              }
+              __release() {
+              }
+              async checkAccount() {
+                return null;
+              }
+              shutdown() {
+              }
+            };
+          }
+        ],
+        [
+          "ical",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_account4(), account_exports4));
+            return mod.default;
+          }
+        ]
+      ]);
+      engineTaskMappings = new Map([
+        [
+          "feed",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_feed_tasks(), feed_tasks_exports));
+            return mod.default;
+          }
+        ],
+        [
+          "gapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_gapi_tasks(), gapi_tasks_exports));
+            return mod.default;
+          }
+        ],
+        [
+          "mapi",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_mapi_tasks(), mapi_tasks_exports));
+            return mod.default;
+          }
+        ],
+        [
+          "ical",
+          async function() {
+            const mod = await Promise.resolve().then(() => (init_ical_tasks(), ical_tasks_exports));
+            return mod.default;
+          }
+        ]
+      ]);
+      engineHacks = new Map([
+        [
+          "feed",
+          {
+            unselectableFolderTypes: new Set()
+          }
+        ],
+        [
+          "gapi",
+          {
+            unselectableFolderTypes: new Set()
+          }
+        ],
+        [
+          "mapi",
+          {
+            unselectableFolderTypes: new Set()
+          }
+        ],
+        [
+          "ical",
+          {
+            unselectableFolderTypes: new Set()
+          }
+        ]
+      ]);
+      engineBackEndFacts = new Map([
+        [
+          "feed",
+          {
+            syncGranularity: "account"
+          }
+        ],
+        [
+          "gapi",
+          {
+            syncGranularity: "folder",
+            syncRangeInDays: [-1, 60]
+          }
+        ],
+        [
+          "mapi",
+          {
+            syncGranularity: "folder",
+            syncRangeInDays: [-1, 60]
+          }
+        ],
+        [
+          "ical",
+          {
+            syncGranularity: "account"
+          }
+        ]
+      ]);
+      engineFrontEndAccountMeta = new Map([
+        [
+          "feed",
+          {
+            engineFacts: {
+              syncGranularity: "account"
+            },
+            usesArchiveMetaphor: false
+          }
+        ],
+        [
+          "gapi",
+          {
+            engineFacts: {
+              syncGranularity: "folder",
+              oauth: {
+                scopes: [
+                  "https://www.googleapis.com/auth/gmail.readonly",
+                  "https://www.googleapis.com/auth/calendar.events.readonly",
+                  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+                  "https://www.googleapis.com/auth/documents.readonly",
+                  "https://www.googleapis.com/auth/drive.readonly"
+                ]
+              }
+            },
+            usesArchiveMetaphor: true
+          }
+        ],
+        [
+          "mapi",
+          {
+            engineFacts: {
+              syncGranularity: "folder",
+              oauth: {
+                scopes: [
+                  "offline_access",
+                  "https://graph.microsoft.com/Calendars.Read",
+                  "https://graph.microsoft.com/Mail.Read",
+                  "https://graph.microsoft.com/User.Read"
+                ]
+              }
+            },
+            usesArchiveMetaphor: true
+          }
+        ],
+        [
+          "ical",
+          {
+            engineFacts: {
+              syncGranularity: "account"
+            },
+            usesArchiveMetaphor: false
+          }
+        ]
+      ]);
+      engineFrontEndFolderMeta = new Map([
+        [
+          "feed",
+          {
+            syncGranularity: "account"
+          }
+        ],
+        [
+          "gapi",
+          {
+            syncGranularity: "folder"
+          }
+        ],
+        [
+          "mapi",
+          {
+            syncGranularity: "folder"
+          }
+        ],
+        [
+          "ical",
+          {
+            syncGranularity: "account"
+          }
+        ]
+      ]);
     }
   });
 
@@ -16099,6 +16517,10 @@ var WorkshopBackend = (() => {
       await this.universe.syncFolderList(msg.accountId, "bridge");
       replyFunc(null);
     },
+    async _promised_syncCleanUpAccount(msg, replyFunc) {
+      await this.universe.syncCleanUpAccount(msg.accountId, "bridge");
+      replyFunc(null);
+    },
     async _promised_modifyFolder(msg, replyFunc) {
       await this.universe.modifyFolder(msg.accountId, msg.mods, "bridge");
       replyFunc(null);
@@ -16249,6 +16671,11 @@ var WorkshopBackend = (() => {
     async _promised_refreshAllFoldersList(msg, replyFunc) {
       const allAccountIds = this.universe.getAllAccountIdsWithKind(msg.spec.kind);
       await Promise.all(allAccountIds.map((accountId) => this.universe.syncFolderList(accountId, "bridge")));
+      replyFunc(null);
+    },
+    async _promised_cleanupAllAccounts(msg, replyFunc) {
+      const allAccountIds = this.universe.getAllAccountIdsWithKind(msg.spec.kind);
+      await Promise.all(allAccountIds.map((accountId) => this.universe.syncCleanupAccount(accountId, "bridge")));
       replyFunc(null);
     },
     async _cmd_searchAllMessages(msg) {
@@ -16934,6 +17361,25 @@ var WorkshopBackend = (() => {
             req.onerror = handler;
           }
         }
+        if (requests.messagesByAccount) {
+          const messageStore = trans.objectStore(TBL_MESSAGES);
+          const requestsMap = requests.messagesByAccount;
+          for (const accountId of requestsMap.keys()) {
+            const accountIdBounds = getIdBounds(accountId);
+            const accountArrayItemPrefix = IDBKeyRange.bound([accountIdBounds.lower], [accountIdBounds.upper], true, true);
+            dbReqCount++;
+            const req = messageStore.getAll(accountArrayItemPrefix);
+            const handler = (event) => {
+              if (req.error) {
+                analyzeAndLogErrorEvent(event);
+              } else {
+                requestsMap.set(accountId, req.result);
+              }
+            };
+            req.onsuccess = handler;
+            req.onerror = handler;
+          }
+        }
         if (requests.messagesByConversation) {
           const messageStore = trans.objectStore(TBL_MESSAGES);
           const messageCache = this.messageCache;
@@ -17246,6 +17692,15 @@ var WorkshopBackend = (() => {
         }
       }
     }
+    _processMessageDeletion(trans, messages) {
+      const preStates = new Map();
+      const messagesMap = new Map();
+      for (const message of messages) {
+        preStates.set(message.id, message);
+        messagesMap.set(message.id, null);
+      }
+      this._processMessageMutations(trans, preStates, messagesMap);
+    }
     _processMessageMutations(trans, preStates, messages) {
       const store = trans.objectStore(TBL_MESSAGES);
       const idsStore = trans.objectStore(TBL_MSG_IDS_BY_FOLDER);
@@ -17535,6 +17990,9 @@ var WorkshopBackend = (() => {
         if (mutations.messages) {
           this._processMessageMutations(trans, ctx._preMutateStates.messages, mutations.messages);
         }
+        if (mutations.deletedMessages) {
+          this._processMessageDeletion(trans, mutations.deletedMessages);
+        }
       } else {
         mutations = {};
       }
@@ -17622,312 +18080,12 @@ var WorkshopBackend = (() => {
   // src/backend/universe/account_manager.js
   init_logic();
   init_id_conversions();
-
-  // src/backend/engine_glue.js
-  var configuratorModules = new Map([
-    [
-      "feed",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_configurator(), configurator_exports));
-        return mod.default;
-      }
-    ],
-    [
-      "gapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_configurator2(), configurator_exports2));
-        return mod.default;
-      }
-    ],
-    [
-      "mapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_configurator3(), configurator_exports3));
-        return mod.default;
-      }
-    ],
-    [
-      "testservice",
-      async function() {
-        return () => ({
-          userDetails: "",
-          credentials: "",
-          typeFields: {},
-          connInfoFields: {},
-          kind: "calendar"
-        });
-      }
-    ],
-    [
-      "ical",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_configurator4(), configurator_exports4));
-        return mod.default;
-      }
-    ]
-  ]);
-  var validatorModules = new Map([
-    [
-      "feed",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_validator(), validator_exports));
-        return mod.default;
-      }
-    ],
-    [
-      "gapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_validator2(), validator_exports2));
-        return mod.default;
-      }
-    ],
-    [
-      "mapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_validator3(), validator_exports3));
-        return mod.default;
-      }
-    ],
-    [
-      "testservice",
-      async function() {
-        return () => ({
-          engineFields: {
-            engine: "gapi",
-            engineData: {}
-          },
-          receiveProtoConn: null
-        });
-      }
-    ],
-    [
-      "ical",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_validator4(), validator_exports4));
-        return mod.default;
-      }
-    ]
-  ]);
-  var accountModules = new Map([
-    [
-      "feed",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_account3(), account_exports3));
-        return mod.default;
-      }
-    ],
-    [
-      "gapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_account(), account_exports));
-        return mod.default;
-      }
-    ],
-    [
-      "mapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_account2(), account_exports2));
-        return mod.default;
-      }
-    ],
-    [
-      "testservice",
-      async function() {
-        return class WorkshopTestService {
-          get __isTestService() {
-            return true;
-          }
-          toString() {
-            return "[WorkshopTestService testservice]";
-          }
-          async __acquire() {
-            return this;
-          }
-          __release() {
-          }
-          async checkAccount() {
-            return null;
-          }
-          shutdown() {
-          }
-        };
-      }
-    ],
-    [
-      "ical",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_account4(), account_exports4));
-        return mod.default;
-      }
-    ]
-  ]);
-  var engineTaskMappings = new Map([
-    [
-      "feed",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_feed_tasks(), feed_tasks_exports));
-        return mod.default;
-      }
-    ],
-    [
-      "gapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_gapi_tasks(), gapi_tasks_exports));
-        return mod.default;
-      }
-    ],
-    [
-      "mapi",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_mapi_tasks(), mapi_tasks_exports));
-        return mod.default;
-      }
-    ],
-    [
-      "ical",
-      async function() {
-        const mod = await Promise.resolve().then(() => (init_ical_tasks(), ical_tasks_exports));
-        return mod.default;
-      }
-    ]
-  ]);
-  var engineHacks = new Map([
-    [
-      "feed",
-      {
-        unselectableFolderTypes: new Set()
-      }
-    ],
-    [
-      "gapi",
-      {
-        unselectableFolderTypes: new Set()
-      }
-    ],
-    [
-      "mapi",
-      {
-        unselectableFolderTypes: new Set()
-      }
-    ],
-    [
-      "ical",
-      {
-        unselectableFolderTypes: new Set()
-      }
-    ]
-  ]);
-  var engineBackEndFacts = new Map([
-    [
-      "feed",
-      {
-        syncGranularity: "account"
-      }
-    ],
-    [
-      "gapi",
-      {
-        syncGranularity: "folder"
-      }
-    ],
-    [
-      "mapi",
-      {
-        syncGranularity: "folder"
-      }
-    ],
-    [
-      "ical",
-      {
-        syncGranularity: "account"
-      }
-    ]
-  ]);
-  var engineFrontEndAccountMeta = new Map([
-    [
-      "feed",
-      {
-        engineFacts: {
-          syncGranularity: "account"
-        },
-        usesArchiveMetaphor: false
-      }
-    ],
-    [
-      "gapi",
-      {
-        engineFacts: {
-          syncGranularity: "folder",
-          oauth: {
-            scopes: [
-              "https://www.googleapis.com/auth/gmail.readonly",
-              "https://www.googleapis.com/auth/calendar.events.readonly",
-              "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
-              "https://www.googleapis.com/auth/documents.readonly",
-              "https://www.googleapis.com/auth/drive.readonly"
-            ]
-          }
-        },
-        usesArchiveMetaphor: true
-      }
-    ],
-    [
-      "mapi",
-      {
-        engineFacts: {
-          syncGranularity: "folder",
-          oauth: {
-            scopes: [
-              "offline_access",
-              "https://graph.microsoft.com/Calendars.Read",
-              "https://graph.microsoft.com/Mail.Read",
-              "https://graph.microsoft.com/User.Read"
-            ]
-          }
-        },
-        usesArchiveMetaphor: true
-      }
-    ],
-    [
-      "ical",
-      {
-        engineFacts: {
-          syncGranularity: "account"
-        },
-        usesArchiveMetaphor: false
-      }
-    ]
-  ]);
-  var engineFrontEndFolderMeta = new Map([
-    [
-      "feed",
-      {
-        syncGranularity: "account"
-      }
-    ],
-    [
-      "gapi",
-      {
-        syncGranularity: "folder"
-      }
-    ],
-    [
-      "mapi",
-      {
-        syncGranularity: "folder"
-      }
-    ],
-    [
-      "ical",
-      {
-        syncGranularity: "account"
-      }
-    ]
-  ]);
+  init_engine_glue();
 
   // src/backend/db/accounts_toc.js
   var import_evt5 = __toModule(require_evt());
   init_logic();
+  init_engine_glue();
   init_util();
   function accountDefComparator(a, b) {
     if (!a.name) {
@@ -18025,6 +18183,7 @@ var WorkshopBackend = (() => {
   init_util();
   var import_evt6 = __toModule(require_evt());
   init_id_conversions();
+  init_engine_glue();
   init_folder_info_rep();
   var FOLDER_TYPE_TO_SORT_PRIORITY = {
     account: "a",
@@ -22547,6 +22706,9 @@ var WorkshopBackend = (() => {
     };
   }
 
+  // src/backend/tasks/account_create.js
+  init_engine_glue();
+
   // src/backend/default_prefs.js
   var DEFAULT_PREFS = {
     syncRange: "auto",
@@ -23404,9 +23566,9 @@ var WorkshopBackend = (() => {
         userDetails
       }, why);
     },
-    tryToCreateAccount(userDetails, domainInfo, why) {
+    async tryToCreateAccount(userDetails, domainInfo, why) {
       if (!this.online) {
-        return Promise.resolve({ error: "offline" });
+        return { error: "offline" };
       }
       if (domainInfo) {
         return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult({
@@ -23415,22 +23577,21 @@ var WorkshopBackend = (() => {
           domainInfo
         }, why);
       }
-      return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult({
+      const result = await this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult({
         type: "account_autoconfig",
         userDetails
-      }, why).then((result) => {
-        if (result.result !== "need-password") {
-          return {
-            error: result.result,
-            errorDetails: null
-          };
-        }
-        return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult({
-          type: "account_create",
-          userDetails,
-          domainInfo: result.configInfo
-        }, why);
-      });
+      }, why);
+      if (result.result !== "need-password") {
+        return {
+          error: result.result,
+          errorDetails: null
+        };
+      }
+      return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult({
+        type: "account_create",
+        userDetails,
+        domainInfo: result.configInfo
+      }, why);
     },
     deleteAccount(accountId, why) {
       return this.taskManager.scheduleTaskAndWaitForExecutedResult({
@@ -23438,19 +23599,18 @@ var WorkshopBackend = (() => {
         accountId
       }, why);
     },
-    recreateAccount(accountId, why) {
+    async recreateAccount(accountId, why) {
       let accountDef = this.accountManager.getAccountDefById(accountId);
-      this.taskManager.scheduleTaskAndWaitForExecutedResult({
+      await this.taskManager.scheduleTaskAndWaitForExecutedResult({
         type: "account_delete",
         accountId
-      }, why).then(() => {
-        this.taskManager.scheduleTasks([
-          {
-            type: "account_migrate",
-            accountDef
-          }
-        ], why);
-      });
+      }, why);
+      await this.taskManager.scheduleTasks([
+        {
+          type: "account_migrate",
+          accountDef
+        }
+      ], why);
     },
     saveAccountDef(accountDef, protoConn) {
       this.db.saveAccountDef(this.config, accountDef);
@@ -23536,6 +23696,12 @@ var WorkshopBackend = (() => {
         type: "sync_grow",
         accountId,
         folderId
+      }, why);
+    },
+    async syncCleanupAccount(accountId, why) {
+      await this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult({
+        type: "account_cleanup",
+        accountId
       }, why);
     },
     async syncRefreshMetadataForMessages(items, convId, why) {

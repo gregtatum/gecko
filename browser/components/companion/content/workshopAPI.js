@@ -185,6 +185,9 @@ if (workshopEnabled) {
       const spec = this.getCalendarEventQuery();
       let listView = workshopAPI.searchAllMessages(spec);
       listView.refresh();
+
+      workshopAPI.cleanupAllAccounts(spec);
+
       return listView;
     },
 
@@ -208,6 +211,7 @@ if (workshopEnabled) {
       const spec = this.getCalendarEventQuery();
       await workshopAPI.refreshAllFoldersList(spec);
       await workshopAPI.refreshAllMessages(spec);
+      await workshopAPI.cleanupAllAccounts(spec);
     },
 
     /**

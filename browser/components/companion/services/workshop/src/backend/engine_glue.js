@@ -342,12 +342,14 @@ export const engineBackEndFacts = new Map([
     "gapi",
     {
       syncGranularity: "folder",
+      syncRangeInDays: [-1, 60],
     },
   ],
   [
     "mapi",
     {
       syncGranularity: "folder",
+      syncRangeInDays: [-1, 60],
     },
   ],
   /*

@@ -15,6 +15,7 @@
  */
 
 import gapi_accountInit from "./tasks/account_init";
+import gapi_accountCleanup from "./tasks/account_cleanup";
 import gapi_syncFolderList from "./tasks/sync_folder_list";
 import gapi_syncConv from "./tasks/cal_sync_conv";
 import gapi_cal_syncRefresh from "./tasks/sync_refresh";
@@ -25,6 +26,7 @@ import { CommonFolderModify } from "../../tasks/folder_modify";
 import CommonIdentityModify from "../../tasks/identity_modify";
 
 export default [
+  gapi_accountCleanup,
   gapi_accountInit,
   gapi_syncFolderList,
 

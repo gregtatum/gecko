@@ -18,6 +18,7 @@ import logic from "logic";
 
 import { makeDaysAgo } from "shared/date";
 import { makeFolderNamespacedConvId } from "shared/id_conversions";
+import { engineBackEndFacts } from "../../engine_glue";
 
 /**
  * For details see `README.md`, but the core things to know are:
@@ -40,6 +41,8 @@ export default class MapiCalFolderSyncStateHelper {
   constructor(ctx, rawSyncState, accountId, folderId, why) {
     logic.defineScope(this, "MapiSyncState", { ctxId: ctx.id, why });
 
+    const [min, max] = engineBackEndFacts.get("gapi").syncRangeInDays;
+
     if (!rawSyncState) {
       logic(ctx, "creatingDefaultSyncState", {});
       rawSyncState = {
@@ -49,10 +52,10 @@ export default class MapiCalFolderSyncStateHelper {
         // values when trying to ask the server for things that have changed,
         // specifically via `updatedMin`.
         calUpdatedTS: null,
-        rangeOldestTS: makeDaysAgo(15),
+        rangeOldestTS: makeDaysAgo(-min),
         // For now we're syncing ~8 weeks into the future in order to provide
         // some buffer time to make sure the time window shifting is reliable.
-        rangeNewestTS: makeDaysAgo(-60),
+        rangeNewestTS: makeDaysAgo(-max),
       };
     }
 

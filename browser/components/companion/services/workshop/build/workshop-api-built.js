@@ -2200,6 +2200,12 @@ var MailAccount = class extends import_evt8.Emitter {
       accountId: this.id
     });
   }
+  async syncAccountCleanup() {
+    await this._api._sendPromisedRequest({
+      type: "syncAccountCleanup",
+      accountId: this.id
+    });
+  }
   async fillEmptyAccount() {
     await this._api._sendPromisedRequest({
       type: "fillEmptyAccount",
@@ -3612,6 +3618,12 @@ var MailAPI = class extends import_evt14.Emitter {
   refreshAllFoldersList(spec) {
     return this._sendPromisedRequest({
       type: "refreshAllFoldersList",
+      spec
+    });
+  }
+  cleanupAllAccounts(spec) {
+    return this._sendPromisedRequest({
+      type: "cleanupAllAccounts",
       spec
     });
   }

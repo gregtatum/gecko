@@ -296,6 +296,11 @@ MailBridge.prototype = {
     replyFunc(null);
   },
 
+  async _promised_syncCleanUpAccount(msg, replyFunc) {
+    await this.universe.syncCleanUpAccount(msg.accountId, "bridge");
+    replyFunc(null);
+  },
+
   async _promised_modifyFolder(msg, replyFunc) {
     await this.universe.modifyFolder(msg.accountId, msg.mods, "bridge");
     replyFunc(null);
@@ -524,6 +529,16 @@ MailBridge.prototype = {
     await Promise.all(
       allAccountIds.map(accountId =>
         this.universe.syncFolderList(accountId, "bridge")
+      )
+    );
+    replyFunc(null);
+  },
+
+  async _promised_cleanupAllAccounts(msg, replyFunc) {
+    const allAccountIds = this.universe.getAllAccountIdsWithKind(msg.spec.kind);
+    await Promise.all(
+      allAccountIds.map(accountId =>
+        this.universe.syncCleanupAccount(accountId, "bridge")
       )
     );
     replyFunc(null);

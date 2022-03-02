@@ -733,9 +733,9 @@ MailUniverse.prototype = {
    * accountId }. "error" will be null if there's no problem and everything else
    * may potentially be undefined.
    */
-  tryToCreateAccount(userDetails, domainInfo, why) {
+  async tryToCreateAccount(userDetails, domainInfo, why) {
     if (!this.online) {
-      return Promise.resolve({ error: "offline" });
+      return { error: "offline" };
     }
     // TODO: put back in detecting and refusing to create duplicate accounts.
 
@@ -751,33 +751,31 @@ MailUniverse.prototype = {
       );
     }
     // -- Attempt autoconfig then chain into creation
-    return this.taskManager
-      .scheduleNonPersistentTaskAndWaitForExecutedResult(
-        {
-          type: "account_autoconfig",
-          userDetails,
-        },
-        why
-      )
-      .then(result => {
-        // - If we got anything other than a need-password result, we failed.
-        // Convert the "result" to an error.
-        if (result.result !== "need-password") {
-          return {
-            error: result.result,
-            errorDetails: null,
-          };
-        }
-        // - Okay, try the account creation then.
-        return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
-          {
-            type: "account_create",
-            userDetails,
-            domainInfo: result.configInfo,
-          },
-          why
-        );
-      });
+    const result = await this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
+      {
+        type: "account_autoconfig",
+        userDetails,
+      },
+      why
+    );
+
+    // - If we got anything other than a need-password result, we failed.
+    // Convert the "result" to an error.
+    if (result.result !== "need-password") {
+      return {
+        error: result.result,
+        errorDetails: null,
+      };
+    }
+    // - Okay, try the account creation then.
+    return this.taskManager.scheduleNonPersistentTaskAndWaitForExecutedResult(
+      {
+        type: "account_create",
+        userDetails,
+        domainInfo: result.configInfo,
+      },
+      why
+    );
   },
 
   /**
@@ -795,7 +793,7 @@ MailUniverse.prototype = {
     );
   },
 
-  recreateAccount(accountId, why) {
+  async recreateAccount(accountId, why) {
     // Latch the accountDef now since it's going away.  It's safe to do this
     // synchronously since the accountDefs are loaded by startup and the
     // AccountManager provides immediate access to them.
@@ -804,25 +802,22 @@ MailUniverse.prototype = {
     // Because of how the migration logic works (verbatim reuse of the account
     // id), make sure we don't schedule the migration task until the deletion
     // task has been executed.
-    this.taskManager
-      .scheduleTaskAndWaitForExecutedResult(
+    await this.taskManager.scheduleTaskAndWaitForExecutedResult(
+      {
+        type: "account_delete",
+        accountId,
+      },
+      why
+    );
+    await this.taskManager.scheduleTasks(
+      [
         {
-          type: "account_delete",
-          accountId,
+          type: "account_migrate",
+          accountDef,
         },
-        why
-      )
-      .then(() => {
-        this.taskManager.scheduleTasks(
-          [
-            {
-              type: "account_migrate",
-              accountDef,
-            },
-          ],
-          why
-        );
-      });
+      ],
+      why
+    );
   },
 
   /**
@@ -991,6 +986,19 @@ MailUniverse.prototype = {
         type: "sync_grow",
         accountId,
         folderId,
+      },
+      why
+    );
+  },
+
+  /**
+   * Schedule a task to remove too old messages.
+   */
+  async syncCleanupAccount(accountId, why) {
+    await this.taskManager.scheduleNonPersistentTaskAndWaitForPlannedResult(
+      {
+        type: "account_cleanup",
+        accountId,
       },
       why
     );

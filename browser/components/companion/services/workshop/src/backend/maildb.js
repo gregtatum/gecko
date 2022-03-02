@@ -1112,6 +1112,32 @@ export class MailDB extends Emitter {
         }
       }
 
+      if (requests.messagesByAccount) {
+        const messageStore = trans.objectStore(TBL_MESSAGES);
+        const requestsMap = requests.messagesByAccount;
+
+        for (const accountId of requestsMap.keys()) {
+          const accountIdBounds = getIdBounds(accountId);
+          const accountArrayItemPrefix = IDBKeyRange.bound(
+            [accountIdBounds.lower],
+            [accountIdBounds.upper],
+            true,
+            true
+          );
+          dbReqCount++;
+          const req = messageStore.getAll(accountArrayItemPrefix);
+          const handler = event => {
+            if (req.error) {
+              analyzeAndLogErrorEvent(event);
+            } else {
+              requestsMap.set(accountId, req.result);
+            }
+          };
+          req.onsuccess = handler;
+          req.onerror = handler;
+        }
+      }
+
       // messagesByConversation requires special logic and can't use the helpers
       if (requests.messagesByConversation) {
         const messageStore = trans.objectStore(TBL_MESSAGES);
@@ -1650,6 +1676,16 @@ export class MailDB extends Emitter {
     }
   }
 
+  _processMessageDeletion(trans, messages) {
+    const preStates = new Map();
+    const messagesMap = new Map();
+    for (const message of messages) {
+      preStates.set(message.id, message);
+      messagesMap.set(message.id, null);
+    }
+    this._processMessageMutations(trans, preStates, messagesMap);
+  }
+
   /**
    * Process message modification and removal.
    */
@@ -2163,6 +2199,10 @@ export class MailDB extends Emitter {
           ctx._preMutateStates.messages,
           mutations.messages
         );
+      }
+
+      if (mutations.deletedMessages) {
+        this._processMessageDeletion(trans, mutations.deletedMessages);
       }
 
       // complexTaskStates are committed after merging in trigger side-effects.

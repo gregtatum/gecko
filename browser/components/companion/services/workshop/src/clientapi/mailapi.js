@@ -1237,6 +1237,13 @@ export class MailAPI extends Emitter {
     });
   }
 
+  cleanupAllAccounts(spec) {
+    return this._sendPromisedRequest({
+      type: "cleanupAllAccounts",
+      spec,
+    });
+  }
+
   /**
    * View the messages/events in a folder.  If the folder is a `calendar`
    * folder, than a `CalEventsListView` will be returned, otherwise a

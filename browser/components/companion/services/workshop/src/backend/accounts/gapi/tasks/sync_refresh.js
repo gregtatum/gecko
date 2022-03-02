@@ -184,7 +184,7 @@ export default TaskDefiner.defineAtMostOnceTask([
         //
         // That's a permanent failure on a single calendar; it's not clear that
         // this should generate a permanent problem for the account.
-        logic(ctx, "syncError", { error: e.message || error });
+        logic(ctx, "syncError", { error: e?.message || error });
 
         changes.atomicClobbers.folders.set(req.folderId, {
           lastAttemptedSyncAt: syncDate,
@@ -196,7 +196,7 @@ export default TaskDefiner.defineAtMostOnceTask([
             folderInfo.failedSyncsSinceLastSuccessfulSync + 1,
         });
 
-        if (e.problem) {
+        if (e?.problem) {
           changes.atomicClobbers.accounts = prepareChangeForProblems(
             account,
             e.problem

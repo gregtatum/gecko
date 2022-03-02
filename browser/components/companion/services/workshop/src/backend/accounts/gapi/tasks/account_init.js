@@ -139,7 +139,7 @@ export default TaskDefiner.defineSimpleTask([
           continue;
         }
         const results = allResults[i].value;
-        if (!results) {
+        if (!results || !results.items) {
           continue;
         }
         const folder = folders[i];

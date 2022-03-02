@@ -233,6 +233,16 @@ export class MailAccount extends Emitter {
   }
 
   /**
+   * Remove too old messages to avoid some long term memory leaks.
+   */
+  async syncAccountCleanup() {
+    await this._api._sendPromisedRequest({
+      type: "syncAccountCleanup",
+      accountId: this.id,
+    });
+  }
+
+  /**
    * Once the account has been created and the folder list created, this method
    * can be used in order to feed the folders with the events of the day.
    * It allows to fastly have something to view in the companion bar.
