@@ -51,8 +51,23 @@ view-group[top][hidden] {
   display: flex;
 }
 
-.view-groups-wrapper > view-group:not(:first-of-type) {
-  margin-inline-start: calc(var(--river-collapse-amount) * -1);
+@media (hover: hover) {
+  .view-groups-wrapper > view-group:not(:first-of-type) {
+    margin-inline-start: calc(var(--river-collapse-amount) * -1);
+  }
+
+  .view-groups-wrapper > view-group:hover::part(icon-container) {
+    scale: 1.25;
+  }
+
+  .view-groups-wrapper:hover > view-group:not(:hover) {
+    translate: calc(-1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper:not(:hover) > view-group[active] ~ view-group,
+  .view-groups-wrapper:hover > view-group:hover ~ view-group {
+    translate: calc(1 * var(--river-collapse-amount));
+  }
 }
 
 .view-groups-wrapper > view-group {
@@ -60,17 +75,6 @@ view-group[top][hidden] {
 }
 .view-groups-wrapper > view-group::part(icon-container) {
   transition: scale 100ms;
-}
-.view-groups-wrapper > view-group:hover::part(icon-container) {
-  scale: 1.25;
-}
-
-.view-groups-wrapper:hover > view-group:not(:hover) {
-  translate: calc(-1 * var(--river-collapse-amount));
-}
-.view-groups-wrapper:not(:hover) > view-group[active] ~ view-group,
-.view-groups-wrapper:hover > view-group:hover ~ view-group {
-  translate: calc(1 * var(--river-collapse-amount));
 }
 .view-groups-wrapper > view-group {
   /* The icons will clip through each other as they scale/translate. Giving them
