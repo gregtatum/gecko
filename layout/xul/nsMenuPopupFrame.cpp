@@ -525,6 +525,8 @@ void nsMenuPopupFrame::LayoutPopup(nsBoxLayoutState& aState,
     return;
   }
 
+  mSizedToPopup = aSizedToPopup;
+
   SchedulePaint();
 
   bool shouldPosition = [&] {
@@ -694,16 +696,13 @@ void nsMenuPopupFrame::LayoutPopup(nsBoxLayoutState& aState,
 
   if (needCallback && !mReflowCallbackData.mPosted) {
     pc->PresShell()->PostReflowCallback(this);
-    mReflowCallbackData.MarkPosted(aParentMenu, aSizedToPopup, openChanged);
+    mReflowCallbackData.MarkPosted(aParentMenu, openChanged);
   }
 }
 
 bool nsMenuPopupFrame::ReflowFinished() {
-  SetPopupPosition(mReflowCallbackData.mAnchor, false,
-                   mReflowCallbackData.mSizedToPopup);
-
+  SetPopupPosition(mReflowCallbackData.mAnchor, false, mSizedToPopup);
   mReflowCallbackData.Clear();
-
   return false;
 }
 
@@ -2412,10 +2411,16 @@ void nsMenuPopupFrame::MoveTo(const CSSPoint& aPos, bool aUpdateAttrs) {
     return;
   }
 
-  mAnchorType = MenuPopupAnchorType_Point;
   mScreenRect.MoveTo(appUnitsPos);
+  if (mAnchorType == MenuPopupAnchorType_Rect) {
+    // This ensures that the anchor width is still honored, to prevent it from
+    // changing spuriously.
+    mScreenRect.height = 0;
+  } else {
+    mAnchorType = MenuPopupAnchorType_Point;
+  }
 
-  SetPopupPosition(nullptr, true, false);
+  SetPopupPosition(nullptr, true, mSizedToPopup);
 
   RefPtr<Element> popup = mContent->AsElement();
   if (aUpdateAttrs && (popup->HasAttr(kNameSpaceID_None, nsGkAtoms::left) ||

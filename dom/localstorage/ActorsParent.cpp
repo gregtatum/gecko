@@ -1593,7 +1593,7 @@ class Datastore final
 
   void Clear(Database* aDatabase);
 
-  void BeginUpdateBatch(int64_t aSnapshotInitialUsage);
+  void BeginUpdateBatch(int64_t aSnapshotUsage);
 
   int64_t EndUpdateBatch(int64_t aSnapshotPeakUsage);
 
@@ -1956,12 +1956,12 @@ class Snapshot final : public PBackgroundLSSnapshotParent {
 
   void Init(nsTHashtable<nsStringHashKey>& aLoadedItems,
             nsTHashSet<nsString>&& aUnknownItems, uint32_t aNextLoadIndex,
-            uint32_t aTotalLength, int64_t aInitialUsage, int64_t aPeakUsage,
+            uint32_t aTotalLength, int64_t aUsage, int64_t aPeakUsage,
             LSSnapshot::LoadState aLoadState, bool aHasOtherProcessDatabases,
             bool aHasOtherProcessObservers) {
     AssertIsOnBackgroundThread();
-    MOZ_ASSERT(aInitialUsage >= 0);
-    MOZ_ASSERT(aPeakUsage >= aInitialUsage);
+    MOZ_ASSERT(aUsage >= 0);
+    MOZ_ASSERT(aPeakUsage >= aUsage);
     MOZ_ASSERT_IF(aLoadState != LSSnapshot::LoadState::AllOrderedItems,
                   aNextLoadIndex < aTotalLength);
     MOZ_ASSERT(mTotalLength == 0);
@@ -1972,7 +1972,7 @@ class Snapshot final : public PBackgroundLSSnapshotParent {
     mUnknownItems = std::move(aUnknownItems);
     mNextLoadIndex = aNextLoadIndex;
     mTotalLength = aTotalLength;
-    mUsage = aInitialUsage;
+    mUsage = aUsage;
     mPeakUsage = aPeakUsage;
     if (aLoadState == LSSnapshot::LoadState::AllOrderedKeys) {
       MOZ_ASSERT(mUnknownItems.Count() == 0);
@@ -3221,13 +3221,13 @@ PBackgroundLSDatabaseParent* AllocPBackgroundLSDatabaseParent(
   }
 
   if (NS_WARN_IF(!gPreparedDatastores)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return nullptr;
   }
 
   PreparedDatastore* preparedDatastore = gPreparedDatastores->Get(aDatastoreId);
   if (NS_WARN_IF(!preparedDatastore)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return nullptr;
   }
 
@@ -3296,13 +3296,13 @@ PBackgroundLSObserverParent* AllocPBackgroundLSObserverParent(
   }
 
   if (NS_WARN_IF(!gPreparedObsevers)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return nullptr;
   }
 
   RefPtr<Observer> observer = gPreparedObsevers->Get(aObserverId);
   if (NS_WARN_IF(!observer)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return nullptr;
   }
 
@@ -4963,15 +4963,15 @@ void Datastore::Clear(Database* aDatabase) {
   }
 }
 
-void Datastore::BeginUpdateBatch(int64_t aSnapshotInitialUsage) {
+void Datastore::BeginUpdateBatch(int64_t aSnapshotUsage) {
   AssertIsOnBackgroundThread();
-  // Don't assert `aSnapshotInitialUsage >= 0`, it can be negative when multiple
+  // Don't assert `aSnapshotUsage >= 0`, it can be negative when multiple
   // snapshots are operating in parallel.
   MOZ_ASSERT(!mClosed);
   MOZ_ASSERT(mUpdateBatchUsage == -1);
   MOZ_ASSERT(!mInUpdateBatch);
 
-  mUpdateBatchUsage = aSnapshotInitialUsage;
+  mUpdateBatchUsage = aSnapshotUsage;
 
   if (IsPersistent()) {
     mConnection->BeginUpdateBatch();
@@ -5495,7 +5495,7 @@ mozilla::ipc::IPCResult Database::RecvDeleteMe() {
 
   IProtocol* mgr = Manager();
   if (!PBackgroundLSDatabaseParent::Send__delete__(this)) {
-    return IPC_FAIL_NO_REASON(mgr);
+    return IPC_FAIL(mgr, "Send__delete__ failed!");
   }
   return IPC_OK();
 }
@@ -5504,8 +5504,7 @@ mozilla::ipc::IPCResult Database::RecvAllowToClose() {
   AssertIsOnBackgroundThread();
 
   if (NS_WARN_IF(mAllowedToClose)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mAllowedToClose already set!");
   }
 
   AllowToClose();
@@ -5520,12 +5519,12 @@ PBackgroundLSSnapshotParent* Database::AllocPBackgroundLSSnapshotParent(
   AssertIsOnBackgroundThread();
 
   if (NS_WARN_IF(aIncreasePeakUsage && aMinSize < 0)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return nullptr;
   }
 
   if (NS_WARN_IF(mAllowedToClose)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return nullptr;
   }
 
@@ -5561,9 +5560,9 @@ mozilla::ipc::IPCResult Database::RecvPBackgroundLSSnapshotConstructor(
 
   uint32_t totalLength = mDatastore->GetLength();
 
-  int64_t initialUsage = mDatastore->GetUsage();
+  int64_t usage = mDatastore->GetUsage();
 
-  int64_t peakUsage = initialUsage;
+  int64_t peakUsage = usage;
 
   if (aIncreasePeakUsage) {
     int64_t size =
@@ -5576,7 +5575,7 @@ mozilla::ipc::IPCResult Database::RecvPBackgroundLSSnapshotConstructor(
   bool hasOtherProcessObservers = mDatastore->HasOtherProcessObservers(this);
 
   snapshot->Init(loadedItems, std::move(unknownItems), nextLoadIndex,
-                 totalLength, initialUsage, peakUsage, loadState,
+                 totalLength, usage, peakUsage, loadState,
                  hasOtherProcessDatabases, hasOtherProcessObservers);
 
   RegisterSnapshot(snapshot);
@@ -5584,7 +5583,7 @@ mozilla::ipc::IPCResult Database::RecvPBackgroundLSSnapshotConstructor(
   aInitInfo->addKeyToUnknownItems() = addKeyToUnknownItems;
   aInitInfo->itemInfos() = std::move(itemInfos);
   aInitInfo->totalLength() = totalLength;
-  aInitInfo->initialUsage() = initialUsage;
+  aInitInfo->usage() = usage;
   aInitInfo->peakUsage() = peakUsage;
   aInitInfo->loadState() = loadState;
   aInitInfo->hasOtherProcessDatabases() = hasOtherProcessDatabases;
@@ -5692,7 +5691,7 @@ mozilla::ipc::IPCResult Snapshot::RecvDeleteMe() {
 
   IProtocol* mgr = Manager();
   if (!PBackgroundLSSnapshotParent::Send__delete__(this)) {
-    return IPC_FAIL_NO_REASON(mgr);
+    return IPC_FAIL(mgr, "Send__delete__ failed!");
   }
   return IPC_OK();
 }
@@ -5705,13 +5704,11 @@ mozilla::ipc::IPCResult Snapshot::RecvAsyncCheckpoint(
   MOZ_ASSERT(mPeakUsage >= mUsage);
 
   if (NS_WARN_IF(aWriteInfos.IsEmpty())) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "aWriteInfos is empty!");
   }
 
   if (NS_WARN_IF(mHasOtherProcessObservers)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mHasOtherProcessObservers already set!");
   }
 
   mDatastore->BeginUpdateBatch(mUsage);
@@ -5760,13 +5757,11 @@ mozilla::ipc::IPCResult Snapshot::RecvAsyncCheckpointAndNotify(
   MOZ_ASSERT(mPeakUsage >= mUsage);
 
   if (NS_WARN_IF(aWriteAndNotifyInfos.IsEmpty())) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "aWriteAndNotifyInfos is empty!");
   }
 
   if (NS_WARN_IF(!mHasOtherProcessObservers)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mHasOtherProcessObservers is not set!");
   }
 
   mDatastore->BeginUpdateBatch(mUsage);
@@ -5825,7 +5820,7 @@ mozilla::ipc::IPCResult Snapshot::RecvAsyncFinish() {
   AssertIsOnBackgroundThread();
 
   if (NS_WARN_IF(mFinishReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return IPC_FAIL(this, "Already finished");
   }
 
@@ -5838,7 +5833,7 @@ mozilla::ipc::IPCResult Snapshot::RecvSyncFinish() {
   AssertIsOnBackgroundThread();
 
   if (NS_WARN_IF(mFinishReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
+    MOZ_ASSERT_UNLESS_FUZZING(false);
     return IPC_FAIL(this, "Already finished");
   }
 
@@ -5851,23 +5846,19 @@ mozilla::ipc::IPCResult Snapshot::RecvLoaded() {
   AssertIsOnBackgroundThread();
 
   if (NS_WARN_IF(mFinishReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mFinishReceived already set!");
   }
 
   if (NS_WARN_IF(mLoadedReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadedReceived already set!");
   }
 
   if (NS_WARN_IF(mLoadedAllItems)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadedAllItems already set!");
   }
 
   if (NS_WARN_IF(mLoadKeysReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadKeysReceived already set!");
   }
 
   mLoadedReceived = true;
@@ -5890,23 +5881,23 @@ mozilla::ipc::IPCResult Snapshot::RecvLoadValueAndMoreItems(
   MOZ_ASSERT(mDatastore);
 
   if (NS_WARN_IF(mFinishReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mFinishReceived already set!");
   }
 
   if (NS_WARN_IF(mLoadedReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadedReceived already set!");
   }
 
   if (NS_WARN_IF(mLoadedAllItems)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadedAllItems already set!");
   }
 
-  if (mLoadedItems.Contains(aKey) || mUnknownItems.Contains(aKey)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+  if (mLoadedItems.Contains(aKey)) {
+    return IPC_FAIL(this, "mLoadedItems already contains aKey!");
+  }
+
+  if (mUnknownItems.Contains(aKey)) {
+    return IPC_FAIL(this, "mUnknownItems already contains aKey!");
   }
 
   if (auto entry = mValues.Lookup(aKey)) {
@@ -6031,18 +6022,15 @@ mozilla::ipc::IPCResult Snapshot::RecvLoadKeys(nsTArray<nsString>* aKeys) {
   MOZ_ASSERT(mDatastore);
 
   if (NS_WARN_IF(mFinishReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mFinishReceived already set!");
   }
 
   if (NS_WARN_IF(mLoadedReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadedReceived already set!");
   }
 
   if (NS_WARN_IF(mLoadKeysReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mLoadKeysReceived already set!");
   }
 
   mLoadKeysReceived = true;
@@ -6062,13 +6050,11 @@ mozilla::ipc::IPCResult Snapshot::RecvIncreasePeakUsage(const int64_t& aMinSize,
   MOZ_ASSERT(aSize);
 
   if (NS_WARN_IF(aMinSize <= 0)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "aMinSize not valid!");
   }
 
   if (NS_WARN_IF(mFinishReceived)) {
-    MOZ_CRASH_UNLESS_FUZZING();
-    return IPC_FAIL_NO_REASON(this);
+    return IPC_FAIL(this, "mFinishReceived already set!");
   }
 
   int64_t size =
@@ -6136,7 +6122,7 @@ mozilla::ipc::IPCResult Observer::RecvDeleteMe() {
 
   IProtocol* mgr = Manager();
   if (!PBackgroundLSObserverParent::Send__delete__(this)) {
-    return IPC_FAIL_NO_REASON(mgr);
+    return IPC_FAIL(mgr, "Send__delete__ failed!");
   }
   return IPC_OK();
 }
@@ -6510,7 +6496,7 @@ mozilla::ipc::IPCResult LSRequestBase::RecvCancel() {
 
   IProtocol* mgr = Manager();
   if (!PBackgroundLSRequestParent::Send__delete__(this, NS_ERROR_FAILURE)) {
-    return IPC_FAIL_NO_REASON(mgr);
+    return IPC_FAIL(mgr, "Send__delete__ failed!");
   }
 
   return IPC_OK();

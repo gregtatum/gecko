@@ -46,11 +46,6 @@ use webrender::{
 };
 use wr_malloc_size_of::MallocSizeOfOps;
 
-#[cfg(target_os = "macos")]
-use core_foundation::string::CFString;
-#[cfg(target_os = "macos")]
-use core_graphics::font::CGFont;
-
 extern "C" {
     #[cfg(target_os = "android")]
     fn __android_log_write(prio: c_int, tag: *const c_char, text: *const c_char) -> c_int;
@@ -1086,10 +1081,14 @@ pub struct WrThreadPool(Arc<rayon::ThreadPool>);
 
 #[no_mangle]
 pub extern "C" fn wr_thread_pool_new(low_priority: bool) -> *mut WrThreadPool {
-    // Clamp the number of workers between 1 and 8. We get diminishing returns
+    // Clamp the number of workers between 1 and 4/8. We get diminishing returns
     // with high worker counts and extra overhead because of rayon and font
     // management.
-    let num_threads = num_cpus::get().max(2).min(8);
+
+    // We clamp to 4 high priority threads because contention and memory usage
+    // make it not worth going higher
+    let max = if low_priority { 8 } else { 4 };
+    let num_threads = num_cpus::get().min(max);
 
     let priority_tag = if low_priority { "LP" } else { "" };
 
@@ -2298,20 +2297,9 @@ fn read_font_descriptor(bytes: &mut WrVecU8, index: u32) -> NativeFontHandle {
 #[cfg(target_os = "macos")]
 fn read_font_descriptor(bytes: &mut WrVecU8, _index: u32) -> NativeFontHandle {
     let chars = bytes.flush_into_vec();
-    let name = String::from_utf8(chars).unwrap();
-    let font = match CGFont::from_name(&CFString::new(&*name)) {
-        Ok(font) => font,
-        Err(_) => {
-            // If for some reason we failed to load a font descriptor, then our
-            // only options are to either abort or substitute a fallback font.
-            // It is preferable to use a fallback font instead so that rendering
-            // can at least still proceed in some fashion without erroring.
-            // Lucida Grande is the fallback font in Gecko, so use that here.
-            CGFont::from_name(&CFString::from_static_string("Lucida Grande"))
-                .expect("Failed reading font descriptor and could not load fallback font")
-        },
-    };
-    NativeFontHandle(font)
+    NativeFontHandle {
+        name: String::from_utf8(chars).unwrap()
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
