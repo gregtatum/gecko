@@ -7,6 +7,13 @@
 const PASSWORD_FIELDNAME_HINTS = ["current-password", "new-password"];
 const USERNAME_FIELDNAME_HINT = "username";
 
+XPCOMUtils.defineLazyServiceGetter(
+  this,
+  "imgTools",
+  "@mozilla.org/image/tools;1",
+  "imgITools"
+);
+
 function openContextMenu(aMessage, aBrowser, aActor) {
   if (BrowserHandler.kiosk) {
     // Don't display context menus in kiosk mode
@@ -183,6 +190,7 @@ class nsContextMenu {
       context = this.contentData.context;
       nsContextMenu.contentData = null;
     }
+    // console.log("!!! Context", context);
 
     this.shouldDisplay = context.shouldDisplay;
     this.timeStamp = context.timeStamp;
@@ -586,7 +594,9 @@ class nsContextMenu {
     this.showItem("context-copyimage-contents", this.onImage);
 
     // Copy image location depends on whether we're on an image.
-    this.showItem("context-copyimage", this.onImage || showBGImage);
+    this.showItem("context-imagetext", this.onImage || showBGImage);
+
+    this.showItem("context-copyimage-contents", this.onImage || showBGImage);
 
     // Send media URL (but not for canvas, since it's a big data: URL)
     this.showItem("context-sendimage", this.onImage || showBGImage);
@@ -2125,6 +2135,58 @@ class nsContextMenu {
       Ci.nsIClipboardHelper
     );
     clipboard.copyString(this.originalMediaURL);
+  }
+
+  getImageText() {
+    if (!Services.textRecognition?.isAvailable) {
+      throw new Error("OCR is not available.");
+    }
+
+    // TODO - Where is this .js file loaded? Is it in the parent or child process?
+    // I suspect this step could be done with a lot less work using a transferable.
+    // I couldn't get it working with a nsITransferable.
+
+    // Load the image.
+    const image = new Image();
+    image.onload = function() {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.height = this.naturalHeight;
+      canvas.width = this.naturalWidth;
+      ctx.drawImage(this, 0, 0);
+      const dataURL = canvas.toDataURL("image/png");
+      const base64Data = dataURL.replace("data:image/png;base64,", "");
+      const image = atob(base64Data);
+
+      const imageContainer = imgTools.decodeImageFromBuffer(
+        image,
+        image.length,
+        "image/png"
+      );
+      dump(`Finding text from the context menu\n`);
+      dump(`==================================\n`);
+      Services.textRecognition.findText(imageContainer);
+    };
+    image.src = this.originalMediaURL;
+
+    const url =
+      "data:text/plain;charset=utf-8," +
+      "Right now this is just the alt text of the image, but the API could " +
+      "return the full source:\n " + encodeURIComponent(this.imageInfo?.imageText);
+
+    const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
+      Ci.nsIClipboardHelper
+    );
+    clipboard.copyString(url);
+
+    let referrerInfo = this.contentData.referrerInfo;
+    let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
+
+    // TODO - How do you force this to take focus?
+    openLinkIn(url, "tab", {
+      referrerInfo,
+      triggeringPrincipal: systemPrincipal,
+    });
   }
 
   drmLearnMore(aEvent) {

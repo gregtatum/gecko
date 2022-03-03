@@ -12,6 +12,7 @@ with Files("*TextInput*"):
     BUG_COMPONENT = ("Core", "DOM: UI Events & Focus Handling")
 
 XPIDL_SOURCES += [
+    "nsITextRecognition.idl",
     "nsPIWidgetCocoa.idl",
 ]
 
@@ -66,6 +67,7 @@ UNIFIED_SOURCES += [
     "nsSound.mm",
     "nsStandaloneNativeMenu.mm",
     "nsSystemStatusBarCocoa.mm",
+    "nsTextRecognition.mm",
     "nsToolkit.mm",
     "nsTouchBar.mm",
     "nsTouchBarInput.mm",
@@ -175,6 +177,7 @@ RESOURCE_FILES.__setattr__(
 
 OS_LIBS += [
     "-framework IOSurface",
+    "-framework Vision",
 ]
 
 SPHINX_TREES["/widget/cocoa"] = "docs"
