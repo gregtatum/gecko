@@ -7,6 +7,13 @@
 const PASSWORD_FIELDNAME_HINTS = ["current-password", "new-password"];
 const USERNAME_FIELDNAME_HINT = "username";
 
+XPCOMUtils.defineLazyServiceGetter(
+  this,
+  "imgTools",
+  "@mozilla.org/image/tools;1",
+  "imgITools"
+);
+
 function openContextMenu(aMessage, aBrowser, aActor) {
   if (BrowserHandler.kiosk) {
     // Don't display context menus in kiosk mode
@@ -183,7 +190,7 @@ class nsContextMenu {
       context = this.contentData.context;
       nsContextMenu.contentData = null;
     }
-    console.log("!!! Context", context);
+    // console.log("!!! Context", context);
 
     this.shouldDisplay = context.shouldDisplay;
     this.timeStamp = context.timeStamp;
@@ -2131,6 +2138,32 @@ class nsContextMenu {
   }
 
   getImageText() {
+    if (!Services.ocr?.isAvailable) {
+      throw new Error("OCR is not available.");
+    }
+
+    const image = new Image();
+    image.onload = function() {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.height = this.naturalHeight;
+      canvas.width = this.naturalWidth;
+      ctx.drawImage(this, 0, 0);
+      const dataURL = canvas.toDataURL("image/png");
+      const base64Data = dataURL.replace("data:image/png;base64,", "");
+      const image = atob(base64Data);
+
+      const imageContainer = imgTools.decodeImageFromBuffer(
+        image,
+        image.length,
+        "image/png"
+      );
+      console.log(`!!! Processing text:`);
+      Services.ocr.findText(imageContainer);
+      console.log(`!!! Done processing text`);
+    };
+    image.src = this.originalMediaURL;
+
     const url =
       "data:text/plain;charset=utf-8," +
       encodeURIComponent(this.imageInfo?.imageText);
@@ -2146,7 +2179,6 @@ class nsContextMenu {
       triggeringPrincipal: systemPrincipal,
     });
 
-    console.log(this);
   }
 
   drmLearnMore(aEvent) {

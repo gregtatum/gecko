@@ -4,6 +4,8 @@
 
 #include "nsISupports.idl"
 
+interface imgIContainer;
+
 /**
  * An interface to query the OS's OCR service, if available.
  */
@@ -11,4 +13,6 @@
 interface nsIOCR : nsISupports
 {
   readonly attribute boolean isAvailable;
+
+  void findText (in imgIContainer aTransferable);
 };

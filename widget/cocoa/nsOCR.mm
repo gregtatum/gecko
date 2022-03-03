@@ -22,36 +22,40 @@ nsOCR::GetIsAvailable(bool* aIsAvailable) {
   return NS_OK;
 }
 
-nsresult foo(nsITransferable* aTransferable) {
+NS_IMETHODIMP
+nsOCR::FindText(imgIContainer* aImage) {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
+  MOZ_ASSERT(aImage, "Expected a non-null aImage");
 
-  nsTArray<nsCString> flavors;
-  nsresult rv = aTransferable->FlavorsTransferableCanExport(flavors);
-  NS_ENSURE_SUCCESS(rv, rv);
+  // nsTArray<nsCString> flavors;
+  // nsresult rv = aTransferable->FlavorsTransferableCanExport(flavors);
+  // NS_ENSURE_SUCCESS(rv, rv);
 
-  // The transferable should only send one image in.
-  if (flavors.Length() != 0) {
-    NS_WARNING("Only one image is expected in the transferable.");
-    return NS_ERROR_INVALID_ARG;
-  }
-  nsCString& flavorStr = flavors[0];
-  if (!nsClipboard::IsImageType(flavorStr)) {
-    NS_WARNING("The transferable was not sent an image.");
-    return NS_ERROR_INVALID_ARG;
-  }
+  // // The transferable should only send one image in.
+  // if (flavors.Length() != 1) {
+  //   NS_WARNING("Only one image is expected in the transferable.");
+  //   return NS_ERROR_INVALID_ARG;
+  // }
+  // nsCString& flavorStr = flavors[0];
+  // if (!nsClipboard::IsImageType(flavorStr)) {
+  //   NS_WARNING("The transferable was not sent an image.");
+  //   return NS_ERROR_INVALID_ARG;
+  // }
 
-  nsCOMPtr<nsISupports> transferSupports;
-  rv = aTransferable->GetTransferData(flavorStr.get(), getter_AddRefs(transferSupports));
-  NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<imgIContainer> image(do_QueryInterface(transferSupports));
-  if (!image) {
-    NS_WARNING("Image isn't an imgIContainer in transferable.");
-    return NS_ERROR_FAILURE;
-  }
+  // nsCOMPtr<nsISupports> transferSupports;
+  // rv = aTransferable->GetTransferData(flavorStr.get(), getter_AddRefs(transferSupports));
+  // NS_ENSURE_SUCCESS(rv, rv);
+
+  // nsCOMPtr<imgIContainer> image(do_QueryInterface(transferSupports));
+  // if (!image) {
+  //   NS_WARNING("Image isn't an imgIContainer in transferable.");
+  //   return NS_ERROR_FAILURE;
+  // }
+
 
   RefPtr<SourceSurface> surface =
-    image->GetFrame(imgIContainer::FRAME_CURRENT,
+    aImage->GetFrame(imgIContainer::FRAME_CURRENT,
                     imgIContainer::FLAG_SYNC_DECODE | imgIContainer::FLAG_ASYNC_NOTIFY);
 
   if (!surface) {
@@ -59,7 +63,7 @@ nsresult foo(nsITransferable* aTransferable) {
   }
 
   CGImageRef imageRef = NULL;
-  rv = nsCocoaUtils::CreateCGImageFromSurface(surface, &imageRef);
+  nsresult rv = nsCocoaUtils::CreateCGImageFromSurface(surface, &imageRef);
   if (NS_FAILED(rv) || !imageRef) {
     return NS_ERROR_FAILURE;
   }
@@ -70,11 +74,10 @@ nsresult foo(nsITransferable* aTransferable) {
     [[VNRecognizeTextRequest alloc] initWithCompletionHandler:^(VNRequest * _Nonnull request, NSError * _Nullable error) {
       NSArray<VNRecognizedTextObservation *> *observations = request.results;
       NSMutableArray<NSString *> *results = [NSMutableArray arrayWithCapacity:observations.count];
-
       [observations enumerateObjectsUsingBlock:^(VNRecognizedTextObservation * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         // Requests the n top candidates for a recognized text string.
         VNRecognizedText *topCandidate = [obj topCandidates:1].firstObject;
-        printf("Found text: %s", [topCandidate.string UTF8String]);
+        printf("Found text: %s\n", [topCandidate.string UTF8String]);
       }];
     }];
 
@@ -84,6 +87,7 @@ nsresult foo(nsITransferable* aTransferable) {
 
   VNImageRequestHandler *requestHandler =
     [[VNImageRequestHandler alloc] initWithCGImage:imageRef options:@{}];
+
 
   dispatch_async(queue, ^{
     NSError *error = nil;
@@ -95,4 +99,5 @@ nsresult foo(nsITransferable* aTransferable) {
   });
 
   NS_OBJC_END_TRY_IGNORE_BLOCK
+  return NS_OK;
 }
