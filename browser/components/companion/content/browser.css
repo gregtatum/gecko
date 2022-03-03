@@ -647,7 +647,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 
 #site-info-title {
   font-size: 14px;
-  margin: 0;
+  margin: 6px 0;
   padding-block: 6px;
   border: none;
   flex: 1;
