@@ -16,10 +16,10 @@
   --urlbar-border-radius: 20px;
   --urlbar-min-height: 40px;
   --urlbarbutton-border-radius: 4px;
+  --urlbar-margin-inline: 8px;
   --focus-outline-color: var(--colors-border-focus);
   --toolbarbutton-hover-background: var(--colors-warm-hover-02);
   --toolbarbutton-active-background: var(--colors-warm-pressed-02);
-  --urlbar-margin-inline: 8px;
 
   /* pinebuild-specific variables: */
   --companion-width: 340px;
@@ -33,6 +33,10 @@
      a curve. We may want to define a different curve than ease-out though. */
   --pinebuild-flow-reset-transition-timing: ease-out;
   --pinebuild-pre-flow-reset-background-color: #8d77b4;
+  /* I tried overriding this w/o pinebuild prefix, but it seems to be reset
+   * to 64px later. I'll investigate at a later date */
+  --pinebuild-urlbar-toolbar-height: 40px;
+  --pinebuild-urlbar-toolbar-breakout-width: 720px;
 }
 
 @media (prefers-contrast: more) {
@@ -51,7 +55,7 @@
 }
 
 #urlbar[breakout][breakout-extend] {
-  --urlbar-border-radius: 12px;
+  --urlbar-border-radius: 24px;
 }
 
 :root:not([chromehidden~="toolbar"]) {
@@ -272,16 +276,16 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 #urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box {
   /* Ensure that when the user clicks on the contents of this box, it focuses the url bar */
   pointer-events: none;
-  padding-inline: var(--urlbar-icon-padding);
   border-radius: var(--urlbar-icon-border-radius);
   fill: currentColor;
   fill-opacity: var(--urlbar-icon-fill-opacity);
-  margin-inline-end: var(--identity-box-margin-inline);
 }
 
 #urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box #search-icon {
   -moz-context-properties: fill, fill-opacity;
   background: url(chrome://global/skin/icons/search-glass.svg) no-repeat center;
+  width: 32px;
+  height: 32px;
 }
 
 @supports not -moz-bool-pref("browser.companion.tabdebugging") {
@@ -300,7 +304,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 }
 
 [urlbar-exceeds-toolbar-bounds=true] #urlbar-container {
-  max-width: 750px;
+  max-width: 720px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -312,6 +316,11 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 [urlbar-exceeds-toolbar-bounds=true] #pinebuild-toolbar {
   width: 270px;
   overflow: hidden;
+}
+
+/* Hide the set aside session icon when the search menu's open */
+[urlbar-exceeds-toolbar-bounds=true] #session-setaside-button {
+  visibility: hidden;
 }
 
 #pinebuild-toolbar {
@@ -731,19 +740,13 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 }
 
 #urlbar[breakout][breakout-extend][breakout-extend-animate] #urlbar-page-overlay {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 #urlbar[breakout][breakout-extend] {
-  /* -6px because we want to leave a bit of space between the top of the toolbar
-     and the Urlbar. */
-  top: calc((var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2 - 8px);
-  /* We shift the Urlbar right by the same size as its top border-radius.
-     If we didn't, when the Urlbar overlaps the AVM, we'd show a notch of
-     toolbar in the space between the Urlbar's rounded border and the edge of
-     its outer box. */
-  left: calc(-1 * var(--urlbar-border-radius));
-  width: calc(100% + var(--urlbar-border-radius));
+  left: 8px;
+  top: 8px;
+  max-width: var(--pinebuild-urlbar-toolbar-breakout-width);
 }
 
 #urlbar-background {
@@ -755,7 +758,6 @@ body:not([flow-reset]) #urlbar-background {
 }
 
 body:not([flow-reset]) #urlbar[focused]:not([suppress-focus-border]) > #urlbar-background {
-  background-color: var(--toolbar-field-background-color);
   outline-color: var(--colors-border-focus);
 }
 
@@ -763,9 +765,26 @@ body:not([flow-reset]) #urlbar:hover #urlbar-background {
   box-shadow: -1px 2px 6px 0px rgba(132, 106, 65, 0.13);
 }
 
+body:not([flow-reset]) #urlbar[open] > .urlbarView > .urlbarView-body-outer > .urlbarView-body-inner {
+  border: unset;
+}
+
+/* Search breakout menu */
+
 #urlbar[breakout][breakout-extend] > #urlbar-input-container {
-  /* Reduce the amount of blank space above and below the Urlbar by half. */
-  height: calc(var(--urlbar-toolbar-height) - (var(--urlbar-toolbar-height) - var(--urlbar-height)) / 2);
+  height: var(--pinebuild-urlbar-toolbar-height);
+  border-radius: 24px;
+  margin: 8px;
+}
+
+body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-background {
+  background-color: var(--colors-lightgrey-20);
+}
+
+body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-input-container {
+  width: calc(100% - 16px);
+  border: 1px solid var(--colors-lavender-07);
+  background-color: var(--urlbar-breakout-background);
 }
 
 /* Since we want topSitesButtons to have no margin, but it can't be positioned
@@ -775,7 +794,56 @@ body:not([flow-reset]) #urlbar:hover #urlbar-background {
 }
 
 .urlbarView-row[dynamicType=topSitesButtons] {
+  background-color: unset;
   margin-block-start: calc(-1 * var(--urlbar-view-padding-block));
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row,
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
+  box-shadow: var(--quickactions-topsites-outset-shadow);
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner {
+  height: 70px;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row {
+  align-items: start;
+  flex-direction: column;
+  border: 0.5px solid var(--colors-quickactions-topsites-border);
+  border-radius: 12px;
+  background-color: var(--colors-quickactions-topsites-background);
+  box-sizing: border-box;
+  height: 66px;
+  padding: 8px 10px;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon {
+  width: unset;
+  height: unset;
+  border: unset;
+  border-radius: unset;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon-img {
+  width: 12px;
+  height: 12px;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-title {
+  padding-inline-start: 6px;
+  font-size: 11px;
+  color: var(--colors-secondarygrey);
+}
+
+.urlbarView-row[dynamicType=quickActions][label]::before {
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-label {
+  font-size: 12px;
+  color: var(--colors-primarygrey);
 }
 
 body[flow-reset] {
@@ -787,7 +855,7 @@ body[flow-reset] #urlbar[breakout],
 body[flow-reset] #urlbar[breakout][breakout-extend] {
   display: block;
   position: fixed;
-  top: calc((var(--urlbar-toolbar-height) + 35%));
+  top: calc((var(--pinebuild-urlbar-toolbar-height) + 35%));
   left: var(--companion-width);
   right: 0;
   width: -moz-available;

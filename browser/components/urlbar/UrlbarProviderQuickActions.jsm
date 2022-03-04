@@ -15,6 +15,10 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   DevToolsShim: "chrome://devtools-startup/content/DevToolsShim.jsm",
@@ -263,6 +267,53 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
 
     let children = [...Array(MAX_RESULTS).keys()].map(i => {
+      // reorder child nodes for Pro Client
+      if (AppConstants.PINEBUILD) {
+        return {
+          name: `button-${i}`,
+          tag: "span",
+          attributes: {
+            class: "urlbarView-quickaction-row",
+            role: "button",
+          },
+          children: [
+            {
+              name: `badge-${i}`,
+              tag: "label",
+              attributes: { class: "urlbarView-badge", hidden: "true" },
+            },
+            {
+              name: `div-${i}`,
+              tag: "div",
+              attributes: { flex: "1" },
+              children: [
+                {
+                  name: `label-${i}`,
+                  tag: "span",
+                  attributes: { class: "urlbarView-label" },
+                },
+              ],
+            },
+            {
+              name: `icon-${i}`,
+              tag: "div",
+              attributes: { class: "urlbarView-favicon" },
+              children: [
+                {
+                  name: `image-${i}`,
+                  tag: "img",
+                  attributes: { class: "urlbarView-favicon-img" },
+                },
+                {
+                  name: `title-${i}`,
+                  tag: "span",
+                  attributes: { class: "urlbarView-title" },
+                },
+              ],
+            },
+          ],
+        };
+      }
       return {
         name: `button-${i}`,
         tag: "span",

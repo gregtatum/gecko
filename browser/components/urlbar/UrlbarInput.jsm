@@ -1948,10 +1948,22 @@ class UrlbarInput {
           "--urlbar-container-height",
           px(getBoundsWithoutFlushing(this.textbox.parentNode).height)
         );
-        this.textbox.style.setProperty(
-          "--urlbar-height",
-          px(getBoundsWithoutFlushing(this.textbox).height)
-        );
+
+        // This var causes clipping of the search icon/placeholder text in
+        // Pro Client's breakout search URL bar. Adding a bit of extra space
+        // to compensate.
+        if (AppConstants.PINEBUILD) {
+          this.textbox.style.setProperty(
+            "--urlbar-height",
+            px(getBoundsWithoutFlushing(this.textbox).height + 2)
+          );
+        } else {
+          this.textbox.style.setProperty(
+            "--urlbar-height",
+            px(getBoundsWithoutFlushing(this.textbox).height)
+          );
+        }
+
         this.textbox.style.setProperty(
           "--urlbar-toolbar-height",
           px(getBoundsWithoutFlushing(this._toolbar).height)
