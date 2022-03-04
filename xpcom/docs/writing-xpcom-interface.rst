@@ -1,4 +1,3 @@
-.. _writing_xpcom_interface:
 Tutorial for Writing a New XPCOM Interface
 ==========================================
 
@@ -192,6 +191,7 @@ Registering the component
 At this point, the component should be correctly written, but it's not registered with the component system. In order to this, we'll need to create or modify the :code:`components.conf`.
 
 .. code:: bash
+
     touch path/to/components.conf
 
 
@@ -268,7 +268,8 @@ At this point the full :code:`moz.build` file should look like:
         "nsComponentName.cpp",
     ]
 
-This completes the implementation of a basic XPCOM Interface using C++. The component should be available via the `Browser Console`_ or other chrome contexts.
+The component should be available via the `Browser Console`_ or other chrome contexts. This completes the implementation of a basic XPCOM Interface using C++.
+
 
 .. code:: javascript
 
