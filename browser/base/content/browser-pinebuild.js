@@ -31,6 +31,7 @@ var PineBuildUIUtils = {
 
   delayedStartup() {
     window.top.gHistoryCarousel.init();
+    this.setupKeyboardOverrides();
   },
 
   copy(anchor, string) {
@@ -39,6 +40,25 @@ var PineBuildUIUtils = {
     );
     clipboard.copyString(string);
     anchor.ownerGlobal.ConfirmationHint.show(anchor, "copyURL");
+  },
+
+  setupKeyboardOverrides() {
+    let backKey = document.getElementById("goBackKb");
+    let fwdKey = document.getElementById("goForwardKb");
+    let backKey2 = document.getElementById("goBackKb2");
+    let fwdKey2 = document.getElementById("goForwardKb2");
+
+    for (let keyEl of [backKey, fwdKey, backKey2, fwdKey2]) {
+      if (!keyEl) {
+        continue;
+      }
+
+      keyEl.removeAttribute("command");
+      keyEl.setAttribute(
+        "oncommand",
+        "gHistoryCarousel.showHistoryCarousel(true);"
+      );
+    }
   },
 
   handleEvent(event) {
