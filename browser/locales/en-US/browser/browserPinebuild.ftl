@@ -33,6 +33,9 @@ last-session-saved = Last session saved in Companion
 page-action-menu-secure-page = This website is using a secure connection.
 page-action-menu-reader-view = This page is in Reader View.
 
+# This label should be written in all capital letters if your locale supports them.
+active-view-manager-overflow-panel-title = RECENT
+
 active-view-manager-context-menu-toggle-pinning =
   .label = { $isPinned ->
      [true] Unpin
