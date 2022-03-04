@@ -15,6 +15,7 @@ XPCOMUtils.defineLazyGetter(this, "gHistoryCarousel", () => {
 var PineBuildUIUtils = {
   init() {
     window.addEventListener("deactivate", this);
+    Services.els.addSystemEventListener(document, "keydown", this, false);
 
     window.addEventListener(
       "unload",
@@ -46,6 +47,40 @@ var PineBuildUIUtils = {
         if (!window.closed) {
           SessionManager.queueSessionSave(window);
         }
+        break;
+      }
+      case "keydown": {
+        this.onKeyDown(event);
+        break;
+      }
+    }
+  },
+
+  onKeyDown(event) {
+    let action = ShortcutUtils.getSystemActionForEvent(event);
+    switch (action) {
+      case ShortcutUtils.CYCLE_TABS: {
+        if (event.shiftKey) {
+          gGlobalHistory.goBack();
+        } else {
+          gGlobalHistory.goForward();
+        }
+        event.preventDefault();
+        break;
+      }
+      case ShortcutUtils.CLOSE_TAB: {
+        gGlobalHistory.closeCurrentView();
+        event.preventDefault();
+        break;
+      }
+      case ShortcutUtils.NEXT_TAB: {
+        gGlobalHistory.goForward();
+        event.preventDefault();
+        break;
+      }
+      case ShortcutUtils.PREVIOUS_TAB: {
+        gGlobalHistory.goBack();
+        event.preventDefault();
         break;
       }
     }
