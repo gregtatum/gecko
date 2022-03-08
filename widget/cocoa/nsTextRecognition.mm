@@ -9,6 +9,7 @@
 #include "nsClipboard.h"
 #include "nsCocoaUtils.h"
 #include "nsITransferable.h"
+#include "mozilla/dom/Promise.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -16,16 +17,23 @@ using mozilla::gfx::SourceSurface;
 
 NS_IMPL_ISUPPORTS(nsTextRecognition, nsITextRecognition)
 
+NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE(nsTextRecognition, mGlobal)
+
+NS_IMPL_CYCLE_COLLECTION_ROOT_NATIVE(nsTextRecognition, AddRef)
+NS_IMPL_CYCLE_COLLECTION_UNROOT_NATIVE(nsTextRecognition, Release)
+
 NS_IMETHODIMP
 nsTextRecognition::GetIsAvailable(bool* aIsAvailable) {
   *aIsAvailable = true;
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsTextRecognition::FindText(imgIContainer* aImage) {
+
+already_AddRefed<dom::Promise>
+nsTextRecognition::FindText(imgIContainer* aImage, ErrorResult& aRv) {
   // TODO - What's the ownership of this imgIContainer?
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
+  RefPtr<dom::Promise> promise = dom::Promise::Create(mGlobal, aRv);
   if (@available(macOS 10.15, *)) {
     if (!aImage) {
       NS_WARNING("FindText received a null imgIContainer*");

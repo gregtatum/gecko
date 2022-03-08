@@ -5,16 +5,23 @@
 #ifndef mozilla_widget_nsTextRecognition__
 #define mozilla_widget_nsTextRecognition__
 
+#include "nsCOMPtr.h"
+#include "nsWrapperCache.h"
 #include "nsITextRecognition.h"
+
+class nsIGlobalObject;
 
 namespace mozilla::widget {
 
-class nsTextRecognition final : public nsITextRecognition {
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSITEXTRECOGNITION
+class nsTextRecognition final : public nsWrapperCache {
+  NS_INLINE_DECL_CYCLE_COLLECTING_NATIVE_REFCOUNTING(nsTextRecognition)
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_NATIVE_CLASS(nsTextRecognition)
 
  public:
-  nsTextRecognition() = default;
+  explicit nsTextRecognition(nsIGlobalObject* aGlobal = nullptr);
+
+ protected:
+  nsCOMPtr<nsIGlobalObject> mGlobal;
 
  private:
   ~nsTextRecognition() = default;

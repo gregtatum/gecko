@@ -14,5 +14,5 @@ interface nsITextRecognition : nsISupports
 {
   readonly attribute boolean isAvailable;
 
-  void findText (in imgIContainer aTransferable);
+  Promise<sequence<TextObservation>> findText (in imgIContainer aTransferable);
 };
