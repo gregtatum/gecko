@@ -213,32 +213,6 @@ if (workshopEnabled) {
       await workshopAPI.refreshAllMessages(spec);
       await workshopAPI.cleanupAllAccounts(spec);
     },
-
-    /**
-     * Get the number of unread emails for the given account.
-     * @param {String} accountType
-     * @returns A positive integer or zero if the value exists or -1.
-     */
-    getUnreadMessageCount(accountType) {
-      const account = this.getAccountByType(accountType);
-      const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
-        "inbox-summary"
-      );
-      return inboxSummaryFolder?.unreadMessageCount ?? -1;
-    },
-
-    /**
-     * Get the web link for the inbox.
-     * @param {String} accountType
-     * @returns A string or null.
-     */
-    getInboxUrl(accountType) {
-      const account = this.getAccountByType(accountType);
-      const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
-        "inbox-summary"
-      );
-      return inboxSummaryFolder?.webLink || null;
-    },
   };
 }
 

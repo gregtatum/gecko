@@ -70,13 +70,53 @@ const WorkshopParentAccess = {
       );
     }
   },
+  /**
+   * Get the workshop account of the given type.
+   * @param {String} accountType
+   * @returns A workshop account, or undefined if no account is found.
+   */
   async getAccountByType(accountType) {
     await this.init();
-
     await this.workshopAPI.promisedLatestOnce("accountsLoaded");
-
     return this.workshopAPI.accounts?.items.find(
       account => this._serviceByAPI[account.type] === accountType
     );
+  },
+  /**
+   * Determine if there is a connected account of the given type.
+   * @param {String} accountType
+   * @returns {boolean}
+   */
+  async hasConnectedAccount(accountType) {
+    await this.init();
+    const accounts = await this.getAccountByType(accountType);
+    return !!accounts;
+  },
+  /**
+   * Get the number of unread emails for the given account.
+   * @param {String} accountType
+   * @returns A positive integer or zero.
+   */
+  async getUnreadMessageCount(accountType) {
+    await this.init();
+    const account = await this.getAccountByType(accountType);
+    const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
+      "inbox-summary"
+    );
+    return inboxSummaryFolder?.unreadMessageCount ?? 0;
+  },
+
+  /**
+   * Get the web link for the inbox.
+   * @param {String} accountType
+   * @returns A string or null.
+   */
+  async getInboxUrl(accountType) {
+    await this.init();
+    const account = await this.getAccountByType(accountType);
+    const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
+      "inbox-summary"
+    );
+    return inboxSummaryFolder?.webLink || null;
   },
 };

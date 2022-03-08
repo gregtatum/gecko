@@ -667,10 +667,12 @@ class CompanionHelper {
     }
 
     const MOCK_SERVICE = "testservice";
-    await this.loginToTestService(MOCK_SERVICE);
-    registerCleanupFunction(async () => {
-      await this.logoutFromTestService(MOCK_SERVICE);
-    });
+    if (!OnlineServices.hasService(MOCK_SERVICE)) {
+      await this.loginToTestService(MOCK_SERVICE);
+      registerCleanupFunction(async () => {
+        await this.logoutFromTestService(MOCK_SERVICE);
+      });
+    }
     const service = OnlineServices.getServices(MOCK_SERVICE)[0];
     return { name: service.getAccountAddress() };
   }

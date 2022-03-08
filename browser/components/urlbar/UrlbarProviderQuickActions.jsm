@@ -39,7 +39,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
-const hideExtra = () => !extraActions;
+const extraActionsEnabled = () => extraActions;
 
 const GOOGLE_ACTION_URLS = {
   email: "https://mail.google.com/mail/u/?authuser={email}",
@@ -67,6 +67,36 @@ const formatGoogleURL = (type, fallbackURL, email = "") => {
   );
 };
 
+const shouldShowEmailResult = (accountType, isDefault) => {
+  if (isDefault) {
+    return hasUnreadMessages(accountType);
+  }
+
+  return hasConnectedAccount(accountType);
+};
+
+const hasUnreadMessages = accountType => {
+  if (WorkshopParentAccess.workshopEnabled) {
+    return WorkshopParentAccess.getUnreadMessageCount(accountType);
+  }
+
+  if (Cu.isInAutomation) {
+    accountType = "testservice";
+  }
+  return OnlineServices.getMailCount(accountType);
+};
+
+const hasConnectedAccount = accountType => {
+  if (WorkshopParentAccess.workshopEnabled) {
+    return WorkshopParentAccess.hasConnectedAccount(accountType);
+  }
+
+  if (Cu.isInAutomation) {
+    accountType = "testservice";
+  }
+  return OnlineServices.hasService(accountType);
+};
+
 // These prefs are relative to the `browser.urlbar` branch.
 const ENABLED_PREF = "suggest.quickactions";
 const DYNAMIC_TYPE_NAME = "quickActions";
@@ -81,15 +111,12 @@ const COMMANDS = {
     title: "Gmail",
     serviceType: "google",
     hide(isDefault) {
-      if (isDefault) {
-        return !OnlineServices.getMailCount("google");
-      }
-      return !OnlineServices.hasService("google");
+      return shouldShowEmailResult("google", isDefault);
     },
     showBadge() {
-      return !!OnlineServices.getMailCount("google");
+      return hasUnreadMessages("google");
     },
-    callback: email => {
+    callback: ({ email } = {}) => {
       const url = formatGoogleURL("email", "https://gmail.com", email);
       UrlbarUtils.openUrl(url);
     },
@@ -99,19 +126,15 @@ const COMMANDS = {
     icon: "chrome://browser/content/urlbar/quickactions/outlook.svg",
     label: "Go to Inbox",
     serviceType: "microsoft",
-    callback: () => {
-      let inboxURL = OnlineServices.getInboxURL("microsoft");
-      UrlbarUtils.openUrl(inboxURL);
-    },
     title: "Outlook",
     hide(isDefault) {
-      if (isDefault) {
-        return !OnlineServices.getMailCount("microsoft");
-      }
-      return !OnlineServices.hasService("microsoft");
+      return shouldShowEmailResult("microsoft", isDefault);
     },
     showBadge() {
-      return !!OnlineServices.getMailCount("microsoft");
+      return hasUnreadMessages("microsoft");
+    },
+    callback: ({ inboxUrl } = {}) => {
+      UrlbarUtils.openUrl(inboxUrl);
     },
   },
   createmeeting: {
@@ -120,7 +143,7 @@ const COMMANDS = {
     label: "Schedule a meeting",
     title: "Google Calendar",
     serviceType: "google",
-    callback: email => {
+    callback: ({ email } = {}) => {
       const url = formatGoogleURL("meeting", "https://meeting.new", email);
       UrlbarUtils.openUrl(url);
     },
@@ -131,7 +154,7 @@ const COMMANDS = {
     label: "Create Google slides",
     title: "Google Slides",
     serviceType: "google",
-    callback: email => {
+    callback: ({ email } = {}) => {
       const url = formatGoogleURL("slides", "https://slides.new", email);
       UrlbarUtils.openUrl(url);
     },
@@ -142,7 +165,7 @@ const COMMANDS = {
     label: "Create a Google Sheet",
     title: "Google Sheets",
     serviceType: "google",
-    callback: email => {
+    callback: ({ email } = {}) => {
       const url = formatGoogleURL("sheets", "https://sheets.new", email);
       UrlbarUtils.openUrl(url);
     },
@@ -153,7 +176,7 @@ const COMMANDS = {
     label: "Create a Google doc",
     title: "Google Docs",
     serviceType: "google",
-    callback: email => {
+    callback: ({ email } = {}) => {
       const url = formatGoogleURL("docs", "https://docs.new", email);
       UrlbarUtils.openUrl(url);
     },
@@ -162,7 +185,7 @@ const COMMANDS = {
     commands: ["screenshot"],
     icon: "chrome://browser/skin/screenshot.svg",
     label: "Take a Screenshot",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     callback: () => {
       Services.obs.notifyObservers(null, "menuitem-screenshot-extension");
     },
@@ -172,7 +195,7 @@ const COMMANDS = {
     commands: ["preferences"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     url: "about:preferences",
     title: "Pro Client",
   },
@@ -180,7 +203,7 @@ const COMMANDS = {
     commands: ["downloads"],
     icon: "chrome://browser/skin/downloads/downloads.svg",
     label: "Open Downloads",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     url: "about:downloads",
     title: "Pro Client",
   },
@@ -188,7 +211,7 @@ const COMMANDS = {
     commands: ["privacy", "private"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences (Privacy & Security)",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     callback: "about:preferences#privacy",
     title: "Pro Client",
   },
@@ -196,7 +219,7 @@ const COMMANDS = {
     commands: ["view-source"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "View Source",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     callback: () => {
       let window = BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
@@ -208,7 +231,7 @@ const COMMANDS = {
     commands: ["inspector"],
     icon: "chrome://devtools/skin/images/tool-inspector.svg",
     label: "Open Inspector",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     callback: () => {
       // TODO: This is supposed to be called with an element to start inspecting.
       DevToolsShim.inspectNode(
@@ -224,7 +247,7 @@ const COMMANDS = {
     commands: ["restart"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Restart Firefox",
-    hide: hideExtra,
+    hide: extraActionsEnabled,
     callback: restartBrowser,
     title: "Pro Client",
   },
@@ -261,6 +284,7 @@ function restartBrowser() {
 class ProviderQuickActionsBase extends UrlbarProvider {
   // A tree that maps keywords to a result.
   _tree = new KeywordTree();
+  _serviceData = {};
 
   constructor() {
     super();
@@ -425,29 +449,38 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     if (!results) {
       return;
     }
-    results = results.filter(key => {
-      let data = COMMANDS?.[key];
-      if (data && data.hasOwnProperty("hide")) {
-        return !data.hide(!queryContext.searchString);
-      }
-      return true;
-    });
+
+    results = await Promise.all(
+      results.map(async key => {
+        let data = COMMANDS?.[key];
+        let result = { key, isShown: true };
+        if (data && data.hasOwnProperty("showBadge")) {
+          result.showBadge = await data.showBadge();
+        }
+        if (data && data.hasOwnProperty("hide")) {
+          result.isShown = await data.hide(!queryContext.searchString);
+        }
+        if (data && data.hasOwnProperty("serviceType")) {
+          if (data.serviceType === "google") {
+            result.accountAddress = await this.getAccountAddress("google");
+          } else if (data.serviceType === "microsoft") {
+            result.inboxUrl = await this.getInboxUrl("microsoft");
+          }
+        }
+        return result;
+      })
+    ).then(res => res.filter(({ isShown }) => isShown));
+
     if (!results.length) {
       return;
     }
     results.length =
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
 
-    let accountAddress;
-    if (results.some(key => COMMANDS?.[key]?.serviceType === "google")) {
-      accountAddress = await this.getAccountAddress("google");
-    }
-
     const result = new UrlbarResult(
       UrlbarUtils.RESULT_TYPE.DYNAMIC,
       UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
-        accountAddress,
         results,
         dynamicType: DYNAMIC_TYPE_NAME,
       }
@@ -457,14 +490,33 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     addCallback(this, result);
   }
 
+  async getInboxUrl(accountType) {
+    const serviceData = this._serviceData[accountType];
+    if (serviceData?.inboxUrl) {
+      return serviceData.inboxUrl;
+    }
+
+    let inboxUrl;
+    if (WorkshopParentAccess.workshopEnabled) {
+      inboxUrl = await WorkshopParentAccess.getInboxUrl(accountType);
+      this.setServiceData(accountType, "inboxUrl", inboxUrl);
+      return inboxUrl;
+    }
+
+    inboxUrl = OnlineServices.getInboxURL(accountType);
+    this.setServiceData(accountType, "inboxUrl", inboxUrl);
+    return inboxUrl;
+  }
+
   async getAccountAddress(accountType) {
-    if (this.accountAddress) {
-      return this.accountAddress;
+    const serviceData = this._serviceData[accountType];
+    if (serviceData?.accountAddress) {
+      return serviceData.accountAddress;
     }
 
     if (WorkshopParentAccess.workshopEnabled) {
       const account = await WorkshopParentAccess.getAccountByType(accountType);
-      this.accountAddress = account?.name;
+      this.setServiceData(accountType, "accountAddress", account?.name);
       return account?.name || "";
     }
 
@@ -476,28 +528,36 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     if (OnlineServices.hasService(accountType)) {
       const service = OnlineServices.getServices(accountType)[0];
       const email = service.getAccountAddress();
-      this.accountAddress = email;
+      this.setServiceData(accountType, "accountAddress", email);
       return email || "";
     }
 
     return "";
   }
 
+  setServiceData(accountType, prop, val) {
+    if (!this._serviceData[accountType]) {
+      this._serviceData[accountType] = {};
+    }
+    this._serviceData[accountType][prop] = val;
+  }
+
   getViewUpdate(result) {
     let viewUpdate = {};
     [...Array(MAX_RESULTS).keys()].forEach(i => {
-      let key = result.payload.results?.[i];
+      let item = result.payload.results?.[i];
+      let hidden = !item;
+      let key = item?.key;
       let data = COMMANDS?.[key] || { icon: "", label: " " };
       let buttonAttributes = { "data-key": key };
-      let hidden = !result.payload.results?.[i];
       buttonAttributes.hidden = hidden ? true : null;
       buttonAttributes.role = hidden ? "" : "button";
       viewUpdate[`button-${i}`] = { attributes: buttonAttributes };
       viewUpdate[`image-${i}`] = { attributes: { src: data.icon } };
       viewUpdate[`label-${i}`] = { textContent: data.label };
       viewUpdate[`title-${i}`] = { textContent: data.title };
-      if (data.hasOwnProperty("showBadge")) {
-        let showBadge = data.showBadge();
+      if (item?.hasOwnProperty("showBadge")) {
+        let showBadge = item.showBadge;
         if (showBadge) {
           viewUpdate[`badge-${i}`] = {
             attributes: { hidden: null },
@@ -510,6 +570,10 @@ class ProviderQuickActionsBase extends UrlbarProvider {
             attributes: { hidden: true },
           };
         }
+      } else {
+        viewUpdate[`badge-${i}`] = {
+          attributes: { hidden: true },
+        };
       }
     });
     return viewUpdate;
@@ -527,17 +591,21 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     }
   }
 
-  async pickResult(resultPicked, itemPicked) {
-    let result = COMMANDS[itemPicked.dataset.key];
-    let email = resultPicked.payload.accountAddress;
+  pickResult(result, itemPicked) {
+    let key = itemPicked.dataset.key;
+    let command = COMMANDS[itemPicked.dataset.key];
+    let data = result.payload.results.find(item => item.key === key);
 
-    if (result.url) {
-      UrlbarUtils.openUrl(result.url);
+    if (command.url) {
+      UrlbarUtils.openUrl(command.url);
     } else {
-      result.callback(email);
+      command.callback({
+        email: data?.accountAddress,
+        inboxUrl: data?.inboxUrl,
+      });
     }
 
-    this.accountAddress = null;
+    this._serviceData = {};
   }
 
   /**
