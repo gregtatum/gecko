@@ -5,14 +5,14 @@
 :host {
   display: flex;
   align-items: center;
-  --light-bg-color: var(--colors-cafe-02);
-  background-color: var(--colors-cafe-02);
+  --light-bg-color: var(--colors-cafe-20);
+  background-color: var(--colors-cafe-20);
   border-radius: 25px;
   box-shadow: var(--inset-shadow-cafe);
 }
 
 :host:-moz-lwtheme-brighttext {
-  --light-bg-color: var(--colors-cafe-02);
+  --light-bg-color: var(--colors-cafe-20);
 }
 
 #river {

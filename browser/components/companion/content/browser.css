@@ -25,8 +25,8 @@
   --companion-width: 340px;
   --companion-min-width: 300px;
   --companion-max-width: 600px;
-  --pinebuild-global-background: var(--colors-cafe-01);
-  --pinebuild-highlight-color: var(--colors-lavender-05);
+  --pinebuild-global-background: var(--colors-cafe-10);
+  --pinebuild-highlight-color: var(--colors-lavender-50);
   --pinebuild-highlight-text-color: #562ea6;
   --pinebuild-flow-reset-transition-duration: 1s;
   /* I tried using --animation-timing-function for this, but it was too steep
@@ -50,7 +50,7 @@
   /* Awkwardly, we need the more specific selector here in order to ensure we
      override it. */
   :root:not(:-moz-lwtheme) {
-    --toolbar-field-background-color: var(--colors-cafe-02);
+    --toolbar-field-background-color: var(--colors-cafe-20);
   }
 }
 
@@ -165,9 +165,9 @@ body:not([browser-ready]) .browserStack > browser {
 }
 
 :root[companion] body:not([flow-reset]) .browserStack > browser {
-  border-inline-start: 1px solid var(--colors-cafe-04);
+  border-inline-start: 1px solid var(--colors-cafe-40);
   border-start-start-radius: 8px;
-  border-top: 1px solid var(--colors-cafe-04);
+  border-top: 1px solid var(--colors-cafe-40);
 }
 
 :root[inDOMFullscreen] body:not([flow-reset]) .browserStack > browser {
@@ -414,7 +414,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 :root[companion] #companion-sidebar-button {
   background: url("chrome://browser/skin/companion-selected.svg") no-repeat center;
   -moz-context-properties: fill;
-  fill: var(--colors-lavender-07);
+  fill: var(--colors-lavender-70);
 }
 
 #companion-sidebar-button:hover,
@@ -783,7 +783,7 @@ body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-background {
 
 body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-input-container {
   width: calc(100% - 16px);
-  border: 1px solid var(--colors-lavender-07);
+  border: 1px solid var(--colors-lavender-70);
   background-color: var(--urlbar-breakout-background);
 }
 
@@ -938,7 +938,7 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   background: url("chrome://browser/skin/companion-selected.svg") no-repeat center;
   -moz-context-properties: fill;
   fill: #ffffff;
-  background-color: var(--colors-lavender-06);
+  background-color: var(--colors-lavender-60);
 }
 
 :root[companion] body[flow-reset] #companion-sidebar-button:hover,
@@ -954,7 +954,7 @@ body[flow-reset] #PanelUI-menu-button[open] .toolbarbutton-badge-stack {
 
 
 companion-manager {
-  background: var(--colors-cafe-02);
+  background: var(--colors-cafe-20);
   border-radius: 16px;
   margin: 0 16px 16px;
 }
