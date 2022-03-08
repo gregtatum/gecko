@@ -682,6 +682,10 @@ class nsWindow final : public nsBaseWidget {
    */
   bool mWaitingForMoveToRectCallback : 1;
 
+  // Set when move/resize action is initiated by move-to-rect operation.
+  // Don't use move-to-rect again in such case.
+  bool mUpdatedByMoveToRectCallback : 1;
+
   // Whether we've configured default clear color already.
   bool mConfiguredClearColor : 1;
   // Whether we've received a non-blank paint in which case we can reset the
@@ -786,9 +790,6 @@ class nsWindow final : public nsBaseWidget {
 
   // mRelativePopupPosition is popup position calculated against parent window.
   GdkPoint mRelativePopupPosition{};
-
-  // mRelativePopupOffset is used by context menus.
-  GdkPoint mRelativePopupOffset{};
 
   // Toplevel window (first element) of linked list of Wayland popups. It's null
   // if we're the toplevel.

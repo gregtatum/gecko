@@ -282,7 +282,7 @@ const MESSAGES = () => [
           label: {
             string_id: "spotlight-total-cookie-protection-body",
           },
-          size: "20px",
+          size: "18px",
         },
         primary: {
           label: {
@@ -314,6 +314,108 @@ const MESSAGES = () => [
     trigger: { id: "defaultBrowserCheck" },
   },
   {
+    id: "BETTER_INTERNET_GLOBAL_ROLLOUT",
+    groups: ["eco"],
+    content: {
+      template: "logo-and-content",
+      logo: {
+        imageURL:
+          "chrome://activity-stream/content/data/content/assets/remote/mountain.svg",
+        size: "115px",
+      },
+      body: {
+        title: {
+          label: {
+            string_id: "spotlight-better-internet-header",
+          },
+          size: "22px",
+        },
+        text: {
+          label: {
+            string_id: "spotlight-better-internet-body",
+          },
+          size: "16px",
+        },
+        primary: {
+          label: {
+            string_id: "spotlight-pin-primary-button",
+          },
+          action: {
+            type: "PIN_FIREFOX_TO_TASKBAR",
+          },
+        },
+        secondary: {
+          label: {
+            string_id: "spotlight-pin-secondary-button",
+          },
+          action: {
+            type: "CANCEL",
+          },
+        },
+      },
+    },
+    trigger: {
+      id: "defaultBrowserCheck",
+    },
+    template: "spotlight",
+    frequency: {
+      lifetime: 1,
+    },
+    targeting:
+      "userMonthlyActivity|length >= 1 && userMonthlyActivity|length <= 6 && doesAppNeedPin",
+  },
+  {
+    id: "PEACE_OF_MIND_GLOBAL_ROLLOUT",
+    groups: ["eco"],
+    content: {
+      template: "logo-and-content",
+      logo: {
+        imageURL:
+          "chrome://activity-stream/content/data/content/assets/remote/umbrella.png",
+        size: "115px",
+      },
+      body: {
+        title: {
+          label: {
+            string_id: "spotlight-peace-mind-header",
+          },
+          size: "22px",
+        },
+        text: {
+          label: {
+            string_id: "spotlight-peace-mind-body",
+          },
+          size: "15px",
+        },
+        primary: {
+          label: {
+            string_id: "spotlight-pin-primary-button",
+          },
+          action: {
+            type: "PIN_FIREFOX_TO_TASKBAR",
+          },
+        },
+        secondary: {
+          label: {
+            string_id: "spotlight-pin-secondary-button",
+          },
+          action: {
+            type: "CANCEL",
+          },
+        },
+      },
+    },
+    trigger: {
+      id: "defaultBrowserCheck",
+    },
+    template: "spotlight",
+    frequency: {
+      lifetime: 1,
+    },
+    targeting:
+      "userMonthlyActivity|length >= 7 && userMonthlyActivity|length <= 13 && doesAppNeedPin",
+  },
+  {
     id: "MULTISTAGE_SPOTLIGHT_MESSAGE",
     groups: ["panel-test-provider"],
     template: "spotlight",
@@ -328,6 +430,7 @@ const MESSAGES = () => [
             title: {
               string_id: "mr1-onboarding-pin-header",
             },
+            logo: {},
             hero_text: {
               string_id: "mr1-welcome-screen-hero-text",
             },
@@ -359,9 +462,14 @@ const MESSAGES = () => [
           id: "AW_SET_DEFAULT",
           order: 1,
           content: {
+            logo: {
+              imageURL: "chrome://browser/content/logos/vpn-promo-logo.svg",
+              height: "100px",
+            },
             title: {
               string_id: "mr1-onboarding-default-header",
             },
+            title_style: "slim larger",
             subtitle: {
               string_id: "mr1-onboarding-default-subtitle",
             },
@@ -372,6 +480,62 @@ const MESSAGES = () => [
               action: {
                 navigate: true,
                 type: "SET_DEFAULT_BROWSER",
+              },
+            },
+            secondary_button: {
+              label: {
+                string_id: "mr1-onboarding-set-default-secondary-button-label",
+              },
+              action: {
+                navigate: true,
+              },
+            },
+          },
+        },
+        {
+          id: "BACKGROUND_IMAGE",
+          order: 2,
+          content: {
+            background:
+              "url(chrome://activity-stream/content/data/content/assets/proton-bkg.avif) no-repeat center/cover",
+            text_color: "light",
+            logo: {},
+            title: "A dialog with a background image",
+            subtitle: "The text color is configurable",
+            primary_button: {
+              label: "Continue",
+              action: {
+                navigate: true,
+              },
+            },
+            secondary_button: {
+              label: {
+                string_id: "mr1-onboarding-set-default-secondary-button-label",
+              },
+              action: {
+                navigate: true,
+              },
+            },
+          },
+        },
+        {
+          id: "BACKGROUND_COLOR",
+          order: 3,
+          content: {
+            background: "white",
+            logo: {
+              height: "200px",
+              imageURL: "",
+            },
+            title: "Peace of mind.",
+            title_style: "fancy slim larger",
+            text_color: "dark",
+            subtitle:
+              "For the best privacy protection, keep Firefox in easy reach.",
+            primary_button: {
+              label: "Continue",
+              action: {
+                navigate: true,
               },
             },
             secondary_button: {

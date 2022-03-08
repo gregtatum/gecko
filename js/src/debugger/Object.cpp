@@ -197,6 +197,7 @@ struct MOZ_STACK_CLASS DebuggerObject::CallData {
   bool getPropertyMethod();
   bool setPropertyMethod();
   bool getOwnPropertyNamesMethod();
+  bool getOwnPropertyNamesLengthMethod();
   bool getOwnPropertySymbolsMethod();
   bool getOwnPrivatePropertiesMethod();
   bool getOwnPropertyDescriptorMethod();
@@ -779,6 +780,17 @@ bool DebuggerObject::CallData::getOwnPropertyNamesMethod() {
   }
 
   args.rval().setObject(*obj);
+  return true;
+}
+
+bool DebuggerObject::CallData::getOwnPropertyNamesLengthMethod() {
+  size_t ownPropertiesLength;
+  if (!DebuggerObject::getOwnPropertyNamesLength(cx, object,
+                                                 &ownPropertiesLength)) {
+    return false;
+  }
+
+  args.rval().setNumber(ownPropertiesLength);
   return true;
 }
 
@@ -1496,6 +1508,8 @@ const JSFunctionSpec DebuggerObject::methods_[] = {
     JS_DEBUG_FN("getProperty", getPropertyMethod, 0),
     JS_DEBUG_FN("setProperty", setPropertyMethod, 0),
     JS_DEBUG_FN("getOwnPropertyNames", getOwnPropertyNamesMethod, 0),
+    JS_DEBUG_FN("getOwnPropertyNamesLength", getOwnPropertyNamesLengthMethod,
+                0),
     JS_DEBUG_FN("getOwnPropertySymbols", getOwnPropertySymbolsMethod, 0),
     JS_DEBUG_FN("getOwnPrivateProperties", getOwnPrivatePropertiesMethod, 0),
     JS_DEBUG_FN("getOwnPropertyDescriptor", getOwnPropertyDescriptorMethod, 1),
@@ -1965,6 +1979,27 @@ bool DebuggerObject::getOwnPropertyNames(JSContext* cx,
     cx->markId(result[i]);
   }
 
+  return true;
+}
+
+/* static */
+bool DebuggerObject::getOwnPropertyNamesLength(JSContext* cx,
+                                               HandleDebuggerObject object,
+                                               size_t* result) {
+  RootedObject referent(cx, object->referent());
+
+  RootedIdVector ids(cx);
+  {
+    Maybe<AutoRealm> ar;
+    EnterDebuggeeObjectRealm(cx, ar, referent);
+
+    ErrorCopier ec(ar);
+    if (!GetPropertyKeys(cx, referent, JSITER_OWNONLY | JSITER_HIDDEN, &ids)) {
+      return false;
+    }
+  }
+
+  *result = ids.length();
   return true;
 }
 
