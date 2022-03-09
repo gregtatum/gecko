@@ -784,6 +784,13 @@ DCSurfaceVideo::DCSurfaceVideo(bool aIsOpaque, DCLayerTree* aDCLayerTree)
     : DCSurface(wr::DeviceIntSize{}, wr::DeviceIntPoint{}, aIsOpaque,
                 aDCLayerTree) {}
 
+bool IsYUVSwapChainFormat(DXGI_FORMAT aFormat) {
+  if (aFormat == DXGI_FORMAT_NV12 || aFormat == DXGI_FORMAT_YUY2) {
+    return true;
+  }
+  return false;
+}
+
 void DCSurfaceVideo::AttachExternalImage(wr::ExternalImageId aExternalImage) {
   RenderTextureHost* texture =
       RenderThread::Get()->GetRenderTexture(aExternalImage);
@@ -806,7 +813,22 @@ void DCSurfaceVideo::AttachExternalImage(wr::ExternalImageId aExternalImage) {
   gfx::IntSize size = texture->AsRenderDXGITextureHost()->GetSize(0);
   if (!mVideoSwapChain || mSwapChainSize != size) {
     ReleaseDecodeSwapChainResources();
-    CreateVideoSwapChain(texture);
+    auto swapChainFormat = GetSwapChainFormat();
+    bool useYUVSwapChain = IsYUVSwapChainFormat(swapChainFormat);
+    if (useYUVSwapChain) {
+      // Tries to create YUV SwapChain
+      CreateVideoSwapChain(texture);
+      if (!mVideoSwapChain) {
+        mFailedYuvSwapChain = true;
+        ReleaseDecodeSwapChainResources();
+
+        gfxCriticalNote << "Fallback to RGB SwapChain";
+      }
+    }
+    // Tries to create RGB SwapChain
+    if (!mVideoSwapChain) {
+      CreateVideoSwapChain(texture);
+    }
   }
 
   if (!mVideoSwapChain) {
@@ -819,25 +841,29 @@ void DCSurfaceVideo::AttachExternalImage(wr::ExternalImageId aExternalImage) {
   mVisual->SetContent(mVideoSwapChain);
 
   if (!CallVideoProcessorBlt(texture)) {
+    auto swapChainFormat = GetSwapChainFormat();
+    bool useYUVSwapChain = IsYUVSwapChainFormat(swapChainFormat);
+    if (useYUVSwapChain) {
+      mFailedYuvSwapChain = true;
+      ReleaseDecodeSwapChainResources();
+      return;
+    }
     RenderThread::Get()->NotifyWebRenderError(
         wr::WebRenderError::VIDEO_OVERLAY);
     return;
   }
 
-  mVideoSwapChain->Present(0, 0);
+  HRESULT hr;
+  hr = mVideoSwapChain->Present(0, 0);
+  if (FAILED(hr) && hr != DXGI_STATUS_OCCLUDED) {
+    gfxCriticalNoteOnce << "video Present failed: " << gfx::hexa(hr);
+  }
+
   mPrevTexture = texture;
 }
 
-bool IsYUVSwapChainFormat(DXGI_FORMAT aFormat) {
-  if (aFormat == DXGI_FORMAT_NV12 || aFormat == DXGI_FORMAT_YUY2) {
-    return true;
-  }
-  return false;
-}
-
 DXGI_FORMAT DCSurfaceVideo::GetSwapChainFormat() {
-  if (mFailedToCreateYuvSwapChain ||
-      !mDCLayerTree->SupportsHardwareOverlays()) {
+  if (mFailedYuvSwapChain || !mDCLayerTree->SupportsHardwareOverlays()) {
     return DXGI_FORMAT_B8G8R8A8_UNORM;
   }
   return mDCLayerTree->GetOverlayFormatForSDR();
@@ -888,7 +914,6 @@ bool DCSurfaceVideo::CreateVideoSwapChain(RenderTextureHost* aTexture) {
       getter_AddRefs(mVideoSwapChain));
 
   if (FAILED(hr)) {
-    mFailedToCreateYuvSwapChain = true;
     gfxCriticalNote << "Failed to create video SwapChain: " << gfx::hexa(hr);
     return false;
   }
