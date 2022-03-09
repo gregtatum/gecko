@@ -51,7 +51,7 @@ view-group[top][hidden] {
   display: flex;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .view-groups-wrapper > view-group:not(:first-of-type) {
     margin-inline-start: calc(var(--river-collapse-amount) * -1);
   }

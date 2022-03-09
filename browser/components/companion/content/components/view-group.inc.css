@@ -37,18 +37,18 @@
   :host(:is([top], [active])) > .view-el:not([busy]) > .view-loading-spinner-container {
     transition: opacity 1s var(--animation-easing-function);
   }
-}
 
-:host(:is([top], [active])) > .view-el > .view-loading-spinner-container > .view-loading-spinner {
-  transform: translateX(-462px);
-  animation-iteration-count: 1;
-  animation-timing-function: steps(14);
-  animation-fill-mode: both;
-  animation-duration: .25s;
-}
+  :host(:is([top], [active])) > .view-el > .view-loading-spinner-container > .view-loading-spinner {
+    transform: translateX(-462px);
+    animation-iteration-count: 1;
+    animation-timing-function: steps(14);
+    animation-fill-mode: both;
+    animation-duration: .25s;
+  }
 
-:host(:is([top], [active])) > .view-el[busy] > .view-loading-spinner-container > .view-loading-spinner {
-  animation-name: startSpinner;
+  :host(:is([top], [active])) > .view-el[busy] > .view-loading-spinner-container > .view-loading-spinner {
+    animation-name: startSpinner;
+  }
 }
 
 @keyframes loadingSpinner {
