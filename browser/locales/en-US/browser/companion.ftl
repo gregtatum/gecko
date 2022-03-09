@@ -22,14 +22,14 @@ companion-expand-event-links-button = +{ $linkCount }
     .title = Show all links
 
 # This is a short label to show when the start of an event is happening in less
-# than an hour (eg: In 10 mins).
+# than an hour (eg: In 10 minutes).
 # Variables:
 #   $minutes (Number) - Minutes until the event starts.
 companion-until-event-minutes =
     { $minutes ->
         [0] Now
-        [one] In { $minutes } min
-       *[other] In { $minutes } mins
+        [one] In { $minutes } minute
+       *[other] In { $minutes } minutes
     }
 
 # This is a short label to show when the start of an event is happening in over
