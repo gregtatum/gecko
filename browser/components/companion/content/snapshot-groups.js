@@ -40,14 +40,19 @@ export class SnapshotGroupList extends HTMLElement {
     let fragment = new DocumentFragment();
     for (const group of data) {
       let url = new URL(group.url);
+      let values = [
+        { id: "snapshot-count", args: { snapshotCount: group.snapshotCount } },
+      ];
+      if (group.builderMetadata?.fluentTitle) {
+        values.push(group.builderMetadata.fluentTitle);
+      }
+      let [subTitle, title] = await document.l10n.formatValues(values);
       fragment.appendChild(
         new SnapshotGroupCard({
           id: group.id,
-          title: group.title,
+          title: group.title || title,
           snapshotCount: group.snapshotCount,
-          subTitle: await document.l10n.formatValue("snapshot-count", {
-            snapshotCount: group.snapshotCount,
-          }),
+          subTitle,
           lastInteractionAt: group.lastAccessed,
           faviconSelector: "img.inline-favicon",
           faviconImage: window.CompanionUtils.getFavicon(url.href),

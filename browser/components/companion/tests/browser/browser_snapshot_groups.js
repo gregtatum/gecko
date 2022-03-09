@@ -6,6 +6,7 @@
 XPCOMUtils.defineLazyModuleGetters(this, {
   Interactions: "resource:///modules/Interactions.jsm",
   SnapshotGroups: "resource:///modules/SnapshotGroups.jsm",
+  SnapshotMonitor: "resource:///modules/SnapshotMonitor.jsm",
 });
 
 let now = Date.now();
@@ -70,11 +71,10 @@ async function addInteractionsAndSnapshots(data) {
 
 add_task(async function setup() {
   Services.prefs.setIntPref("browser.places.snapshots.minGroupSize", 4);
+  await Snapshots.reset();
   await addInteractionsAndSnapshots(TEST_URLS);
-  await SnapshotGroups.add(
-    { title: "Test Group", builder: "domain" },
-    TEST_URLS.map(d => d.url)
-  );
+  // Force trigger the builders to build a domain group.
+  await SnapshotMonitor.observe(null, "idle-daily");
 
   // Run test in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
@@ -89,6 +89,8 @@ add_task(async function setup() {
   registerCleanupFunction(async () => {
     await BrowserTestUtils.closeWindow(win);
     await Snapshots.reset();
+    // Force trigger the builders to remove the domain group.
+    await SnapshotMonitor.observe(null, "idle-daily");
     await PlacesUtils.history.clear();
   });
 });
@@ -103,5 +105,51 @@ add_task(async function test_snapshot_groups_displayed() {
       () => content.document.querySelectorAll(".snapshot-group").length
     );
     Assert.equal(snapshotGroupsLength, 1, "Showing snapshot groups");
+  }, win);
+});
+
+add_task(async function test_snapshot_group_titles() {
+  await CompanionHelper.whenReady(async helper => {
+    await helper.selectCompanionTab("browse");
+
+    let group = (await SnapshotGroups.query())[0];
+    group.title = "User";
+    group.builderMetadata = {
+      fluentTitle: { id: "snapshot-group-pinned-header" },
+    };
+    await SnapshotGroups.updateMetadata(group);
+
+    await helper.runCompanionTask(async () => {
+      content.document.querySelector("button.snapshot-groups").click();
+
+      await ContentTaskUtils.waitForCondition(() => {
+        let snapshotGroups = Array.from(
+          content.document.querySelectorAll(".snapshot-group")
+        );
+        return snapshotGroups[0].querySelector(".title").textContent == "User";
+      }, "Should prefer the title field of the group");
+    });
+
+    group.title = "";
+    await SnapshotGroups.updateMetadata(group);
+
+    let expectedTitle = await document.l10n.formatValue(
+      "snapshot-group-pinned-header"
+    );
+    await helper.runCompanionTask(
+      async expected => {
+        content.document.querySelector("button.snapshot-groups").click();
+
+        await ContentTaskUtils.waitForCondition(() => {
+          let snapshotGroups = Array.from(
+            content.document.querySelectorAll(".snapshot-group")
+          );
+          return (
+            snapshotGroups[0].querySelector(".title").textContent == expected
+          );
+        }, "Should use the localisation if the title is not specified");
+      },
+      [expectedTitle]
+    );
   }, win);
 });

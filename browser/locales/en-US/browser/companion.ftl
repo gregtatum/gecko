@@ -158,6 +158,9 @@ browse-list-downloads = Downloads
 session-section-header = Sessions
 snapshot-group-section-header = Snapshot Groups
 
+# Titles of groups displayed in the Snapshot Groups section
+snapshot-group-pinned-header = Pinned
+
 # Title of the Download section.
 downloads-section-header = Downloads
 

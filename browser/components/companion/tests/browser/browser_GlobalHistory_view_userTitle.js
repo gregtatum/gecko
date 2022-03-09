@@ -32,7 +32,7 @@ add_task(async function test_user_title_snapshot() {
 
   let [, data] = await observed;
   Assert.deepEqual(
-    [URL],
+    [{ url: URL, userPersisted: Snapshots.USER_PERSISTED.MANUAL }],
     JSON.parse(data),
     "Should have seen the notification about the snapshot being added."
   );

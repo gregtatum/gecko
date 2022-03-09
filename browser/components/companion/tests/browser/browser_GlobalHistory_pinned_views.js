@@ -32,7 +32,7 @@ add_task(async function test_pinned_view() {
 
   let [, data] = await observed;
   Assert.deepEqual(
-    [URL],
+    [{ url: URL, userPersisted: Snapshots.USER_PERSISTED.PINNED }],
     JSON.parse(data),
     "Should have seen the notification about the snapshot being added."
   );
