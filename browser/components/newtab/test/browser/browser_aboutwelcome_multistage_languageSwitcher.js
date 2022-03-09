@@ -118,8 +118,8 @@ async function testScreenContent(
           },
           `Should render ${selector} in ${experimentName}`,
           // Have an increased interval here due to intermittents.
-          100, // interval
-          50 // maxTries
+          200, // interval
+          200 // maxTries
         );
       }
       for (let selector of unexpected) {
