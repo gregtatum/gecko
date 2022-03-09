@@ -90,6 +90,7 @@ export class RelativeTime extends MozLitElement {
   getFormattedRelativeTime(hours, minutes) {
     let l10n = { args: { hours, minutes } };
 
+    this.isHidden = false;
     if (hours || minutes > 15) {
       if (this.isHappeningNow) {
         l10n.id = "companion-happening-now";

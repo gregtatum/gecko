@@ -25,7 +25,7 @@ add_task(async function testRelativeTimeThirtyMinutesBeforeEvent() {
       },
     ];
 
-    info("Test time stamp fifteen minutes before event.");
+    info("Test time stamp thirty minutes before event.");
     await helper.overrideRelativeTime(start, -30 * ONE_MINUTE);
     await helper.setCalendarEvents(events);
 
@@ -383,6 +383,70 @@ add_task(async function testRelativeTimeAfterEventEnds() {
         relativeTimeContent.getAttribute("data-l10n-id"),
         "companion-event-finished",
         "RelativeTime has correct localization id"
+      );
+    });
+  });
+});
+
+add_task(async function testRelativeTimeTransition() {
+  await CompanionHelper.whenReady(async helper => {
+    let { start, end } = generateEventTimes(0, 30, new Date());
+
+    let events = [
+      {
+        summary: "My meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    info("Test time stamp thirty minutes before event.");
+    await helper.overrideRelativeTime(start, -30 * ONE_MINUTE);
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.hasAttribute("hidden"),
+        true,
+        "RelativeTime should be hidden"
+      );
+    });
+
+    info("Test time stamp fifteen minutes before event.");
+    await helper.overrideRelativeTime(start, -15 * ONE_MINUTE);
+    await helper.setCalendarEvents(events);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventRelativeTime = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector("relative-time");
+      });
+
+      let relativeTimeContent = eventRelativeTime.shadowRoot.querySelector(
+        ".event-relative-time"
+      );
+
+      is(
+        relativeTimeContent.hasAttribute("hidden"),
+        false,
+        "RelativeTime should not be hidden"
       );
     });
   });
