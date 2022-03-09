@@ -109,10 +109,17 @@ async function testScreenContent(
         return el && el.offsetParent !== null;
       }
 
+      let i = Date.now();
       for (let selector of expected) {
         await ContentTaskUtils.waitForCondition(
-          () => selectorIsVisible(selector),
-          `Should render ${selector} in ${experimentName}`
+          () => {
+            info(`Waiting on selector ${(Date.now() - i) / 1000} seconds`);
+            return selectorIsVisible(selector)
+          },
+          `Should render ${selector} in ${experimentName}`,
+          // Have an increased interval here due to intermittents.
+          100, // interval
+          50 // maxTries
         );
       }
       for (let selector of unexpected) {
