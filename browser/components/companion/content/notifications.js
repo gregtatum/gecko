@@ -96,10 +96,7 @@ function processEvents(events) {
     let notificationTime =
       new Date(event.startDate) - 60 * notificationTimeout * 1000;
     let now = Date.now();
-    // This should be the same value as CALENDAR_UPDATE_TIME in calendar.js
-    let inAMinute = now + 60 * 1000;
-
-    if (notificationTime > now && notificationTime < inAMinute) {
+    if (notificationTime > now) {
       logConsole.debug("Adding timer for", event.summary);
       notificationTimers.add(
         setTimeout(showNotification, notificationTime - now, event)
