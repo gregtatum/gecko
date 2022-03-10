@@ -9,6 +9,11 @@
 #include "nsISupportsImpl.h"
 #include "nsITextRecognition.h"
 
+class imgIContainer;
+namespace mozilla::gfx {
+class SourceSurface;
+}
+
 namespace mozilla::widget {
 
 class nsTextRecognition final : public nsITextRecognition {
@@ -19,7 +24,9 @@ class nsTextRecognition final : public nsITextRecognition {
 
   nsTextRecognition() = default;
 
- private:
+ protected:
+  RefPtr<dom::Promise> mCallPromise;
+  bool CallOS(RefPtr<mozilla::gfx::SourceSurface> aImage) const;
   ~nsTextRecognition() = default;
 };
 
