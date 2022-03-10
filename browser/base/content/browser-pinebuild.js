@@ -32,11 +32,6 @@ var PineBuildUIUtils = {
   delayedStartup() {
     window.top.gHistoryCarousel.init();
     this.setupKeyboardOverrides();
-
-    if (!Services.prefs.getBoolPref("browser.pinebuild.workspaces.enabled")) {
-      let cmd = document.getElementById("Browser:StartNewWorkspace");
-      cmd.hidden = true;
-    }
   },
 
   copy(anchor, string) {

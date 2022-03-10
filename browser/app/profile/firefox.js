@@ -2755,7 +2755,6 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
   pref("browser.river.activationTimeout", 5000);
   pref("browser.river.maxGroups", 5);
-  pref("browser.pinebuild.workspaces.enabled", false);
   pref("browser.pinebuild.workshop.enabled", false);
   pref("browser.pinebuild.pocket.url", "https://getpocket.cdn.mozilla.net/v3/firefox/global-recs");
   pref("browser.pinebuild.calendar.minBreakTime", 5);

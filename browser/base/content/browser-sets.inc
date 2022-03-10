@@ -38,7 +38,6 @@
 
 #ifdef PINEBUILD
     <command id="cmd_close" oncommand="gGlobalHistory.closeCurrentView();"/>
-    <command id="Browser:StartNewWorkspace" oncommand="gGlobalHistory.createWorkspace();"/>
 #else
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow(event);"/>
 #endif

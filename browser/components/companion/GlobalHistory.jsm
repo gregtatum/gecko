@@ -65,7 +65,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 
 const DEFAULT_WORKSPACE_ID = 0;
-const MAX_WORKSPACES_LIMIT = 3;
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
  * @typedef {object} ViewHistoryData
@@ -640,7 +639,6 @@ class InternalView {
  * An event fired from GlobalHistory to inform about changes
  * to the view stack. Can be one of the following types:
  *
- * `WorkspaceAdded` - A new workspace has been added to the AVM.
  * `ViewChanged` - The current view has changed.
  * `ViewAdded` - A new view has been added to the top of the stack in a workspace.
  * `ViewRemoved` - An existing view has been removed from a workspace.
@@ -889,10 +887,6 @@ class WorkspaceHistory extends EventTarget {
    * @type {Number}
    */
   #workspaceId = null;
-
-  get workspaceId() {
-    return this.#workspaceId;
-  }
 
   /**
    * The stack of views. Most recent is at the end of the list.
@@ -1518,7 +1512,6 @@ class WorkspaceHistory extends EventTarget {
  * This class manages several workspaces scoped to a specific window.
  *
  * Can emit the following events:
- * `WorkspaceAdded` - A new workspace has been added to the AVM.
  * `ViewChanged` - The current view has changed.
  * `ViewAdded` - A new view has been added to the top of the stack in a workspace.
  * `ViewRemoved` - An existing view has been removed from a workspace.
@@ -1619,8 +1612,14 @@ class GlobalHistory extends EventTarget {
    * Called once the DOM is ready, and we know that gBrowser is available.
    */
   init() {
-    // Create a workspace history object for the default workspace.
-    this.#createWorkspaceHistory(DEFAULT_WORKSPACE_ID);
+    let workspaceHistory = new WorkspaceHistory(
+      DEFAULT_WORKSPACE_ID,
+      this.#window
+    );
+    workspaceHistory.addEventListener("SetCurrentInternalView", this);
+    workspaceHistory.addEventListener("ClearPendingInternalView", this);
+    this.#workspaces.set(DEFAULT_WORKSPACE_ID, workspaceHistory);
+
     this.#window.gBrowser.tabContainer.addEventListener("TabSelect", this);
     this.#window.gBrowser.tabContainer.addEventListener("TabOpen", this);
     this.#window.gBrowser.tabContainer.addEventListener("TabClose", this);
@@ -1658,30 +1657,17 @@ class GlobalHistory extends EventTarget {
   }
 
   handleEvent(event) {
-    let workspace;
     switch (event.type) {
       case "TabSelect":
       case "TabOpen":
       case "TabClose":
       case "TabAttrModified":
       case "TabBrowserDiscarded":
+      case "SSTabRestoring":
         let tab = event.target;
-        workspace = this.#workspaces.get(tab.userContextId);
+        let workspace = this.#workspaces.get(tab.userContextId);
         if (!workspace) {
           logConsole.error("Tab is not associated with a workspace.");
-          return;
-        }
-        workspace.handleTabEvent(
-          event.type,
-          event.target,
-          event.detail?.changed
-        );
-        break;
-      case "SSTabRestoring":
-        let wId = event.target.userContextId;
-        workspace = this.#workspaces.get(wId);
-        if (!workspace) {
-          this.#createWorkspaceHistory(wId);
           return;
         }
         workspace.handleTabEvent(
@@ -1703,28 +1689,6 @@ class GlobalHistory extends EventTarget {
       case "ClearPendingInternalView":
         this.#pendingView = null;
         break;
-    }
-  }
-
-  #createWorkspaceHistory(workspaceId) {
-    let workspaceHistory = new WorkspaceHistory(workspaceId, this.#window);
-    this.#workspaces.set(workspaceId, workspaceHistory);
-    workspaceHistory.addEventListener("SetCurrentInternalView", this);
-    workspaceHistory.addEventListener("ClearPendingInternalView", this);
-  }
-
-  createWorkspace() {
-    for (
-      let workspaceId = DEFAULT_WORKSPACE_ID + 1;
-      workspaceId < MAX_WORKSPACES_LIMIT;
-      workspaceId++
-    ) {
-      if (!this.#workspaces.has(workspaceId)) {
-        this.#createWorkspaceHistory(workspaceId);
-        this.loadEmptyWorkspace(workspaceId);
-        this.notifyEvent("WorkspaceAdded", null, { workspaceId });
-        break;
-      }
     }
   }
 
@@ -2012,7 +1976,13 @@ class GlobalHistory extends EventTarget {
       selectedWorkspace.viewStack.push(selectedView);
     }
 
-    this.setView(selectedView);
+    // Mark the correct view.
+    logConsole.trace(
+      `Setting #currentInternalView to ${selectedView.toString()}`
+    );
+    this.#currentInternalView = selectedView;
+    this.notifyEvent("RiverRebuilt");
+
     this.startActivationTimer();
     this.updateSessionStore();
   }
@@ -2162,9 +2132,6 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * NOTE: This getter does not return the current workspace's workspaceHistory
-   * object if its viewStack is empty i.e. if there are no "non-initial" views
-   * present in it.
    * @type {WorkspaceHistory | null}
    */
   get currentWorkspace() {
@@ -2179,38 +2146,6 @@ class GlobalHistory extends EventTarget {
    */
   get currentIndex() {
     return this.currentWorkspace.viewStack.indexOf(this.#currentInternalView);
-  }
-
-  /**
-   * This function returns the current workspace's Id if there are no currentViews
-   * that we can use to determine the currentWorkspace.
-   */
-  #getEmptyCurrentWorkspaceId() {
-    let urlbar = this.#window.document.getElementById("urlbar");
-    return parseInt(urlbar.getAttribute("workspace-id"));
-  }
-
-  /**
-   * NOTE: If we don't have a currentView to help us determine
-   * the currentWorkspace, it either means that we don't have any
-   * workspaces open in the AVM or that we do have workspaces
-   * with only initial pages as views.
-   */
-  #getCurrentWorkspaceId() {
-    return (
-      this.currentWorkspace?.workspaceId ?? this.#getEmptyCurrentWorkspaceId()
-    );
-  }
-
-  /**
-   * Opens about:blank in a given empty workspace.
-   * @params {Number} workspaceId
-   */
-  loadEmptyWorkspace(workspaceId) {
-    this.#window.gBrowser.selectedTab = this.#window.gBrowser.addTrustedTab(
-      "about:blank",
-      { userContextId: workspaceId }
-    );
   }
 
   /**
@@ -2266,11 +2201,12 @@ class GlobalHistory extends EventTarget {
       return;
     }
 
-    let currentWorkspaceId = this.#getCurrentWorkspaceId();
-    if (internalView.workspaceId > currentWorkspaceId) {
+    if (internalView.workspaceId > this.#currentInternalView.workspaceId) {
       this.#navigatingForward = true;
-    } else if (internalView.workspaceId == currentWorkspaceId) {
-      if (internalView.pinned == this.#currentInternalView?.pinned) {
+    } else if (
+      internalView.workspaceId == this.#currentInternalView.workspaceId
+    ) {
+      if (internalView.pinned == this.#currentInternalView.pinned) {
         this.#navigatingForward = pos > this.currentIndex;
       } else {
         this.#navigatingForward = internalView.pinned;
@@ -2597,14 +2533,20 @@ class GlobalHistory extends EventTarget {
     }
 
     // If none of the above was possible, we conclude that we're closing
-    // the last View in this workspace, so attempt switching to the default workspace.
-    let prevWorkspace = this.#workspaces.get(DEFAULT_WORKSPACE_ID);
-    let lastIndex = prevWorkspace.viewStack.size - 1;
-    viewToSwitchTo = prevWorkspace.viewStack[lastIndex];
+    // the last View in this workspace, so attempt switching to a view
+    // from a different workspace.
+    if (internalView.workspaceId > 0) {
+      let prevWorkspaceId = internalView.workspaceId - 1;
+      let prevWorkspace = this.#workspaces.get(prevWorkspaceId);
+      let lastIndex = prevWorkspace.viewStack.size - 1;
+      viewToSwitchTo = prevWorkspace.viewStack[lastIndex];
+    }
 
+    // If none of that was possible, then we conclude that we're closing
+    // the last View and do a reset.
     if (!viewToSwitchTo) {
-      this.loadEmptyWorkspace(internalView.workspaceId);
       this.notifyEvent("ViewRemoved", internalView);
+      this.reset();
       return;
     }
 

@@ -120,8 +120,6 @@ appmenuitem-save-page =
     .label = Save page as…
 appmenuitem-export-page =
     .label = Export
-appmenuitem-start-new-workspace =
-    .label = Start a new workspace
 
 ## What's New panel in App menu.
 
