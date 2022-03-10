@@ -77,9 +77,6 @@ class CompanionParent extends JSWindowActorParent {
     this._observer = this.observe.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
     this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
-    this._handleViewLocationListener = this.handleViewLocationListener.bind(
-      this
-    );
     this._pageDataFound = this.pageDataFound.bind(this);
     this._handleSessionUpdate = this.handleSessionUpdate.bind(this);
     this._setupGlobalHistoryPrefObservers = this.setUpGlobalHistoryDebuggingObservers.bind(
@@ -133,9 +130,6 @@ class CompanionParent extends JSWindowActorParent {
 
   actorCreated() {
     this.setUpGlobalHistoryDebuggingObservers();
-    let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
-    hist.addEventListener("ViewChanged", this._handleViewLocationListener);
-    hist.addEventListener("ViewUpdated", this._handleViewLocationListener);
     this._destroyed = false;
     SessionManager.on("session-replaced", this._handleSessionUpdate);
     SessionManager.on("session-set-aside", this._handleSessionUpdate);
@@ -178,8 +172,6 @@ class CompanionParent extends JSWindowActorParent {
     ]) {
       hist.removeEventListener(event, this._handleGlobalHistoryEvent);
     }
-    hist.removeEventListener("ViewChanged", this._handleViewLocationListener);
-    hist.removeEventListener("ViewUpdated", this._handleViewLocationListener);
   }
 
   didDestroy() {
@@ -638,24 +630,6 @@ class CompanionParent extends JSWindowActorParent {
     this.sendAsyncMessage("Companion:GlobalHistoryEvent", {
       globalHistory,
     });
-    if (
-      Services.prefs.getBoolPref("browser.companion.globalhistorydebugging")
-    ) {
-      // When debugging is enabled we only want to register one listener, so
-      // this gets repurposed for the debug events and the view location events.
-      this.handleViewLocationListener(event);
-    }
-  }
-
-  handleViewLocationListener(event) {
-    let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
-    let { selectedBrowser, selectedTab } = gBrowser;
-    if (selectedBrowser.documentURI) {
-      this.sendAsyncMessage("Companion:ViewLocation", {
-        url: selectedBrowser.documentURI.spec,
-        oauthFlowService: selectedTab.getAttribute("pinebuild-oauth-flow"),
-      });
-    }
   }
 
   handleTabEvent(event) {
@@ -883,6 +857,14 @@ class CompanionParent extends JSWindowActorParent {
     if (!aWebProgress.isTopLevel || !this.snapshotSelector) {
       return;
     }
+
+    let browser = aWebProgress.browsingContext.embedderElement;
+    let tab = browser.getTabBrowser()?.getTabForBrowser(browser);
+
+    this.sendAsyncMessage("Companion:ViewLocation", {
+      url: browser.documentURI.spec,
+      oauthFlowService: tab?.getAttribute("pinebuild-oauth-flow"),
+    });
 
     if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
       // Reset the current URL for the snapshot selector, as this is a

@@ -20,7 +20,10 @@ add_task(async function test_pinned_view_close_single() {
     0,
     "Should have been able to close a single pinned View"
   );
-  Assert.equal(gGlobalHistory.currentView, null, "currentView should be null");
+  await BrowserTestUtils.waitForCondition(
+    () => gGlobalHistory.currentView === null,
+    "currentView should be null"
+  );
 });
 
 /**
@@ -28,6 +31,7 @@ add_task(async function test_pinned_view_close_single() {
  * in the River.
  */
 add_task(async function test_pinned_view_close_only_multiple_pinned() {
+  gGlobalHistory.reset();
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
@@ -104,6 +108,8 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
  * also in the River.
  */
 add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
+  gGlobalHistory.reset();
+
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",

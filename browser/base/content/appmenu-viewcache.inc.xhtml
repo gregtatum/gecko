@@ -53,6 +53,12 @@
                      data-l10n-id="appmenuitem-new-window"
                      key="key_newNavigator"
                      command="cmd_newNavigator"/>
+#ifdef PINEBUILD
+      <toolbarbutton id="appMenu-start-new-workspace-button"
+                     class="subviewbutton"
+                     command="Browser:StartNewWorkspace"
+                     data-l10n-id="appmenuitem-start-new-workspace"/>
+#endif
 #ifndef PINEBUILD
       <toolbarbutton id="appMenu-new-private-window-button2"
                      class="subviewbutton"

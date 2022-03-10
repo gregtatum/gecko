@@ -13,6 +13,28 @@
   padding: 4px;
 }
 
+#workspace[empty=true] {
+  border-radius: 100%;
+}
+
+#workspace[empty=true] > #workspace-indicator-button {
+  margin: 8px;
+}
+
+#workspace-indicator-button {
+  width: 24px;
+  height: 24px;
+  margin: auto 12px;
+  display: flex;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: #FFFFFF;
+}
+
+#workspace-indicator-button[hidden] {
+  display: none;
+}
+
 #river-overflow-button {
   border-radius: 9999px;
   width: 16px;

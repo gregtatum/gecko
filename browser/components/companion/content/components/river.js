@@ -39,6 +39,10 @@ export default class River extends MozLitElement {
     this.addEventListener("drop", this.#onDrop);
   }
 
+  isEmpty() {
+    return !this.#views.length;
+  }
+
   hasView(view) {
     return this.#views.includes(view);
   }
