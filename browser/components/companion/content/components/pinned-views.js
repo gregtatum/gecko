@@ -25,6 +25,10 @@ class PinnedViews extends MozLitElement {
     this.#dragOverElement = null;
   }
 
+  isEmpty() {
+    return !this._views.length;
+  }
+
   addView(view, atIndex) {
     let index = this._views.indexOf(view);
     if (index != -1) {

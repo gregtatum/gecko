@@ -2496,6 +2496,14 @@ class UrlbarInput {
       params.initiatingDoc = this.window.document;
     }
 
+    // If we're in pinebuild, we should ensure that search tabs are being opened
+    // in the appropriate workspace.
+    if (AppConstants.PINEBUILD) {
+      let urlbar = this.document.getElementById("urlbar");
+      let id = urlbar.getAttribute("workspace-id");
+      params.userContextId = id;
+    }
+
     if (
       this._keyDownEnterDeferred &&
       event?.keyCode === KeyEvent.DOM_VK_RETURN &&

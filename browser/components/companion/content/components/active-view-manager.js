@@ -17,10 +17,9 @@ ChromeUtils.defineModuleGetter(
 /* import-globals-from ../../../../base/content/browser-pinebuild.js */
 
 import getSiteSecurityInfo from "../siteSecurity.js";
+const WORKSPACE_COUNTER_OFFSET = 1;
 
 export default class ActiveViewManager extends window.MozHTMLElement {
-  /** @type {<html:button>} */
-  #overflow;
   /** @type {<xul:panel>} */
   #overflowPanel;
   /** @type {<xul:panel>} */
@@ -31,14 +30,13 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   #securityIconClass;
   /** @type {<xul:menupopup>} */
   #contextMenuPopup;
-  /** @type {Workspace} */
-  #defaultWorkspace;
 
   #pageActionView;
   #contextMenuViewGroup;
   #contextMenuView;
 
   static EVENTS = [
+    "WorkspaceAdded",
     "ViewChanged",
     "ViewAdded",
     "ViewRemoved",
@@ -57,8 +55,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     let fragment = template.content.cloneNode(true);
     this.appendChild(fragment);
 
-    this.#defaultWorkspace = this.querySelector("workspace-el");
-    this.#overflow = this.querySelector("#river-overflow-button");
     this.#contextMenuPopup = document.getElementById(
       "active-view-manager-context-menu"
     );
@@ -73,10 +69,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.addEventListener("UserAction:PinView", this);
     this.addEventListener("UserAction:UnpinView", this);
 
+    this.addEventListener("click", this);
     this.addEventListener("contextmenu", this);
-    this.addEventListener("dragstart", this);
-    this.addEventListener("dragend", this);
-    this.#overflow.addEventListener("click", this);
     this.#contextMenuPopup.addEventListener("popupshowing", this);
     this.#contextMenuPopup.addEventListener("popuphiding", this);
 
@@ -104,28 +98,49 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.removeEventListener("UserAction:PinView", this);
     this.removeEventListener("UserAction:UnpinView", this);
 
+    this.removeEventListener("click", this);
     this.removeEventListener("contextmenu", this);
-    this.removeEventListener("dragstart", this);
-    this.removeEventListener("dragend", this);
-    this.#overflow.removeEventListener("click", this);
   }
 
   handleEvent(event) {
+    let workspace;
     switch (event.type) {
+      case "WorkspaceAdded":
+        let id = event.detail.workspaceId;
+        this.#createWorkspaceElement(id);
+        this.#manageWorkspaceIndicatorButtons();
+        break;
       case "ViewAdded":
-        this.#defaultWorkspace.addView(event.view);
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        workspace.addView(event.view);
         break;
       case "ViewChanged":
-        this.#defaultWorkspace.setActiveView(event.view);
+        this.#clearActiveView();
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        workspace.setActiveView(event.view);
         break;
       case "ViewMoved":
-        this.#defaultWorkspace.moveView(event.view);
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        workspace.moveView(event.view);
         break;
       case "ViewRemoved":
-        this.#defaultWorkspace.removeView(event.view);
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        workspace.removeView(event.view);
+        // TODO: If the workspace is empty, maybe navigate to an adjacent workspace.
         break;
       case "ViewUpdated":
-        this.#defaultWorkspace.updateView(event.view);
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        workspace.updateView(event.view);
         break;
       case "UserAction:ViewSelected": {
         let view = event.detail.clickedView;
@@ -154,7 +169,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         break;
       }
       case "click":
-        if (event.target == this.#overflow) {
+        if (event.target.id == "river-overflow-button") {
           this.#openOverflowPanel(event);
         } else if (event.currentTarget == this.#overflowPanel) {
           this.#overflowPanelClicked(event);
@@ -164,14 +179,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         break;
       case "contextmenu": {
         this.#onContextMenu(event);
-        break;
-      }
-      case "dragstart": {
-        this.#onDragStart(event);
-        break;
-      }
-      case "dragend": {
-        this.#onDragEnd(event);
         break;
       }
       case "keydown": {
@@ -200,23 +207,66 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       case "ViewPinned": {
         let view = event.view;
         let index = event.detail.index;
-        if (this.#defaultWorkspace.isRiverView(view)) {
-          this.#defaultWorkspace.removeView(view);
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        if (workspace.isRiverView(view)) {
+          workspace.removeView(view);
+        } else {
+          console.error(
+            "Tried pinning a view that does not exist in the river."
+          );
         }
-        this.#defaultWorkspace.addView(view, true, index);
+        workspace.addView(view, true, index);
         break;
       }
       case "ViewUnpinned": {
         let view = event.view;
-        this.#defaultWorkspace.removeView(view);
-        this.#defaultWorkspace.addView(event.view);
+        workspace = this.querySelector(
+          "[workspace-id='" + event.view.workspaceId + "']"
+        );
+        workspace.removeView(view);
+        workspace.addView(event.view);
         break;
       }
     }
   }
 
+  #clearActiveView() {
+    let workspaces = this.querySelectorAll("workspace-el");
+    workspaces.forEach(workspace => {
+      workspace.clearActiveView();
+    });
+  }
+
+  #createWorkspaceElement(id) {
+    let workspace = this.querySelector("[workspace-id='" + id + "']");
+    if (workspace) {
+      console.warn("Saw WorkspaceAdded for a workspace that already exists.");
+      return;
+    }
+
+    workspace = document.createElement("workspace-el");
+    workspace.setAttribute("workspace-id", id);
+    this.appendChild(workspace);
+  }
+
+  #manageWorkspaceIndicatorButtons() {
+    let workspaces = this.querySelectorAll("workspace-el");
+    workspaces.forEach(workspace => {
+      let id = workspace.getAttribute("workspace-id");
+      let button = workspace.querySelector("#workspace-indicator-button");
+      button.textContent = parseInt(id) + WORKSPACE_COUNTER_OFFSET;
+      button.hidden = false;
+    });
+  }
+
   #viewSelected(view) {
-    this.#defaultWorkspace.setActiveView(view);
+    this.#clearActiveView();
+    let workspace = this.querySelector(
+      "[workspace-id='" + view.workspaceId + "']"
+    );
+    workspace.setActiveView(view);
     window.gGlobalHistory.setView(view);
   }
 
@@ -230,7 +280,11 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
   #openOverflowPanel(event) {
     let panel = this.#getOverflowPanel();
-    panel.openPopup(this.#overflow, {
+    let workspaceId = event.target.parentNode.parentNode.getAttribute(
+      "workspace-id"
+    );
+    panel.setAttribute("workspace-id", workspaceId);
+    panel.openPopup(event.target, {
       position: "bottomcenter topleft",
       triggerEvent: event,
     });
@@ -261,6 +315,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
     let view = event.target.view;
     this.#viewSelected(view);
+    this.#overflowPanel.removeAttribute("workspace-id");
     this.#overflowPanel.hidePopup();
   }
 
@@ -274,7 +329,9 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
 
     let fragment = document.createDocumentFragment();
-    let overflowedViews = this.#defaultWorkspace.overflowedViews;
+    let workspaceId = this.#overflowPanel.getAttribute("workspace-id");
+    let workspace = this.querySelector("[workspace-id='" + workspaceId + "']");
+    let overflowedViews = workspace.overflowedViews;
 
     for (let view of overflowedViews) {
       let item = document.createXULElement("toolbarbutton");
@@ -512,56 +569,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     for (let view of views) {
       window.gGlobalHistory.closeView(view);
     }
-  }
-
-  #onDragStart(event) {
-    let draggedViewGroup = this.#getEventViewGroup(event);
-    if (!draggedViewGroup) {
-      return;
-    }
-
-    // Hack needed so that the dragimage will still show the
-    // item as it appeared before it was hidden.
-    window.requestAnimationFrame(() => {
-      draggedViewGroup.setAttribute("dragging", "true");
-    });
-
-    this.#defaultWorkspace.dragging = true;
-
-    let dt = event.dataTransfer;
-
-    // Because we're relying on Lit to manipulate the DOM, we can
-    // run into situations where the dragend event fails to fire if
-    // the dragged ViewGroup element has been detached from the DOM,
-    // which seems to occur sometimes when Lit decides that a pre-exiting
-    // ViewGroup can be repurposed rather than being replaced with the
-    // dragged ViewGroup.
-    //
-    // To work around this, we use the addElement API to make sure that
-    // the dragend event fires on ActiveViewManager.
-    dt.addElement(this);
-
-    dt.mozSetDataAt(ActiveViewManager.VIEWGROUP_DROP_TYPE, draggedViewGroup, 0);
-
-    let iconBounds = window.windowUtils.getBoundsWithoutFlushing(
-      draggedViewGroup.iconContainer
-    );
-    dt.setDragImage(
-      draggedViewGroup.iconContainer,
-      iconBounds.width / 2,
-      iconBounds.height / 2
-    );
-  }
-
-  #onDragEnd(event) {
-    let dt = event.dataTransfer;
-    let draggedViewGroup = dt.mozGetDataAt(
-      ActiveViewManager.VIEWGROUP_DROP_TYPE,
-      0
-    );
-    draggedViewGroup.removeAttribute("dragging");
-
-    this.#defaultWorkspace.dragging = false;
   }
 
   #getEventViewGroup(event) {

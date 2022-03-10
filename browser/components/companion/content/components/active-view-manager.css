@@ -8,3 +8,19 @@ active-view-manager {
   margin-block: 8px;
   -moz-window-dragging: no-drag;
 }
+
+workspace-el {
+  margin-inline: 20px;
+}
+
+workspace-el[workspace-id="0"] > #workspace > #workspace-indicator-button {
+  background: #845BDC;
+}
+
+workspace-el[workspace-id="1"] > #workspace > #workspace-indicator-button {
+  background: #3F6BC0;
+}
+
+workspace-el[workspace-id="2"] > #workspace > #workspace-indicator-button {
+  background: #248287;
+}
