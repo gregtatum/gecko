@@ -5,15 +5,18 @@
 #ifndef mozilla_widget_nsTextRecognition__
 #define mozilla_widget_nsTextRecognition__
 
+#include "nsCycleCollectionParticipant.h"
+#include "nsISupportsImpl.h"
 #include "nsITextRecognition.h"
 
 namespace mozilla::widget {
 
 class nsTextRecognition final : public nsITextRecognition {
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSITEXTRECOGNITION
-
  public:
+  NS_DECL_NSITEXTRECOGNITION
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTION_CLASS(nsTextRecognition)
+
   nsTextRecognition() = default;
 
  private:

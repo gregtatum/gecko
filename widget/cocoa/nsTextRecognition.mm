@@ -14,7 +14,17 @@ using namespace mozilla;
 using namespace mozilla::widget;
 using mozilla::gfx::SourceSurface;
 
-NS_IMPL_ISUPPORTS(nsTextRecognition, nsITextRecognition)
+// NS_IMPL_ISUPPORTS(nsTextRecognition, nsITextRecognition)
+
+NS_IMPL_CYCLE_COLLECTION(nsTextRecognition)
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsTextRecognition)
+  NS_INTERFACE_MAP_ENTRY(nsITextRecognition)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsITextRecognition)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_CYCLE_COLLECTING_ADDREF(nsTextRecognition)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(nsTextRecognition)
 
 NS_IMETHODIMP
 nsTextRecognition::GetIsAvailable(bool* aIsAvailable) {
@@ -23,7 +33,7 @@ nsTextRecognition::GetIsAvailable(bool* aIsAvailable) {
 }
 
 NS_IMETHODIMP
-nsTextRecognition::FindText(imgIContainer* aImage) {
+nsTextRecognition::FindText(imgIContainer *aImage, JSContext* cx, ::mozilla::dom::Promise ** promise) {
   // TODO - What's the ownership of this imgIContainer?
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
   if (@available(macOS 10.15, *)) {
