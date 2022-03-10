@@ -2146,6 +2146,8 @@ class nsContextMenu {
     // I suspect this step could be done with a lot less work using a transferable.
     // I couldn't get it working with a nsITransferable.
 
+    let referrerInfo = this.contentData.referrerInfo;
+
     // Load the image.
     const image = new Image();
     image.onload = function() {
@@ -2165,9 +2167,27 @@ class nsContextMenu {
       );
       dump(`Finding text from the context menu\n`);
       dump(`==================================\n`);
+
       Services.textRecognition.findText(imageContainer).then(
-        (result) => {
-          console.log("!!! Services.textRecognition.findText result", result);
+        (text) => {
+          console.log("!!! Services.textRecognition.findText result", text);
+
+          const url =
+            "data:text/plain;charset=utf-8," + encodeURIComponent(text);
+
+          const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
+            Ci.nsIClipboardHelper
+          );
+          clipboard.copyString(text);
+
+          let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
+
+          // TODO - How do you force this to take focus?
+          openLinkIn(url, "tab", {
+            referrerInfo,
+            triggeringPrincipal: systemPrincipal,
+          });
+
         },
         (error) => {
           console.log("!!! Services.textRecognition.findText error", error);
@@ -2175,25 +2195,6 @@ class nsContextMenu {
       );
     };
     image.src = this.originalMediaURL;
-
-    const url =
-      "data:text/plain;charset=utf-8," +
-      "Right now this is just the alt text of the image, but the API could " +
-      "return the full source:\n " + encodeURIComponent(this.imageInfo?.imageText);
-
-    const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
-      Ci.nsIClipboardHelper
-    );
-    clipboard.copyString(url);
-
-    let referrerInfo = this.contentData.referrerInfo;
-    let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
-
-    // TODO - How do you force this to take focus?
-    openLinkIn(url, "tab", {
-      referrerInfo,
-      triggeringPrincipal: systemPrincipal,
-    });
   }
 
   drmLearnMore(aEvent) {

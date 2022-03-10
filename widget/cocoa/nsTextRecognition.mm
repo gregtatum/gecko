@@ -11,6 +11,8 @@
 #include "nsClipboard.h"
 #include "nsCocoaUtils.h"
 #include "nsITransferable.h"
+#include "mozilla/MacStringHelpers.h"
+#include "/Users/greg/scripts/PrettyPrint.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -51,9 +53,10 @@ void SpawnOSBackgroundThread(
   auto promiseHolder = MakeRefPtr<nsMainThreadPtrHolder<dom::Promise>>(
       "nsTextRecognition::SpawnOSBackgroundThread", &aPromise);
 
-  // We actually want to allow to access the printer data from the callback, so
-  // disable strict checking. They should of course only access immutable
-  // members.
+  // TODO - Update these guarantees for TextRecognition:
+  // > We actually want to allow to access the printer data from the callback, so
+  // > disable strict checking. They should of course only access immutable
+  // > members.
   auto holder = MakeRefPtr<nsMainThreadPtrHolder<T>>(
       "nsTextRecognition::SpawnOSBackgroundThread", &aReceiver,
       /* strict = */ false);
@@ -90,29 +93,6 @@ void SpawnOSBackgroundThread(
   );
 }
 
-// Gets a fresh promise into aResultPromise, that resolves whenever the background
-// task finishes.
-template <typename T, typename Result, typename... Args>
-nsresult CallOSTaskPromise(
-    T& aReceiver,
-    JSContext* aCx,
-    dom::Promise** aResultPromise,
-    CallOS<T, Result, Args...> aTask,
-    Args... aArgs
-) {
-  ErrorResult rv;
-  RefPtr<dom::Promise> promise = dom::Promise::Create(xpc::CurrentNativeGlobal(aCx), rv);
-  if (MOZ_UNLIKELY(rv.Failed())) {
-    return rv.StealNSResult();
-  }
-
-  SpawnOSBackgroundThread(aReceiver, *promise, aTask,
-                           std::forward<Args>(aArgs)...);
-
-  promise.forget(aResultPromise);
-  return NS_OK;
-}
-
 // Resolves an async attribute via a background task, creating and storing a
 // promise as needed in aPromiseSlot.
 template <typename T, typename Result, typename... Args>
@@ -130,18 +110,29 @@ nsresult AsyncPromise(
     return NS_OK;
   }
 
-  nsresult rv =
-      CallOSTaskPromise(aReceiver, aCx, aResultPromise,
-                                 aTask, std::forward<Args>(aArgs)...);
-  NS_ENSURE_SUCCESS(rv, rv);
+  // Gets a fresh promise into aResultPromise, that resolves whenever the background
+  // task finishes.
+  ErrorResult rv;
+  RefPtr<dom::Promise> promise = dom::Promise::Create(xpc::CurrentNativeGlobal(aCx), rv);
+  if (MOZ_UNLIKELY(rv.Failed())) {
+    return rv.StealNSResult();
+  }
+
+  SpawnOSBackgroundThread(aReceiver, *promise, aTask,
+                           std::forward<Args>(aArgs)...);
+
+  promise.forget(aResultPromise);
 
   aPromiseSlot = *aResultPromise;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsTextRecognition::FindText(imgIContainer *aImage, JSContext* aCx, ::mozilla::dom::Promise ** aResultPromise) {
-
+nsTextRecognition::FindText(
+  imgIContainer *aImage,
+  JSContext* aCx,
+  mozilla::dom::Promise ** aResultPromise
+) {
   if (!aImage) {
     NS_WARNING("FindText received a null imgIContainer*");
     return NS_ERROR_NULL_POINTER;
@@ -156,23 +147,23 @@ nsTextRecognition::FindText(imgIContainer *aImage, JSContext* aCx, ::mozilla::do
     return NS_ERROR_FAILURE;
   }
 
- return AsyncPromise(*this, mCallPromise, aCx,
-                                              aResultPromise,
-                                              &nsTextRecognition::CallOS, surface);
+ return AsyncPromise(*this, mCallPromise, aCx, aResultPromise,
+                     &nsTextRecognition::CallOS, surface);
 }
 
-bool nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
-  // TODO - What's the ownership of this imgIContainer?
+nsAutoString nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
+  // TODO - Do real error handling.
+  __block nsAutoString result;
+
   if (@available(macOS 10.15, *)) {
 
     CGImageRef imageRef = NULL;
     nsresult rv = nsCocoaUtils::CreateCGImageFromSurface(aSurface, &imageRef);
     if (NS_FAILED(rv) || !imageRef) {
-      return NS_ERROR_FAILURE == NS_OK;
+      // return NS_ERROR_FAILURE;
+      return result;
     }
-
-    __block bool success = false;
 
     // Define the request to use, and handle the result. It will be dispatched below.
     VNRecognizeTextRequest *textRecognitionRequest =
@@ -183,10 +174,15 @@ bool nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
         [observations enumerateObjectsUsingBlock:^(
           VNRecognizedTextObservation * _Nonnull obj, NSUInteger idx,
           BOOL * _Nonnull stop) {
-            success = true;
             // Requests the n top candidates for a recognized text string.
             VNRecognizedText *recognizedText = [obj topCandidates:1].firstObject;
             printf("Found text: %s\n", [recognizedText.string UTF8String]);
+            nsAutoString line;
+            mozilla::CopyCocoaStringToXPCOMString(recognizedText.string, line);
+            result.Append(line);
+            result.Append(u"\n");
+            printf("Setting a string:\n");
+            PrettyPrint(result);
           }
         ];
       }];
@@ -198,14 +194,19 @@ bool nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
     [requestHandler performRequests:@[textRecognitionRequest] error:&error];
 
     if (error != nil) {
-      return NS_ERROR_FAILURE == NS_OK;
+      // return NS_ERROR_FAILURE
+      return result;
     }
-    printf("Returning recognition result %s\n", success ? "true" : "false");
-    return success;
+
+    printf("Returning the result:\n");
+    PrettyPrint(result);
+    return result;
   } else {
     // The APIs are not available.
-    return NS_ERROR_NOT_IMPLEMENTED == NS_OK;
+    // return NS_ERROR_NOT_IMPLEMENTED
+    return result;
   }
+  // return NS_OK;
+  return result;
   NS_OBJC_END_TRY_IGNORE_BLOCK
-  return NS_OK == NS_OK;
 }

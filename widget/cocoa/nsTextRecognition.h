@@ -26,7 +26,7 @@ class nsTextRecognition final : public nsITextRecognition {
 
  protected:
   RefPtr<dom::Promise> mCallPromise;
-  bool CallOS(RefPtr<mozilla::gfx::SourceSurface> aImage) const;
+  nsAutoString CallOS(RefPtr<mozilla::gfx::SourceSurface> aImage) const;
   ~nsTextRecognition() = default;
 };
 
