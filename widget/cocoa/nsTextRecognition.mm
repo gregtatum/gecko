@@ -172,14 +172,18 @@ bool nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
       return NS_ERROR_FAILURE == NS_OK;
     }
 
+    __block bool success = false;
+
     // Define the request to use, and handle the result. It will be dispatched below.
     VNRecognizeTextRequest *textRecognitionRequest =
       [[VNRecognizeTextRequest alloc] initWithCompletionHandler:^(VNRequest * _Nonnull request, NSError * _Nullable error) {
         NSArray<VNRecognizedTextObservation*> *observations = request.results;
 
+        printf("Received text observations\n");
         [observations enumerateObjectsUsingBlock:^(
           VNRecognizedTextObservation * _Nonnull obj, NSUInteger idx,
           BOOL * _Nonnull stop) {
+            success = true;
             // Requests the n top candidates for a recognized text string.
             VNRecognizedText *recognizedText = [obj topCandidates:1].firstObject;
             printf("Found text: %s\n", [recognizedText.string UTF8String]);
@@ -187,21 +191,17 @@ bool nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
         ];
       }];
 
-    // TODO - nsTextRecognition might want to require a `new` operator, and retain this queue.
-    auto queue = dispatch_queue_create("org.mozilla.textrecognition", DISPATCH_QUEUE_SERIAL);
+    NSError *error = nil;
+    VNImageRequestHandler *requestHandler =
+      [[VNImageRequestHandler alloc] initWithCGImage:imageRef options:@{}];
 
-    // Dispatch this request to an event queue.
-    dispatch_async(queue, ^{
-      NSError *error = nil;
-      VNImageRequestHandler *requestHandler =
-        [[VNImageRequestHandler alloc] initWithCGImage:imageRef options:@{}];
+    [requestHandler performRequests:@[textRecognitionRequest] error:&error];
 
-      [requestHandler performRequests:@[textRecognitionRequest] error:&error];
-
-      if (error != nil) {
-        // TODO - Handle this.
-      }
-    });
+    if (error != nil) {
+      return NS_ERROR_FAILURE == NS_OK;
+    }
+    printf("Returning recognition result %s\n", success ? "true" : "false");
+    return success;
   } else {
     // The APIs are not available.
     return NS_ERROR_NOT_IMPLEMENTED == NS_OK;

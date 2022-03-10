@@ -2165,7 +2165,14 @@ class nsContextMenu {
       );
       dump(`Finding text from the context menu\n`);
       dump(`==================================\n`);
-      Services.textRecognition.findText(imageContainer);
+      Services.textRecognition.findText(imageContainer).then(
+        (result) => {
+          console.log("!!! Services.textRecognition.findText result", result);
+        },
+        (error) => {
+          console.log("!!! Services.textRecognition.findText error", error);
+        }
+      );
     };
     image.src = this.originalMediaURL;
 
