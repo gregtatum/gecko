@@ -116,7 +116,7 @@ add_task(async function test_checkgmail() {
       set: [
         [
           "browser.pinebuild.quickactions.testURL",
-          "https://example.com/help?email={email}",
+          "https://example.com/gmail?email={email}",
         ],
       ],
     });
@@ -137,7 +137,7 @@ add_task(async function test_checkgmail() {
       );
 
       await assertActionOpensUrl(
-        `https://example.com/help?email=${encodeURIComponent(account.name)}`,
+        `https://example.com/gmail?email=${encodeURIComponent(account.name)}`,
         win
       );
     }, win);

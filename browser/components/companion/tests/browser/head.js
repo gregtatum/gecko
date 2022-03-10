@@ -239,11 +239,13 @@ class WorkshopHelper {
       this.workshopAPI = await this.startBackend({});
     }
 
-    const { account } = await this.workshopAPI.tryToCreateAccount(
-      {},
-      this.fakeServer.domainInfo
-    );
-    this.account = account;
+    if (!this.account) {
+      const { account } = await this.workshopAPI.tryToCreateAccount(
+        {},
+        this.fakeServer.domainInfo
+      );
+      this.account = account;
+    }
     return this.account;
   }
 
