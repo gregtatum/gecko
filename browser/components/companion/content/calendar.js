@@ -253,7 +253,8 @@ export class CalendarEventList extends MozLitElement {
 
   getRelevantEvents(events) {
     // TODO: remove this method: this stuff is done in workshop.
-    let filteredEvents = events.filter(e => !e.isAllDay);
+    let filteredEvents = events;
+
     if (!debugEnabled() && this.listType != "browse") {
       // Return all meetings that start in the next hour or are currently in
       // progress.

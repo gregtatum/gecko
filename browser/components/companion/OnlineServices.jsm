@@ -229,10 +229,6 @@ class GoogleService {
 
         for (let result of results.items) {
           try {
-            // Ignore all day events
-            if (!result.start?.dateTime || !result.end?.dateTime) {
-              continue;
-            }
             if (
               calendar.id == "primary" &&
               result.attendees &&
@@ -502,8 +498,8 @@ class MicrosoftService {
 
         for (let result of results.value) {
           try {
-            // Ignore all day events
-            if (result.isAllDay || result.isCancelled) {
+            // Ignore cancelled events
+            if (result.isCancelled) {
               continue;
             }
             let event = parseMicrosoftCalendarResult(result);

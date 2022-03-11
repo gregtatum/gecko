@@ -263,10 +263,14 @@ function getConferenceInfo(result, links) {
 
 function parseGoogleCalendarResult(result, primaryEmail) {
   let event = {};
+  let start = result.start?.date || result.start?.dateTime;
+  let end = result.end?.date || result.end?.dateTime;
+
   event.id = result.id;
   event.summary = result.summary;
-  event.startDate = new Date(result.start?.dateTime);
-  event.endDate = new Date(result.end?.dateTime);
+
+  event.startDate = new Date(start);
+  event.endDate = new Date(end);
   let links = getLinkInfo(result);
   let attachments = getAttachmentInfo(result.attachments);
   event.links = [...attachments, ...links].filter(
@@ -302,7 +306,7 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   let formattedURL = new URL(result.htmlLink);
   formattedURL.searchParams.set("authuser", primaryEmail);
   event.url = formattedURL.href;
-  event.isAllDay = isAllDayEvent(result.start?.dateTime, result.end?.dateTime);
+  event.isAllDay = isAllDayEvent(start, end);
   return event;
 }
 

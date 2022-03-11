@@ -34,32 +34,9 @@ add_task(async function testBrowseOpenBack() {
       },
     ];
 
-    await helper.reload();
-    await helper.setCalendarEvents(events);
-    await helper.selectCompanionTab("browse");
-
+    await checkEventInBrowseView(helper, events);
     await helper.runCompanionTask(async () => {
       let calendarEntry = content.document.querySelector(".calendar");
-      ok(
-        ContentTaskUtils.is_visible(calendarEntry),
-        "Calendar option is visible"
-      );
-
-      let calendarShown = ContentTaskUtils.waitForEvent(
-        content.document,
-        "browse-panel-shown"
-      );
-      calendarEntry.click();
-      await calendarShown;
-
-      let browseEventList = content.document.getElementById(
-        "browse-event-list"
-      );
-      ok(browseEventList, "Browse event list is shown.");
-
-      let event = browseEventList.shadowRoot.querySelector("calendar-event");
-      ok(event, "An event is displayed in the browse section.");
-
       let calendarPanel = content.document.querySelector(".calendar-panel");
       let { backButton } = calendarPanel;
       ok(ContentTaskUtils.is_visible(backButton), "Back button is visible");
@@ -77,3 +54,73 @@ add_task(async function testBrowseOpenBack() {
     });
   });
 });
+
+add_task(async function testMultiDayEventInBrowseView() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    let now = new Date();
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      48,
+      30,
+      now.getHours()
+    );
+
+    let events = [
+      {
+        summary: "Multi Day Meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    await checkEventInBrowseView(helper, events);
+  });
+});
+
+add_task(async function testAllDayEventInBrowseView() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    let now = new Date();
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      12,
+      30,
+      now.getHours()
+    );
+
+    let events = [
+      {
+        summary: "12 Hour Meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    await checkEventInBrowseView(helper, events);
+  });
+});
+
+async function checkEventInBrowseView(helper, events) {
+  await helper.reload();
+  await helper.setCalendarEvents(events);
+  await helper.selectCompanionTab("browse");
+
+  await helper.runCompanionTask(async () => {
+    let calendarButton = content.document.querySelector(".calendar");
+    let calendarShown = ContentTaskUtils.waitForEvent(
+      content.document,
+      "browse-panel-shown"
+    );
+    calendarButton.click();
+    await calendarShown;
+
+    let browseEventList = content.document.getElementById("browse-event-list");
+    let event = browseEventList.shadowRoot.querySelector("calendar-event");
+    ok(event, "event is shown in the browse section.");
+  });
+}
