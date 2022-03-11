@@ -72,11 +72,10 @@ var localProviderModules = {
 };
 
 if (AppConstants.PINEBUILD) {
-  // TODO: Being tracked to reenable in MR2-2049.
-  //localProviderModules.UrlbarProviderQuickActionsEmpty =
-  //  "resource:///modules/UrlbarProviderQuickActions.jsm";
-  //localProviderModules.UrlbarProviderQuickActionsFilter =
-  //  "resource:///modules/UrlbarProviderQuickActions.jsm";
+  localProviderModules.UrlbarProviderQuickActionsEmpty =
+    "resource:///modules/UrlbarProviderQuickActions.jsm";
+  localProviderModules.UrlbarProviderQuickActionsFilter =
+    "resource:///modules/UrlbarProviderQuickActions.jsm";
   localProviderModules.UrlbarProviderTopSitesButtons =
     "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
   localProviderModules.UrlbarProviderRecentSearches =
