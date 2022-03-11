@@ -190,7 +190,6 @@ class nsContextMenu {
       context = this.contentData.context;
       nsContextMenu.contentData = null;
     }
-    // console.log("!!! Context", context);
 
     this.shouldDisplay = context.shouldDisplay;
     this.timeStamp = context.timeStamp;
@@ -594,9 +593,9 @@ class nsContextMenu {
     this.showItem("context-copyimage-contents", this.onImage);
 
     // Copy image location depends on whether we're on an image.
-    this.showItem("context-imagetext", this.onImage || showBGImage);
+    this.showItem("context-copyimage", this.onImage || showBGImage);
 
-    this.showItem("context-copyimage-contents", this.onImage || showBGImage);
+    this.showItem("context-imagetext", this.onImage || showBGImage);
 
     // Send media URL (but not for canvas, since it's a big data: URL)
     this.showItem("context-sendimage", this.onImage || showBGImage);

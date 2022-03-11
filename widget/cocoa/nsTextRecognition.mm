@@ -5,7 +5,6 @@
 // TODO - put the proper ifdef in here to build when this API is not available.
 #import <Vision/Vision.h>
 
-#include <cstdio>
 #include "mozilla/dom/Promise.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/ErrorResult.h"
@@ -180,6 +179,9 @@ nsAutoString nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
       return result;
     }
 
+    // TODO - Remove printf.
+    printf("Preparing recognize text request.\n");
+
     // Define the request to use, which also handles the result. It will be run below
     // directly in this thread. After creating this request.
     VNRecognizeTextRequest *textRecognitionRequest =
@@ -187,7 +189,7 @@ nsAutoString nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
         NSArray<VNRecognizedTextObservation*> *observations = request.results;
 
         // TODO - Remove printf.
-        printf("Received text observations\n");
+        printf("Received text observations.\n");
 
         [observations enumerateObjectsUsingBlock:^(
           VNRecognizedTextObservation * _Nonnull obj, NSUInteger idx,
