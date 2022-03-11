@@ -2,7 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+// TODO - put the proper ifdef in here to build when this API is not available.
 #import <Vision/Vision.h>
+
+#include <cstdio>
 #include "mozilla/dom/Promise.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/ErrorResult.h"
@@ -12,7 +15,6 @@
 #include "nsCocoaUtils.h"
 #include "nsITransferable.h"
 #include "mozilla/MacStringHelpers.h"
-#include "/Users/greg/scripts/PrettyPrint.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -38,6 +40,8 @@ nsTextRecognition::GetIsAvailable(bool* aIsAvailable) {
   return NS_OK;
 }
 
+// TODO - I don't think this function is particularly needed. This is where the error
+// of the CallOS call needs to be propagated to the promise.
 template <typename T, typename Result>
 void ResolveOrReject(dom::Promise& aPromise, T&, Result& aResult) {
   aPromise.MaybeResolve(std::forward<Result>(aResult));
@@ -60,6 +64,8 @@ void SpawnOSBackgroundThread(
   auto holder = MakeRefPtr<nsMainThreadPtrHolder<T>>(
       "nsTextRecognition::SpawnOSBackgroundThread", &aReceiver,
       /* strict = */ false);
+
+  // TODO - clang-format this file so that the following is unreadable again.
 
   // See https://stackoverflow.com/questions/47496358/c-lambdas-how-to-capture-variadic-parameter-pack-from-the-upper-scope
   // about the tuple shenanigans. It could be improved with C++20
@@ -93,8 +99,11 @@ void SpawnOSBackgroundThread(
   );
 }
 
-// Resolves an async attribute via a background task, creating and storing a
+// Resolves an OS call via a background task, creating and storing a
 // promise as needed in aPromiseSlot.
+//
+// TODO - We'll need more than just a single promise slot to properly handle this, or
+// maybe the FindText can return a separate object that owns the promise.
 template <typename T, typename Result, typename... Args>
 nsresult AsyncPromise(
     T& aReceiver,
@@ -104,11 +113,14 @@ nsresult AsyncPromise(
     CallOS<T, Result, Args...> aTask,
     Args... aArgs
 ) {
+  // TODO - The following if check was in the original printer code, I think it's just
+  // because the printer list didn't need updating. I believe there is a race condition
+  // in the promise implementation now that I have commented it out.
 
-  if (RefPtr<dom::Promise> existing = aPromiseSlot) {
-    existing.forget(aResultPromise);
-    return NS_OK;
-  }
+  // if (RefPtr<dom::Promise> existing = aPromiseSlot) {
+  //   existing.forget(aResultPromise);
+  //   return NS_OK;
+  // }
 
   // Gets a fresh promise into aResultPromise, that resolves whenever the background
   // task finishes.
@@ -151,13 +163,16 @@ nsTextRecognition::FindText(
                      &nsTextRecognition::CallOS, surface);
 }
 
+// Warning: Only run this on a background thread.
+// TODO - Do real error handling.
 nsAutoString nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
-  // TODO - Do real error handling.
   __block nsAutoString result;
 
   if (@available(macOS 10.15, *)) {
 
+    // TODO - Is this the most efficient path? Maybe we can write a new
+    // CreateCGImageFromXXX that enables more efficient marshalling of the data.
     CGImageRef imageRef = NULL;
     nsresult rv = nsCocoaUtils::CreateCGImageFromSurface(aSurface, &imageRef);
     if (NS_FAILED(rv) || !imageRef) {
@@ -165,28 +180,42 @@ nsAutoString nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
       return result;
     }
 
-    // Define the request to use, and handle the result. It will be dispatched below.
+    // Define the request to use, which also handles the result. It will be run below
+    // directly in this thread. After creating this request.
     VNRecognizeTextRequest *textRecognitionRequest =
       [[VNRecognizeTextRequest alloc] initWithCompletionHandler:^(VNRequest * _Nonnull request, NSError * _Nullable error) {
         NSArray<VNRecognizedTextObservation*> *observations = request.results;
 
+        // TODO - Remove printf.
         printf("Received text observations\n");
+
         [observations enumerateObjectsUsingBlock:^(
           VNRecognizedTextObservation * _Nonnull obj, NSUInteger idx,
           BOOL * _Nonnull stop) {
             // Requests the n top candidates for a recognized text string.
             VNRecognizedText *recognizedText = [obj topCandidates:1].firstObject;
+
+            // TODO - Remove printf.
             printf("Found text: %s\n", [recognizedText.string UTF8String]);
+
+            // TODO - Return a structured type and remove inefficient string
+            // manipulation. The returned type should include:
+            //
+            // https://developer.apple.com/documentation/vision/vnrecognizedtext?language=objc
+            //
+            //  - string
+            //  – confidence
+            //  - boundingBoxForRange
             nsAutoString line;
             mozilla::CopyCocoaStringToXPCOMString(recognizedText.string, line);
             result.Append(line);
             result.Append(u"\n");
-            printf("Setting a string:\n");
-            PrettyPrint(result);
           }
         ];
       }];
 
+    // Send out the request. This blocks execution of this thread with an expensive
+    // CPU call.
     NSError *error = nil;
     VNImageRequestHandler *requestHandler =
       [[VNImageRequestHandler alloc] initWithCGImage:imageRef options:@{}];
@@ -198,14 +227,13 @@ nsAutoString nsTextRecognition::CallOS(RefPtr<SourceSurface> aSurface) const {
       return result;
     }
 
-    printf("Returning the result:\n");
-    PrettyPrint(result);
     return result;
   } else {
     // The APIs are not available.
     // return NS_ERROR_NOT_IMPLEMENTED
     return result;
   }
+
   // return NS_OK;
   return result;
   NS_OBJC_END_TRY_IGNORE_BLOCK

@@ -16,6 +16,15 @@ class SourceSurface;
 
 namespace mozilla::widget {
 
+/**
+ * Perform text recognition on an image using native OS APIs.
+ *
+ * TODO - This should be a base class with specific platform implementations.
+ *
+ * The base class should reject the promise for finding text, and set the
+ * isAvailable method to false. The deriving classes should implement the
+ * OS-specific APIs.
+ */
 class nsTextRecognition final : public nsITextRecognition {
  public:
   NS_DECL_NSITEXTRECOGNITION
@@ -25,7 +34,13 @@ class nsTextRecognition final : public nsITextRecognition {
   nsTextRecognition() = default;
 
  protected:
+  // TODO - I don't think this promise needs to be retained, it was just how the
+  // printer implementation did it. Or maybe, it needs to be a list of
+  // outstanding promises to be resolved. Multiple OS calls can go out at once,
+  // so this is a racy area.
   RefPtr<dom::Promise> mCallPromise;
+
+  // This contains the OS-specific call to get the text recognition results.
   nsAutoString CallOS(RefPtr<mozilla::gfx::SourceSurface> aImage) const;
   ~nsTextRecognition() = default;
 };

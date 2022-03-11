@@ -2137,20 +2137,25 @@ class nsContextMenu {
     clipboard.copyString(this.originalMediaURL);
   }
 
+  /**
+   * This function calls out to nsTextRecognition for the right clicked imaged.
+   * It's just a prototype for interacting with those results. It opens up a new
+   * tab and horrifically crafts a text string for the HTML markup of the page.
+   * It then opens it as a data url.
+   */
   getImageText() {
     if (!Services.textRecognition?.isAvailable) {
       throw new Error("OCR is not available.");
     }
 
-    // TODO - Where is this .js file loaded? Is it in the parent or child process?
-    // I suspect this step could be done with a lot less work using a transferable.
-    // I couldn't get it working with a nsITransferable.
-
     let referrerInfo = this.contentData.referrerInfo;
+    const { originalMediaURL } = this;
 
     // Load the image.
     const image = new Image();
     image.onload = function() {
+      // TODO - This is really slow and bad. In performance profiles this is where much
+      // of the time is spent.
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       canvas.height = this.naturalHeight;
@@ -2165,36 +2170,90 @@ class nsContextMenu {
         image.length,
         "image/png"
       );
-      dump(`Finding text from the context menu\n`);
-      dump(`==================================\n`);
 
       Services.textRecognition.findText(imageContainer).then(
         (text) => {
-          console.log("!!! Services.textRecognition.findText result", text);
+          // TODO - This is not secure or a good approach, it was expedient
+          // for prototyping.
+          const markup = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8" />
+              <style>
+                html {
+                  position: absolute;
+                  width: 100%;
+                  height: 100%;
+                  margin: 0;
+                  padding: 0;
+                }
+                body {
+                  display: flex;
+                  flex-direction: column;
+                  width: 100%;
+                  position: relative;
+                  height: 100%;
+                  margin: 0;
+                  padding: 0;
+                  justify-content: center;
+                  align-items: center;
+                  font-family: sans-serif;
+                }
+                div {
+                  max-height: 40vh;
+                  overflow-y: auto;
+                }
+                img {
+                  /* TODO - This could be done better to fill the total height */
+                  max-width: 40vh;
+                  box-shadow: 3px 2px 8px #00000040;
+                  border-radius: 3px;
+                }
+                body > * {
+                  margin: 4vh;
+                }
+              </style>
+              <!-- This is horrible for security, don't do this for real. -->
+              <title>
+                ${text.replace("<", "").replace(">", "")}
+              </title>
+            </head>
+            <body>
+              <!-- This is horrible for security, don't do this for real. -->
+              <div>
+                ${text.split("\n").join("<br/>")}
+              </div>
+              <!-- This is horrible for security, don't do this for real. -->
+              <img src="${originalMediaURL}" />
+            </body>
+            </html>
+          `;
 
+          // This is horrible for security, don't do this for real.
           const url =
-            "data:text/plain;charset=utf-8," + encodeURIComponent(text);
+            "data:text/html;charset=utf-8," + encodeURIComponent(markup);
 
           const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
             Ci.nsIClipboardHelper
           );
           clipboard.copyString(text);
 
+          // TODO - What's the proper value here?
           let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
 
-          // TODO - How do you force this to take focus?
           openLinkIn(url, "tab", {
             referrerInfo,
             triggeringPrincipal: systemPrincipal,
+            inBackground: false,
           });
-
         },
         (error) => {
-          console.log("!!! Services.textRecognition.findText error", error);
+          console.error("Services.textRecognition.findText error", error);
         }
       );
     };
-    image.src = this.originalMediaURL;
+    image.src = originalMediaURL;
   }
 
   drmLearnMore(aEvent) {
