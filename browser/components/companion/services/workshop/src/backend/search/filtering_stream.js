@@ -190,7 +190,8 @@ export default function FilteringStream({
           queuedSet.delete(changeId);
           notifyAdded(preDerivers, gathered);
           let matchInfo = filterRunner.filter(gathered);
-          logic(ctx, "maybeMatch", { matched: !!matchInfo });
+          const isKnown = knownFilteredSet.has(changeId);
+          logic(ctx, "maybeMatch", { matched: !!matchInfo, isKnown });
           if (matchInfo) {
             const xids = { validId: null, invalidId: null };
             if (matchInfo?.event.durationBeforeToBeValid) {
@@ -206,7 +207,7 @@ export default function FilteringStream({
                 // The delay is a way too high so ignore the change.
               }
 
-              if (knownFilteredSet.has(changeId)) {
+              if (isKnown) {
                 // The change will be visible but for now it must be filtered
                 // out.
                 enqueue(change);
@@ -237,7 +238,7 @@ export default function FilteringStream({
             // make our own mutable copy.
             change = shallowClone(change);
             // We match now, we may or may not have previously matched.
-            if (!knownFilteredSet.has(changeId)) {
+            if (!isKnown) {
               // Didn't have it before, have it now.  Make sure this resembles
               // an add.  (If this actually is an add, this is a no-op.)
               mutateChangeToResembleAdd(change);
@@ -247,8 +248,9 @@ export default function FilteringStream({
             // And this is how the matchInfo actually gets into the TOC...
             change.matchInfo = matchInfo;
             enqueue(change);
-          } else if (knownFilteredSet.delete(changeId)) {
+          } else if (isKnown) {
             // We need to issue a retraction... delete and check RV.
+            knownFilteredSet.delete(changeId);
             change = shallowClone(change);
             mutateChangeToResembleDeletion(change);
             enqueue(change);

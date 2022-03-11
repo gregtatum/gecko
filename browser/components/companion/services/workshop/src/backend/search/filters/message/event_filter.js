@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { NOW } from "shared/date";
+
 /**
  * Filter ical events which are happening "now" or today.
  */
@@ -45,49 +47,64 @@ EventFilter.prototype = {
     }
     const message = gathered?.message;
     if (!message || !("startDate" in message)) {
-      return true;
+      return false;
     }
 
     if (message.recurrenceRules) {
+      // It's the main event describing a recurring event so it doesn't have
+      // to be in the view.
       return false;
     }
 
     const { startDate, endDate, isAllDay } = message;
-    const now = new Date().valueOf();
-
-    if (endDate <= now) {
-      // Event is finished.
-      return false;
-    }
+    const nowTS = NOW();
 
     if (this.type === "now") {
+      if (isAllDay || endDate <= nowTS) {
+        // Event is finished.
+        return false;
+      }
+
       const shiftedStartDate = startDate - this.durationBeforeInMillis;
-      if (now < shiftedStartDate) {
+      if (nowTS < shiftedStartDate) {
         // The event will appear in (shiftedStartDate - now) ms.
         return {
-          durationBeforeToBeValid: shiftedStartDate - now,
+          durationBeforeToBeValid: shiftedStartDate - nowTS,
         };
       }
 
       // The event will disappear in (endDate - now) ms.
       return {
-        durationBeforeToBeInvalid: endDate - now,
+        durationBeforeToBeInvalid: endDate - nowTS,
       };
     }
 
-    // Keep events which are happening today.
-    const tomorrow = new Date().setHours(24, 0, 0, 0).valueOf();
-    if (startDate >= tomorrow) {
+    // this.type === "browse".
+
+    const todayTS = new Date(nowTS).setHours(0, 0, 0, 0);
+    const _date = new Date(todayTS);
+    const tomorrowTS = _date.setDate(_date.getDate() + 1);
+
+    if (endDate <= todayTS) {
+      // Event finished before today.
       return false;
     }
 
-    // Keep allDay events if the list query is "browse"
-    if (this.type == "now" && isAllDay) {
-      return false;
+    if (startDate >= tomorrowTS) {
+      // Event begins after tomorrow.
+      const _startDateTS = new Date(startDate).setHours(0, 0, 0, 0);
+      return {
+        durationBeforeToBeValid: _startDateTS - nowTS,
+      };
     }
+
+    // Get the "tomorrow" after endDate
+    let _endDate = new Date(endDate);
+    _endDate.setHours(0, 0, 0, 0);
+    const _endDateTS = _endDate.setDate(_endDate.getDate() + 1);
 
     return {
-      durationBeforeToBeInvalid: endDate - now,
+      durationBeforeToBeInvalid: _endDateTS - nowTS,
     };
   },
 };

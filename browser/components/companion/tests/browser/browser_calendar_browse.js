@@ -53,6 +53,144 @@ add_task(async function testBrowseOpenBack() {
       ok(ContentTaskUtils.is_visible(calendarEntry), "Calendar button visible");
     });
   });
+
+  add_task(async function testEventInBrowseView() {
+    await SpecialPowers.pushPrefEnv({
+      set: [["browser.pinebuild.calendar.browseEnabled", true]],
+    });
+
+    await CompanionHelper.whenReady(async helper => {
+      let now = new Date().valueOf();
+      let today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+
+      let yesterday = new Date(now);
+      yesterday.setDate(today.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+
+      let tomorrow = new Date(now);
+      tomorrow.setDate(today.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      let events = [];
+      let { start, end } = PinebuildTestUtils.generateEventTimes(
+        0,
+        30,
+        yesterday
+      );
+      events.push({
+        summary: "Meeting starting/ending yesterday",
+        startDate: start,
+        endDate: end,
+      });
+
+      start = new Date(yesterday.setHours(23, 0, 0, 0)).toISOString();
+      end = new Date((today.valueOf() + now) / 2).toISOString();
+      events.push({
+        summary: "Meeting starting yesterday & ending today",
+        startDate: start,
+        endDate: end,
+      });
+
+      start = new Date((2 * today.valueOf() + now) / 3).toISOString();
+      end = new Date((today.valueOf() + now) / 2).toISOString();
+      events.push({
+        summary: "Finished meeting",
+        startDate: start,
+        endDate: end,
+      });
+
+      start = new Date((today.valueOf() + 2 * now) / 3).toISOString();
+      end = new Date((2 * now + tomorrow.valueOf()) / 3).toISOString();
+      events.push({
+        summary: "Happening meeting",
+        startDate: start,
+        endDate: end,
+      });
+
+      start = new Date((now + tomorrow.valueOf()) / 2).toISOString();
+      end = new Date((now + 2 * tomorrow.valueOf()) / 3).toISOString();
+      events.push({
+        summary: "Future meeting",
+        startDate: start,
+        endDate: end,
+      });
+
+      ({ start, end } = PinebuildTestUtils.generateEventTimes(
+        0,
+        30,
+        new Date(tomorrow.setHours(1, 0, 0, 0))
+      ));
+      events.push({
+        summary: "Tomorrow meeting",
+        startDate: start,
+        endDate: end,
+      });
+
+      await helper.reload();
+      await helper.overrideRelativeTime(now, 0);
+      await helper.setCalendarEvents(events);
+      await helper.selectCompanionTab("browse");
+
+      await helper.runCompanionTask(async () => {
+        let calendarEntry = content.document.querySelector(".calendar");
+        ok(
+          ContentTaskUtils.is_visible(calendarEntry),
+          "Calendar option is visible"
+        );
+
+        let calendarShown = ContentTaskUtils.waitForEvent(
+          content.document,
+          "browse-panel-shown"
+        );
+        calendarEntry.click();
+        await calendarShown;
+
+        let browseEventList = content.document.getElementById(
+          "browse-event-list"
+        );
+        ok(browseEventList, "Browse event list is shown.");
+
+        let viewEvents = [
+          ...browseEventList.shadowRoot.querySelectorAll("calendar-event"),
+        ];
+        is(viewEvents.length, 4, "Three events must be in the browse section");
+
+        let eventRelativeTimes = await Promise.all(
+          viewEvents.map(async e =>
+            ContentTaskUtils.waitForCondition(() => {
+              return e.shadowRoot.querySelector("relative-time");
+            })
+          )
+        );
+
+        let relativeTimeContents = eventRelativeTimes.map(relativeTime =>
+          relativeTime.shadowRoot.querySelector(".event-relative-time")
+        );
+
+        let l10nIds = relativeTimeContents.map(content =>
+          content.getAttribute("data-l10n-id")
+        );
+
+        is(l10nIds[0], "companion-event-finished", "An event is finished");
+        is(l10nIds[1], "companion-event-finished", "An event is finished");
+        ok(
+          [
+            "companion-happening-now",
+            "companion-ending-soon",
+            "companion-almost-over",
+          ].includes(l10nIds[2]),
+          "An event is happening now"
+        );
+        ok(
+          ["companion-up-next", "companion-starting-soon", ""].includes(
+            l10nIds[3]
+          ),
+          "An event will happen"
+        );
+      });
+    });
+  });
 });
 
 add_task(async function testMultiDayEventInBrowseView() {

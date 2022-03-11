@@ -11304,6 +11304,20 @@ var WorkshopBackend = (() => {
   function toArray(obj) {
     return Array.isArray(obj) ? obj : [...obj.values()];
   }
+  function toStringKey(obj) {
+    let result = "";
+    if (typeof obj === "object") {
+      const keys = Object.keys(obj).sort();
+      for (const key of keys) {
+        result += toStringKey(obj[key]);
+      }
+    } else if (Array.isArray(obj)) {
+      result += obj.map(toStringKey).join("");
+    } else {
+      result += "|" + obj.toString();
+    }
+    return result;
+  }
   var init_tools = __esm({
     "src/backend/utils/tools.js"() {
     }
@@ -21144,7 +21158,8 @@ var WorkshopBackend = (() => {
             queuedSet.delete(changeId);
             notifyAdded(preDerivers, gathered);
             let matchInfo = filterRunner.filter(gathered);
-            logic(ctx, "maybeMatch", { matched: !!matchInfo });
+            const isKnown = knownFilteredSet.has(changeId);
+            logic(ctx, "maybeMatch", { matched: !!matchInfo, isKnown });
             if (matchInfo) {
               const xids = { validId: null, invalidId: null };
               if (matchInfo?.event.durationBeforeToBeValid) {
@@ -21157,7 +21172,7 @@ var WorkshopBackend = (() => {
                   timeoutIds.set(changeId, xids);
                 } catch {
                 }
-                if (knownFilteredSet.has(changeId)) {
+                if (isKnown) {
                   enqueue(change);
                   notifyRemoved(preDerivers, changeId);
                   notifyRemoved(postDerivers, changeId);
@@ -21177,14 +21192,15 @@ var WorkshopBackend = (() => {
                 }
               }
               change = shallowClone2(change);
-              if (!knownFilteredSet.has(changeId)) {
+              if (!isKnown) {
                 mutateChangeToResembleAdd(change);
                 knownFilteredSet.add(changeId);
                 notifyAdded(postDerivers, gathered);
               }
               change.matchInfo = matchInfo;
               enqueue(change);
-            } else if (knownFilteredSet.delete(changeId)) {
+            } else if (isKnown) {
+              knownFilteredSet.delete(changeId);
               change = shallowClone2(change);
               mutateChangeToResembleDeletion(change);
               enqueue(change);
@@ -21884,6 +21900,7 @@ var WorkshopBackend = (() => {
   };
 
   // src/backend/search/filters/message/event_filter.js
+  init_date();
   function EventFilter(params, args) {
     this.durationBeforeInMillis = (args.durationBeforeInMinutes ?? -1) * 60 * 1e3;
     this.type = args.type;
@@ -21898,36 +21915,44 @@ var WorkshopBackend = (() => {
       }
       const message = gathered?.message;
       if (!message || !("startDate" in message)) {
-        return true;
+        return false;
       }
       if (message.recurrenceRules) {
         return false;
       }
       const { startDate, endDate, isAllDay } = message;
-      const now = new Date().valueOf();
-      if (endDate <= now) {
-        return false;
-      }
+      const nowTS = NOW();
       if (this.type === "now") {
+        if (isAllDay || endDate <= nowTS) {
+          return false;
+        }
         const shiftedStartDate = startDate - this.durationBeforeInMillis;
-        if (now < shiftedStartDate) {
+        if (nowTS < shiftedStartDate) {
           return {
-            durationBeforeToBeValid: shiftedStartDate - now
+            durationBeforeToBeValid: shiftedStartDate - nowTS
           };
         }
         return {
-          durationBeforeToBeInvalid: endDate - now
+          durationBeforeToBeInvalid: endDate - nowTS
         };
       }
-      const tomorrow = new Date().setHours(24, 0, 0, 0).valueOf();
-      if (startDate >= tomorrow) {
+      const todayTS = new Date(nowTS).setHours(0, 0, 0, 0);
+      const _date = new Date(todayTS);
+      const tomorrowTS = _date.setDate(_date.getDate() + 1);
+      if (endDate <= todayTS) {
         return false;
       }
-      if (this.type == "now" && isAllDay) {
-        return false;
+      if (startDate >= tomorrowTS) {
+        const _startDateTS = new Date(startDate).setHours(0, 0, 0, 0);
+        return {
+          durationBeforeToBeValid: _startDateTS - nowTS
+        };
       }
+      let _endDate = new Date(endDate);
+      _endDate.setHours(0, 0, 0, 0);
+      const _endDateTS = _endDate.setDate(_endDate.getDate() + 1);
       return {
-        durationBeforeToBeInvalid: endDate - now
+        durationBeforeToBeInvalid: _endDateTS - nowTS
       };
     }
   };
@@ -23167,6 +23192,7 @@ var WorkshopBackend = (() => {
   __publicField(VirtualConversationTOC, "_globalId", 0);
 
   // src/backend/mailuniverse.js
+  init_tools();
   function MailUniverse({ online, testOptions, appExtensions }) {
     logic.defineScope(this, "Universe");
     this._initialized = false;
@@ -23496,10 +23522,10 @@ var WorkshopBackend = (() => {
       return ctx.acquire(toc);
     },
     acquireSearchAllAccountsMessagesTOC(ctx, spec) {
-      const { accountIds } = spec;
+      const { accountIds, filter } = spec;
       accountIds.sort();
-      const keyAccountIds = accountIds.join("");
-      const virtualConvTOC = this._virtualConversationTOCs.get(keyAccountIds);
+      const key = accountIds.join("") + toStringKey(filter);
+      const virtualConvTOC = this._virtualConversationTOCs.get(key);
       if (virtualConvTOC) {
         return virtualConvTOC;
       }
@@ -23519,10 +23545,10 @@ var WorkshopBackend = (() => {
         refreshHelperMaker: this.__makeRefreshHelper.bind(this),
         metaHelperMaker: this.__makeMetaHelper.bind(this),
         onForgotten: () => {
-          this._virtualConversationTOCs.delete(keyAccountIds);
+          this._virtualConversationTOCs.delete(key);
         }
       });
-      this._virtualConversationTOCs.set(keyAccountIds, toc);
+      this._virtualConversationTOCs.set(key, toc);
       if (spec.refresh) {
         toc.refresh("searchAllAccountsMessages");
       }

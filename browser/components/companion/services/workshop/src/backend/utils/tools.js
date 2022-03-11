@@ -42,3 +42,25 @@ export function prepareChangeForProblems(account, problem) {
 export function toArray(obj) {
   return Array.isArray(obj) ? obj : [...obj.values()];
 }
+
+/**
+ * Create a string from an object in ordering the keys in the object and in its
+ * children if any.
+ * The goal is to have something to be used as a key in a map.
+ * @param {*} obj
+ * @return {string}
+ */
+export function toStringKey(obj) {
+  let result = "";
+  if (typeof obj === "object") {
+    const keys = Object.keys(obj).sort();
+    for (const key of keys) {
+      result += toStringKey(obj[key]);
+    }
+  } else if (Array.isArray(obj)) {
+    result += obj.map(toStringKey).join("");
+  } else {
+    result += "|" + obj.toString();
+  }
+  return result;
+}

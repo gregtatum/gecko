@@ -562,7 +562,22 @@ class CompanionHelper {
     } else {
       let oneHourFromNow = new Date();
       oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
+
+      let now = new Date();
+      let today = new Date(now);
+      let todayTS = today.setHours(0, 0, 0, 0);
+
+      let tomorrow = new Date(todayTS);
+      let tomorrowTS = tomorrow.setDate(today.getDate() + 1);
+
       let standardizedEvents = eventsData
+        .filter(
+          event =>
+            !event.startDate ||
+            !event.endDate ||
+            (new Date(event.startDate).valueOf() <= tomorrowTS &&
+              new Date(event.endDate).valueOf() >= todayTS)
+        )
         .map(event => {
           let startDate = event.startDate || new Date();
           let endDate = event.endDate || oneHourFromNow;

@@ -49,6 +49,7 @@ import {
   accountIdFromIdentityId,
 } from "shared/id_conversions";
 import { VirtualConversationTOC } from "./db/virtual_conv_toc";
+import { toStringKey } from "./utils/tools";
 
 /**
  * The root of the backend, coordinating/holding everything together.  It is the
@@ -637,10 +638,10 @@ MailUniverse.prototype = {
   },
 
   acquireSearchAllAccountsMessagesTOC(ctx, spec) {
-    const { accountIds } = spec;
+    const { accountIds, filter } = spec;
     accountIds.sort();
-    const keyAccountIds = accountIds.join("");
-    const virtualConvTOC = this._virtualConversationTOCs.get(keyAccountIds);
+    const key = accountIds.join("") + toStringKey(filter);
+    const virtualConvTOC = this._virtualConversationTOCs.get(key);
     if (virtualConvTOC) {
       return virtualConvTOC;
     }
@@ -667,11 +668,11 @@ MailUniverse.prototype = {
       refreshHelperMaker: this.__makeRefreshHelper.bind(this),
       metaHelperMaker: this.__makeMetaHelper.bind(this),
       onForgotten: () => {
-        this._virtualConversationTOCs.delete(keyAccountIds);
+        this._virtualConversationTOCs.delete(key);
       },
     });
 
-    this._virtualConversationTOCs.set(keyAccountIds, toc);
+    this._virtualConversationTOCs.set(key, toc);
     if (spec.refresh) {
       toc.refresh("searchAllAccountsMessages");
     }
