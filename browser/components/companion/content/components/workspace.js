@@ -60,13 +60,10 @@ export default class Workspace extends window.MozHTMLElement {
     this.#urlbar.setAttribute("workspace-id", this.#id);
   }
 
-  clearActiveView() {
-    this.#river.activeView = null;
-    this.#pinnedViews.activeView = null;
-  }
-
   setActiveView(view) {
     this.#updateSearchWorkspace();
+    this.#river.activeView = null;
+    this.#pinnedViews.activeView = null;
 
     if (this.isRiverView(view)) {
       this.#river.activeView = view;

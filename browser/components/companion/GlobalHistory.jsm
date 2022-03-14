@@ -481,12 +481,15 @@ class ViewGroup {
       // not InternalViews, so we map them to their .view properties.
       overflowed = [...views.slice(0, index + 1).map(v => v.view)].reverse();
     } else {
+      let isPinnedApp = pinnedAppBrowsers?.has(
+        currentGroup.at(-1).getBrowser()
+      );
       // We bailed out because we reached the end of the list. Whatever is
       // in currentGroup can get pushed into the displayed groups.
       //
       // See the comment inside of the loop for why we're reversing the
       // currentGroup.
-      groups.push(new ViewGroup(currentGroup.reverse()));
+      groups.push(new ViewGroup(currentGroup.reverse(), isPinnedApp));
     }
 
     // Finally, we reverse the displayed ViewGroups that we've collected.
@@ -2736,6 +2739,43 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
+   * Helper function that takes a ViewGroup and, depending
+   * on the contents of the ViewGroup, returns a View that should
+   * be acted upon by default. Non-pinned app ViewGroups will result
+   * in the last View in the group returned. Pinned app ViewGroups
+   * will return the View associated with the current history entry
+   * in the underlying browser element.
+   *
+   * @param {ViewGroup} viewGroup
+   *   The ViewGroup to get the representative View from.
+   * @returns {View}
+   */
+  #getViewInGroup(viewGroup) {
+    let view = viewGroup.lastView;
+    if (!viewGroup.isApp) {
+      return view;
+    }
+
+    let internalView = InternalView.viewMap.get(view);
+    let browser = internalView.getBrowser();
+    let SHEntry = getCurrentEntry(browser);
+    let workspace = this.#workspaces.get(internalView.workspaceId);
+    let currentInternalViewForBrowser = workspace.historyViews.get(SHEntry.ID);
+    return currentInternalViewForBrowser.view;
+  }
+
+  /**
+   * Stages a View from a ViewGroup.
+   *
+   * @param {ViewGroup} viewGroup
+   *   The ViewGroup to stage a View from.
+   */
+  setViewInGroup(viewGroup) {
+    let view = this.#getViewInGroup(viewGroup);
+    this.setView(view);
+  }
+
+  /**
    * Navigates to the given view.
    *
    * @param {View} view
@@ -3035,6 +3075,17 @@ class GlobalHistory extends EventTarget {
       ? this.#currentHistoryCarouselInternalView
       : this.#currentInternalView;
     this.#closeInternalView(currentView);
+  }
+
+  /**
+   * Closes a View from a ViewGroup.
+   *
+   * @param {ViewGroup} viewGroup
+   *   The ViewGroup to close a View in.
+   */
+  closeViewInGroup(viewGroup) {
+    let view = this.#getViewInGroup(viewGroup);
+    this.closeView(view);
   }
 
   /**

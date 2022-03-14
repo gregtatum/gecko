@@ -85,7 +85,7 @@ function generateViewGroupElement(fakeViewGroup) {
   registerCleanupFunction(() => {
     viewGroupEl.remove();
   });
-  viewGroupEl.addEventListener("UserAction:ViewSelected", e => {
+  viewGroupEl.addEventListener("UserAction:ViewGroupSelected", e => {
     e.stopPropagation();
   });
   return viewGroupEl;

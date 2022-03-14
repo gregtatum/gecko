@@ -47,10 +47,10 @@ export default class ViewGroupElement extends MozLitElement {
   }
 
   #onClick(event) {
-    let e = new CustomEvent("UserAction:ViewSelected", {
+    let e = new CustomEvent("UserAction:ViewGroupSelected", {
       bubbles: true,
       composed: true,
-      detail: { clickedView: this.lastView },
+      detail: { clickedViewGroup: this.viewGroup },
     });
     this.dispatchEvent(e);
   }
@@ -60,17 +60,17 @@ export default class ViewGroupElement extends MozLitElement {
       return;
     }
 
-    let selectEvent = new CustomEvent("UserAction:ViewSelected", {
+    let selectEvent = new CustomEvent("UserAction:ViewGroupSelected", {
       bubbles: true,
       composed: true,
-      detail: { clickedView: this.lastView },
+      detail: { clickedViewGroup: this.viewGroup },
     });
     this.dispatchEvent(selectEvent);
 
-    let closeEvent = new CustomEvent("UserAction:ViewClosed", {
+    let closeEvent = new CustomEvent("UserAction:ViewGroupCloseOne", {
       bubbles: true,
       composed: true,
-      detail: { clickedView: this.lastView },
+      detail: { clickedViewGroup: this.viewGroup },
     });
     this.dispatchEvent(closeEvent);
   }

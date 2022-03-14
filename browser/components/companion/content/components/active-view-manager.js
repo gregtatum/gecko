@@ -62,7 +62,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
 
     this.addEventListener("UserAction:ViewSelected", this);
-    this.addEventListener("UserAction:ViewClosed", this);
+    this.addEventListener("UserAction:ViewGroupSelected", this);
+    this.addEventListener("UserAction:ViewGroupCloseOne", this);
     this.addEventListener("UserAction:OpenPageActionMenu", this);
     this.addEventListener("UserAction:PinView", this);
     this.addEventListener("UserAction:UnpinView", this);
@@ -91,7 +92,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       window.gGlobalHistory.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:ViewSelected", this);
-    this.removeEventListener("UserAction:ViewClosed", this);
+    this.removeEventListener("UserAction:ViewGroupCloseOne", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
     this.removeEventListener("UserAction:PinView", this);
     this.removeEventListener("UserAction:UnpinView", this);
@@ -113,6 +114,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       }
       case "ViewAdded":
       // Intentional fall-through
+      case "ViewChanged":
+      // Intentional fall-through
       case "ViewMoved":
       // Intentional fall-through
       case "ViewRemoved":
@@ -128,18 +131,21 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           workspace?.overflowedViews,
           workspace?.pinnedViewGroups
         );
-        break;
-      }
-      case "ViewChanged": {
-        let workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
-        );
-        workspace.setActiveView(event.view);
+
+        let allWorkspaces = this.querySelectorAll("workspace-el");
+        allWorkspaces.forEach(w => {
+          w.setActiveView(window.gGlobalHistory.currentView);
+        });
         break;
       }
       case "UserAction:ViewSelected": {
         let view = event.detail.clickedView;
         this.#viewSelected(view);
+        break;
+      }
+      case "UserAction:ViewGroupSelected": {
+        let viewGroup = event.detail.clickedViewGroup;
+        this.#viewGroupSelected(viewGroup);
         break;
       }
       case "UserAction:OpenPageActionMenu": {
@@ -158,9 +164,9 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         this.#setViewPinnedState(view, false);
         break;
       }
-      case "UserAction:ViewClosed": {
-        let view = event.detail.clickedView;
-        this.#viewClosed(view);
+      case "UserAction:ViewGroupCloseOne": {
+        let viewGroup = event.detail.clickedViewGroup;
+        this.#viewGroupCloseOne(viewGroup);
         break;
       }
       case "click":
@@ -202,13 +208,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
   }
 
-  #clearActiveView() {
-    let workspaces = this.querySelectorAll("workspace-el");
-    workspaces.forEach(workspace => {
-      workspace.clearActiveView();
-    });
-  }
-
   #createWorkspaceElement(id) {
     let workspace = this.querySelector("[workspace-id='" + id + "']");
     if (workspace) {
@@ -232,16 +231,15 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   #viewSelected(view) {
-    this.#clearActiveView();
-    let workspace = this.querySelector(
-      "[workspace-id='" + view.workspaceId + "']"
-    );
-    workspace.setActiveView(view);
     window.gGlobalHistory.setView(view);
   }
 
-  #viewClosed(view) {
-    window.gGlobalHistory.closeView(view);
+  #viewGroupSelected(viewGroup) {
+    window.gGlobalHistory.setViewInGroup(viewGroup);
+  }
+
+  #viewGroupCloseOne(viewGroup) {
+    window.gGlobalHistory.closeViewInGroup(viewGroup);
   }
 
   /**
