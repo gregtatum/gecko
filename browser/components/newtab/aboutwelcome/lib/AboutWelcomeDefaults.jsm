@@ -446,7 +446,7 @@ async function prepareContentForReact(content) {
 
   if (content.languageMismatchEnabled) {
     const screen = content?.screens?.find(s => s.id === "AW_LANGUAGE_MISMATCH");
-    if (screen) {
+    if (screen && content.appAndSystemLocaleInfo.canLiveReload) {
       // Add the display names for the OS and Firefox languages, like "American English".
       const { appAndSystemLocaleInfo } = content;
       function addMessageArgs(obj) {

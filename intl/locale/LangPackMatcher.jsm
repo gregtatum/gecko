@@ -282,6 +282,15 @@ function getAppAndSystemLocaleInfo() {
     type: "language",
   });
 
+  const systemDirection = Services.intl.getScriptDirection(
+    systemLocale.language
+  );
+  const appDirection = Services.intl.getScriptDirection(appLocale.language);
+  const supportsBidiSwitching = Services.prefs.getBoolPref(
+    "intl.multilingual.liveReloadBidirectional",
+    false
+  );
+
   return {
     // Return the Intl.Locale in a serializable form.
     systemLocaleRaw,
@@ -289,6 +298,7 @@ function getAppAndSystemLocaleInfo() {
     appLocaleRaw,
     appLocale,
     matchType,
+    canLiveReload: systemDirection === appDirection || supportsBidiSwitching,
 
     // These can be used as Fluent message args.
     displayNames: {
