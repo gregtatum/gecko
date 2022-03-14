@@ -980,7 +980,7 @@ var PinebuildTestUtils = {
     let viewGroups = pinnedViews.shadowRoot.querySelectorAll("view-group");
     for (let viewGroup of viewGroups) {
       Assert.equal(
-        viewGroup.views.length,
+        viewGroup.viewGroup.length,
         1,
         "There should be 1 View for each pinned ViewGroup."
       );

@@ -43,7 +43,6 @@ export default class Workspace extends window.MozHTMLElement {
   }
 
   disconnectedCallback() {
-    window.gGlobalHistory.removeEventListener("RiverRebuilt", this);
     this.removeEventListener("RiverRegrouped");
     this.removeEventListener("dragstart", this);
     this.removeEventListener("dragend", this);
@@ -78,49 +77,19 @@ export default class Workspace extends window.MozHTMLElement {
     }
   }
 
-  updateView(view) {
-    if (this.isPinnedView(view)) {
-      this.#pinnedViews.requestUpdate();
-    } else if (this.isRiverView(view)) {
-      this.#river.viewUpdated();
-    } else {
-      console.warn("Saw ViewUpdated for an unknown view.");
-    }
-  }
-
   #isEmpty() {
     return this.#river.isEmpty() && this.#pinnedViews.isEmpty();
   }
 
-  addView(view, pin = false, atIndex = null) {
-    if (pin) {
-      this.#pinnedViews.addView(view, atIndex);
-    } else {
-      this.#river.addView(view);
-    }
-
+  update(riverViewGroups = [], overflowedViews = [], pinnedViewGroups = []) {
+    this.#river.viewGroups = riverViewGroups;
+    this.#river.overflowedViews = overflowedViews;
+    this.#pinnedViews.viewGroups = pinnedViewGroups;
+    let l10nId = this.#overflow.getAttribute("data-l10n-id");
+    let count = overflowedViews.length;
+    document.l10n.setAttributes(this.#overflow, l10nId, { count });
+    this.#overflow.hidden = count == 0;
     this.#workspace.setAttribute("empty", this.#isEmpty());
-  }
-
-  removeView(view) {
-    if (this.isPinnedView(view)) {
-      this.#pinnedViews.removeView(view);
-    } else if (this.isRiverView(view)) {
-      this.#river.removeView(view);
-    } else {
-      console.warn("Saw ViewRemoved for an unknown view.");
-    }
-
-    this.#workspace.setAttribute("empty", this.#isEmpty());
-  }
-
-  moveView(view) {
-    if (this.isRiverView(view)) {
-      this.#river.addView(view);
-      this.#river.activeView = view;
-    } else {
-      console.warn("Saw ViewMoved for an unknown view.");
-    }
   }
 
   isRiverView(view) {
@@ -208,27 +177,6 @@ export default class Workspace extends window.MozHTMLElement {
       }
       case "dragend": {
         this.#onDragEnd(event);
-        break;
-      }
-      case "RiverRegrouped": {
-        let l10nId = this.#overflow.getAttribute("data-l10n-id");
-        let count = event.detail.overflowCount;
-        document.l10n.setAttributes(this.#overflow, l10nId, { count });
-        this.#overflow.hidden = count == 0;
-        break;
-      }
-      case "RiverRebuilt": {
-        let workspaceViews = [];
-        for (let view of window.gGlobalHistory.views) {
-          if (view.workspaceId == this.#id) {
-            workspaceViews.push(view);
-          }
-        }
-        this.#river.setViews(workspaceViews);
-        this.#pinnedViews.clear();
-        if (window.gGlobalHistory.currentView?.workspaceId == this.#id) {
-          this.setActiveView(window.gGlobalHistory.currentView);
-        }
         break;
       }
     }

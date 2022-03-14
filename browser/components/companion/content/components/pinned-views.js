@@ -11,7 +11,7 @@ class PinnedViews extends MozLitElement {
 
   static get properties() {
     return {
-      _views: { type: Array, state: true },
+      viewGroups: { type: Array, state: true, attribute: false },
       activeView: { type: Object },
       dragging: { type: Boolean },
     };
@@ -19,40 +19,18 @@ class PinnedViews extends MozLitElement {
 
   constructor() {
     super();
-    this._views = [];
+    this.viewGroups = [];
     this.activeView = null;
     this.dragging = false;
     this.#dragOverElement = null;
   }
 
   isEmpty() {
-    return !this._views.length;
-  }
-
-  addView(view, atIndex) {
-    let index = this._views.indexOf(view);
-    if (index != -1) {
-      this._views.splice(index, 1);
-    }
-
-    this._views = [...this._views];
-    this._views.splice(atIndex, 0, view);
-  }
-
-  removeView(view) {
-    let index = this._views.indexOf(view);
-    if (index != -1) {
-      this._views.splice(index, 1);
-      this._views = [...this._views];
-    }
+    return !this.viewGroups.length;
   }
 
   hasView(view) {
-    return this._views.includes(view);
-  }
-
-  clear() {
-    this._views = [];
+    return this.viewGroups.some(group => group.includes(view));
   }
 
   #onDragOver(event) {
@@ -119,21 +97,21 @@ class PinnedViews extends MozLitElement {
       />
       <div
         id="pinned-views"
-        ?hidden=${!this._views.length && !this.dragging}
-        ?hasviews=${this._views.length}
+        ?hidden=${!this.viewGroups.length && !this.dragging}
+        ?hasviews=${this.viewGroups.length}
         ?dragging=${this.dragging}
         @dragover=${this.#onDragOver}
         @dragleave=${this.#onDragLeave}
         @drop=${this.#onDrop}
       >
         <img id="pin-icon" src="chrome://browser/skin/pin-12.svg"></img>
-        ${this._views.map(
-          view =>
+        ${this.viewGroups.map(
+          viewGroup =>
             html`
               <view-group
                 exportparts="domain, history"
-                ?active=${view == this.activeView}
-                .views=${[view]}
+                ?active=${viewGroup.includes(this.activeView)}
+                .viewGroup=${viewGroup}
                 .activeView=${this.activeView}
               ></view-group>
             `

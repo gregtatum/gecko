@@ -72,13 +72,13 @@ function generateGroupableViews(numViews) {
  * doesn't try to do anything about it. This function also handles
  * cleaning up the ViewGroupElement when the test is over.
  *
- * @param {FakeView[]} fakeViews
+ * @param {FakeViewGroup[]} fakeViews
  *   The FakeViews to set on the ViewGroupElement.
  * @returns {ViewGroupElement}
  */
-function generateViewGroupElement(fakeViews) {
+function generateViewGroupElement(fakeViewGroup) {
   let viewGroupEl = document.createElement("view-group");
-  viewGroupEl.views = fakeViews;
+  viewGroupEl.viewGroup = fakeViewGroup;
   viewGroupEl.setAttribute("exportparts", "domain, history");
   viewGroupEl.setAttribute("active", "true");
   gActiveViewManager.appendChild(viewGroupEl);

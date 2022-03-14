@@ -40,8 +40,8 @@ async function openContextMenu(group) {
 add_task(async function test_context_menu_close_group() {
   let [view1] = await PinebuildTestUtils.loadViews(["https://example.com/"]);
   let [group] = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(group.views.length, 1);
-  Assert.equal(group.views[0], view1);
+  Assert.equal(group.viewGroup.length, 1);
+  Assert.equal(group.viewGroup.at(0), view1);
 
   let menu = await openContextMenu(group);
   let closeGroupMenuItem = menu.querySelector(
@@ -66,8 +66,8 @@ add_task(async function test_context_menu_close_group() {
     "https://example.com/browser/browser/components",
   ]);
   [group] = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(group.views.length, 3);
-  Assert.deepEqual(group.views, [view2, view3, view4]);
+  Assert.equal(group.viewGroup.length, 3);
+  Assert.deepEqual([...group.viewGroup], [view2, view3, view4]);
 
   menu = await openContextMenu(group);
   Assert.equal(

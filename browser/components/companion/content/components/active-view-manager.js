@@ -103,9 +103,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   handleEvent(event) {
-    let workspace;
     switch (event.type) {
-      case "WorkspaceAdded":
+      case "WorkspaceAdded": {
         let id = event.detail.workspaceId;
         this.#createWorkspaceElement(id);
         this.#manageWorkspaceIndicatorButtons();
@@ -113,38 +112,37 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         let urlbar = document.getElementById("urlbar");
         urlbar.setAttribute("workspace-id", id);
         break;
+      }
       case "ViewAdded":
-        workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
+      // Intentional fall-through
+      case "ViewMoved":
+      // Intentional fall-through
+      case "ViewPinned":
+      // Internal fall-through
+      case "ViewRemoved":
+      // Intentional fall-through
+      case "ViewUnpinned":
+      // Internal fall-through
+      case "ViewUpdated": {
+        let workspaceId = event.view.workspaceId;
+        let workspace = window.gGlobalHistory.getWorkspaceWithId(workspaceId);
+        let workspaceEl = this.querySelector(
+          "[workspace-id='" + workspaceId + "']"
         );
-        workspace.addView(event.view);
+        workspaceEl.update(
+          workspace?.viewGroups,
+          workspace?.overflowedViews,
+          workspace?.pinnedViewGroups
+        );
         break;
-      case "ViewChanged":
-        this.#clearActiveView();
-        workspace = this.querySelector(
+      }
+      case "ViewChanged": {
+        let workspace = this.querySelector(
           "[workspace-id='" + event.view.workspaceId + "']"
         );
         workspace.setActiveView(event.view);
         break;
-      case "ViewMoved":
-        workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
-        );
-        workspace.moveView(event.view);
-        break;
-      case "ViewRemoved":
-        workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
-        );
-        workspace.removeView(event.view);
-        // TODO: If the workspace is empty, maybe navigate to an adjacent workspace.
-        break;
-      case "ViewUpdated":
-        workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
-        );
-        workspace.updateView(event.view);
-        break;
+      }
       case "UserAction:ViewSelected": {
         let view = event.detail.clickedView;
         this.#viewSelected(view);
@@ -207,31 +205,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           this.#contextMenuPopupShowing(event);
         }
         break;
-      case "ViewPinned": {
-        let view = event.view;
-        let index = event.detail.index;
-        workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
-        );
-        if (workspace.isRiverView(view)) {
-          workspace.removeView(view);
-        } else {
-          console.error(
-            "Tried pinning a view that does not exist in the river."
-          );
-        }
-        workspace.addView(view, true, index);
-        break;
-      }
-      case "ViewUnpinned": {
-        let view = event.view;
-        workspace = this.querySelector(
-          "[workspace-id='" + event.view.workspaceId + "']"
-        );
-        workspace.removeView(view);
-        workspace.addView(event.view);
-        break;
-      }
     }
   }
 
@@ -551,7 +524,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     let closeViewGroupL10nId =
       "active-view-manager-context-menu-close-view-group";
     document.l10n.setAttributes(closeViewGroupMenuItem, closeViewGroupL10nId, {
-      viewCount: this.#contextMenuViewGroup.views.length,
+      viewCount: this.#contextMenuViewGroup.viewGroup.length,
     });
   }
 
@@ -568,7 +541,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   contextMenuCloseViewGroup(event) {
-    let views = this.#contextMenuViewGroup.views;
+    let views = this.#contextMenuViewGroup.viewGroup;
     for (let view of views) {
       window.gGlobalHistory.closeView(view);
     }

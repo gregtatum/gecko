@@ -23,7 +23,7 @@ export default class ViewGroupElement extends MozLitElement {
 
   static get properties() {
     return {
-      views: { type: Object },
+      viewGroup: { type: Object },
       activeView: { type: Object },
       active: { type: Boolean },
       busyAnimating: { type: Boolean },
@@ -38,7 +38,7 @@ export default class ViewGroupElement extends MozLitElement {
 
   constructor() {
     super();
-    this.views = [];
+    this.viewGroup = null;
     this.activeView = null;
     this.busyAnimationTimeout = null;
     this.addEventListener("click", this.#onClick);
@@ -105,7 +105,7 @@ export default class ViewGroupElement extends MozLitElement {
    * represents.
    */
   get lastView() {
-    return this.views[this.views.length - 1];
+    return this.viewGroup?.lastView;
   }
 
   #transitionEndOrCancel() {
@@ -180,7 +180,7 @@ export default class ViewGroupElement extends MozLitElement {
     // can choose to hide the domain and show the history breadcrumbs when
     // hovering the toolbar. We only need to show breadcrumbs if there's more
     // than one view in the group.
-    let shouldExposeParts = this.views.length > 1;
+    let shouldExposeParts = this.viewGroup.length > 1;
 
     return html`
       <div class="view-el" title=${ifDefined(rootTitle)} ?busy=${
@@ -277,18 +277,18 @@ export default class ViewGroupElement extends MozLitElement {
    * @returns {ViewGroupHistory[]}
    */
   computeHistoryVisualization(view) {
-    if (!view || !this.views.length) {
+    if (!view || !this.viewGroup.length) {
       return [];
     }
 
-    let selectedViewIndex = this.views.indexOf(view);
+    let selectedViewIndex = this.viewGroup.indexOf(view);
 
     if (this.#slidingWindowIndex == -1) {
       // We've never set a sliding window for this ViewGroup,
       // so create a new one based on where view is in the views
       // array.
       this.#slidingWindowIndex = ViewGroupElement.#findSlidingWindowIndexCenteredAt(
-        this.views.length,
+        this.viewGroup.length,
         selectedViewIndex
       );
     } else if (selectedViewIndex < this.#slidingWindowIndex) {
@@ -312,7 +312,7 @@ export default class ViewGroupElement extends MozLitElement {
       // just the SLIDING_WINDOW_WIDTH at the end of the views array -
       // whichever is smaller.
       this.#slidingWindowIndex = Math.min(
-        this.views.length - ViewGroupElement.SLIDING_WINDOW_WIDTH,
+        this.viewGroup.length - ViewGroupElement.SLIDING_WINDOW_WIDTH,
         selectedViewIndex - ViewGroupElement.SLIDING_WINDOW_PADDING - 1
       );
     } else if (selectedViewIndex == this.#slidingWindowIndex) {
@@ -330,7 +330,7 @@ export default class ViewGroupElement extends MozLitElement {
       // We slide the sliding window +1 index, or to the sliding window
       // width at the end of the views array - whichever is smaller.
       this.#slidingWindowIndex = Math.min(
-        this.views.length - ViewGroupElement.SLIDING_WINDOW_WIDTH,
+        this.viewGroup.length - ViewGroupElement.SLIDING_WINDOW_WIDTH,
         this.#slidingWindowIndex + 1
       );
     }
@@ -339,7 +339,7 @@ export default class ViewGroupElement extends MozLitElement {
 
     let slidingWindowEndIndex = Math.min(
       this.#slidingWindowIndex + ViewGroupElement.SLIDING_WINDOW_WIDTH - 1,
-      this.views.length - 1
+      this.viewGroup.length - 1
     );
     let viewGroupHistory = [];
 
@@ -351,7 +351,7 @@ export default class ViewGroupElement extends MozLitElement {
       ++index
     ) {
       viewGroupHistory.push({
-        view: this.views[index],
+        view: this.viewGroup.at(index),
         size: "large",
       });
     }
@@ -362,7 +362,7 @@ export default class ViewGroupElement extends MozLitElement {
     if (this.#slidingWindowIndex > 0) {
       viewGroupHistory[0].size = "medium";
       viewGroupHistory.unshift({
-        view: this.views[this.#slidingWindowIndex - 1],
+        view: this.viewGroup.at(this.#slidingWindowIndex - 1),
         size: "small",
       });
     }
@@ -370,10 +370,10 @@ export default class ViewGroupElement extends MozLitElement {
     // Similarly, if there are any items after the sliding window, set
     // the styling of the last item in the window to medium, and then add
     // an extra history item for the next view styled to small.
-    if (slidingWindowEndIndex < this.views.length - 1) {
+    if (slidingWindowEndIndex < this.viewGroup.length - 1) {
       viewGroupHistory[viewGroupHistory.length - 1].size = "medium";
       viewGroupHistory.push({
-        view: this.views[slidingWindowEndIndex + 1],
+        view: this.viewGroup.at(slidingWindowEndIndex + 1),
         size: "small",
       });
     }

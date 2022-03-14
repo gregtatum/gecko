@@ -320,7 +320,7 @@ add_task(async function testSessionSetAsideNoFlowReset() {
   let viewGroups = await PinebuildTestUtils.getViewGroups(win);
   Assert.equal(viewGroups.length, 1, "Should only be 1 ViewGroup");
   Assert.equal(
-    viewGroups[0].views.length,
+    viewGroups[0].viewGroup.length,
     1,
     "Should only be 1 View in the ViewGroup"
   );

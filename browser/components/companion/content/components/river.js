@@ -4,21 +4,16 @@
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { css, html } from "chrome://browser/content/companion/lit.all.js";
-import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
-
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
-);
 
 export default class River extends MozLitElement {
   #views;
 
   static get properties() {
     return {
-      _displayedViewGroups: { type: Array, state: true },
+      viewGroups: { type: Array, attribute: false, state: true },
       overflowedViews: { type: Array, attribute: false },
-      activeView: { type: Object },
+      activeView: { type: Object, attribute: false },
     };
   }
 
@@ -30,9 +25,8 @@ export default class River extends MozLitElement {
 
   constructor() {
     super();
-    this.#views = [];
     // The Views that are being displayed in the River, and not overflowed.
-    this._displayedViewGroups = [];
+    this.viewGroups = [];
     // The Views that will be listed in the overflow menu.
     this.overflowedViews = [];
     this.addEventListener("dragover", this.#onDragOver);
@@ -40,121 +34,14 @@ export default class River extends MozLitElement {
   }
 
   isEmpty() {
-    return !this.#views.length;
+    return !this.viewGroups.length;
   }
 
   hasView(view) {
-    return this.#views.includes(view);
-  }
-
-  addView(view) {
-    if (!view) {
-      return;
-    }
-
-    let index = this.#views.indexOf(view);
-    if (index != -1) {
-      this.#views.splice(index, 1);
-    }
-
-    this.#views.push(view);
-    this.#groupViews();
-  }
-
-  /**
-   * Called when the river has been replaced with a new state.
-   * For example, after session restore has ended.
-   */
-  setViews(views) {
-    this.#views = [...views];
-    this.#groupViews();
-  }
-
-  removeView(view) {
-    let index = this.#views.indexOf(view);
-    this.#views.splice(index, 1);
-
-    this.#groupViews();
-  }
-
-  #groupViews() {
-    this._displayedViewGroups = [];
-    this.overflowedViews = [];
-
-    if (!this.#views.length) {
-      let e = new CustomEvent("RiverRegrouped", {
-        bubbles: true,
-        composed: true,
-        detail: { overflowCount: 0 },
-      });
-      this.dispatchEvent(e);
-      return;
-    }
-
-    // After the list of Views in the River changes, we want to do some
-    // grouping. The idea is to work backwards through the View list, and
-    // group Views that are same-origin together into a single ViewGroupElement.
-    // We do this until we reach a maximum of River.maxRiverGroups, and the
-    // rest show up in the overflow menu.
-
-    // We start with the last View in the list, and create a Principal for it
-    // to do same-origin checks with other Views. We then add that View to an
-    // initial group, and start the loop index at the 2nd last item in the list.
-    let lastView = this.#views[this.#views.length - 1];
-    let currentGroup = [lastView];
-    let index = this.#views.length - 2;
-
-    // The idea is to work backwards through the list until one of two things
-    // happens:
-    //
-    // 1. We run out of items.
-    // 2. The number of groups reaches TOP_RIVER_GROUPS.
-    for (; index >= 0; --index) {
-      let view = this.#views[index];
-      if (ViewGroupElement.canGroup(currentGroup[0], view)) {
-        currentGroup.push(view);
-        continue;
-      } else {
-        // We're reversing the currentGroup because we've been _pushing_
-        // them into the Array, and we're going to want to ultimately
-        // represent them in reverse order. We _could_ have used unshift
-        // to put each item at the start of the Array, but that's apparently
-        // more expensive than doing one big reverse at the end.
-        this._displayedViewGroups.push(currentGroup.reverse());
-
-        if (this._displayedViewGroups.length >= River.maxRiverGroups) {
-          break;
-        }
-
-        currentGroup = [view];
-      }
-    }
-
-    if (index >= 0) {
-      // We bailed out because we reached our maximum number of groups.
-      // Any remaining items in the Views from index 0 to index should
-      // go into the overflow menu.
-      this.overflowedViews = [...this.#views.slice(0, index + 1)].reverse();
-    } else {
-      // We bailed out because we reached the end of the list. Whatever is
-      // in currentGroup can get pushed into the displayed groups.
-      //
-      // See the comment inside of the loop for why we're reversing the
-      // currentGroup.
-      this._displayedViewGroups.push(currentGroup.reverse());
-    }
-
-    // Finally, we reverse the displayed ViewGroups that we've collected.
-    // Similar to the currentGroup's, this is faster than doing an unshift
-    // for each item.
-    this._displayedViewGroups.reverse();
-
-    let e = new CustomEvent("RiverRegrouped", {
-      bubbles: true,
-      composed: true,
-      detail: { overflowCount: this.overflowedViews.length },
-    });
-    this.dispatchEvent(e);
+    return (
+      this.overflowedViews.includes(view) ||
+      this.viewGroups.some(group => group.includes(view))
+    );
   }
 
   #onDragOver(event) {
@@ -180,37 +67,31 @@ export default class River extends MozLitElement {
     }
   }
 
-  viewUpdated() {
-    this.#groupViews();
-  }
-
   render() {
-    let containsActive = this.#views.includes(this.activeView);
+    let containsActive = this.hasView(this.activeView);
     // The base case is that the _displayedViewGroups is empty. In that case,
     // we still want the River <div> to render in order to take the appropriate
     // amount of vertical space in the toolbar - it just doesn't have any
     // contents.
-    let riverViewGroups = [...this._displayedViewGroups];
+    let river = [...this.viewGroups];
     // If there's a topViewGroup, we need to wrap it in a new Array in order for
     // LitElement to know to re-render the ViewGroup.
     let topViewGroup =
-      containsActive && this._displayedViewGroups.length
-        ? [...riverViewGroups.pop()]
-        : null;
+      containsActive && this.viewGroups.length ? river.pop() : null;
     return html`
       <div
         id="river"
-        ?hidden=${!riverViewGroups.length}
+        ?hidden=${!river.length}
         ?containsActive=${containsActive}
       >
         <div class="view-groups-wrapper">
-          ${riverViewGroups.map(
+          ${river.map(
             viewGroup =>
               html`
                 <view-group
                   exportparts="domain, history"
                   ?active=${viewGroup.includes(this.activeView)}
-                  .views=${[...viewGroup]}
+                  .viewGroup=${viewGroup}
                   .activeView=${this.activeView}
                 ></view-group>
               `
@@ -222,18 +103,11 @@ export default class River extends MozLitElement {
         top="true"
         exportparts="domain, history"
         ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
-        .views=${topViewGroup || []}
+        .viewGroup=${topViewGroup || null}
         .activeView=${this.activeView}
       ></view-group>
     `;
   }
 }
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  River,
-  "maxRiverGroups",
-  "browser.river.maxGroups",
-  5
-);
 
 customElements.define("river-el", River);

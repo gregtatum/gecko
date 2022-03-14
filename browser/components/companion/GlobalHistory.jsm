@@ -64,6 +64,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "MAX_RIVER_GROUPS",
+  "browser.river.maxGroups",
+  5
+);
+
 const DEFAULT_WORKSPACE_ID = 0;
 const MAX_WORKSPACES_LIMIT = 3;
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
@@ -239,6 +246,268 @@ class View {
   /** @type {nsIPrincipal} **/
   get contentPrincipal() {
     return this.#internalView.contentPrincipal;
+  }
+}
+
+/**
+ * A ViewGroup is a collection of Views that are related enough that we
+ * group them together and represent them as a single unit within the
+ * ActiveViewManager. The interface is similar to that of an Array, but
+ * its collection is not mutable.
+ */
+class ViewGroup {
+  /** @type {InternalView[]} */
+  #views;
+
+  /**
+   * @param {InternalView[]} views
+   *   The InternalViews that have been grouped.
+   */
+  constructor(views) {
+    this.#views = views;
+  }
+
+  /** @type {View} */
+  get lastView() {
+    return this.#views.at(-1)?.view;
+  }
+
+  /**
+   * True if the ViewGroup contains a particular View.
+   * @param {View} view
+   *   The View to check for the presence of.
+   * @returns {boolean}
+   **/
+  includes(view) {
+    let internalView = InternalView.viewMap.get(view);
+    return this.#views.includes(internalView);
+  }
+
+  /**
+   * Returns the View at a particular index within the ViewGroup itself.
+   * @param {index} index
+   *   The index of the View to retrieve.
+   * @returns {View}
+   **/
+  at(index) {
+    return this.#views.at(index)?.view;
+  }
+
+  /** @type {Number} */
+  get length() {
+    return this.#views.length;
+  }
+
+  /**
+   * Returns the index for a View in the ViewGroup, or -1 if the View is
+   * not contained within the ViewGroup.
+   * @param {View} view
+   *   The View to get the index of.
+   * @returns {Number}
+   **/
+  indexOf(view) {
+    let internalView = InternalView.viewMap.get(view);
+    return this.#views.indexOf(internalView);
+  }
+
+  /** @type {Iterator} */
+  [Symbol.iterator]() {
+    return this.#views.map(internalView => internalView.view).values();
+  }
+
+  /**
+   * Determines whether or not two InternalViews should be put into the same
+   * ViewGroup.
+   *
+   * InternalViews can be grouped if they are same origin AND their favicons
+   * match (or one of their favicons are null). This heuristic allows
+   * us to keep most same-origin navigations grouped, but lets us have
+   * group separation for sites that have multiple "apps" hosted under
+   * the same origin - for example, docs.google.com is where both
+   * Google Docs, Google Spreadsheets and Google Presentatations can be
+   * found. However Google makes their favicons distinct, which means
+   * we correctly skip grouping them together.
+   *
+   * @param {InternalView} viewA
+   *   The View to check for grouping with viewB
+   * @param {InternalView} viewB
+   *   The View to check for grouping with viewA
+   * @param {Object} options
+   *   Extra options that can be optionally passed, including:
+   *
+   *   {boolean} [pinning=false]
+   *     Whether or not the grouping is for a series of pinned views.
+   * @returns {boolean} True if the two Views can be grouped.
+   */
+  static #canGroup(viewA, viewB, win, { pinning = false } = {}) {
+    if (pinning) {
+      return false;
+    }
+
+    let isSameOrigin = viewA.contentPrincipal.isSameOrigin(
+      viewB.url,
+      win.browsingContext.usePrivateBrowsing
+    );
+
+    // If either of the View icons are null, we'll still let them group
+    // if they're same origin. We'll have a chance to reconsider the grouping
+    // once the favicon finishes loading.
+    return (
+      isSameOrigin &&
+      (viewA.iconURL == viewB.iconURL ||
+        viewA.iconURL == null ||
+        viewB.iconURL == null)
+    );
+  }
+
+  /**
+   * Helper function for grouping that scans backwards from the end of a series
+   * of InternalViews and generates ViewGroups for them.
+   *
+   * @param {DOMWindow} window
+   *   The browser window that the InternalViews belong to.
+   * @param {InternalView[]} views
+   *   The collection of InternalViews to group.
+   * @param {Object} options
+   *   Extra options that can be optionally passed, including:
+   *
+   *   {Number} [limit=Infinity]
+   *     The maximum number of ViewGroups to create. If passed, any InternalViews
+   *     that are not put into ViewGroups are returned in the overflowed property
+   *     of the return value.
+   *   {boolean} [pinning=false]
+   *     True if the grouping is for pinned views.
+   * @returns {Object}
+   *   An object with the following properties:
+   *
+   *   {ViewGroup[]} groups
+   *     The generated ViewGroups
+   *   {InternalView[]} overflowed
+   *     Leftover InternalViews that were not grouped due to hitting the limit.
+   */
+  static #groupFromEnd(
+    window,
+    views,
+    { limit = Infinity, pinning = false } = {}
+  ) {
+    let groups = [];
+    let overflowed = [];
+
+    if (!views.length) {
+      return { groups, overflowed };
+    }
+
+    // After the list of Views in the River changes, we want to do some
+    // grouping. The idea is to work backwards through the View list, and
+    // group Views that are same-origin together into a single ViewGroup.
+    // We do this until we reach a maximum of MAX_RIVER_GROUPS, and the
+    // rest show up in the overflow menu.
+
+    // We start with the last View in the list, and create a Principal for it
+    // to do same-origin checks with other Views. We then add that View to an
+    // initial group, and start the loop index at the 2nd last item in the list.
+    let lastView = views.at(-1);
+    let currentGroup = [lastView];
+    let index = views.length - 2;
+
+    // The idea is to work backwards through the list until one of two things
+    // happens:
+    //
+    // 1. We run out of items.
+    // 2. The number of groups reaches TOP_RIVER_GROUPS.
+    for (; index >= 0; --index) {
+      let view = views[index];
+      if (ViewGroup.#canGroup(currentGroup[0], view, window, { pinning })) {
+        currentGroup.push(view);
+        continue;
+      } else {
+        // We're reversing the currentGroup because we've been _pushing_
+        // them into the Array, and we're going to want to ultimately
+        // represent them in reverse order. We _could_ have used unshift
+        // to put each item at the start of the Array, but that's apparently
+        // more expensive than doing one big reverse at the end.
+        groups.push(new ViewGroup(currentGroup.reverse()));
+
+        if (groups.length >= limit) {
+          break;
+        }
+
+        currentGroup = [view];
+      }
+    }
+
+    if (index >= 0) {
+      console.assert(
+        limit !== Infinity,
+        "We got leftover views to group despite having no limit."
+      );
+      // We bailed out because we reached our maximum number of groups.
+      // Any remaining items in the Views from index 0 to index should
+      // go into the overflow menu. We also want these to be Views and
+      // not InternalViews, so we map them to their .view properties.
+      overflowed = [...views.slice(0, index + 1).map(v => v.view)].reverse();
+    } else {
+      // We bailed out because we reached the end of the list. Whatever is
+      // in currentGroup can get pushed into the displayed groups.
+      //
+      // See the comment inside of the loop for why we're reversing the
+      // currentGroup.
+      groups.push(new ViewGroup(currentGroup.reverse()));
+    }
+
+    // Finally, we reverse the displayed ViewGroups that we've collected.
+    // Similar to the currentGroup's, this is faster than doing an unshift
+    // for each item.
+    groups.reverse();
+
+    return { groups, overflowed };
+  }
+
+  /**
+   * Groups InternalViews into ViewGroups to be represented in the
+   * ActiveViewManager.
+   *
+   * @param {InternalView[]} views
+   *   The InternalViews to group.
+   * @param {DOMWindow} window
+   *   The browser window that the InternalView's belong to.
+   * @return {Object}
+   *   An object with the following properties:
+   *
+   *   {ViewGroup[]} groups
+   *     The generated ViewGroups for unpinned InternalView's
+   *   {InternalView[]} overflowed
+   *     Leftover InternalViews that were not grouped due to hitting the limit.
+   *   {ViewGroup[]} pinned
+   *     The generated ViewGroups for pinned InternalView's.
+   */
+  static group(views, window) {
+    if (!views.length) {
+      return { groups: [], overflowed: [], pinned: [] };
+    }
+
+    let firstNotPinned = views.findIndex(v => !v.pinned);
+    let pinnedViews;
+    let unpinnedViews;
+
+    if (firstNotPinned == -1) {
+      pinnedViews = views.slice(0);
+      unpinnedViews = [];
+    } else {
+      pinnedViews = views.slice(0, firstNotPinned);
+      unpinnedViews = views.slice(firstNotPinned);
+    }
+
+    let { groups, overflowed } = ViewGroup.#groupFromEnd(
+      window,
+      unpinnedViews,
+      { limit: MAX_RIVER_GROUPS }
+    );
+    let { groups: pinned } = ViewGroup.#groupFromEnd(window, pinnedViews, {
+      pinning: true,
+    });
+
+    return { groups, overflowed, pinned };
   }
 }
 
@@ -901,6 +1170,19 @@ class WorkspaceHistory extends EventTarget {
   viewStack = [];
 
   /**
+   * The current ViewGroups for the viewStack for unpinned InternalViews.
+   */
+  #viewGroups = [];
+  /**
+   * Overflowed InternalViews that are not currently in any ViewGroups.
+   */
+  #overflowedViews = [];
+  /**
+   * The current ViewGroups for the viewStack for pinned InternalViews.
+   */
+  #pinnedViewGroups = [];
+
+  /**
    * Maintains a reference to the browser listener as long as the browser is alive.
    * @type {WeakMap<Browser, BrowserListener>}
    */
@@ -1097,6 +1379,35 @@ class WorkspaceHistory extends EventTarget {
     });
 
     this.#browsers = new WeakMap();
+  }
+
+  /**
+   * Called after the viewStack, or any of its containing InternalViews have
+   * been modified. This causes new ViewGroups to be generated for reflection
+   * into the ActiveViewManager.
+   */
+  regroup() {
+    // There's a way of doing this destructuring re-assignment in a one-liner,
+    // but this is probably more readable.
+    let { groups, overflowed, pinned } = ViewGroup.group(
+      this.viewStack,
+      this.#window
+    );
+    this.#viewGroups = groups;
+    this.#overflowedViews = overflowed;
+    this.#pinnedViewGroups = pinned;
+  }
+
+  get viewGroups() {
+    return this.#viewGroups;
+  }
+
+  get overflowedViews() {
+    return this.#overflowedViews;
+  }
+
+  get pinnedViewGroups() {
+    return this.#pinnedViewGroups;
   }
 
   /**
@@ -1818,6 +2129,7 @@ class GlobalHistory extends EventTarget {
     for (let workspace of this.#workspaces.values()) {
       workspace.historyViews.clear();
       workspace.viewStack = [];
+      workspace.regroup();
     }
     logConsole.trace(`Setting #currentInternalView to NULL`);
     this.#currentInternalView = null;
@@ -1836,6 +2148,11 @@ class GlobalHistory extends EventTarget {
    *   the event.
    */
   notifyEvent(type, internalView, detail) {
+    if (internalView) {
+      let workspace = this.#workspaces.get(internalView.workspaceId);
+      workspace.regroup();
+    }
+
     this.dispatchEvent(
       new GlobalHistoryEvent(type, internalView?.view, detail)
     );
@@ -2016,8 +2333,12 @@ class GlobalHistory extends EventTarget {
       `Setting #currentInternalView to ${selectedView.toString()}`
     );
     this.#currentInternalView = selectedView;
-    this.notifyEvent("RiverRebuilt");
 
+    for (let workspace of this.#workspaces.values()) {
+      workspace.regroup();
+    }
+
+    this.notifyEvent("RiverRebuilt");
     this.startActivationTimer();
     this.updateSessionStore();
   }
@@ -2216,6 +2537,18 @@ class GlobalHistory extends EventTarget {
       "about:blank",
       { userContextId: workspaceId }
     );
+  }
+
+  /**
+   * Returns the WorkspaceHistory with a particular ID, or null
+   * if no such WorkspaceHistory can be found for the window.
+   *
+   * @param {Number} workspaceId
+   *   The ID of the WorkspaceHistory to retrieve.
+   * @returns {WorkspaceHistory | null}
+   */
+  getWorkspaceWithId(workspaceId) {
+    return this.#workspaces.get(workspaceId);
   }
 
   /**
