@@ -2012,6 +2012,24 @@ class WorkspaceHistory extends EventTarget {
     this.#globalHistory.notifyEvent("ViewUpdated", internalView);
     this.#globalHistory.notifyEvent("ViewChanged", internalView);
   }
+
+  /**
+   * Returns whether or not an InternalView is a Pinned View (as opposed)
+   * to being unpinned, or a Pinned App.
+   *
+   * @param {InternalView | null} internalView
+   *   The InternalView (or null) to check. null always returns false.
+   * @returns {boolean}
+   */
+  isPinnedView(internalView) {
+    if (!internalView) {
+      return false;
+    }
+    return (
+      internalView.pinned &&
+      !this.pinnedAppBrowsers.has(internalView.getBrowser())
+    );
+  }
 }
 
 /**
@@ -2999,10 +3017,8 @@ class GlobalHistory extends EventTarget {
 
     let currentIndex =
       this.currentWorkspace?.viewStack.indexOf(currentView) || null;
-    return (
-      currentIndex > 0 &&
-      !this.currentWorkspace?.viewStack[currentIndex - 1].pinned
-    );
+    let prevView = this.currentWorkspace?.viewStack[currentIndex - 1];
+    return currentIndex > 0 && !this.currentWorkspace?.isPinnedView(prevView);
   }
 
   /**
