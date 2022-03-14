@@ -1821,6 +1821,57 @@ class WorkspaceHistory extends EventTarget {
     }
     return index;
   }
+
+  /**
+   * Sets the `pinned` state on a View to shouldPin in this Workspace.
+   *
+   * @param {InternalView} view The View to set the pinned state on.
+   * @param {boolean} shouldPin True if the View should be pinned.
+   * @param {Number | null} index The index within the Pinned Views section
+   *   of the #viewStack to put the Pinned View. Defaults to 0.
+   */
+  setInternalViewPinnedState(internalView, shouldPin, index = 0) {
+    let pinnedViewCount = this.getPinnedViewCount();
+    if (index > pinnedViewCount) {
+      throw new Error(
+        "Cannot pin at an index greater than the number of pinned Views"
+      );
+    }
+
+    // We don't want to remove Pinned Views from the viewStack Array,
+    // since so much of GlobalHistory relies on all available Views
+    // existing in it.
+    //
+    // To accommodate Pinned Views, we borrow the organizational model
+    // of Pinned Tabs from tabbrowser: Views that are pinned are moved
+    // to the beginning of the viewStack Array. So if we started with
+    // this viewStack:
+    //
+    // [Unpinned View 1, Unpinned View 2, Unpinned View 3]
+    //
+    // and then pinned View 3, viewStack would become:
+    //
+    // [Pinned View 3, Unpinned View 1, Unpinned View 2]
+    //
+    // This way, we can keep pinned Views within #viewStack and not have
+    // to treat them specially throughout GlobalHistory.
+    let viewIndex = this.viewStack.indexOf(internalView);
+    this.viewStack.splice(viewIndex, 1);
+
+    if (shouldPin) {
+      this.viewStack.splice(index, 0, internalView);
+      Snapshots.add({
+        url: internalView.url.spec,
+        userPersisted: Snapshots.USER_PERSISTED.PINNED,
+      });
+    } else {
+      this.viewStack.push(internalView);
+    }
+
+    internalView.pinned = shouldPin;
+    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+    this.#globalHistory.notifyEvent("ViewChanged", internalView);
+  }
 }
 
 /**
@@ -2747,47 +2798,7 @@ class GlobalHistory extends EventTarget {
     logConsole.log("Pinning view ", internalView.toString());
 
     let workspace = this.#workspaces.get(internalView.workspaceId);
-    let pinnedViewCount = workspace.getPinnedViewCount();
-    if (index > pinnedViewCount) {
-      throw new Error(
-        "Cannot pin at an index greater than the number of pinned Views"
-      );
-    }
-
-    // We don't want to remove Pinned Views from the viewStack Array,
-    // since so much of GlobalHistory relies on all available Views
-    // existing in it.
-    //
-    // To accommodate Pinned Views, we borrow the organizational model
-    // of Pinned Tabs from tabbrowser: Views that are pinned are moved
-    // to the beginning of the viewStack Array. So if we started with
-    // this viewStack:
-    //
-    // [Unpinned View 1, Unpinned View 2, Unpinned View 3]
-    //
-    // and then pinned View 3, viewStack would become:
-    //
-    // [Pinned View 3, Unpinned View 1, Unpinned View 2]
-    //
-    // This way, we can keep pinned Views within #viewStack and not have
-    // to treat them specially throughout GlobalHistory.
-    let viewIndex = workspace.viewStack.indexOf(internalView);
-    workspace.viewStack.splice(viewIndex, 1);
-    let detail = {};
-
-    if (shouldPin) {
-      workspace.viewStack.splice(index, 0, internalView);
-      detail.index = index;
-      Snapshots.add({
-        url: internalView.url.spec,
-        userPersisted: Snapshots.USER_PERSISTED.PINNED,
-      });
-    } else {
-      workspace.viewStack.push(internalView);
-    }
-
-    internalView.pinned = shouldPin;
-    this.notifyEvent("ViewUpdated", internalView, detail);
+    workspace.setInternalViewPinnedState(internalView, shouldPin, index);
   }
 
   /**
