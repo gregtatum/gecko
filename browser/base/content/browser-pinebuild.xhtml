@@ -162,10 +162,15 @@
           <div id="page-action-panel-sections">
             <div id="page-actions-section">
               <toolbarbutton id="page-action-pin-view"
-                             data-l10n-id="page-action-toggle-pinning"
+                             data-l10n-id="page-action-toggle-pinning-view"
                              data-l10n-args='{"isPinned": false}'
                              wrap="true"
                              oncommand="gActiveViewManager.pageActionPinView(event);"/>
+              <toolbarbutton id="page-action-pin-app"
+                             data-l10n-id="page-action-toggle-pinning-app"
+                             data-l10n-args='{"isPinned": false}'
+                             wrap="true"
+                             oncommand="gActiveViewManager.pageActionPinApp(event);"/>
               <toolbarbutton id="page-action-copy-url"
                              data-l10n-id="page-action-copy-url"
                              wrap="true"

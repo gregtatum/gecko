@@ -38,10 +38,10 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
     "https://example.org/browser",
     "https://example.org/browser/browser/components",
   ]);
-  gGlobalHistory.setViewPinnedState(view1, true, 0);
-  gGlobalHistory.setViewPinnedState(view2, true, 1);
-  gGlobalHistory.setViewPinnedState(view3, true, 2);
-  gGlobalHistory.setViewPinnedState(view4, true, 3);
+  gGlobalHistory.setViewPinnedState(view1, true, false, 0);
+  gGlobalHistory.setViewPinnedState(view2, true, false, 1);
+  gGlobalHistory.setViewPinnedState(view3, true, false, 2);
+  gGlobalHistory.setViewPinnedState(view4, true, false, 3);
 
   await PinebuildTestUtils.setCurrentView(view1);
 
@@ -116,8 +116,8 @@ add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
     "https://example.com/browser/browser/components",
     "https://example.org/",
   ]);
-  gGlobalHistory.setViewPinnedState(view1, true, 0);
-  gGlobalHistory.setViewPinnedState(view2, true, 1);
+  gGlobalHistory.setViewPinnedState(view1, true, false, 0);
+  gGlobalHistory.setViewPinnedState(view2, true, false, 1);
 
   await PinebuildTestUtils.setCurrentView(view1);
 

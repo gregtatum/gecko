@@ -337,17 +337,31 @@ class ViewGroup {
    *
    *   {boolean} [pinning=false]
    *     Whether or not the grouping is for a series of pinned views.
+   *   {WeakSet} [pinnedAppBrowsers=null]
+   *     The set of browsers associated with pinned apps.
    * @returns {boolean} True if the two Views can be grouped.
    */
-  static #canGroup(viewA, viewB, win, { pinning = false } = {}) {
-    if (pinning) {
-      return false;
-    }
-
+  static #canGroup(
+    viewA,
+    viewB,
+    win,
+    { pinning = false, pinnedAppBrowsers = null } = {}
+  ) {
     let isSameOrigin = viewA.contentPrincipal.isSameOrigin(
       viewB.url,
       win.browsingContext.usePrivateBrowsing
     );
+
+    if (pinnedAppBrowsers) {
+      let viewABrowser = viewA.getBrowser();
+      let viewBBrowser = viewB.getBrowser();
+      if (
+        viewABrowser === viewBBrowser &&
+        pinnedAppBrowsers.has(viewABrowser)
+      ) {
+        return true;
+      }
+    }
 
     // If either of the View icons are null, we'll still let them group
     // if they're same origin. We'll have a chance to reconsider the grouping
@@ -377,6 +391,8 @@ class ViewGroup {
    *     of the return value.
    *   {boolean} [pinning=false]
    *     True if the grouping is for pinned views.
+   *   {WeakSet} [pinnedAppBrowsers=null]
+   *     The set of browsers associated with pinned apps.
    * @returns {Object}
    *   An object with the following properties:
    *
@@ -388,7 +404,7 @@ class ViewGroup {
   static #groupFromEnd(
     window,
     views,
-    { limit = Infinity, pinning = false } = {}
+    { limit = Infinity, pinning = false, pinnedAppBrowsers = null } = {}
   ) {
     let groups = [];
     let overflowed = [];
@@ -417,7 +433,12 @@ class ViewGroup {
     // 2. The number of groups reaches TOP_RIVER_GROUPS.
     for (; index >= 0; --index) {
       let view = views[index];
-      if (ViewGroup.#canGroup(currentGroup[0], view, window, { pinning })) {
+      if (
+        ViewGroup.#canGroup(currentGroup[0], view, window, {
+          pinning,
+          pinnedAppBrowsers,
+        })
+      ) {
         currentGroup.push(view);
         continue;
       } else {
@@ -471,6 +492,8 @@ class ViewGroup {
    *   The InternalViews to group.
    * @param {DOMWindow} window
    *   The browser window that the InternalView's belong to.
+   * @param {WeakSet} pinnedAppBrowsers
+   *     The set of browsers associated with pinned apps.
    * @return {Object}
    *   An object with the following properties:
    *
@@ -481,7 +504,7 @@ class ViewGroup {
    *   {ViewGroup[]} pinned
    *     The generated ViewGroups for pinned InternalView's.
    */
-  static group(views, window) {
+  static group(views, window, pinnedAppBrowsers) {
     if (!views.length) {
       return { groups: [], overflowed: [], pinned: [] };
     }
@@ -505,6 +528,7 @@ class ViewGroup {
     );
     let { groups: pinned } = ViewGroup.#groupFromEnd(window, pinnedViews, {
       pinning: true,
+      pinnedAppBrowsers,
     });
 
     return { groups, overflowed, pinned };
@@ -1192,6 +1216,12 @@ class WorkspaceHistory extends EventTarget {
    */
   historyViews = new Map();
 
+  /**
+   * The set of browsers associated with pinned apps.
+   * @type {WeakSet<Browser>}
+   */
+  pinnedAppBrowsers = new WeakSet();
+
   constructor(workspaceId, window) {
     super();
     if (!(Number.isInteger(workspaceId) && workspaceId >= 0)) {
@@ -1389,7 +1419,8 @@ class WorkspaceHistory extends EventTarget {
     // but this is probably more readable.
     let { groups, overflowed, pinned } = ViewGroup.group(
       this.viewStack,
-      this.#window
+      this.#window,
+      this.pinnedAppBrowsers
     );
     this.#viewGroups = groups;
     this.#overflowedViews = overflowed;
@@ -1627,8 +1658,7 @@ class WorkspaceHistory extends EventTarget {
         detail: { internalView },
       });
       this.dispatchEvent(event);
-      this.viewStack.push(internalView);
-      this.historyViews.set(newEntry.ID, internalView);
+      this.#insertNewView(internalView, newEntry, browser);
 
       SessionManager.register(this.#window, internalView.url).catch(
         logConsole.error
@@ -1796,6 +1826,48 @@ class WorkspaceHistory extends EventTarget {
   }
 
   /**
+   * Takes a newly constructed View and finds the most appropriate place
+   * in the viewStack to insert it into.
+   *
+   * Regarding the arguments, while it's true that both the newEntry and
+   * browser could be inferred by newInternalView, the caller of this function
+   * is known to already have those values available, and this saves us having
+   * to do another set of lookups.
+   *
+   * @param {InternalView} newInternalView
+   *   The new View being added
+   * @param {nsISHEntry} newEntry
+   *   The nsISHEntry associated with the new View
+   * @param {Browser} browser
+   *   The browser associated with the View
+   */
+  #insertNewView(newInternalView, newEntry, browser) {
+    if (this.pinnedAppBrowsers.has(browser)) {
+      let siblingViewIndex = -1;
+      for (let i = 0; i < this.viewStack.length; ++i) {
+        let internalView = this.viewStack[i];
+        if (internalView.getBrowser() == browser) {
+          siblingViewIndex = i;
+        } else if (siblingViewIndex >= 0) {
+          break;
+        }
+      }
+      console.assert(
+        siblingViewIndex >= 0,
+        "pinnedAppBrowsers and viewStack are still in sync"
+      );
+      newInternalView.pinned = true;
+      // We don't need to do a bounds check here with siblingViewIndex, because
+      // splice will just insert at the end of the Array if siblingViewIndex + 1
+      // goes past the end.
+      this.viewStack.splice(siblingViewIndex + 1, 0, newInternalView);
+    } else {
+      this.viewStack.push(newInternalView);
+    }
+    this.historyViews.set(newEntry.ID, newInternalView);
+  }
+
+  /**
    * @param {object[]} entries The serialized entries that were removed.
    */
   _onHistoryEntriesRemoved(entries) {
@@ -1827,10 +1899,11 @@ class WorkspaceHistory extends EventTarget {
    *
    * @param {InternalView} view The View to set the pinned state on.
    * @param {boolean} shouldPin True if the View should be pinned.
+   * @param {boolean} appMode True if the View should be pinned in App Mode.
    * @param {Number | null} index The index within the Pinned Views section
    *   of the #viewStack to put the Pinned View. Defaults to 0.
    */
-  setInternalViewPinnedState(internalView, shouldPin, index = 0) {
+  setInternalViewPinnedState(internalView, shouldPin, appMode, index = 0) {
     let pinnedViewCount = this.getPinnedViewCount();
     if (index > pinnedViewCount) {
       throw new Error(
@@ -1838,34 +1911,78 @@ class WorkspaceHistory extends EventTarget {
       );
     }
 
-    // We don't want to remove Pinned Views from the viewStack Array,
-    // since so much of GlobalHistory relies on all available Views
-    // existing in it.
-    //
-    // To accommodate Pinned Views, we borrow the organizational model
-    // of Pinned Tabs from tabbrowser: Views that are pinned are moved
-    // to the beginning of the viewStack Array. So if we started with
-    // this viewStack:
-    //
-    // [Unpinned View 1, Unpinned View 2, Unpinned View 3]
-    //
-    // and then pinned View 3, viewStack would become:
-    //
-    // [Pinned View 3, Unpinned View 1, Unpinned View 2]
-    //
-    // This way, we can keep pinned Views within #viewStack and not have
-    // to treat them specially throughout GlobalHistory.
-    let viewIndex = this.viewStack.indexOf(internalView);
-    this.viewStack.splice(viewIndex, 1);
+    let browser = internalView.getBrowser();
+    let isBulkJob = appMode || this.pinnedAppBrowsers.has(browser);
 
-    if (shouldPin) {
-      this.viewStack.splice(index, 0, internalView);
-      Snapshots.add({
-        url: internalView.url.spec,
-        userPersisted: Snapshots.USER_PERSISTED.PINNED,
-      });
+    if (isBulkJob) {
+      // Find every other InternalView associated with the pinned view's
+      // browser, and (presuming they can be grouped together) pin them
+      // all sequentially.
+      let [views, remains] = this.viewStack.reduce(
+        (result, someView) => {
+          if (someView.getBrowser() == browser) {
+            result[0].push(someView);
+          } else {
+            result[1].push(someView);
+          }
+          return result;
+        },
+        [[], []]
+      );
+
+      if (shouldPin) {
+        this.viewStack = remains;
+        // Now inject the newly pinned views at the end of the pinned section
+        // of the views array...
+        this.viewStack.splice(pinnedViewCount, 0, ...views);
+        this.pinnedAppBrowsers.add(browser);
+      } else {
+        this.viewStack = remains;
+        // Now inject the newly pinned views at the end of the pinned section
+        // of the views array...
+        this.viewStack.push(...views);
+        this.pinnedAppBrowsers.delete(browser);
+      }
+
+      for (let view of views) {
+        view.pinned = shouldPin;
+        if (shouldPin) {
+          Snapshots.add({
+            url: view.url.spec,
+            userPersisted: Snapshots.USER_PERSISTED.PINNED,
+          });
+        }
+      }
     } else {
-      this.viewStack.push(internalView);
+      // We don't want to remove Pinned Views from the viewStack Array,
+      // since so much of GlobalHistory relies on all available Views
+      // existing in it.
+      //
+      // To accommodate Pinned Views, we borrow the organizational model
+      // of Pinned Tabs from tabbrowser: Views that are pinned are moved
+      // to the beginning of the viewStack Array. So if we started with
+      // this viewStack:
+      //
+      // [Unpinned View 1, Unpinned View 2, Unpinned View 3]
+      //
+      // and then pinned View 3, viewStack would become:
+      //
+      // [Pinned View 3, Unpinned View 1, Unpinned View 2]
+      //
+      // This way, we can keep pinned Views within #viewStack and not have
+      // to treat them specially throughout GlobalHistory.
+      let viewIndex = this.viewStack.indexOf(internalView);
+      this.viewStack.splice(viewIndex, 1);
+
+      if (shouldPin) {
+        this.viewStack.splice(index, 0, internalView);
+        Snapshots.add({
+          url: internalView.url.spec,
+          userPersisted: Snapshots.USER_PERSISTED.PINNED,
+        });
+      } else {
+        this.viewStack.push(internalView);
+      }
     }
 
     internalView.pinned = shouldPin;
@@ -2786,10 +2903,11 @@ class GlobalHistory extends EventTarget {
    *
    * @param {View} view The View to set the pinned state on.
    * @param {boolean} shouldPin True if the View should be pinned.
+   * @param {boolean} appMode True if the View is being pinned as an app.
    * @param {Number | null} index The index within the Pinned Views section
    *   of the viewStack to put the Pinned View. Defaults to 0.
    */
-  setViewPinnedState(view, shouldPin, index = 0) {
+  setViewPinnedState(view, shouldPin, appMode, index = 0) {
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
       throw new Error("Unknown view.");
@@ -2798,7 +2916,12 @@ class GlobalHistory extends EventTarget {
     logConsole.log("Pinning view ", internalView.toString());
 
     let workspace = this.#workspaces.get(internalView.workspaceId);
-    workspace.setInternalViewPinnedState(internalView, shouldPin, index);
+    workspace.setInternalViewPinnedState(
+      internalView,
+      shouldPin,
+      appMode,
+      index
+    );
   }
 
   /**

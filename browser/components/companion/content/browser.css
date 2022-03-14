@@ -242,11 +242,13 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   z-index: 1;
 }
 
-#nav-bar:hover river-el::part(history) {
+#nav-bar:hover river-el::part(history),
+#nav-bar:hover pinned-views::part(history) {
   display: flex;
 }
 
-#nav-bar:hover river-el::part(domain) {
+#nav-bar:hover river-el::part(domain),
+#nav-bar:hover pinned-views::part(domain) {
   display: none;
 }
 
@@ -584,7 +586,8 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   outline-offset: var(--focus-outline-offset, 2px);
 }
 
-#page-action-pin-view > .toolbarbutton-icon {
+#page-action-pin-view > .toolbarbutton-icon,
+#page-action-pin-app > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/pin-12.svg");
 }
 

@@ -35,7 +35,7 @@ add_task(async function test_PageActionMenu_active_view() {
 
   Assert.equal(
     pinningToggle.dataset.l10nId,
-    "page-action-toggle-pinning",
+    "page-action-toggle-pinning-view",
     "Correct L10n ID set on pinning toggle."
   );
 
@@ -58,7 +58,7 @@ add_task(async function test_PageActionMenu_active_view() {
 
   Assert.equal(
     pinningToggle.dataset.l10nId,
-    "page-action-toggle-pinning",
+    "page-action-toggle-pinning-view",
     "Correct L10n ID set on pinning toggle."
   );
 

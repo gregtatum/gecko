@@ -11,10 +11,15 @@ active-view-manager-overflow-button-text = +{$count}
 page-action-menu-button =
   .title = Open Page Action Menu
 
-page-action-toggle-pinning =
+page-action-toggle-pinning-view =
   .label = { $isPinned ->
-     [true] Unpin
-    *[other] Pin
+     [true] Unpin view
+    *[other] Pin view
+  }
+page-action-toggle-pinning-app =
+  .label = { $isPinned ->
+     [true] Unpin app
+    *[other] Pin app
   }
 page-action-copy-url =
   .label = Copy

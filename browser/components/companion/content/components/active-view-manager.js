@@ -150,7 +150,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       case "UserAction:PinView": {
         let view = event.detail.view;
         let index = event.detail.index;
-        this.#setViewPinnedState(view, true, index);
+        this.#setViewPinnedState(view, true, { index });
         break;
       }
       case "UserAction:UnpinView": {
@@ -368,8 +368,16 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
     let view = this.#pageActionView;
     let pinView = document.getElementById("page-action-pin-view");
-    let pinL10nId = "page-action-toggle-pinning";
-    document.l10n.setAttributes(pinView, pinL10nId, { isPinned: view.pinned });
+    let pinViewL10nId = "page-action-toggle-pinning-view";
+    document.l10n.setAttributes(pinView, pinViewL10nId, {
+      isPinned: view.pinned,
+    });
+
+    let pinApp = document.getElementById("page-action-pin-app");
+    let pinAppL10nId = "page-action-toggle-pinning-app";
+    document.l10n.setAttributes(pinApp, pinAppL10nId, {
+      isPinned: view.pinned,
+    });
 
     let muteView = document.getElementById("page-action-mute");
     document.l10n.setAttributes(muteView, "page-action-toggle-muting", {
@@ -475,6 +483,14 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     );
   }
 
+  pageActionPinApp(event) {
+    this.#setViewPinnedState(
+      this.#pageActionView,
+      !this.#pageActionView.pinned,
+      { appMode: true }
+    );
+  }
+
   pageActionCopyURL(event) {
     PineBuildUIUtils.copy(this, this.#pageActionView.url.spec);
   }
@@ -551,8 +567,12 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     return null;
   }
 
-  #setViewPinnedState(view, state, index) {
-    window.gGlobalHistory.setViewPinnedState(view, state, index);
+  #setViewPinnedState(
+    view,
+    state,
+    { index = undefined, appMode = false } = {}
+  ) {
+    window.gGlobalHistory.setViewPinnedState(view, state, appMode, index);
     this.#viewSelected(view);
   }
 
