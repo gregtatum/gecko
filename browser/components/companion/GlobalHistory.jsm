@@ -916,8 +916,6 @@ class InternalView {
  * `ViewMoved` - An existing view has been moved to the top of the stack in a workspace.
  * `ViewUpdated` - An existing view has changed in some way.
  * `RiverRebuilt` - The rivers have been replaced with a new state and should be rebuilt.
- * `ViewPinned` - A view has transitioned from the unpinned to pinned state in a workspace.
- * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state in a workspace.
  * `ViewLoaded` - A view has finished loading.
  */
 class GlobalHistoryEvent extends Event {
@@ -926,7 +924,7 @@ class GlobalHistoryEvent extends Event {
 
   /**
    * @param {"ViewChanged" | "ViewAdded" | "ViewMoved" | "ViewRemoved" | "ViewUpdated" |
-   *   "RiverRebuilt" | "ViewPinned" | "ViewUnpinned"} type
+   *   "RiverRebuilt"} type
    *   The event type.
    * @param {View | null}
    *   The related view.
@@ -1836,8 +1834,6 @@ class WorkspaceHistory extends EventTarget {
  * `ViewMoved` - An existing view has been moved to the top of the stack in a workspace.
  * `ViewUpdated` - An existing view has changed in some way.
  * `RiverRebuilt` - The rivers have been replaced with a new state and should be rebuilt.
- * `ViewPinned` - A view has transitioned from the unpinned to pinned state in a workspace.
- * `ViewUnpinned` - A view has transitioned from the pinned to unpinned state in a workspace.
  * `ViewLoaded` - A view has finished loading.
  */
 class GlobalHistory extends EventTarget {
@@ -2777,12 +2773,10 @@ class GlobalHistory extends EventTarget {
     // to treat them specially throughout GlobalHistory.
     let viewIndex = workspace.viewStack.indexOf(internalView);
     workspace.viewStack.splice(viewIndex, 1);
-    let eventName;
     let detail = {};
 
     if (shouldPin) {
       workspace.viewStack.splice(index, 0, internalView);
-      eventName = "ViewPinned";
       detail.index = index;
       Snapshots.add({
         url: internalView.url.spec,
@@ -2790,11 +2784,10 @@ class GlobalHistory extends EventTarget {
       });
     } else {
       workspace.viewStack.push(internalView);
-      eventName = "ViewUnpinned";
     }
 
     internalView.pinned = shouldPin;
-    this.notifyEvent(eventName, internalView, detail);
+    this.notifyEvent("ViewUpdated", internalView, detail);
   }
 
   /**

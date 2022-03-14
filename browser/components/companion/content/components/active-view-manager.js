@@ -42,8 +42,6 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     "ViewRemoved",
     "ViewMoved",
     "ViewUpdated",
-    "ViewPinned",
-    "ViewUnpinned",
   ];
 
   connectedCallback() {
@@ -117,12 +115,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       // Intentional fall-through
       case "ViewMoved":
       // Intentional fall-through
-      case "ViewPinned":
-      // Internal fall-through
       case "ViewRemoved":
       // Intentional fall-through
-      case "ViewUnpinned":
-      // Internal fall-through
       case "ViewUpdated": {
         let workspaceId = event.view.workspaceId;
         let workspace = window.gGlobalHistory.getWorkspaceWithId(workspaceId);
