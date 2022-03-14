@@ -81,14 +81,14 @@ browser.jar:
     content/browser/companion/components/companion-manager.css (content/components/companion-manager.css)
     content/browser/companion/components/active-view-manager.js (content/components/active-view-manager.js)
     content/browser/companion/components/active-view-manager.css (content/components/active-view-manager.css)
-    content/browser/companion/components/view-group.js (content/components/view-group.js)
-    content/browser/companion/components/view-group.inc.css (content/components/view-group.inc.css)
+    content/browser/companion/components/view-group-element.js (content/components/view-group-element.js)
+    content/browser/companion/components/view-group-element.inc.css (content/components/view-group-element.inc.css)
 #ifdef XP_MACOSX
-    content/browser/companion/components/view-group.css (content/components/view-group-macos.css)
+    content/browser/companion/components/view-group-element.css (content/components/view-group-element-macos.css)
 #elifdef XP_WIN
-    content/browser/companion/components/view-group.css (content/components/view-group-windows.css)
+    content/browser/companion/components/view-group-element.css (content/components/view-group-element-windows.css)
 #else
-    content/browser/companion/components/view-group.css (content/components/view-group-linux.css)
+    content/browser/companion/components/view-group-element.css (content/components/view-group-element-linux.css)
 #endif
     content/browser/companion/components/workspace.js (content/components/workspace.js)
     content/browser/companion/components/workspace.css (content/components/workspace.css)

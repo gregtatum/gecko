@@ -12,7 +12,7 @@ import {
 
 import getViewSecurityState from "../siteSecurity.js";
 
-export default class ViewGroup extends MozLitElement {
+export default class ViewGroupElement extends MozLitElement {
   #slidingWindowIndex;
 
   static get queries() {
@@ -32,7 +32,7 @@ export default class ViewGroup extends MozLitElement {
 
   static get styles() {
     return css`
-      @import url("chrome://browser/content/companion/components/view-group.css");
+      @import url("chrome://browser/content/companion/components/view-group-element.css");
     `;
   }
 
@@ -287,7 +287,7 @@ export default class ViewGroup extends MozLitElement {
       // We've never set a sliding window for this ViewGroup,
       // so create a new one based on where view is in the views
       // array.
-      this.#slidingWindowIndex = ViewGroup.#findSlidingWindowIndexCenteredAt(
+      this.#slidingWindowIndex = ViewGroupElement.#findSlidingWindowIndexCenteredAt(
         this.views.length,
         selectedViewIndex
       );
@@ -303,7 +303,7 @@ export default class ViewGroup extends MozLitElement {
       this.#slidingWindowIndex = Math.max(0, selectedViewIndex - 1);
     } else if (
       selectedViewIndex >
-      this.#slidingWindowIndex + ViewGroup.SLIDING_WINDOW_WIDTH - 1
+      this.#slidingWindowIndex + ViewGroupElement.SLIDING_WINDOW_WIDTH - 1
     ) {
       // Case 2: The view is after the sliding window.
       //
@@ -312,8 +312,8 @@ export default class ViewGroup extends MozLitElement {
       // just the SLIDING_WINDOW_WIDTH at the end of the views array -
       // whichever is smaller.
       this.#slidingWindowIndex = Math.min(
-        this.views.length - ViewGroup.SLIDING_WINDOW_WIDTH,
-        selectedViewIndex - ViewGroup.SLIDING_WINDOW_PADDING - 1
+        this.views.length - ViewGroupElement.SLIDING_WINDOW_WIDTH,
+        selectedViewIndex - ViewGroupElement.SLIDING_WINDOW_PADDING - 1
       );
     } else if (selectedViewIndex == this.#slidingWindowIndex) {
       // Case 3: The view is at the very start of the sliding window.
@@ -323,14 +323,14 @@ export default class ViewGroup extends MozLitElement {
       this.#slidingWindowIndex = Math.max(0, this.#slidingWindowIndex - 1);
     } else if (
       selectedViewIndex ==
-      this.#slidingWindowIndex + ViewGroup.SLIDING_WINDOW_WIDTH - 1
+      this.#slidingWindowIndex + ViewGroupElement.SLIDING_WINDOW_WIDTH - 1
     ) {
       // Case 4: The view is at the very end of the sliding window
       //
       // We slide the sliding window +1 index, or to the sliding window
       // width at the end of the views array - whichever is smaller.
       this.#slidingWindowIndex = Math.min(
-        this.views.length - ViewGroup.SLIDING_WINDOW_WIDTH,
+        this.views.length - ViewGroupElement.SLIDING_WINDOW_WIDTH,
         this.#slidingWindowIndex + 1
       );
     }
@@ -338,7 +338,7 @@ export default class ViewGroup extends MozLitElement {
     // need to be moved.
 
     let slidingWindowEndIndex = Math.min(
-      this.#slidingWindowIndex + ViewGroup.SLIDING_WINDOW_WIDTH - 1,
+      this.#slidingWindowIndex + ViewGroupElement.SLIDING_WINDOW_WIDTH - 1,
       this.views.length - 1
     );
     let viewGroupHistory = [];
@@ -442,17 +442,17 @@ export default class ViewGroup extends MozLitElement {
    */
   static #findSlidingWindowIndexCenteredAt(arrayLength, index) {
     if (
-      arrayLength <= ViewGroup.SLIDING_WINDOW_WIDTH ||
-      index <= ViewGroup.SLIDING_WINDOW_PADDING
+      arrayLength <= ViewGroupElement.SLIDING_WINDOW_WIDTH ||
+      index <= ViewGroupElement.SLIDING_WINDOW_PADDING
     ) {
       return 0;
     }
 
-    if (index >= arrayLength - ViewGroup.SLIDING_WINDOW_PADDING) {
-      return arrayLength - ViewGroup.SLIDING_WINDOW_WIDTH;
+    if (index >= arrayLength - ViewGroupElement.SLIDING_WINDOW_PADDING) {
+      return arrayLength - ViewGroupElement.SLIDING_WINDOW_WIDTH;
     }
 
-    return index - ViewGroup.SLIDING_WINDOW_PADDING;
+    return index - ViewGroupElement.SLIDING_WINDOW_PADDING;
   }
 
   /**
@@ -468,8 +468,8 @@ export default class ViewGroup extends MozLitElement {
    * Returns the total expected width of the sliding window.
    */
   static get SLIDING_WINDOW_WIDTH() {
-    return ViewGroup.SLIDING_WINDOW_PADDING * 2 + 1;
+    return ViewGroupElement.SLIDING_WINDOW_PADDING * 2 + 1;
   }
 }
 
-customElements.define("view-group", ViewGroup);
+customElements.define("view-group", ViewGroupElement);

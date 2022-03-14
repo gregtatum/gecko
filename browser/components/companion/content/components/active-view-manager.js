@@ -109,6 +109,9 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         let id = event.detail.workspaceId;
         this.#createWorkspaceElement(id);
         this.#manageWorkspaceIndicatorButtons();
+
+        let urlbar = document.getElementById("urlbar");
+        urlbar.setAttribute("workspace-id", id);
         break;
       case "ViewAdded":
         workspace = this.querySelector(

@@ -4,7 +4,7 @@
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { css, html } from "chrome://browser/content/companion/lit.all.js";
-import ViewGroup from "chrome://browser/content/companion/components/view-group.js";
+import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 
 const { XPCOMUtils } = ChromeUtils.import(
@@ -93,7 +93,7 @@ export default class River extends MozLitElement {
 
     // After the list of Views in the River changes, we want to do some
     // grouping. The idea is to work backwards through the View list, and
-    // group Views that are same-origin together into a single ViewGroup.
+    // group Views that are same-origin together into a single ViewGroupElement.
     // We do this until we reach a maximum of River.maxRiverGroups, and the
     // rest show up in the overflow menu.
 
@@ -111,7 +111,7 @@ export default class River extends MozLitElement {
     // 2. The number of groups reaches TOP_RIVER_GROUPS.
     for (; index >= 0; --index) {
       let view = this.#views[index];
-      if (ViewGroup.canGroup(currentGroup[0], view)) {
+      if (ViewGroupElement.canGroup(currentGroup[0], view)) {
         currentGroup.push(view);
         continue;
       } else {
