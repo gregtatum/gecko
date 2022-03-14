@@ -49,3 +49,12 @@ view-group[draggingover],
 #pin-icon[draggingover] {
   border-inline-end: 32px solid transparent;
 }
+
+view-group:not([app]) + view-group[app]::before {
+  content: "";
+  position: relative;
+  width: 1px;
+  border-inline-start: 1px solid rgba(0,0,0,0.2);
+  height: 100%;
+  inset-inline-start: -8px;
+}

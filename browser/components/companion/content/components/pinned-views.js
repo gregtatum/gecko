@@ -113,6 +113,7 @@ class PinnedViews extends MozLitElement {
                 ?active=${viewGroup.includes(this.activeView)}
                 .viewGroup=${viewGroup}
                 .activeView=${this.activeView}
+                ?app=${viewGroup.isApp}
               ></view-group>
             `
         )}

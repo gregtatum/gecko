@@ -259,12 +259,18 @@ class ViewGroup {
   /** @type {InternalView[]} */
   #views;
 
+  /** @type {boolean} */
+  #isApp;
+
   /**
    * @param {InternalView[]} views
    *   The InternalViews that have been grouped.
+   * @param {boolean} [isApp=false]
+   *   True if the InternalViews are part of a pinned app.
    */
-  constructor(views) {
+  constructor(views, isApp = false) {
     this.#views = views;
+    this.#isApp = isApp;
   }
 
   /** @type {View} */
@@ -313,6 +319,10 @@ class ViewGroup {
   /** @type {Iterator} */
   [Symbol.iterator]() {
     return this.#views.map(internalView => internalView.view).values();
+  }
+
+  get isApp() {
+    return this.#isApp;
   }
 
   /**
@@ -442,12 +452,15 @@ class ViewGroup {
         currentGroup.push(view);
         continue;
       } else {
+        let isPinnedApp = pinnedAppBrowsers?.has(
+          currentGroup.at(-1).getBrowser()
+        );
         // We're reversing the currentGroup because we've been _pushing_
         // them into the Array, and we're going to want to ultimately
         // represent them in reverse order. We _could_ have used unshift
         // to put each item at the start of the Array, but that's apparently
         // more expensive than doing one big reverse at the end.
-        groups.push(new ViewGroup(currentGroup.reverse()));
+        groups.push(new ViewGroup(currentGroup.reverse(), isPinnedApp));
 
         if (groups.length >= limit) {
           break;
@@ -529,6 +542,13 @@ class ViewGroup {
     let { groups: pinned } = ViewGroup.#groupFromEnd(window, pinnedViews, {
       pinning: true,
       pinnedAppBrowsers,
+    });
+
+    // For now, as a hack to create a separate "pinned apps" section, we'll sort
+    // the viewGroups by app / not-app status, and then set an attribute on the
+    // apps so that we can apply a different style for them.
+    pinned.sort((a, b) => {
+      return Number(a.isApp) - Number(b.isApp);
     });
 
     return { groups, overflowed, pinned };
