@@ -15,6 +15,7 @@
   --urlbarbutton-border-radius: 4px;
   --urlbar-border-radius: 20px;
   --urlbar-min-height: 40px;
+  --urlbar-height: 44px;
   --urlbarbutton-border-radius: 4px;
   --urlbar-margin-inline: 8px;
   --focus-outline-color: var(--colors-border-focus);
@@ -852,6 +853,8 @@ body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-input-contai
 body[flow-reset] {
   --toolbarbutton-icon-fill: white;
   --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
+  /* Shrink the --urlbar-height just a bit on the flow-reset page. */
+  --urlbar-height: 42px;
 }
 
 body[flow-reset] #urlbar[breakout],
