@@ -111,6 +111,7 @@ export function makeAttendeeInfo(raw) {
 export function makeCalendarEventInfo(raw) {
   return {
     id: raw.id,
+    originalId: raw.originalId,
     type: "cal",
     date: raw.date,
     //dateModified: raw.dateModified || raw.date,

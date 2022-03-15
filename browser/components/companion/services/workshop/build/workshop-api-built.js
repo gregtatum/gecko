@@ -3031,6 +3031,7 @@ var CalEvent = class extends import_evt13.Emitter {
     this.conference = wireRep.conference;
     this.creator = wireRep.creator;
     this.organizer = wireRep.organizer;
+    this.originalId = wireRep.originalId;
   }
   __updateOverlays(overlays) {
   }

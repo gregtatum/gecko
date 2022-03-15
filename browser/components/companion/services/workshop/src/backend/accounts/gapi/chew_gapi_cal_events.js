@@ -343,6 +343,7 @@ export class GapiCalEventChewer {
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,
+          originalId: gapiEvent.id,
           date: startDate,
           startDate,
           endDate,

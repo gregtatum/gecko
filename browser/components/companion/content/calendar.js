@@ -262,23 +262,30 @@ export class CalendarEventList extends MozLitElement {
   }
 
   getRelevantEvents(events) {
-    // TODO: remove this method: this stuff is done in workshop.
-    let filteredEvents = events;
+    // De-duplicate events based on the original ID provided by the service
+    // TODO: Apply a concept of precedence so that the user's personal calendar
+    // version of the event supersedes any group calendar event. This should
+    // ideally be handled by a follow-up to MR2-1903 by handling this in the
+    // VirtualConversationTOC.
+    let uniqueEvents = [
+      ...new Map(events.map(event => [event.originalId, event])).values(),
+    ];
 
     if (!debugEnabled() && this.listType != "browse") {
+      // TODO: remove this method: this stuff is done in workshop.
       // Return all meetings that start in the next hour or are currently in
       // progress.
       let now = new Date();
       let oneHourFromNow = new Date();
       oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
-      filteredEvents = events.filter(event => {
+      uniqueEvents = uniqueEvents.filter(event => {
         let startDate = new Date(event.startDate);
         let endDate = new Date(event.endDate);
 
         return startDate <= oneHourFromNow && endDate >= now && !event.isAllDay;
       });
     }
-    return filteredEvents.sort(
+    return uniqueEvents.sort(
       (a, b) => new Date(a.startDate) - new Date(b.startDate)
     );
   }

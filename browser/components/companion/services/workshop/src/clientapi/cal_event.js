@@ -111,6 +111,7 @@ export class CalEvent extends Emitter {
 
     this.creator = wireRep.creator;
     this.organizer = wireRep.organizer;
+    this.originalId = wireRep.originalId;
   }
 
   __updateOverlays(overlays) {

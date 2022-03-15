@@ -253,6 +253,7 @@ export class MapiCalEventChewer {
 
         const eventInfo = makeCalendarEventInfo({
           id: eventId,
+          originalId: mapiEvent.id,
           date: startDate,
           startDate,
           endDate,

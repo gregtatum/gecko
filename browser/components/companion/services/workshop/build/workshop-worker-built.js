@@ -11487,6 +11487,7 @@ var WorkshopBackend = (() => {
   function makeCalendarEventInfo(raw) {
     return {
       id: raw.id,
+      originalId: raw.originalId,
       type: "cal",
       date: raw.date,
       startDate: raw.startDate,
@@ -11734,6 +11735,7 @@ var WorkshopBackend = (() => {
               }
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
+                originalId: gapiEvent.id,
                 date: startDate,
                 startDate,
                 endDate,
@@ -12812,6 +12814,7 @@ var WorkshopBackend = (() => {
               const url = mapiEvent.webLink || "";
               const eventInfo = makeCalendarEventInfo({
                 id: eventId,
+                originalId: mapiEvent.id,
                 date: startDate,
                 startDate,
                 endDate,

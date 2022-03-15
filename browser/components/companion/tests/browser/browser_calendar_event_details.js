@@ -489,3 +489,30 @@ add_task(async function testHostDetailsWeirdNonSecondaryGCalOrganizerData() {
     });
   });
 });
+
+add_task(async function testSharedCalendarEventsDeDuplicated() {
+  await CompanionHelper.whenReady(async helper => {
+    const ORIGINAL_ID = "123OriginalId";
+    let events = [
+      {
+        summary: "Shared Calendar Event",
+        id: ORIGINAL_ID,
+      },
+      {
+        summary: "Shared Calendar Event",
+        id: ORIGINAL_ID,
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let calEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      is(calEvents.length, 1, "Only one event is shown.");
+    });
+  });
+});
