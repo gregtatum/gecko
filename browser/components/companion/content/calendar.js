@@ -242,7 +242,11 @@ export class CalendarEventList extends MozLitElement {
 
     if (this.serial !== this.listView.serial) {
       this.serial = this.listView.serial;
-      this.dispatchOnUpdateComplete(new CustomEvent("calendar-events-updated"));
+      this.dispatchOnUpdateComplete(
+        new CustomEvent("calendar-events-updated", {
+          detail: { eventCount: plainEvents.length },
+        })
+      );
     }
     noteTelemetryTimestamp("Companion:CalendarPainted", {
       numberOfEvents: this.events.length,

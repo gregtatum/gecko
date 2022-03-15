@@ -541,24 +541,45 @@ class CompanionHelper {
       "companion-sidebar-button"
     );
   }
-
-  async setCalendarEvents(eventsData) {
+  /**
+   * Sets up events needed for a given test and waits for any resulting UI
+   * updates to finish before proceeding.
+   *
+   * @param {Object[]} eventsData Array of events for the current test run.
+   * @param {Number=} expectedEventCount
+   *   Number of the supplied events expected to be returned from the backend.
+   *   Specified in cases where events should get filtered.
+   * @return {Promise}
+   * @resolves {undefined}
+   *   Resolves once the events have been received and the DOM has been updated.
+   */
+  async setCalendarEvents(eventsData, expectedEventCount) {
     if (this.workshopEnabled) {
       await this.workshopHelper.addCalendarEvents(eventsData);
-      await this.runCompanionTask(async () => {
-        content.document.dispatchEvent(
-          new content.CustomEvent("refresh-events", {})
-        );
-        // Checking the event list based on the assumption that we're testing
-        // the calendar UI whenever we set events, which seems reasonable for now.
-        let calendarEventList = content.document.querySelector(
-          "calendar-event-list"
-        );
-        await ContentTaskUtils.waitForEvent(
-          calendarEventList,
-          "calendar-events-updated"
-        );
-      });
+      await this.runCompanionTask(
+        async (events, expectedCount) => {
+          content.document.dispatchEvent(
+            new content.CustomEvent("refresh-events", {})
+          );
+          // Checking the event list based on the assumption that we're testing
+          // the calendar UI whenever we set events, which seems reasonable for now.
+          let calendarEventList = content.document.querySelector(
+            "calendar-event-list"
+          );
+          await ContentTaskUtils.waitForEvent(
+            calendarEventList,
+            "calendar-events-updated",
+            false,
+            e => {
+              if (expectedCount != undefined) {
+                return e.detail.eventCount === expectedCount;
+              }
+              return e.detail.eventCount === events.length;
+            }
+          );
+        },
+        [eventsData, expectedEventCount]
+      );
     } else {
       let oneHourFromNow = new Date();
       oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
