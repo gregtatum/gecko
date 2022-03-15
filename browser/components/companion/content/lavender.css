@@ -103,8 +103,6 @@
   --colors-quickactions-topsites-border: #e5e2e2;
   --colors-quickactions-topsites-background: white;
 
-  --inset-shadow-cafe: inset 0px 2px 4px rgba(242, 236, 225, 0.8);
-  --outset-shadow-cafe: 0px 0px 2px rgba(122, 94, 63, 0.15);
   --quickactions-topsites-outset-shadow: -1px 1px 4px 0px rgba(69, 36, 135, 0.14);
 
   --urlbar-default-border: 1px solid var(--colors-warm-pressed-02);
