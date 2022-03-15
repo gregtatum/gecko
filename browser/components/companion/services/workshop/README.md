@@ -23,9 +23,13 @@ We check in BOTH:
 - Changes to the un-built source found under `src/`
 - The built changes found under `build/`
 
-The build step is, from the root of the tree:
+To build on macOS and Linux, run the following command from the root of the tree:
 ```
 ./mach npm --prefix=browser/components/companion/services/workshop run build
+```
+On Windows, run the following command from the `browser/components/companion/services/workshop` directory:
+```
+../../../../../mach npm run build
 ```
 
 If things work, you'll see only something like the following after ~1.25 seconds.
@@ -39,9 +43,13 @@ errors.
 
 #### Setting up to Build Things
 
-On Linux and OS X, you should run the following from the root of your tree to
+On Linux and OS X, run the following from the root of your tree to
 install the necessary build dependencies (currently only esbuild).
 
 ```
 ./mach npm install --prefix=browser/components/companion/services/workshop
+```
+On Windows, run the following command from the `browser/components/companion/services/workshop` directory:
+```
+./mach npm install
 ```
