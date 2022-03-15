@@ -460,22 +460,10 @@ class CompanionParent extends JSWindowActorParent {
       if (!filtered.length) {
         return resultMap;
       }
-
-      let db = await PlacesUtils.promiseDBConnection();
-      for (let chunk of PlacesUtils.chunkArray(filtered, db.variableLimit)) {
-        let rows = await db.executeCached(
-          `SELECT url, title FROM moz_places
-          WHERE url_hash IN (${Array(chunk.length)
-            .fill("hash(?)")
-            .join(",")})`,
-          chunk
-        );
-        for (let row of rows) {
-          let url = row.getResultByName("url");
-          let title = row.getResultByName("title");
-          this._cachedPlacesTitles.set(url, title);
-          resultMap.set(url, title);
-        }
+      let pages = await PlacesUtils.history.fetchMany(filtered);
+      for (let page of pages.values()) {
+        this._cachedPlacesTitles.set(page.url.href, page.title);
+        resultMap.set(page.url.href, page.title);
       }
       return resultMap;
     } finally {
