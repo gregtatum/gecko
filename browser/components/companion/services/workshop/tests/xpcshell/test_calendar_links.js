@@ -287,7 +287,7 @@ const MAPI_DESCRIPTION_TEST = [
       {
         url: "https://onedrive.live.com/edit?resid=foo&authkey=xlsx",
         docInfo: {
-          type: "ms-spreadsheets",
+          type: "ms-spreadsheet",
           title: "foo.xlsx",
         },
       },

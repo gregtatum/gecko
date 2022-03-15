@@ -26,6 +26,16 @@ const GOOGLE_SLIDES_ICON =
   "https://ssl.gstatic.com/docs/presentations/images/favicon5.ico";
 const GOOGLE_DRIVE_ICON =
   "https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png";
+const MICROSOFT_DOCS_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/docx.svg";
+const MICROSOFT_SHEETS_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/xlsx.svg";
+const MICROSOFT_SLIDES_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/pptx.svg";
+// Microsoft has icons for lots of file types in OneDrive.
+// This was the best generic icon I could come up with.
+const MICROSOFT_DRIVE_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/genericfile.svg";
 const DEFAULT_ICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
 // Update display every minute
@@ -735,6 +745,14 @@ class CalendarEvent extends MozLitElement {
       type = href.split("/")[3];
     }
     switch (type) {
+      case "ms-document":
+        return MICROSOFT_DOCS_ICON;
+      case "ms-spreadsheet":
+        return MICROSOFT_SHEETS_ICON;
+      case "ms-presentation":
+        return MICROSOFT_SLIDES_ICON;
+      case "ms-drive":
+        return MICROSOFT_DRIVE_ICON;
       case "document":
         return GOOGLE_DOCS_ICON;
       case "spreadsheets":

@@ -346,7 +346,7 @@ async function getDocumentTitleFromMicrosoft(url, mapiClient, docTitleCache) {
       return null;
     }
     url = `https://onedrive.live.com/redir?resid=${resid}&authkey=${authkey}`;
-  } else if (url.hostname === "1drv.ms") {
+  } else {
     url = url.toString();
   }
 
@@ -377,7 +377,7 @@ async function getDocumentTitleFromMicrosoft(url, mapiClient, docTitleCache) {
           type = "ms-document";
           break;
         case "xlsx":
-          type = "ms-spreadsheets";
+          type = "ms-spreadsheet";
           break;
         case "pptx":
           type = "ms-presentation";
@@ -405,7 +405,10 @@ export async function getDocumentTitle(url, clients, docTitleCache) {
     return getDocumentTitleFromGoogle(url, clients.get("gapi"), docTitleCache);
   }
 
-  if (["1drv.ms", "onedrive.live.com"].includes(url.hostname)) {
+  if (
+    ["1drv.ms", "onedrive.live.com"].includes(url.hostname) ||
+    url.hostname.endsWith(".sharepoint.com")
+  ) {
     return getDocumentTitleFromMicrosoft(
       url,
       clients.get("mapi"),

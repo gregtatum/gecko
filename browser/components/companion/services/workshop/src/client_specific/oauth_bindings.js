@@ -42,6 +42,7 @@ const OauthBindings = {
       "https://graph.microsoft.com/Calendars.Read",
       "https://graph.microsoft.com/Mail.Read",
       "https://graph.microsoft.com/User.Read",
+      "https://graph.microsoft.com/Files.Read.All",
     ],
   },
 };

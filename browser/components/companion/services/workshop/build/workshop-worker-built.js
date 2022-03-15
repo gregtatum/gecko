@@ -10185,7 +10185,7 @@ var WorkshopBackend = (() => {
         return null;
       }
       url = `https://onedrive.live.com/redir?resid=${resid}&authkey=${authkey}`;
-    } else if (url.hostname === "1drv.ms") {
+    } else {
       url = url.toString();
     }
     const encoded = encodeURLForGraph(url);
@@ -10210,7 +10210,7 @@ var WorkshopBackend = (() => {
           type = "ms-document";
           break;
         case "xlsx":
-          type = "ms-spreadsheets";
+          type = "ms-spreadsheet";
           break;
         case "pptx":
           type = "ms-presentation";
@@ -10226,7 +10226,7 @@ var WorkshopBackend = (() => {
     if (url.hostname.endsWith(".google.com")) {
       return getDocumentTitleFromGoogle(url, clients.get("gapi"), docTitleCache);
     }
-    if (["1drv.ms", "onedrive.live.com"].includes(url.hostname)) {
+    if (["1drv.ms", "onedrive.live.com"].includes(url.hostname) || url.hostname.endsWith(".sharepoint.com")) {
       return getDocumentTitleFromMicrosoft(url, clients.get("mapi"), docTitleCache);
     }
     return null;
@@ -14127,7 +14127,8 @@ var WorkshopBackend = (() => {
                   "offline_access",
                   "https://graph.microsoft.com/Calendars.Read",
                   "https://graph.microsoft.com/Mail.Read",
-                  "https://graph.microsoft.com/User.Read"
+                  "https://graph.microsoft.com/User.Read",
+                  "https://graph.microsoft.com/Files.Read.All"
                 ]
               }
             },
