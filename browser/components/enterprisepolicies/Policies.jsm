@@ -1012,7 +1012,12 @@ var Policies = {
             false
           );
           // Block about:debugging
-          blockAboutPage(manager, "about:debugging");
+          // We're using the enterprise policy mechanism to block addons, but
+          // that's very aggressive and blocks "about:debugging",
+          // so add a PINEBUILD carve-out.
+          if (!AppConstants.PINEBUILD) {
+            blockAboutPage(manager, "about:debugging");
+          }
         }
         if ("restricted_domains" in extensionSettings["*"]) {
           let restrictedDomains = Services.prefs
