@@ -26,6 +26,11 @@ workspace-el[workspace-id="2"] > #workspace > #workspace-indicator-button {
   background: var(--colors-teal-90);
 }
 
+workspace-el.contains-pins:not(.multiple) {
+  background-color: var(--colors-cafe-40);
+}
+
+workspace-el.contains-pins:not(.multiple),
 workspace-el.multiple.selected {
   padding: 4px;
 }

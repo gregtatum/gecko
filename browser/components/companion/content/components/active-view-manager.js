@@ -133,6 +133,10 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           workspace?.overflowedViews,
           workspace?.pinnedViewGroups
         );
+        workspaceEl.classList.toggle(
+          "contains-pins",
+          workspace?.pinnedViewGroups.length
+        );
 
         let allWorkspaces = this.querySelectorAll("workspace-el");
         allWorkspaces.forEach(w => {
