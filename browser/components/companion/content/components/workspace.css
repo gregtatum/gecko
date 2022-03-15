@@ -4,7 +4,6 @@
 
 #workspace {
   display: flex;
-  border-radius: 100px;
 }
 
 #workspace[empty=true] {

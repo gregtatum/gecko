@@ -65,8 +65,6 @@ export default class Workspace extends window.MozHTMLElement {
       this.#river.activeView = view;
     } else if (this.isPinnedView(view)) {
       this.#pinnedViews.activeView = view;
-    } else {
-      console.warn("Saw setActiveView for an unknown view.");
     }
   }
 

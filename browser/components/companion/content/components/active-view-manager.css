@@ -11,10 +11,11 @@ active-view-manager {
 
 workspace-el {
   margin-inline: 20px;
+  border-radius: 100px;
 }
 
 workspace-el[workspace-id="0"] > #workspace > #workspace-indicator-button {
-  background: #845BDC;
+  background: var(--colors-lavender-80);
 }
 
 workspace-el[workspace-id="1"] > #workspace > #workspace-indicator-button {
@@ -22,5 +23,21 @@ workspace-el[workspace-id="1"] > #workspace > #workspace-indicator-button {
 }
 
 workspace-el[workspace-id="2"] > #workspace > #workspace-indicator-button {
-  background: #248287;
+  background: var(--colors-teal-90);
+}
+
+workspace-el.multiple.selected {
+  padding: 4px;
+}
+
+workspace-el.multiple.selected[workspace-id="0"] {
+  background-color: var(--colors-lavender-20);
+}
+
+workspace-el.multiple.selected[workspace-id="1"] {
+  background-color: #E1E9FA;
+}
+
+workspace-el.multiple.selected[workspace-id="2"] {
+  background-color: #E1F3F5;
 }

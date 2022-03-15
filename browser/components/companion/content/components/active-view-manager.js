@@ -137,6 +137,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         let allWorkspaces = this.querySelectorAll("workspace-el");
         allWorkspaces.forEach(w => {
           w.setActiveView(window.gGlobalHistory.currentView);
+          w.classList.toggle("selected", w == workspaceEl);
         });
         break;
       }
@@ -230,6 +231,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       let button = workspace.querySelector("#workspace-indicator-button");
       button.textContent = parseInt(id) + WORKSPACE_COUNTER_OFFSET;
       button.hidden = false;
+      workspace.classList.add("multiple");
     });
   }
 
