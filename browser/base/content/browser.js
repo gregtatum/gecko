@@ -1706,8 +1706,7 @@ var gBrowserInit = {
       ) {
         let windowFrameColor = new Color(
           ...ChromeUtils.import(
-            "resource:///modules/Windows8WindowFrameColor.jsm",
-            {}
+            "resource:///modules/Windows8WindowFrameColor.jsm"
           ).Windows8WindowFrameColor.get()
         );
         // Default to black for foreground text.
@@ -2425,8 +2424,7 @@ var gBrowserInit = {
         try {
           DownloadsCommon.initializeAllDataLinks();
           ChromeUtils.import(
-            "resource:///modules/DownloadsTaskbar.jsm",
-            {}
+            "resource:///modules/DownloadsTaskbar.jsm"
           ).DownloadsTaskbar.registerIndicator(window);
           if (AppConstants.platform == "macosx") {
             ChromeUtils.import(

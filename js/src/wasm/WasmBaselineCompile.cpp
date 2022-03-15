@@ -293,24 +293,24 @@ void BaseCompiler::tableSwitch(Label* theTable, RegI32 switchValue,
 
 #ifdef JS_CODEGEN_X86
 void BaseCompiler::stashI64(RegPtr regForTls, RegI64 r) {
-  MOZ_ASSERT(sizeof(TlsData::baselineScratch) >= 8);
+  MOZ_ASSERT(Instance::sizeOfBaselineScratch() >= 8);
   MOZ_ASSERT(regForTls != r.low && regForTls != r.high);
   fr.loadTlsPtr(regForTls);
-  masm.store32(r.low, Address(regForTls, offsetof(TlsData, baselineScratch)));
+  masm.store32(r.low, Address(regForTls, Instance::offsetOfBaselineScratch()));
   masm.store32(r.high,
-               Address(regForTls, offsetof(TlsData, baselineScratch) + 4));
+               Address(regForTls, Instance::offsetOfBaselineScratch() + 4));
 }
 
 void BaseCompiler::unstashI64(RegPtr regForTls, RegI64 r) {
-  MOZ_ASSERT(sizeof(TlsData::baselineScratch) >= 8);
+  MOZ_ASSERT(Instance::sizeOfBaselineScratch() >= 8);
   fr.loadTlsPtr(regForTls);
   if (regForTls == r.low) {
-    masm.load32(Address(regForTls, offsetof(TlsData, baselineScratch) + 4),
+    masm.load32(Address(regForTls, Instance::offsetOfBaselineScratch() + 4),
                 r.high);
-    masm.load32(Address(regForTls, offsetof(TlsData, baselineScratch)), r.low);
+    masm.load32(Address(regForTls, Instance::offsetOfBaselineScratch()), r.low);
   } else {
-    masm.load32(Address(regForTls, offsetof(TlsData, baselineScratch)), r.low);
-    masm.load32(Address(regForTls, offsetof(TlsData, baselineScratch) + 4),
+    masm.load32(Address(regForTls, Instance::offsetOfBaselineScratch()), r.low);
+    masm.load32(Address(regForTls, Instance::offsetOfBaselineScratch() + 4),
                 r.high);
   }
 }
@@ -1423,7 +1423,7 @@ bool BaseCompiler::throwFrom(RegRef exn, uint32_t lineOrBytecode) {
 
 void BaseCompiler::loadTag(RegPtr tlsData, uint32_t tagIndex, RegRef tagDst) {
   const TagDesc& tagDesc = moduleEnv_.tags[tagIndex];
-  size_t offset = offsetof(TlsData, globalArea) + tagDesc.globalDataOffset;
+  size_t offset = Instance::offsetOfGlobalArea() + tagDesc.globalDataOffset;
   masm.loadPtr(Address(tlsData, offset), tagDst);
 }
 
@@ -1431,14 +1431,15 @@ void BaseCompiler::consumePendingException(RegRef* exnDst, RegRef* tagDst) {
   RegPtr pendingAddr = RegPtr(PreBarrierReg);
   needPtr(pendingAddr);
   masm.computeEffectiveAddress(
-      Address(WasmTlsReg, offsetof(TlsData, pendingException)), pendingAddr);
+      Address(WasmTlsReg, Instance::offsetOfPendingException()), pendingAddr);
   *exnDst = needRef();
   masm.loadPtr(Address(pendingAddr, 0), *exnDst);
   emitBarrieredClear(pendingAddr);
 
   *tagDst = needRef();
   masm.computeEffectiveAddress(
-      Address(WasmTlsReg, offsetof(TlsData, pendingExceptionTag)), pendingAddr);
+      Address(WasmTlsReg, Instance::offsetOfPendingExceptionTag()),
+      pendingAddr);
   masm.loadPtr(Address(pendingAddr, 0), *tagDst);
   emitBarrieredClear(pendingAddr);
   freePtr(pendingAddr);
@@ -1888,7 +1889,7 @@ void BaseCompiler::convertI64ToF64(RegI64 src, bool isUnsigned, RegF64 dest,
 // Global variable access.
 
 Address BaseCompiler::addressOfGlobalVar(const GlobalDesc& global, RegI32 tmp) {
-  uint32_t globalToTlsOffset = offsetof(TlsData, globalArea) + global.offset();
+  uint32_t globalToTlsOffset = Instance::offsetOfGlobalArea() + global.offset();
   fr.loadTlsPtr(tmp);
   if (global.isIndirect()) {
     masm.loadPtr(Address(tmp, globalToTlsOffset), tmp);
@@ -3825,9 +3826,9 @@ bool BaseCompiler::emitDelegate() {
   tryNote.entryPoint = tryNote.end;
   tryNote.framePushed = masm.framePushed();
 
-  // Store the TlsData that was left in WasmTlsReg by the exception handling
-  // mechanism, that is this frame's TlsData but with the exception filled in
-  // TlsData::pendingException.
+  // Store the Instance that was left in WasmTlsReg by the exception handling
+  // mechanism, that is this frame's Instance but with the exception filled in
+  // Instance::pendingException.
   fr.storeTlsPtr(WasmTlsReg);
 
   // If the target block is a non-try block, skip over it and find the next
@@ -3913,12 +3914,12 @@ bool BaseCompiler::endTryCatch(ResultType type) {
     tryNote.end = tryNote.entryPoint;
   }
 
-  // Store the TlsData that was left in WasmTlsReg by the exception handling
-  // mechanism, that is this frame's TlsData but with the exception filled in
-  // TlsData::pendingException.
+  // Store the Instance that was left in WasmTlsReg by the exception handling
+  // mechanism, that is this frame's Instance but with the exception filled in
+  // Instance::pendingException.
   fr.storeTlsPtr(WasmTlsReg);
 
-  // Load exception pointer from TlsData and make sure that it is
+  // Load exception pointer from Instance and make sure that it is
   // saved before the following call will clear it.
   RegRef exn;
   RegRef tag;
@@ -6582,95 +6583,95 @@ static void XorV128(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
 }
 
 static void AddI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addInt8x16(rs, rsd);
+  masm.addInt8x16(rsd, rs, rsd);
 }
 
 static void AddI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addInt16x8(rs, rsd);
+  masm.addInt16x8(rsd, rs, rsd);
 }
 
 static void AddI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addInt32x4(rs, rsd);
+  masm.addInt32x4(rsd, rs, rsd);
 }
 
 static void AddF32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addFloat32x4(rs, rsd);
+  masm.addFloat32x4(rsd, rs, rsd);
 }
 
 static void AddI64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addInt64x2(rs, rsd);
+  masm.addInt64x2(rsd, rs, rsd);
 }
 
 static void AddF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addFloat64x2(rs, rsd);
+  masm.addFloat64x2(rsd, rs, rsd);
 }
 
 static void AddSatI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addSatInt8x16(rs, rsd);
+  masm.addSatInt8x16(rsd, rs, rsd);
 }
 
 static void AddSatUI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedAddSatInt8x16(rs, rsd);
+  masm.unsignedAddSatInt8x16(rsd, rs, rsd);
 }
 
 static void AddSatI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.addSatInt16x8(rs, rsd);
+  masm.addSatInt16x8(rsd, rs, rsd);
 }
 
 static void AddSatUI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedAddSatInt16x8(rs, rsd);
+  masm.unsignedAddSatInt16x8(rsd, rs, rsd);
 }
 
 static void SubI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subInt8x16(rs, rsd);
+  masm.subInt8x16(rsd, rs, rsd);
 }
 
 static void SubI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subInt16x8(rs, rsd);
+  masm.subInt16x8(rsd, rs, rsd);
 }
 
 static void SubI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subInt32x4(rs, rsd);
+  masm.subInt32x4(rsd, rs, rsd);
 }
 
 static void SubF32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subFloat32x4(rs, rsd);
+  masm.subFloat32x4(rsd, rs, rsd);
 }
 
 static void SubI64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subInt64x2(rs, rsd);
+  masm.subInt64x2(rsd, rs, rsd);
 }
 
 static void SubF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subFloat64x2(rs, rsd);
+  masm.subFloat64x2(rsd, rs, rsd);
 }
 
 static void SubSatI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subSatInt8x16(rs, rsd);
+  masm.subSatInt8x16(rsd, rs, rsd);
 }
 
 static void SubSatUI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedSubSatInt8x16(rs, rsd);
+  masm.unsignedSubSatInt8x16(rsd, rs, rsd);
 }
 
 static void SubSatI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.subSatInt16x8(rs, rsd);
+  masm.subSatInt16x8(rsd, rs, rsd);
 }
 
 static void SubSatUI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedSubSatInt16x8(rs, rsd);
+  masm.unsignedSubSatInt16x8(rsd, rs, rsd);
 }
 
 static void MulI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.mulInt16x8(rs, rsd);
+  masm.mulInt16x8(rsd, rs, rsd);
 }
 
 static void MulI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.mulInt32x4(rs, rsd);
+  masm.mulInt32x4(rsd, rs, rsd);
 }
 
 static void MulF32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.mulFloat32x4(rs, rsd);
+  masm.mulFloat32x4(rsd, rs, rsd);
 }
 
 #  if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
@@ -6686,15 +6687,15 @@ static void MulI64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd,
 #  endif
 
 static void MulF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.mulFloat64x2(rs, rsd);
+  masm.mulFloat64x2(rsd, rs, rsd);
 }
 
 static void DivF32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.divFloat32x4(rs, rsd);
+  masm.divFloat32x4(rsd, rs, rsd);
 }
 
 static void DivF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.divFloat64x2(rs, rsd);
+  masm.divFloat64x2(rsd, rs, rsd);
 }
 
 #  if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
@@ -6772,7 +6773,7 @@ static void PMaxF64x2(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
 #  endif
 
 static void DotI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.widenDotInt16x8(rs, rsd);
+  masm.widenDotInt16x8(rsd, rs, rsd);
 }
 
 static void ExtMulLowI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
@@ -7135,75 +7136,75 @@ static void ShiftRightUI64x2(MacroAssembler& masm, RegI32 rs, RegV128 rsd,
 #  endif
 
 static void AverageUI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedAverageInt8x16(rs, rsd);
+  masm.unsignedAverageInt8x16(rsd, rs, rsd);
 }
 
 static void AverageUI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedAverageInt16x8(rs, rsd);
+  masm.unsignedAverageInt16x8(rsd, rs, rsd);
 }
 
 static void MinI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.minInt8x16(rs, rsd);
+  masm.minInt8x16(rsd, rs, rsd);
 }
 
 static void MinUI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedMinInt8x16(rs, rsd);
+  masm.unsignedMinInt8x16(rsd, rs, rsd);
 }
 
 static void MaxI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.maxInt8x16(rs, rsd);
+  masm.maxInt8x16(rsd, rs, rsd);
 }
 
 static void MaxUI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedMaxInt8x16(rs, rsd);
+  masm.unsignedMaxInt8x16(rsd, rs, rsd);
 }
 
 static void MinI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.minInt16x8(rs, rsd);
+  masm.minInt16x8(rsd, rs, rsd);
 }
 
 static void MinUI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedMinInt16x8(rs, rsd);
+  masm.unsignedMinInt16x8(rsd, rs, rsd);
 }
 
 static void MaxI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.maxInt16x8(rs, rsd);
+  masm.maxInt16x8(rsd, rs, rsd);
 }
 
 static void MaxUI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedMaxInt16x8(rs, rsd);
+  masm.unsignedMaxInt16x8(rsd, rs, rsd);
 }
 
 static void MinI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.minInt32x4(rs, rsd);
+  masm.minInt32x4(rsd, rs, rsd);
 }
 
 static void MinUI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedMinInt32x4(rs, rsd);
+  masm.unsignedMinInt32x4(rsd, rs, rsd);
 }
 
 static void MaxI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.maxInt32x4(rs, rsd);
+  masm.maxInt32x4(rsd, rs, rsd);
 }
 
 static void MaxUI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedMaxInt32x4(rs, rsd);
+  masm.unsignedMaxInt32x4(rsd, rs, rsd);
 }
 
 static void NarrowI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.narrowInt16x8(rs, rsd);
+  masm.narrowInt16x8(rsd, rs, rsd);
 }
 
 static void NarrowUI16x8(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedNarrowInt16x8(rs, rsd);
+  masm.unsignedNarrowInt16x8(rsd, rs, rsd);
 }
 
 static void NarrowI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.narrowInt32x4(rs, rsd);
+  masm.narrowInt32x4(rsd, rs, rsd);
 }
 
 static void NarrowUI32x4(MacroAssembler& masm, RegV128 rs, RegV128 rsd) {
-  masm.unsignedNarrowInt32x4(rs, rsd);
+  masm.unsignedNarrowInt32x4(rsd, rs, rsd);
 }
 
 static void WidenLowI8x16(MacroAssembler& masm, RegV128 rs, RegV128 rd) {

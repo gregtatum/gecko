@@ -1506,11 +1506,7 @@
 # be loaded normally as-if users normally navigated to the page.
 - name: browser.soft_reload.only_force_validate_top_level_document
   type: bool
-#if defined(EARLY_BETA_OR_EARLIER)
   value: true
-#else
-  value: false
-#endif
   mirror: always
 
 #---------------------------------------------------------------------------
@@ -2865,13 +2861,13 @@
 # Whether origin trials are enabled.
 - name: dom.origin-trials.enabled
   type: bool
-  value: true
+  value: false
   mirror: always
 
 # Whether we use the test key to verify tokens.
 - name: dom.origin-trials.test-key.enabled
   type: bool
-  value: true
+  value: false
   mirror: always
 
 # Is support for Window.paintWorklet enabled?
@@ -4418,6 +4414,13 @@
 # line of an `<hr>` element causes moving caret to immediatly after the `<hr>`
 # element, and then, another Backspace can delete it.
 - name: editor.hr_element.allow_to_delete_from_following_line
+  type: bool
+  value: true
+  mirror: always
+
+# Whether editor initializes attributes and/or child nodes of newly inserting
+# element before or after connecting to the DOM tree.
+- name: editor.initialize_element_before_connect
   type: bool
   value: true
   mirror: always
@@ -7454,6 +7457,13 @@
 - name: layout.css.control-characters.visible
   type: RelaxedAtomicBool
   value: @IS_NOT_RELEASE_OR_BETA@
+  mirror: always
+  rust: true
+
+# Whether the `content-visibility` CSS property is enabled
+- name: layout.css.content-visibility.enabled
+  type: RelaxedAtomicBool
+  value: false
   mirror: always
   rust: true
 

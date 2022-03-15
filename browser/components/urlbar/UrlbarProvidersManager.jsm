@@ -109,7 +109,7 @@ class ProvidersManager {
     // providers at the front.
     this.providers = [];
     for (let [symbol, module] of Object.entries(localProviderModules)) {
-      let { [symbol]: provider } = ChromeUtils.import(module, {});
+      let { [symbol]: provider } = ChromeUtils.import(module);
       this.registerProvider(provider);
     }
     // Tracks ongoing Query instances by queryContext.
@@ -123,7 +123,7 @@ class ProvidersManager {
     // This maps muxer names to muxers.
     this.muxers = new Map();
     for (let [symbol, module] of Object.entries(localMuxerModules)) {
-      let { [symbol]: muxer } = ChromeUtils.import(module, {});
+      let { [symbol]: muxer } = ChromeUtils.import(module);
       this.registerMuxer(muxer);
     }
   }

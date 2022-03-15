@@ -1035,35 +1035,6 @@ BrowserGlue.prototype = {
     Services.prefs.savePrefFile(null);
   },
 
-  _setSyncAutoconnectDelay: function BG__setSyncAutoconnectDelay() {
-    // Assume that a non-zero value for services.sync.autoconnectDelay should override
-    if (Services.prefs.prefHasUserValue("services.sync.autoconnectDelay")) {
-      let prefDelay = Services.prefs.getIntPref(
-        "services.sync.autoconnectDelay"
-      );
-
-      if (prefDelay > 0) {
-        return;
-      }
-    }
-
-    // delays are in seconds
-    const MAX_DELAY = 300;
-    let delay = 3;
-    for (let win of Services.wm.getEnumerator("navigator:browser")) {
-      // browser windows without a gBrowser almost certainly means we are
-      // shutting down, so instead of just ignoring that window we abort.
-      if (win.closed || !win.gBrowser) {
-        return;
-      }
-      delay += win.gBrowser.tabs.length;
-    }
-    delay = delay <= MAX_DELAY ? delay : MAX_DELAY;
-
-    const { Weave } = ChromeUtils.import("resource://services-sync/main.js");
-    Weave.Service.scheduler.delayedAutoConnect(delay);
-  },
-
   // nsIObserver implementation
   observe: async function BG_observe(subject, topic, data) {
     switch (topic) {
@@ -1105,9 +1076,6 @@ BrowserGlue.prototype = {
         if (OBSERVE_LASTWINDOW_CLOSE_TOPICS) {
           this._setPrefToSaveSession();
         }
-        break;
-      case "weave:service:ready":
-        this._setSyncAutoconnectDelay();
         break;
       case "fxaccounts:onverified":
         this._onThisDeviceConnected();
@@ -1366,7 +1334,6 @@ BrowserGlue.prototype = {
       "browser:purge-session-history",
       "quit-application-requested",
       "quit-application-granted",
-      "weave:service:ready",
       "fxaccounts:onverified",
       "fxaccounts:device_connected",
       "fxaccounts:verify_login",
@@ -1795,8 +1762,7 @@ BrowserGlue.prototype = {
       let updateChannel;
       try {
         updateChannel = ChromeUtils.import(
-          "resource://gre/modules/UpdateUtils.jsm",
-          {}
+          "resource://gre/modules/UpdateUtils.jsm"
         ).UpdateUtils.UpdateChannel;
       } catch (ex) {}
       if (updateChannel) {
@@ -2959,6 +2925,15 @@ BrowserGlue.prototype = {
       {
         task: () => {
           this._collectTelemetryPiPEnabled();
+        },
+      },
+      // Schedule a sync (if enabled) after we've loaded
+      {
+        task: async () => {
+          if (WeaveService.enabled) {
+            await WeaveService.whenLoaded();
+            WeaveService.Weave.Service.scheduler.autoConnect();
+          }
         },
       },
 
