@@ -26,6 +26,19 @@
   overflow: hidden;
 }
 
+#river-overflow-button {
+  border-radius: 9999px;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: 12px;
+  align-items: center;
+  display: flex;
+}
+
+#river-overflow-button[hidden] {
+  display: none;
+}
+
 #river:not([containsActive]) {
   padding-inline-end: 5px;
   border-start-end-radius: 25px;

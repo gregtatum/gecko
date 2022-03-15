@@ -34,11 +34,3 @@
 #workspace-indicator-button[hidden] {
   display: none;
 }
-
-#river-overflow-button {
-  border-radius: 9999px;
-  width: 16px;
-  height: 16px;
-  margin-block: auto;
-  margin-inline-end: 18px;
-}

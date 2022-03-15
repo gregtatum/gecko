@@ -17,6 +17,12 @@ export default class River extends MozLitElement {
     };
   }
 
+  static get queries() {
+    return {
+      overflowButton: "#river-overflow-button",
+    };
+  }
+
   static get styles() {
     return css`
       @import url("chrome://browser/content/companion/components/river.css");
@@ -42,6 +48,14 @@ export default class River extends MozLitElement {
       this.overflowedViews.includes(view) ||
       this.viewGroups.some(group => group.includes(view))
     );
+  }
+
+  #onOverflowClick(event) {
+    let e = new CustomEvent("UserAction:OpenOverflowPanel", {
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(e);
   }
 
   #onDragOver(event) {
@@ -79,6 +93,14 @@ export default class River extends MozLitElement {
     let topViewGroup =
       containsActive && this.viewGroups.length ? river.pop() : null;
     return html`
+      <toolbarbutton
+        class="subviewbutton"
+        id="river-overflow-button"
+        @click=${this.#onOverflowClick}
+        data-l10n-id="active-view-manager-overflow-button-text"
+        data-l10n-args='{ "count": ${this.overflowedViews.length} }'
+        ?hidden=${!this.overflowedViews.length}
+      ></toolbarbutton>
       <div
         id="river"
         ?hidden=${!river.length}

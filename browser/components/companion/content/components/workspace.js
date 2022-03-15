@@ -7,7 +7,6 @@ import ActiveViewManager from "chrome://browser/content/companion/components/act
 export default class Workspace extends window.MozHTMLElement {
   #river;
   #pinnedViews;
-  #overflow;
   #urlbar;
   #id;
   #workspace;
@@ -27,9 +26,7 @@ export default class Workspace extends window.MozHTMLElement {
 
     this.#river = this.querySelector("river-el");
     this.#pinnedViews = this.querySelector("pinned-views");
-    this.#overflow = this.querySelector("#river-overflow-button");
     this.#urlbar = document.getElementById("urlbar");
-    this.addEventListener("RiverRegrouped", this);
     this.addEventListener("dragstart", this);
     this.addEventListener("dragend", this);
     this.addEventListener("click", this);
@@ -43,7 +40,6 @@ export default class Workspace extends window.MozHTMLElement {
   }
 
   disconnectedCallback() {
-    this.removeEventListener("RiverRegrouped");
     this.removeEventListener("dragstart", this);
     this.removeEventListener("dragend", this);
     this.removeEventListener("click", this);
@@ -82,10 +78,6 @@ export default class Workspace extends window.MozHTMLElement {
     this.#river.viewGroups = riverViewGroups;
     this.#river.overflowedViews = overflowedViews;
     this.#pinnedViews.viewGroups = pinnedViewGroups;
-    let l10nId = this.#overflow.getAttribute("data-l10n-id");
-    let count = overflowedViews.length;
-    document.l10n.setAttributes(this.#overflow, l10nId, { count });
-    this.#overflow.hidden = count == 0;
     this.#workspace.setAttribute("empty", this.#isEmpty());
   }
 

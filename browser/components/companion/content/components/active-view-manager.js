@@ -61,6 +61,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       window.gGlobalHistory.addEventListener(event, this);
     }
 
+    this.addEventListener("UserAction:OpenOverflowPanel", this);
     this.addEventListener("UserAction:ViewSelected", this);
     this.addEventListener("UserAction:ViewGroupSelected", this);
     this.addEventListener("UserAction:ViewGroupCloseOne", this);
@@ -91,6 +92,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     for (let event of ActiveViewManager.EVENTS) {
       window.gGlobalHistory.removeEventListener(event, this);
     }
+    this.removeEventListener("UserAction:OpenOverflowPanel", this);
     this.removeEventListener("UserAction:ViewSelected", this);
     this.removeEventListener("UserAction:ViewGroupCloseOne", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
@@ -169,10 +171,11 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         this.#viewGroupCloseOne(viewGroup);
         break;
       }
+      case "UserAction:OpenOverflowPanel":
+        this.#openOverflowPanel(event);
+        break;
       case "click":
-        if (event.target.id == "river-overflow-button") {
-          this.#openOverflowPanel(event);
-        } else if (event.currentTarget == this.#overflowPanel) {
+        if (event.currentTarget == this.#overflowPanel) {
           this.#overflowPanelClicked(event);
         } else if (event.currentTarget == this.#pageActionPanel) {
           this.#pageActionPanelClicked(event);
@@ -252,7 +255,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       "workspace-id"
     );
     panel.setAttribute("workspace-id", workspaceId);
-    panel.openPopup(event.target, {
+    panel.openPopup(event.target.overflowButton, {
       position: "bottomcenter topleft",
       triggerEvent: event,
     });
