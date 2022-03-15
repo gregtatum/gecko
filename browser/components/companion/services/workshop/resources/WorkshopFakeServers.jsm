@@ -68,7 +68,7 @@ class FakeCalendar {
     let previousSummary = "";
     let recurringId;
     return events.map(rawEvent => {
-      const { serverId, icalId } = this.serverOwner.issueEventIds();
+      const { serverId, icalId } = this.serverOwner.issueEventIds(rawEvent);
       const result = Object.assign(
         {
           // gapi: base32 constraint: 0-9, a-v
@@ -344,8 +344,8 @@ class BaseFakeServer {
     return new Date();
   }
 
-  issueEventIds() {
-    const useEventId = this.#nextEventId++;
+  issueEventIds(rawEvent) {
+    const useEventId = rawEvent?.id || this.#nextEventId++;
     return {
       serverId: `srv${useEventId}`,
       icalId: `${useEventId}@${this.domain}`,

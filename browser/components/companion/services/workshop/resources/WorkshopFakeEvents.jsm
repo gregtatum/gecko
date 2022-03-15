@@ -108,9 +108,8 @@ class FakeEventFactory {
       const location = sketch.location || undefined;
       const every = sketch.every || undefined;
       const url = sketch.url || undefined;
-      const id = sketch.id || undefined;
       const fullEvent = {
-        id,
+        ...(sketch.id && { id: sketch.id }),
         startDate,
         endDate,
         summary,
