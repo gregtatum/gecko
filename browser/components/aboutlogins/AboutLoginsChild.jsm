@@ -17,6 +17,12 @@ const { LayoutUtils } = ChromeUtils.import(
   "resource://gre/modules/LayoutUtils.jsm"
 );
 
+ChromeUtils.defineModuleGetter(
+  this,
+  "AppConstants",
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 XPCOMUtils.defineLazyServiceGetter(
   this,
   "ClipboardHelper",
@@ -143,6 +149,7 @@ class AboutLoginsChild extends JSWindowActorChild {
     this.sendAsyncMessage("AboutLogins:Subscribe");
 
     if (this.browsingContext.embedderElement) {
+      let documentElement = this.document.documentElement;
       documentElement.classList.add("in-companion");
       documentElement.querySelector("login-list").classList.add("in-companion");
       documentElement.querySelector("login-item").classList.add("in-companion");
@@ -351,6 +358,7 @@ class AboutLoginsChild extends JSWindowActorChild {
     utils.supportBaseURL = Services.urlFormatter.formatURLPref(
       "app.support.baseURL"
     );
+    let waivedContent = Cu.waiveXrays(this.browsingContext.window);
     waivedContent.AboutLoginsUtils.platform = AppConstants.platform;
     waivedContent.AboutLoginsUtils.pineBuild = AppConstants.PINEBUILD;
     this.sendToContent("Setup", data);
