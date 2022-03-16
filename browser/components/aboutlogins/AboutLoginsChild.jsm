@@ -17,12 +17,6 @@ const { LayoutUtils } = ChromeUtils.import(
   "resource://gre/modules/LayoutUtils.jsm"
 );
 
-ChromeUtils.defineModuleGetter(
-  this,
-  "AppConstants",
-  "resource://gre/modules/AppConstants.jsm"
-);
-
 XPCOMUtils.defineLazyServiceGetter(
   this,
   "ClipboardHelper",
@@ -58,67 +52,67 @@ class AboutLoginsChild extends JSWindowActorChild {
   handleEvent(event) {
     switch (event.type) {
       case "AboutLoginsInit": {
-        this.onAboutLoginsInit();
+        this.#aboutLoginsInit();
         break;
       }
       case "AboutLoginsImportReportInit": {
-        this.onAboutLoginsImportReportInit();
+        this.#aboutLoginsImportReportInit();
         break;
       }
       case "AboutLoginsCopyLoginDetail": {
-        this.onAboutLoginsCopyLoginDetail(event.detail, event.target);
+        this.#aboutLoginsCopyLoginDetail(event.detail, event.target);
         break;
       }
       case "AboutLoginsCreateLogin": {
-        this.onAboutLoginsCreateLogin(event.detail);
+        this.#aboutLoginsCreateLogin(event.detail);
         break;
       }
       case "AboutLoginsDeleteLogin": {
-        this.onAboutLoginsDeleteLogin(event.detail);
+        this.#aboutLoginsDeleteLogin(event.detail);
         break;
       }
       case "AboutLoginsExportPasswords": {
-        this.onAboutLoginsExportPasswords();
+        this.#aboutLoginsExportPasswords();
         break;
       }
       case "AboutLoginsGetHelp": {
-        this.onAboutLoginsGetHelp();
+        this.#aboutLoginsGetHelp();
         break;
       }
       case "AboutLoginsImportFromBrowser": {
-        this.onAboutLoginsImportFromBrowser();
+        this.#aboutLoginsImportFromBrowser();
         break;
       }
       case "AboutLoginsImportFromFile": {
-        this.onAboutLoginsImportFromFile();
+        this.#aboutLoginsImportFromFile();
         break;
       }
       case "AboutLoginsOpenPreferences": {
-        this.onAboutLoginsOpenPreferences();
+        this.#aboutLoginsOpenPreferences();
         break;
       }
       case "AboutLoginsRecordTelemetryEvent": {
-        this.onAboutLoginsRecordTelemetryEvent(event);
+        this.#aboutLoginsRecordTelemetryEvent(event);
         break;
       }
       case "AboutLoginsRemoveAllLogins": {
-        this.onAboutLoginsRemoveAllLogins();
+        this.#aboutLoginsRemoveAllLogins();
         break;
       }
       case "AboutLoginsSortChanged": {
-        this.onAboutLoginsSortChanged(event.detail);
+        this.#aboutLoginsSortChanged(event.detail);
         break;
       }
       case "AboutLoginsSyncEnable": {
-        this.onAboutLoginsSyncEnable();
+        this.#aboutLoginsSyncEnable();
         break;
       }
       case "AboutLoginsSyncOptions": {
-        this.onAboutLoginsSyncOptions();
+        this.#aboutLoginsSyncOptions();
         break;
       }
       case "AboutLoginsUpdateLogin": {
-        this.onAboutLoginsUpdateLogin(event.detail);
+        this.#aboutLoginsUpdateLogin(event.detail);
         break;
       }
       case "AboutLoginsBrowsePanel": {
@@ -145,14 +139,8 @@ class AboutLoginsChild extends JSWindowActorChild {
     }
   }
 
-  onAboutLoginsInit() {
+  #aboutLoginsInit() {
     this.sendAsyncMessage("AboutLogins:Subscribe");
-
-    let documentElement = this.document.documentElement;
-    documentElement.classList.toggle(
-      "official-branding",
-      AppConstants.MOZILLA_OFFICIAL
-    );
 
     if (this.browsingContext.embedderElement) {
       documentElement.classList.add("in-companion");
@@ -208,16 +196,11 @@ class AboutLoginsChild extends JSWindowActorChild {
     );
   }
 
-  onAboutLoginsImportReportInit() {
+  #aboutLoginsImportReportInit() {
     this.sendAsyncMessage("AboutLogins:ImportReportInit");
-    let documentElement = this.document.documentElement;
-    documentElement.classList.toggle(
-      "official-branding",
-      AppConstants.MOZILLA_OFFICIAL
-    );
   }
 
-  onAboutLoginsCopyLoginDetail(detail, target) {
+  #aboutLoginsCopyLoginDetail(detail, target) {
     if (AppConstants.PINEBUILD) {
       let rect = LayoutUtils.getElementBoundingScreenRect(
         target.closest(".login-list-item")
@@ -226,30 +209,31 @@ class AboutLoginsChild extends JSWindowActorChild {
         rect,
       });
     }
+
     ClipboardHelper.copyString(detail, ClipboardHelper.Sensitive);
   }
 
-  onAboutLoginsCreateLogin(login) {
+  #aboutLoginsCreateLogin(login) {
     this.sendAsyncMessage("AboutLogins:CreateLogin", {
       login,
     });
   }
 
-  onAboutLoginsDeleteLogin(login) {
+  #aboutLoginsDeleteLogin(login) {
     this.sendAsyncMessage("AboutLogins:DeleteLogin", {
       login,
     });
   }
 
-  onAboutLoginsExportPasswords() {
+  #aboutLoginsExportPasswords() {
     this.sendAsyncMessage("AboutLogins:ExportPasswords");
   }
 
-  onAboutLoginsGetHelp() {
+  #aboutLoginsGetHelp() {
     this.sendAsyncMessage("AboutLogins:GetHelp");
   }
 
-  onAboutLoginsImportFromBrowser() {
+  #aboutLoginsImportFromBrowser() {
     this.sendAsyncMessage("AboutLogins:ImportFromBrowser");
     recordTelemetryEvent({
       object: "import_from_browser",
@@ -257,7 +241,7 @@ class AboutLoginsChild extends JSWindowActorChild {
     });
   }
 
-  onAboutLoginsImportFromFile() {
+  #aboutLoginsImportFromFile() {
     this.sendAsyncMessage("AboutLogins:ImportFromFile");
     recordTelemetryEvent({
       object: "import_from_csv",
@@ -265,7 +249,7 @@ class AboutLoginsChild extends JSWindowActorChild {
     });
   }
 
-  onAboutLoginsOpenPreferences() {
+  #aboutLoginsOpenPreferences() {
     this.sendAsyncMessage("AboutLogins:OpenPreferences");
     recordTelemetryEvent({
       object: "preferences",
@@ -273,7 +257,7 @@ class AboutLoginsChild extends JSWindowActorChild {
     });
   }
 
-  onAboutLoginsRecordTelemetryEvent(event) {
+  #aboutLoginsRecordTelemetryEvent(event) {
     let { method } = event.detail;
 
     if (method == "open_management") {
@@ -297,23 +281,23 @@ class AboutLoginsChild extends JSWindowActorChild {
     recordTelemetryEvent(event.detail);
   }
 
-  onAboutLoginsRemoveAllLogins() {
+  #aboutLoginsRemoveAllLogins() {
     this.sendAsyncMessage("AboutLogins:RemoveAllLogins");
   }
 
-  onAboutLoginsSortChanged(detail) {
+  #aboutLoginsSortChanged(detail) {
     this.sendAsyncMessage("AboutLogins:SortChanged", detail);
   }
 
-  onAboutLoginsSyncEnable() {
+  #aboutLoginsSyncEnable() {
     this.sendAsyncMessage("AboutLogins:SyncEnable");
   }
 
-  onAboutLoginsSyncOptions() {
+  #aboutLoginsSyncOptions() {
     this.sendAsyncMessage("AboutLogins:SyncOptions");
   }
 
-  onAboutLoginsUpdateLogin(login) {
+  #aboutLoginsUpdateLogin(login) {
     this.sendAsyncMessage("AboutLogins:UpdateLogin", {
       login,
     });
@@ -328,45 +312,43 @@ class AboutLoginsChild extends JSWindowActorChild {
   receiveMessage(message) {
     switch (message.name) {
       case "AboutLogins:ImportReportData":
-        this.onImportReportData(message.data);
+        this.#importReportData(message.data);
         break;
       case "AboutLogins:PrimaryPasswordResponse":
-        this.onPrimaryPasswordResponse(message.data);
+        this.#primaryPasswordResponse(message.data);
         break;
       case "AboutLogins:RemaskPassword":
-        this.onRemaskPassword(message.data);
+        this.#remaskPassword(message.data);
         break;
       case "AboutLogins:Setup":
-        this.onSetup(message.data);
+        this.#setup(message.data);
         break;
       default:
-        this.passMessageDataToContent(message);
+        this.#passMessageDataToContent(message);
     }
   }
 
-  onImportReportData(data) {
+  #importReportData(data) {
     this.sendToContent("ImportReportData", data);
   }
 
-  onPrimaryPasswordResponse(data) {
+  #primaryPasswordResponse(data) {
     if (gPrimaryPasswordPromise) {
       gPrimaryPasswordPromise.resolve(data.result);
       recordTelemetryEvent(data.telemetryEvent);
     }
   }
 
-  onRemaskPassword(data) {
+  #remaskPassword(data) {
     this.sendToContent("RemaskPassword", data);
   }
 
-  onSetup(data) {
-    let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-    waivedContent.AboutLoginsUtils.primaryPasswordEnabled =
-      data.primaryPasswordEnabled;
-    waivedContent.AboutLoginsUtils.passwordRevealVisible =
-      data.passwordRevealVisible;
-    waivedContent.AboutLoginsUtils.importVisible = data.importVisible;
-    waivedContent.AboutLoginsUtils.supportBaseURL = Services.urlFormatter.formatURLPref(
+  #setup(data) {
+    let utils = Cu.waiveXrays(this.browsingContext.window).AboutLoginsUtils;
+    utils.primaryPasswordEnabled = data.primaryPasswordEnabled;
+    utils.passwordRevealVisible = data.passwordRevealVisible;
+    utils.importVisible = data.importVisible;
+    utils.supportBaseURL = Services.urlFormatter.formatURLPref(
       "app.support.baseURL"
     );
     waivedContent.AboutLoginsUtils.platform = AppConstants.platform;
@@ -374,7 +356,7 @@ class AboutLoginsChild extends JSWindowActorChild {
     this.sendToContent("Setup", data);
   }
 
-  passMessageDataToContent(message) {
+  #passMessageDataToContent(message) {
     this.sendToContent(message.name.replace("AboutLogins:", ""), message.data);
   }
 

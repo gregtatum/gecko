@@ -86,10 +86,6 @@ login-item[data-editing="true"] + login-intro,
   display: block;
 }
 
-:root:not(.official-branding) #branding-logo {
-  visibility: hidden;
-}
-
 :root:not(.primary-password-auth-required) #primary-password-required-overlay {
   display: none;
 }
