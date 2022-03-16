@@ -272,7 +272,9 @@ export class CalendarEventList extends MozLitElement {
     // ideally be handled by a follow-up to MR2-1903 by handling this in the
     // VirtualConversationTOC.
     let uniqueEvents = [
-      ...new Map(events.map(event => [event.originalId, event])).values(),
+      ...new Map(
+        events.map(event => [event.originalId || event.id, event])
+      ).values(),
     ];
 
     if (!debugEnabled() && this.listType != "browse") {
