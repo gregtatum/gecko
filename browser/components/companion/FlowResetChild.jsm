@@ -11,11 +11,19 @@ class FlowResetChild extends JSWindowActorChild {
     super();
   }
 
-  handleEvent(event) {
+  async handleEvent(event) {
     switch (event.type) {
       case "ViewCompanionBrowseTab":
       case "RestoreLastSession":
         this.sendAsyncMessage(event.type);
+        break;
+      case "DOMContentLoaded":
+        let hasSession = await this.sendQuery("HasSession");
+        this.contentWindow.document.dispatchEvent(
+          new this.contentWindow.CustomEvent("HasSession", {
+            detail: { hasSession },
+          })
+        );
     }
   }
 }

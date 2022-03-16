@@ -33,6 +33,13 @@ class FlowResetParent extends JSWindowActorParent {
         break;
       case "RestoreLastSession":
         SessionManager.restoreLastSession(window);
+        break;
+      case "HasSession":
+        return SessionManager.query({ limit: 1 }).then(
+          sessions => !!sessions.length
+        );
     }
+
+    return null;
   }
 }

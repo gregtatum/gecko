@@ -1297,9 +1297,11 @@ BrowserGlue.prototype = {
           events: {
             ViewCompanionBrowseTab: { wantUntrusted: true },
             RestoreLastSession: { wantUntrusted: true },
+            DOMContentLoaded: {},
           },
         },
         matches: ["about:flow-reset"],
+        remoteTypes: ["privilegedabout"],
       };
 
       JSWINDOWACTORS.DownloadsCommon.allFrames = true;
