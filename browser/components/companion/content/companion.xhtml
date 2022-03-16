@@ -30,7 +30,7 @@
   <link rel="localization" href="browser/browser.ftl"/>
   <link rel="localization" href="browser/companion.ftl"/>
 </head>
-<html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" flow-reset-startup="true">
 
   <script src="chrome://browser/content/utilityOverlay.js"/>
 
@@ -237,7 +237,6 @@
     <html:named-deck id="companion-deck">
       <div xmlns="http://www.w3.org/1999/xhtml" id="scroll" name="now">
         <section id="flow-reset-placeholder">
-
           <img src="chrome://browser/content/companion/flow-reset-placeholder.png" />
           <button id="flow-reset-close"></button>
           <h3 data-l10n-id="session-cleared-title"/>

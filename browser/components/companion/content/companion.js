@@ -206,4 +206,12 @@ window.addEventListener("unload", () => {
   window.CompanionUtils.removePrefObserver(DEBUG_PREF, toggleDebug);
 });
 
+window.addEventListener(
+  "Companion:ResetFlowExited",
+  () => {
+    document.body.removeAttribute("flow-reset-startup");
+  },
+  { once: true }
+);
+
 document.dispatchEvent(new CustomEvent("CompanionInit", { bubbles: true }));

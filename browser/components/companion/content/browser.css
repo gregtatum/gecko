@@ -966,7 +966,9 @@ companion-manager {
 }
 
 body[flow-reset] companion-manager {
-  background: linear-gradient(165.47deg, rgba(251, 250, 249, 0.3) 64.97%, rgba(251, 250, 249, 0.2) 105.74%);
+  /* --colors-cafe-20 */
+  background: rgba(250, 247, 242, 0.5);
+  border: 0.5px solid rgba(250, 247, 242, 0.8);
 }
 
 .sidebar-splitter {

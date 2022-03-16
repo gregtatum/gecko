@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+@import url("chrome://browser/content/companion/lavender.css");
+
 html,
 body {
   padding: 0;
@@ -426,30 +428,40 @@ e-global-nav-debugging h2 {
 .tab-button-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--chrome-content-separator-color);
+  margin: 16px;
+  border-radius: 42px;
+  background: var(--colors-cafe-30);
 }
 
 .tab-button {
   /* Overwrite the generic button styles */
   background-color: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
   border-radius: 0;
   -moz-outline-radius: 0;
-  margin: 0;
+  color: var(--colors-darkgrey-30);
+  margin-inline: 4px;
   display: flex;
   justify-content: center;
   align-items: center;
+  min-height: unset;
+  padding-block: 6px;
+}
+
+.tab-button:hover {
+  color: var(--colors-darkgrey-30) !important;
 }
 
 .tab-button span {
   padding-inline-start: 4px;
   font-weight: normal;
+  font-size: 14px;
 }
 
 .tab-button[selected] {
-  color: var(--in-content-primary-button-background);
-  border-color: var(--in-content-primary-button-background);
+  background-color: var(--colors-cafe-10);
+  color: var(--colors-darkgrey-30);
+  box-shadow: -1px 2px 4px 0px rgba(122, 94, 63, 0.08);
 }
 
 .tab-button img {
@@ -457,10 +469,36 @@ e-global-nav-debugging h2 {
   height: 16px;
   display: inline-block;
   -moz-context-properties: fill;
+  fill: var(--colors-darkgrey-30);
 }
 
-.tab-button[selected] img {
-  fill: var(--in-content-primary-button-background);
+body::not([flow-reset]):not([flow-reset-startup]) .tab-button-group {
+  background-color: var(--colors-cafe-30);
+}
+
+body:not([flow-reset]):not([flow-reset-startup]) .companion-main .tab-button:hover {
+  background-color: var(--colors-warm-pressed-02);
+}
+
+body:not([flow-reset]):not([flow-reset-startup]) .companion-main .tab-button:hover:active {
+  background-color: var(--colors-cafe-70);
+}
+
+body[flow-reset] .companion-main .tab-button-group,
+body[flow-reset-startup] .companion-main .tab-button-group {
+  /* --colors-lavender-120 */
+  background-color: rgba(55, 30, 105, 0.07);
+}
+
+body[flow-reset] .tab-button:hover,
+body[flow-reset-startup] .tab-button:hover {
+  /* --colors-cafe-10 */
+  background: rgba(255, 254, 252, 0.39);
+}
+
+body[flow-reset] .tab-button:hover:active,
+body[flow-reset-startup] .tab-button:hover:active {
+  background-color: var(--colors-lightgrey-60);
 }
 
 #companion-deck-button-browse img {
@@ -604,17 +642,7 @@ toolbarbutton.subviewbutton-back {
 }
 
 #flow-reset-close {
-  width: 16px;
-  height: 16px;
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: center center no-repeat url(chrome://global/skin/icons/close.svg);
-  background-size: 12px;
-}
-
-#flow-reset-close:hover {
-  background-color: var(--light-bg-color);
+  display: none;
 }
 
 [flow-reset] #flow-reset-placeholder {
@@ -623,6 +651,11 @@ toolbarbutton.subviewbutton-back {
 
 [flow-reset] #now-content {
   display: none;
+}
+
+body[flow-reset] .tab-button-group {
+  /* --colors-lavender-120 */
+  background-color: rgba(55, 30, 105, 0.07);
 }
 
 header {
@@ -653,12 +686,9 @@ header h2 {
 
 /* NOTE: these border radii on the now/browse buttons are not final styles;
    they're just a stopgap while lavender is being worked on. */
+#companion-deck-button-browse,
 #companion-deck-button-now {
-  border-start-start-radius: 16px;
-}
-
-#companion-deck-button-browse {
-  border-start-end-radius: 16px;
+  border-radius: 16px;
 }
 
 #snapshot-groups-detail .details {
