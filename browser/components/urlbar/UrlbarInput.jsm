@@ -2493,7 +2493,13 @@ class UrlbarInput {
     if (AppConstants.PINEBUILD) {
       let urlbar = this.document.getElementById("urlbar");
       let id = urlbar.getAttribute("workspace-id");
-      params.userContextId = id;
+      // Do not set the userContextId if it is 0. This causes browser.js _loadURI
+      // function to throw an error due to a mismatch between this value and the
+      // "usercontextid" attribute on the loading browser object. `browser` objects
+      // are not assigned a "usercontextid" property if userContextId is 0.
+      if (parseInt(id, 10)) {
+        params.userContextId = id;
+      }
     }
 
     if (
