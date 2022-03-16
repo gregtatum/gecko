@@ -60,13 +60,29 @@ class PreviewElement extends HTMLLIElement {
     this.#image.src = URL.createObjectURL(blob);
   }
 
+  /**
+   * Converts a color encoded as a uint32_t (Gecko's nscolor format)
+   * to an rgb string.
+   *
+   * @param {Number} nscolor
+   *   An RGB color encoded in nscolor format.
+   * @return {String}
+   *   A string of the form "rgb(r, g, b)".
+   */
+  #nscolorToRGB(nscolor) {
+    let r = nscolor & 0xff;
+    let g = (nscolor >> 8) & 0xff;
+    let b = (nscolor >> 16) & 0xff;
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
   setWireframe(wireframe, width, height) {
     const SVG_NS = "http://www.w3.org/2000/svg";
     let svg = document.createElementNS(SVG_NS, "svg");
     svg.classList.add("preview-image");
 
     svg.setAttributeNS(null, "viewBox", `0 0 ${width} ${height}`);
-    svg.style.backgroundColor = wireframe.canvasBackground;
+    svg.style.backgroundColor = this.#nscolorToRGB(wireframe.canvasBackground);
 
     for (let rectObj of wireframe.rects) {
       if (rectObj.type != "background" && rectObj.type != "text") {
@@ -80,7 +96,7 @@ class PreviewElement extends HTMLLIElement {
       rectEl.setAttribute("height", rectObj.height);
 
       if (rectObj.type == "background") {
-        rectEl.setAttribute("fill", rectObj.color);
+        rectEl.setAttribute("fill", this.#nscolorToRGB(rectObj.color));
       } else if (rectObj.type == "text") {
         rectEl.setAttribute(
           "fill",
