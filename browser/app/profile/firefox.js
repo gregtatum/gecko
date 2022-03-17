@@ -2749,6 +2749,9 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.places.perwindowsessions.enabled", true);
   pref("browser.companion.passwords.enabled", true);
   pref("browser.places.session_file_expire_time_days", 30);
+  // Disable restoring from a crash, so that we don't have stale pages shown
+  // on the flow-reset screen after a restart. MR2-1858
+  pref("browser.sessionstore.resume_from_crash", false);
 
   // Pinebuild specific configurations
   pref("browser.companion.globalhistorydebugging", false);
