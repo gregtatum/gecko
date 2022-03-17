@@ -176,15 +176,19 @@ body:not([browser-ready]) .browserStack > browser {
   border-radius: 0;
 }
 
-#navigator-toolbox,
+#navigator-toolbox:not([shifted]),
 #navigator-toolbox:not(:-moz-lwtheme),
 #tabbrowser-tabpanels,
-.browser-toolbar:not(.titlebar-color) {
+#navigator-toolbox:not([shifted]) .browser-toolbar:not(.titlebar-color) {
   background: none;
 }
 
-#navigator-toolbox {
+/* It turns out the padding looks weird if the flow-reset page is shifted. */
+#navigator-toolbox:not([shifted]) {
   padding-inline-start: 8px;
+}
+
+#navigator-toolbox {
   border-bottom: none;
 }
 
@@ -215,6 +219,16 @@ body[flow-reset] active-view-manager {
    toolbar that can't be used to drag the window.  */
 body[flow-reset] #urlbar-container {
   max-width: 0;
+}
+
+/* Show a translucent background for the toolbox in fullscreen shifted state
+   on macos. */
+body[flow-reset] #navigator-toolbox[shifted]:not(:-moz-lwtheme),
+body[flow-reset] #navigator-toolbox[shifted] {
+  background-color: rgba(255,255,255,0.74);
+}
+body[flow-reset] #navigator-toolbox[shifted] #nav-bar {
+  background: none;
 }
 
 body[historycarousel] #browser-outer > vbox {
