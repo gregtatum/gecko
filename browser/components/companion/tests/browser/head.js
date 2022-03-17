@@ -1106,37 +1106,13 @@ var PinebuildTestUtils = {
    *   document once it has fired the event declaring itself as "ready".
    */
   async enterHistoryCarousel(win = window) {
-    let ready = this.waitForHistoryCarousel(win);
-    win.gHistoryCarousel.showHistoryCarousel(true);
-    return ready;
-  },
-
-  /**
-   * Returns a Promise that resolves when the history carousel is ready.
-   *
-   * @param {Window?} win
-   *   The window that the history carousel will open in. Defaults to the current
-   *   window.
-   * @return {Promise}
-   * @resolves {Element}
-   *   Resolves with the <browser> element hosting the about:historycarousel
-   *   document once it has fired the event declaring itself as "ready".
-   */
-  async waitForHistoryCarousel(win = window) {
-    await BrowserTestUtils.waitForEvent(
-      window,
-      "HistoryCarousel:TransitionStart"
-    );
-    let transitionEnd = BrowserTestUtils.waitForEvent(
-      window,
-      "HistoryCarousel:TransitionEnd"
-    );
+    let entered = win.gHistoryCarousel.showHistoryCarousel(true);
     let browser = win.document.getElementById("historycarousel-browser");
     let ready = BrowserTestUtils.waitForContentEvent(
       browser,
       "HistoryCarouselReady"
     );
-    await Promise.all([transitionEnd, ready]);
+    await Promise.all([entered, ready]);
     return browser;
   },
 
