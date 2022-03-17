@@ -7,6 +7,13 @@
 const PASSWORD_FIELDNAME_HINTS = ["current-password", "new-password"];
 const USERNAME_FIELDNAME_HINT = "username";
 
+XPCOMUtils.defineLazyServiceGetter(
+  this,
+  "imgTools",
+  "@mozilla.org/image/tools;1",
+  "imgITools"
+);
+
 function openContextMenu(aMessage, aBrowser, aActor) {
   if (BrowserHandler.kiosk) {
     // Don't display context menus in kiosk mode
@@ -589,6 +596,8 @@ class nsContextMenu {
 
     // Copy image location depends on whether we're on an image.
     this.showItem("context-copyimage", this.onImage || showBGImage);
+
+    this.showItem("context-imagetext", this.onImage || showBGImage);
 
     // Send media URL (but not for canvas, since it's a big data: URL)
     this.showItem("context-sendimage", this.onImage || showBGImage);
@@ -2206,6 +2215,10 @@ class nsContextMenu {
       Ci.nsIClipboardHelper
     );
     clipboard.copyString(this.originalMediaURL);
+  }
+
+  getImageText() {
+    this.actor.getImageText(this.targetIdentifier);
   }
 
   drmLearnMore(aEvent) {

@@ -271,6 +271,10 @@ main-context-menu-image-copy =
     .label = Copy Image
     .accesskey = y
 
+main-context-menu-image-get-text =
+    .label = Get Text From Image
+    .accesskey = t
+
 main-context-menu-image-copy-link =
     .label = Copy Image Link
     .accesskey = o
