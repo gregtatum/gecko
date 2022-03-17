@@ -19,7 +19,12 @@ add_task(async function test_keyboard_controls() {
     "https://example.org/browser/browser/components",
   ]);
 
-  let browser = await PinebuildTestUtils.enterHistoryCarousel();
+  // Let's start by entering the history carousel via one of the keyboard shorcuts.
+  let historyCarouselPromise = PinebuildTestUtils.waitForHistoryCarousel();
+  EventUtils.synthesizeKey("VK_LEFT", {
+    metaKey: true,
+  });
+  let browser = await historyCarouselPromise;
 
   let { currentIndex } = await PinebuildTestUtils.getHistoryCarouselPreviews(
     browser
@@ -72,9 +77,14 @@ add_task(async function test_keyboard_controls() {
   testKey("KEY_Escape", view3, 3);
   await historyCarouselClosed;
 
-  // Now re-enter HistoryCarousel, select view2, and hit Enter. This should
-  // cause view2 to be the selected view.
-  browser = await PinebuildTestUtils.enterHistoryCarousel();
+  // Now re-enter HistoryCarousel with the other keyboard shortcut, select view2,
+  // and hit Enter. This should cause view2 to be the selected view.
+  historyCarouselPromise = PinebuildTestUtils.waitForHistoryCarousel();
+  EventUtils.synthesizeKey("VK_RIGHT", {
+    metaKey: true,
+  });
+  browser = await historyCarouselPromise;
+
   await testKey("KEY_ArrowLeft", view2, 2);
   historyCarouselClosed = BrowserTestUtils.waitForEvent(
     window,
