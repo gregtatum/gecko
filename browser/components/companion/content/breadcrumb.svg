@@ -3,15 +3,15 @@
    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
 <!--
   This image defines three versions of the breadcrumb:
-  #large = 16 x 4
-  #medium = 8 x 4
-  #small = 4 x 4
+  #large = 16 x 3
+  #medium = 8 x 3
+  #small = 4 x 3
 -->
-<svg height="4" xmlns="http://www.w3.org/2000/svg" stroke="context-stroke">
-  <view id="large" viewBox="0 0 16 4"/>
-  <path stroke-width="4" stroke-linecap="round" d="M2 2h12"/>
-  <view id="medium" viewBox="0 4 8 4"/>
-  <path stroke-width="4" stroke-linecap="round" d="M2 6h4"/>
-  <view id="small" viewBox="0 8 4 4"/>
-  <path stroke-width="4" stroke-linecap="round" d="M2 10h0"/>
+<svg height="3" xmlns="http://www.w3.org/2000/svg" stroke="context-stroke">
+  <view id="large" viewBox="0 0 16 3"/>
+  <path stroke-width="3" stroke-linecap="round" d="M2 2h12"/>
+  <view id="medium" viewBox="0 4 8 3"/>
+  <path stroke-width="3" stroke-linecap="round" d="M2 6h4"/>
+  <view id="small" viewBox="0 8 4 3"/>
+  <path stroke-width="3" stroke-linecap="round" d="M2 10h0"/>
 </svg>

@@ -552,7 +552,8 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   margin-inline-end: -20px;
   margin-block-start: 10px;
   min-width: 285px;
-  border-radius: 16px;
+  --panel-border-radius: 16px;
+  box-shadow: -1px 2px 12px 0px rgba(122, 94, 63, 0.2);
 }
 
 #page-action-panel-sections {

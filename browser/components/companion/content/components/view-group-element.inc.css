@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+@import url("chrome://browser/content/companion/lavender.css");
+
 :host,
 .view-el {
   display: flex;
@@ -198,7 +200,7 @@
   background-position: center center;
   background-repeat: no-repeat;
   -moz-context-properties: stroke;
-  stroke: #AFAFBA;
+  stroke: var(--colors-lightgrey-80);
   cursor: pointer;
   height: 12px;
 }
@@ -229,7 +231,7 @@
 
 .view-history > .history:hover,
 .view-history > .active {
-  stroke: var(--button-primary-bgcolor);
+  stroke: var(--colors-lavender-90);
 }
 
 .page-action-button[hidden] {
