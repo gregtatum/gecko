@@ -5477,7 +5477,13 @@ var XULBrowserWindow = {
     // via simulated locationchange events such as switching between tabs, however
     // if this is a document navigation then PopupNotifications will be updated
     // via TabsProgressListener.onLocationChange and we do not want it called twice
-    gURLBar.setURI(aLocationURI, aIsSimulated);
+    //
+    // For PINEBUILD, we don't want to show anything in the URLBar unless
+    // it was typed by the user. So, don't bother showing anything when the
+    // location changes. MR2-1939
+    if (!AppConstants.PINEBUILD) {
+      gURLBar.setURI(aLocationURI, aIsSimulated);
+    }
 
     BookmarkingUI.onLocationChange();
     // If we've actually changed document, update the toolbar visibility.
