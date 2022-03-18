@@ -39,6 +39,7 @@ export function initSessionUI() {
       document.getElementById("companion-deck").selectedViewName = "browse";
     });
   document.getElementById("flow-reset-close").addEventListener("click", () => {
+    document.body.setAttribute("flow-reset-startup", true);
     document.body.removeAttribute("flow-reset");
   });
 }

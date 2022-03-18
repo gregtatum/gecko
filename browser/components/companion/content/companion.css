@@ -642,7 +642,17 @@ toolbarbutton.subviewbutton-back {
 }
 
 #flow-reset-close {
-  display: none;
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: center center no-repeat url(chrome://global/skin/icons/close.svg);
+  background-size: 12px;
+}
+
+#flow-reset-close:hover {
+  background-color: var(--light-bg-color);
 }
 
 [flow-reset] #flow-reset-placeholder {
