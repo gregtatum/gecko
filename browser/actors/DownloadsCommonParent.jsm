@@ -24,15 +24,11 @@ Integration.downloads.defineModuleGetter(
 XPCOMUtils.defineLazyModuleGetters(this, {
   DownloadsCommon: "resource:///modules/DownloadsCommon.jsm",
   FileUtils: "resource://gre/modules/FileUtils.jsm",
-  Services: "resource://gre/modules/Services.jsm",
 });
 
 class DownloadsCommonParent extends JSWindowActorParent {
   constructor() {
     super();
-    // A WeakMap of download objects to uuid's, used to identify
-    // updates to downloads in the child.
-    this.activeIDs = new WeakMap();
     // A Map of id's to the download objects, used to retrieve
     // the download object when we receive a message from the child.
     this.activeDownloads = new Map();
@@ -107,10 +103,7 @@ class DownloadsCommonParent extends JSWindowActorParent {
   }
 
   onDownloadAdded(download) {
-    let uuid = Services.uuid.generateUUID().toString();
-    this.activeIDs.set(download, uuid);
-    this.activeDownloads.set(uuid, download);
-    download.uuid = uuid;
+    this.activeDownloads.set(download.uuid, download);
     this.sendAsyncMessage(
       "Download:onDownloadAdded",
       download.toSerializable()
@@ -118,8 +111,6 @@ class DownloadsCommonParent extends JSWindowActorParent {
   }
 
   onDownloadChanged(download) {
-    let uuid = this.activeIDs.get(download);
-    download.uuid = uuid;
     this.sendAsyncMessage(
       "Download:onDownloadChanged",
       download.toSerializable()
@@ -127,10 +118,7 @@ class DownloadsCommonParent extends JSWindowActorParent {
   }
 
   onDownloadRemoved(download) {
-    let uuid = this.activeIDs.get(download);
-    this.activeIDs.remove(download);
-    download.uuid = uuid;
-    this.activeDownloads.remove(uuid);
+    this.activeDownloads.delete(download.uuid);
     this.sendAsyncMessage(
       "Download:onDownloadRemoved",
       download.toSerializable()

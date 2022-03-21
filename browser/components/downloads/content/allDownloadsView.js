@@ -227,6 +227,15 @@ function DownloadsPlacesView(
   this._richlistbox._placesView = this;
   window.controllers.insertControllerAt(0, this);
 
+  // The embedder can set a "?source=" param and we will only
+  // show downloads coming from that source.
+  this._filterUUID = new URLSearchParams(
+    new URL(window.location.href).search
+  ).get("uuid");
+  if (this._filterUUID) {
+    this._richlistbox.classList.add("notification-mode");
+  }
+
   // Map downloads to their element shells.
   if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
     this._viewItemsForDownloads = new Map();
@@ -249,6 +258,13 @@ function DownloadsPlacesView(
     window.addEventListener(
       "DownloadToContent",
       evt => {
+        if (
+          evt.detail.download &&
+          this._filterUUID &&
+          evt.detail.download.uuid !== this._filterUUID
+        ) {
+          return;
+        }
         switch (evt.detail.type) {
           case "onDownloadBatchStarting": {
             this.onDownloadBatchStarting();
@@ -484,6 +500,9 @@ DownloadsPlacesView.prototype = {
    * we assume the user has already started using the view and give up.
    */
   _ensureInitialSelection() {
+    if (this._filterUUID) {
+      return;
+    }
     // Either they're both null, or the selection has not changed in between.
     if (this._richlistbox.selectedItem == this._initiallySelectedElement) {
       let firstDownloadElement = this._richlistbox.firstChild;
@@ -528,9 +547,11 @@ DownloadsPlacesView.prototype = {
     goUpdateDownloadCommands();
     if (this._waitingForInitialData) {
       this._waitingForInitialData = false;
-      this._richlistbox.dispatchEvent(
-        new CustomEvent("InitialDownloadsLoaded")
-      );
+      if (!this._filterUUID) {
+        this._richlistbox.dispatchEvent(
+          new CustomEvent("InitialDownloadsLoaded")
+        );
+      }
     }
   },
 

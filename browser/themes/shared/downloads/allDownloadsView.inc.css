@@ -13,6 +13,21 @@
   margin: 0;
 }
 
+/* The following block should only be enabled on PINEBUILD
+ * however we don't currently have the selectors to do
+ * that */
+/*** START PINEBUILD ***/
+#contentAreaDownloadsView {
+  padding: 0;
+}
+#downloadsListBox {
+  border: 0;
+}
+#downloadsListBox.notification-mode .downloadButton {
+  display: none;
+}
+/*** END PINEBUILD ***/
+
 /*** List items ***/
 
 #downloadsListBox > richlistitem {

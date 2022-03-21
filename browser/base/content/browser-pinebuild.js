@@ -66,6 +66,127 @@ var PineBuildUIUtils = {
     }
   },
 
+  // A Set containing the currently displayed notifications so we can avoid
+  // showing duplicates.
+  activeNotifications: new Set(),
+  // A promise that is set when the notifications start hiding and is resolved
+  // when that animation completes.
+  hideNotificationsPromise: null,
+  // The AbortSignalController stored so we can remove the event listeners.
+  notificationAbortController: null,
+  // The timer for hiding the notifications.
+  notificationTimer: null,
+  // How long notifications show for.
+  NOTIFICATION_LENGTH: 5000,
+
+  /**
+   * Shows a toast notification for a short period before hiding.
+   *
+   * @param {object} opts
+   *    Object containing the options to show a notification, including the
+   *    domElement to be shown.
+   */
+  showToastNotification(opts) {
+    // If we try to show a notification while the notification panel
+    // is hiding, wait till its hidden then reshow it.
+    if (this.hideNotificationsPromise) {
+      this.hideNotificationsPromise.then(() =>
+        this.showToastNotification(opts)
+      );
+    }
+
+    let startHideNotificationTimer = () => {
+      this.notificationTimer = this._delayDOMChange(
+        () => this.hideNotifications(),
+        this.NOTIFICATION_LENGTH
+      );
+    };
+
+    // A notification with the same id is currently beings shown
+    if (this.activeNotifications.has(opts.id)) {
+      clearTimeout(this.notificationTimer);
+      startHideNotificationTimer();
+      return;
+    }
+
+    this.activeNotifications.add(opts.id);
+
+    const XUL_NS =
+      "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+    let container = document.createElementNS(XUL_NS, "html:div");
+
+    container.classList.add("toast-notification");
+    container.addEventListener("click", () => {
+      clearTimeout(this.notificationTimer);
+      this.hideNotifications();
+      opts.onSelect();
+    });
+    container.appendChild(opts.domElement);
+
+    let toasts = document.getElementById("companion-toast");
+    toasts.appendChild(container);
+
+    if (toasts.classList.contains("show")) {
+      return;
+    }
+
+    this.notificationAbortController = new AbortController();
+    // Don't hide the toast notifications while the use is hovering
+    // over them.
+    toasts.addEventListener(
+      "mouseenter",
+      () => {
+        clearTimeout(this.notificationTimer);
+      },
+      { signal: this.notificationAbortController.signal }
+    );
+    toasts.addEventListener(
+      "mouseleave",
+      () => {
+        startHideNotificationTimer();
+      },
+      { signal: this.notificationAbortController.signal }
+    );
+
+    toasts.classList.add("show");
+    startHideNotificationTimer();
+  },
+
+  hideNotifications() {
+    this.hideNotificationsPromise = new Promise(resolve => {
+      let toasts = document.getElementById("companion-toast");
+      this.notificationAbortController.abort();
+
+      let done = () => {
+        toasts.replaceChildren();
+        this.activeNotifications.clear();
+        this.hideNotificationsPromise = null;
+        resolve();
+      };
+
+      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+        done();
+      } else {
+        toasts.addEventListener("transitionend", done, { once: true });
+      }
+
+      toasts.classList.remove("show");
+    });
+  },
+
+  /**
+   * Delays a change for the specified timeout, and waits for an animation
+   * frame.
+   *
+   * @param {function} cb
+   *   Called when the delay is complete and an animation frame obtained.
+   * @param {number} timeout
+   *   The number of milliseconds to delay the change for.
+   */
+  _delayDOMChange(cb, timeout) {
+    return setTimeout(() => requestAnimationFrame(cb), timeout);
+  },
+
   handleEvent(event) {
     switch (event.type) {
       case "deactivate": {

@@ -38,6 +38,10 @@
    * to 64px later. I'll investigate at a later date */
   --pinebuild-urlbar-toolbar-height: 40px;
   --pinebuild-urlbar-toolbar-breakout-width: 720px;
+
+  --pinebuild-toast-transition-duration: .2s;
+  --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
+  --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
 }
 
 @media (prefers-contrast: more) {
@@ -127,6 +131,7 @@ body[browser-ready]:not([flow-reset]) {
 @media (prefers-reduced-motion: reduce) {
   :root {
     --pinebuild-flow-reset-transition-duration: 0s;
+    --pinebuild-toast-transition-duration: 0;
   }
 }
 
@@ -1031,4 +1036,48 @@ toolbar .toolbarbutton-1 {
 /* The Forward button is currently disabled, so removing the margin on it */
 #pinebuild-forward-button {
   margin: 0;
+}
+
+#companion-toast {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(var(--companion-width) - 32px);
+  box-sizing: border-box;
+  margin: 32px;
+  background: white;
+  box-shadow: var(--pinebuild-toast-box-shadow);
+  filter: var(--pinebuild-toast-drop-shadow);
+  border-radius: 12px;
+  overflow: hidden;
+  transform: translateY(200px);
+  transition: var(--pinebuild-toast-transition-duration) ease-in-out;
+}
+
+#companion-downloads-browser {
+  width: 100%;
+}
+
+#companion-toast.show {
+  transform: translateY(0);
+}
+
+.toast-notification {
+  height: var(--downloads-item-height);
+  overflow: hidden;
+}
+
+.toast-notification::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  cursor: pointer;
+}
+
+.download-notification {
+  display: block;
+  width: calc(var(--companion-width) - 32px);
 }

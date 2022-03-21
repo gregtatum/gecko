@@ -509,7 +509,7 @@ let JSWINDOWACTORS = {
         DownloadDoCommand: { wantUntrusted: true },
       },
     },
-    matches: ["about:downloads"],
+    matches: ["about:downloads*"],
   },
 
   EncryptedMedia: {

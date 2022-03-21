@@ -6443,7 +6443,7 @@
      *   The number of milliseconds to delay the change for.
      */
     _delayDOMChange(cb, timeout) {
-      setTimeout(() => requestAnimationFrame(cb), timeout);
+      return setTimeout(() => requestAnimationFrame(cb), timeout);
     },
   };
 
