@@ -3401,12 +3401,19 @@ class GlobalHistory extends EventTarget {
       });
       result.image = { blob };
     } else {
-      let rect = this.#window.windowUtils.getBoundsWithoutFlushing(browser);
-      let historyIndex = getHistoryIndex(browser, internalView.historyId);
-      let historyEntry = browser.browsingContext.sessionHistory.getEntryAtIndex(
-        historyIndex
-      );
-      let wireframe = historyEntry.wireframe;
+      let browserBox = this.#window.document.getElementById("browser");
+      let rect = this.#window.windowUtils.getBoundsWithoutFlushing(browserBox);
+      let wireframe = null;
+      if (browser && browser.browsingContext) {
+        let historyIndex = getHistoryIndex(browser, internalView.historyId);
+        let historyEntry = browser.browsingContext.sessionHistory.getEntryAtIndex(
+          historyIndex
+        );
+        wireframe = historyEntry.wireframe;
+      } else if (internalView.cachedEntry) {
+        wireframe = internalView.cachedEntry.wireframe;
+      }
+
       result.image = {
         wireframe,
         width: rect.width,
