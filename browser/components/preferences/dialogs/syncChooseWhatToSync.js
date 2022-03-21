@@ -5,6 +5,9 @@
 /* import-globals-from /toolkit/content/preferencesBindings.js */
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 Preferences.addAll([
   { id: "services.sync.engine.addons", type: "bool" },
@@ -46,6 +49,11 @@ let gSyncChooseWhatToSync = {
       ["services.sync.engine.addresses", ".sync-engine-addresses"],
       ["services.sync.engine.creditcards", ".sync-engine-creditcards"],
     ];
+
+    if (AppConstants.PINEBUILD) {
+      enginePrefs.push(["services.sync.engine.addons", ".sync-engine-addons"]);
+    }
+
     for (let [enabledPref, className] of enginePrefs) {
       let availablePref = enabledPref + ".available";
       // If the engine is enabled we force it to be available, otherwise we see

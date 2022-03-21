@@ -2721,6 +2721,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("dom.security.https_first", true, locked);
   pref("services.sync.prefs.sync.extensions.activeThemeID", false, locked);
   pref("services.sync.engine.addons", false, locked);
+  pref("services.sync.engine.addons.available", false, locked);
   pref("browser.tabs.unloadOnLowMemory", true, locked);
   pref("browser.urlbar.openintab", true, locked);
   pref("browser.tabs.warnOnClose", false, locked);
