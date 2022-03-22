@@ -14,6 +14,10 @@ workspace-el {
   border-radius: 100px;
 }
 
+workspace-el:not(.selected) > #workspace > pinned-views {
+  display: none;
+}
+
 workspace-el[workspace-id="0"] > #workspace > #workspace-indicator-button {
   background: var(--colors-lavender-80);
 }
