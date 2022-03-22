@@ -84,8 +84,12 @@ class PreviewElement extends HTMLLIElement {
     svg.setAttributeNS(null, "viewBox", `0 0 ${width} ${height}`);
     svg.style.backgroundColor = this.#nscolorToRGB(wireframe.canvasBackground);
 
+    const DEFAULT_FILL = "color-mix(in srgb, black 10%, transparent)";
+
     for (let rectObj of wireframe.rects) {
-      if (rectObj.type != "background" && rectObj.type != "text") {
+      // For now we'll skip rects that have an unknown classification, since
+      // it's not clear how we should treat them.
+      if (rectObj.type == "unknown") {
         continue;
       }
 
@@ -95,14 +99,25 @@ class PreviewElement extends HTMLLIElement {
       rectEl.setAttribute("width", rectObj.width);
       rectEl.setAttribute("height", rectObj.height);
 
-      if (rectObj.type == "background") {
-        rectEl.setAttribute("fill", this.#nscolorToRGB(rectObj.color));
-      } else if (rectObj.type == "text") {
-        rectEl.setAttribute(
-          "fill",
-          "color-mix(in srgb, black 10%, transparent)"
-        );
+      let fill;
+      switch (rectObj.type) {
+        case "background": {
+          fill = this.#nscolorToRGB(rectObj.color);
+          break;
+        }
+        case "image": {
+          fill = rectObj.color
+            ? this.#nscolorToRGB(rectObj.color)
+            : DEFAULT_FILL;
+          break;
+        }
+        case "text": {
+          fill = DEFAULT_FILL;
+          break;
+        }
       }
+
+      rectEl.setAttribute("fill", fill);
 
       svg.appendChild(rectEl);
     }
