@@ -2242,6 +2242,11 @@ class GlobalHistory extends EventTarget {
         break;
       }
     }
+
+    let workspacesButton = this.#window.document.getElementById(
+      "appMenu-start-new-workspace-button"
+    );
+    workspacesButton.disabled = this.#workspaces.size == MAX_WORKSPACES_LIMIT;
   }
 
   onSecurityChange(browser, webProgress, request, status) {
