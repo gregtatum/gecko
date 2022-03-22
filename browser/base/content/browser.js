@@ -4418,7 +4418,7 @@ const BrowserSearch = {
       "browser.search.searchEngineRemoval"
     );
     link.setAttribute("data-l10n-name", "remove-search-engine-article");
-    document.l10n.setAttributes(message, "remove-search-engine-message", {
+    document.l10n.setAttributes(message, "removed-search-engine-message", {
       oldEngine,
       newEngine,
     });
