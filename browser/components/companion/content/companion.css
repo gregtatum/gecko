@@ -590,6 +590,10 @@ toolbarbutton.subviewbutton-back {
   border-radius: 4px;
 }
 
+#companion-downloads-browser {
+  background: unset;
+}
+
 #companion-login-browser, #companion-downloads-browser {
   display: inline-block;
   width: 100%;

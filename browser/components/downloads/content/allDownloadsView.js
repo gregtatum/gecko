@@ -500,9 +500,6 @@ DownloadsPlacesView.prototype = {
    * we assume the user has already started using the view and give up.
    */
   _ensureInitialSelection() {
-    if (this._filterUUID) {
-      return;
-    }
     // Either they're both null, or the selection has not changed in between.
     if (this._richlistbox.selectedItem == this._initiallySelectedElement) {
       let firstDownloadElement = this._richlistbox.firstChild;
@@ -998,6 +995,11 @@ document.addEventListener("DOMContentLoaded", function() {
   richListBox.addEventListener("keypress", function(event) {
     return this._placesView.onKeyPress(event);
   });
+  if (AppConstants.PINEBUILD) {
+    richListBox.addEventListener("click", function(event) {
+      return this._placesView.onDoubleClick(event);
+    });
+  }
   richListBox.addEventListener("dblclick", function(event) {
     return this._placesView.onDoubleClick(event);
   });

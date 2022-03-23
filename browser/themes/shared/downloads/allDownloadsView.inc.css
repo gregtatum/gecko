@@ -13,20 +13,78 @@
   margin: 0;
 }
 
-/* The following block should only be enabled on PINEBUILD
- * however we don't currently have the selectors to do
- * that */
-/*** START PINEBUILD ***/
-#contentAreaDownloadsView {
-  padding: 0;
+@supports -moz-bool-pref("browser.pinebuild.styleoverrides") {
+  #contentAreaDownloadsView {
+    padding: 0;
+  }
+  #downloadsListBox {
+    border: 0;
+  }
+  #downloadsListBox.notification-mode .downloadButton {
+    display: none;
+  }
+
+  #contentAreaDownloadsView, #downloadsListBox {
+    background: unset;
+  }
+
+  #downloadsListBox > richlistitem {
+    background: #FFFFFF;
+  }
+
+  #downloadsListBox:not(.notification-mode) > richlistitem {
+    box-shadow: -1px 2px 4px rgba(132, 106, 65, 0.1);
+    border-radius: 12px;
+    margin: 8px 16px;
+    position: relative;
+  }
+
+  #downloadsListBox .downloadTarget {
+    font-size: 14px;
+    color: var(--in-content-text-color);
+  }
+
+  #downloadsListBox .downloadDetails {
+    color: var(--in-content-text-color);
+  }
+
+  #downloadsListBox .downloadTypeIcon {
+    margin: 8px;
+    background: #F7F7F8;
+    border-radius: 32px;
+    padding: 8px;
+  }
+
+  #downloadsListBox > richlistitem:hover {
+    background: #F0E8DA;
+  }
+
+  .downloadButton {
+    visibility: hidden;
+  }
+
+  #downloadsListBox > richlistitem:hover .downloadButton {
+    visibility: visible;
+  }
+
+  #downloadsListBox .downloadButton > .button-box > .button-icon {
+    color: black;
+  }
+
+  #downloadsListBox .downloadButton:hover > .button-box {
+    background-color: unset;
+  }
+
+  #downloadsListBox > richlistitem::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    cursor: pointer;
+  }
 }
-#downloadsListBox {
-  border: 0;
-}
-#downloadsListBox.notification-mode .downloadButton {
-  display: none;
-}
-/*** END PINEBUILD ***/
 
 /*** List items ***/
 
