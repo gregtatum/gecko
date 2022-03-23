@@ -22,14 +22,13 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   NetUtil: "resource://gre/modules/NetUtil.jsm",
 });
 
-var ContentAreaUtils = {
-  get stringBundle() {
-    delete this.stringBundle;
-    return (this.stringBundle = Services.strings.createBundle(
-      "chrome://global/locale/contentAreaCommands.properties"
-    ));
-  },
-};
+var ContentAreaUtils = {};
+
+XPCOMUtils.defineStringBundleGetter(
+  ContentAreaUtils,
+  "stringBundle",
+  "chrome://global/locale/contentAreaCommands.properties"
+);
 
 function urlSecurityCheck(
   aURL,

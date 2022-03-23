@@ -40,7 +40,9 @@ function appUpdater(options = {}) {
   this.updatingMinDisplayTimerId = null;
   this.updateDeck = document.getElementById("updateDeck");
 
-  this.bundle = Services.strings.createBundle(
+  XPCOMUtils.defineStringBundleGetter(
+    this,
+    "bundle",
     "chrome://browser/locale/browser.properties"
   );
 

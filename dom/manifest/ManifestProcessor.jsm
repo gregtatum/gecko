@@ -53,7 +53,9 @@ const { ImageObjectProcessor } = ChromeUtils.import(
   "resource://gre/modules/ImageObjectProcessor.jsm"
 );
 
-const domBundle = Services.strings.createBundle(
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "domBundle",
   "chrome://global/locale/dom/dom.properties"
 );
 

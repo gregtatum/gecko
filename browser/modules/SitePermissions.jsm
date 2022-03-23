@@ -14,7 +14,9 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   setTimeout: "resource://gre/modules/Timer.jsm",
 });
 
-var gStringBundle = Services.strings.createBundle(
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gStringBundle",
   "chrome://browser/locale/sitePermissions.properties"
 );
 

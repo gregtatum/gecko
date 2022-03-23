@@ -184,16 +184,10 @@ const BUNDLES = {
 PromptCollection.prototype.stringBundles = {};
 
 for (const [bundleName, bundleUrl] of Object.entries(BUNDLES)) {
-  XPCOMUtils.defineLazyGetter(
+  XPCOMUtils.defineStringBundleGetter(
     PromptCollection.prototype.stringBundles,
     bundleName,
-    function() {
-      let bundle = Services.strings.createBundle(bundleUrl);
-      if (!bundle) {
-        throw new Error("String bundle for dom not present!");
-      }
-      return bundle;
-    }
+    bundleUrl
   );
 }
 

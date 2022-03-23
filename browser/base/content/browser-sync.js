@@ -354,13 +354,6 @@ var gSync = {
     return this._log;
   },
 
-  get fxaStrings() {
-    delete this.fxaStrings;
-    return (this.fxaStrings = Services.strings.createBundle(
-      "chrome://browser/locale/accounts.properties"
-    ));
-  },
-
   get fluentStrings() {
     delete this.fluentStrings;
     return (this.fluentStrings = new Localization(
@@ -372,15 +365,6 @@ var gSync = {
         "browser/branding/sync-brand.ftl",
       ],
       true
-    ));
-  },
-
-  get syncStrings() {
-    delete this.syncStrings;
-    // XXXzpao these strings should probably be moved from /services to /browser... (bug 583381)
-    //        but for now just make it work
-    return (this.syncStrings = Services.strings.createBundle(
-      "chrome://weave/locale/sync.properties"
     ));
   },
 
@@ -1969,3 +1953,15 @@ var gSync = {
     "nsISupportsWeakReference",
   ]),
 };
+
+XPCOMUtils.defineStringBundleGetter(
+  gSync,
+  "fxaStrings",
+  "chrome://browser/locale/accounts.properties"
+);
+
+XPCOMUtils.defineStringBundleGetter(
+  gSync,
+  "syncStrings",
+  "chrome://weave/locale/sync.properties"
+);

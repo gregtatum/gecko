@@ -58,13 +58,6 @@ ChromeUtils.defineModuleGetter(
 var PrintUtils = {
   SAVE_TO_PDF_PRINTER: "Mozilla Save to PDF",
 
-  get _bundle() {
-    delete this._bundle;
-    return (this._bundle = Services.strings.createBundle(
-      "chrome://global/locale/printing.properties"
-    ));
-  },
-
   /**
    * Updates the hidden state of the "Page Setup" menu items in the File menu,
    * depending on the value of the `print.show_page_setup_menu` pref.
@@ -447,6 +440,12 @@ var PrintUtils = {
     return printSettings;
   },
 };
+
+XPCOMUtils.defineStringBundleGetter(
+  PrintUtils,
+  "_bundle",
+  "chrome://global/locale/printing.properties"
+);
 
 class PrintPreview extends MozElements.BaseControl {
   constructor({

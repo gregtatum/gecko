@@ -36,13 +36,6 @@ var CaptivePortalWatcher = {
     return Services.prefs.getCharPref("captivedetect.canonicalURL");
   },
 
-  get _browserBundle() {
-    delete this._browserBundle;
-    return (this._browserBundle = Services.strings.createBundle(
-      "chrome://browser/locale/browser.properties"
-    ));
-  },
-
   init() {
     Services.obs.addObserver(this, "captive-portal-login");
     Services.obs.addObserver(this, "captive-portal-login-abort");
@@ -380,3 +373,9 @@ var CaptivePortalWatcher = {
     gBrowser.selectedTab = tab;
   },
 };
+
+XPCOMUtils.defineStringBundleGetter(
+  CaptivePortalWatcher,
+  "_browserBundle",
+  "chrome://browser/locale/browser.properties"
+);
