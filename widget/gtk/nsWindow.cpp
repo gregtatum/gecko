@@ -400,9 +400,7 @@ nsWindow::nsWindow()
       mPopupTemporaryHidden(false),
       mPopupClosed(false),
       mPopupUseMoveToRect(false),
-      mPreferredPopupRectFlushed(false),
       mWaitingForMoveToRectCallback(false),
-      mUpdatedByMoveToRectCallback(false),
       mConfiguredClearColor(false),
       mGotNonBlankPaint(false) {
   mWindowType = eWindowType_child;
@@ -944,11 +942,6 @@ void nsWindow::ResizeInt(int aX, int aY, int aWidth, int aHeight, bool aMove) {
     mBounds.y = aY;
   }
 
-  // We have updated position from layout, move.
-  if (mPreferredPopupRectFlushed) {
-    aMove = true;
-  }
-
   // For top-level windows, aWidth and aHeight should possibly be
   // interpreted as frame bounds, but NativeResize treats these as window
   // bounds (Bug 581866).
@@ -1037,12 +1030,12 @@ void nsWindow::Move(double aX, double aY) {
   }
 
   if (IsWaylandPopup()) {
-    auto prefBounds = mPreferredPopupRect;
+    auto prefBounds = mMoveToRectPopupRect;
     if (prefBounds.TopLeft() != mBounds.TopLeft()) {
       NativeMoveResize(/* move */ true, /* resize */ false);
       NotifyRollupGeometryChange();
     } else {
-      LOG("  mBounds same as mPreferredPopupRect, no need to move");
+      LOG("  mBounds same as mMoveToRectPopupRect, no need to move");
     }
   } else {
     NativeMoveResize(/* move */ true, /* resize */ false);
@@ -1803,7 +1796,7 @@ void nsWindow::UpdateWaylandPopupHierarchy() {
         popup, popup->mPopupMatchesLayout, popup->mPopupAnchored,
         popup->mWaylandPopupPrev->mWaylandToplevel == nullptr, useMoveToRect);
 
-    popup->mPopupUseMoveToRect = useMoveToRect && !mUpdatedByMoveToRectCallback;
+    popup->mPopupUseMoveToRect = useMoveToRect;
     popup->WaylandPopupMove();
     popup->mPopupChanged = false;
     popup = popup->mWaylandPopupNext;
@@ -1837,9 +1830,10 @@ void nsWindow::NativeMoveResizeWaylandPopupCallback(
   if (moved || resized) {
     LOG("  Another move/resize called during waiting for callback\n");
 
-    // Set the preferred size to zero to avoid wrong size of popup because the
-    // mPreferredPopupRect is used in nsMenuPopupFrame to set dimensions
-    mPreferredPopupRect = LayoutDeviceIntRect();
+    // Set mMoveToRectPopupRect to zero.
+    // Popup was moved between move-to-rect call and move-to-rect callback
+    // and the coordinates from move-to-rect callback are outdated.
+    mMoveToRectPopupRect = LayoutDeviceIntRect();
     if (moved) {
       mBounds.x = mNewBoundsAfterMoveToRect.x;
       mBounds.y = mNewBoundsAfterMoveToRect.y;
@@ -1867,15 +1861,16 @@ void nsWindow::NativeMoveResizeWaylandPopupCallback(
   LOG("  new mBounds [%d, %d] -> [%d x %d]", newBounds.x, newBounds.y,
       newBounds.width, newBounds.height);
 
+  // Store popup size received from Wayland compositor.
+  // We're going to reuse it in layout code if popup is moved.
+  mMoveToRectPopupRect = newBounds;
+
   const bool needsPositionUpdate = newBounds.TopLeft() != mBounds.TopLeft();
   const bool needsSizeUpdate = newBounds.Size() != mBounds.Size();
 
   // Update view
   if (needsSizeUpdate) {
     LOG("  needSizeUpdate\n");
-    mPreferredPopupRect = newBounds;
-    mPreferredPopupRectFlushed = false;
-
     Resize(aFinalSize->width, aFinalSize->height, true);
 
     if (nsMenuPopupFrame* popupFrame = GetMenuPopupFrame(GetFrame())) {
@@ -1887,12 +1882,29 @@ void nsWindow::NativeMoveResizeWaylandPopupCallback(
     }
   }
   if (needsPositionUpdate) {
+    // See Bug 1735095
+    // Font scale causes rounding errors which we can't handle by move-to-rect.
+    // The font scale should not be used, but let's handle it somehow to
+    // avoid endless move calls.
+    if (StaticPrefs::layout_css_devPixelsPerPx() > 0 ||
+        gfxPlatformGtk::GetFontScaleFactor() != 1) {
+      bool roundingError = (abs(newBounds.x - mBounds.x) < 2 &&
+                            abs(newBounds.y - mBounds.y) < 2);
+      if (roundingError) {
+        // Keep the window where it is.
+        GdkPoint topLeft = DevicePixelsToGdkPointRoundDown(mBounds.TopLeft());
+        LOG("  apply rounding error workaround, move to %d, %d", topLeft.x,
+            topLeft.y);
+        gtk_window_move(GTK_WINDOW(mShell), topLeft.x, topLeft.y);
+        return;
+      }
+    }
+
     LOG("  needPositionUpdate, new bounds [%d, %d]", newBounds.x, newBounds.y);
     mBounds.x = newBounds.x;
     mBounds.y = newBounds.y;
     NotifyWindowMoved(mBounds.x, mBounds.y);
   }
-  mUpdatedByMoveToRectCallback = true;
 }
 
 static GdkGravity PopupAlignmentToGdkGravity(int8_t aAlignment) {
@@ -2015,13 +2027,13 @@ bool nsWindow::WaylandPopupFitsParentWindow(const GdkRectangle& aSize) {
   // We use parent mozcontainer size plus left/top CSD decorations sizes as
   // this coordinates are used by mBounds.
   int parentWidth = gdk_window_get_width(parentGdkWindow) + x;
-  int parentHeight = gdk_window_get_width(parentGdkWindow) + y;
+  int parentHeight = gdk_window_get_height(parentGdkWindow) + y;
   int popupWidth = aSize.width;
   int popupHeight = aSize.height;
 
   auto popupBounds = DevicePixelsToGdkRectRoundOut(mBounds);
-
-  return popupBounds.x + popupWidth <= parentWidth &&
+  return popupBounds.x >= 0 && popupBounds.y >= 0 &&
+         popupBounds.x + popupWidth <= parentWidth &&
          popupBounds.y + popupHeight <= parentHeight;
 }
 
@@ -2075,9 +2087,6 @@ void nsWindow::NativeMoveResizeWaylandPopup(bool aMove, bool aResize) {
     LOG("  set size [%d, %d]\n", rect.width, rect.height);
     gtk_window_resize(GTK_WINDOW(mShell), rect.width, rect.height);
   }
-
-  auto clearUpdateFlag =
-      MakeScopeExit([&] { mUpdatedByMoveToRectCallback = false; });
 
   if (!aMove && WaylandPopupFitsParentWindow(rect)) {
     // Popup position has not been changed and its position/size fits
@@ -2246,13 +2255,13 @@ nsWindow::WaylandPopupGetPositionFromLayout() {
     anchorRectAppUnits.Inflate(popupMargin.mAnchorMargin);
     LOG("    after margins %s\n", ToString(anchorRectAppUnits).c_str());
     nscoord auPerDev = popupFrame->PresContext()->AppUnitsPerDevPixel();
+    anchorRect = LayoutDeviceIntRect::FromAppUnitsToNearest(anchorRectAppUnits,
+                                                            auPerDev);
     if (anchorRect.width < 0) {
       auto w = -anchorRect.width;
       anchorRect.width += w + 1;
       anchorRect.x += w;
     }
-    anchorRect = LayoutDeviceIntRect::FromAppUnitsToNearest(anchorRectAppUnits,
-                                                            auPerDev);
     LOG("    final %s\n", ToString(anchorRect).c_str());
   }
 
@@ -5355,8 +5364,6 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
   LOG("  mBounds: x:%d y:%d w:%d h:%d\n", mBounds.x, mBounds.y, mBounds.width,
       mBounds.height);
 
-  mPreferredPopupRectFlushed = false;
-
   ConstrainSize(&mBounds.width, &mBounds.height);
 
   GtkWidget* eventWidget = nullptr;
@@ -5940,7 +5947,6 @@ void nsWindow::NativeMoveResize(bool aMoved, bool aResized) {
       LOG("  moving to %d x %d", rect.x, rect.y);
       gtk_window_move(GTK_WINDOW(mShell), rect.x, rect.y);
     }
-    mUpdatedByMoveToRectCallback = false;
     return;
   }
 
@@ -6186,8 +6192,7 @@ void nsWindow::NativeShow(bool aAction) {
   } else {
     // There's a chance that when the popup will be shown again it might be
     // resized because parent could be moved meanwhile.
-    mPreferredPopupRect = LayoutDeviceIntRect();
-    mPreferredPopupRectFlushed = false;
+    mMoveToRectPopupRect = LayoutDeviceIntRect();
     LOG("nsWindow::NativeShow hide\n");
     if (GdkIsWaylandDisplay()) {
       if (IsWaylandPopup()) {
