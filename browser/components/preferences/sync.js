@@ -98,11 +98,11 @@ var gSyncPane = {
       Weave.Svc.Obs.remove(UIState.ON_UPDATE, this.updateWeavePrefs, this);
     });
 
-    XPCOMUtils.defineLazyGetter(this, "_accountsStringBundle", () => {
-      return Services.strings.createBundle(
-        "chrome://browser/locale/accounts.properties"
-      );
-    });
+    XPCOMUtils.defineStringBundleGetter(
+      this,
+      "_accountsStringBundle",
+      "chrome://browser/locale/accounts.properties"
+    );
 
     FxAccounts.config
       .promiseConnectDeviceURI(this._getEntryPoint())

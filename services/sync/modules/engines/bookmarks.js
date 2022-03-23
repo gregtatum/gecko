@@ -40,11 +40,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SyncedBookmarksMirror: "resource://gre/modules/SyncedBookmarksMirror.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "PlacesBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://places/locale/places.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "PlacesBundle",
+  "chrome://places/locale/places.properties"
+);
 
 XPCOMUtils.defineLazyGetter(this, "ANNOS_TO_TRACK", () => [
   PlacesUtils.LMANNO_FEEDURI,

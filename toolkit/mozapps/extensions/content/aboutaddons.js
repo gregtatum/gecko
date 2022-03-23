@@ -23,21 +23,21 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "browserBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
-XPCOMUtils.defineLazyGetter(this, "brandBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
-XPCOMUtils.defineLazyGetter(this, "extBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://mozapps/locale/extensions/extensions.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "browserBundle",
+  "chrome://browser/locale/browser.properties"
+);
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "brandBundle",
+  "chrome://branding/locale/brand.properties"
+);
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "extBundle",
+  "chrome://mozapps/locale/extensions/extensions.properties"
+);
 XPCOMUtils.defineLazyGetter(this, "extensionStylesheets", () => {
   const { ExtensionParent } = ChromeUtils.import(
     "resource://gre/modules/ExtensionParent.jsm"

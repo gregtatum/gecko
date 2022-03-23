@@ -32,11 +32,11 @@ ChromeUtils.defineModuleGetter(
   "resource:///modules/webrtcUI.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
 XPCOMUtils.defineLazyServiceGetter(
   this,

@@ -234,14 +234,10 @@ this.LoginManagerContextMenu = {
   },
 };
 
-XPCOMUtils.defineLazyGetter(
+XPCOMUtils.defineStringBundleGetter(
   LoginManagerContextMenu,
   "_stringBundle",
-  function() {
-    return Services.strings.createBundle(
-      "chrome://passwordmgr/locale/passwordmgr.properties"
-    );
-  }
+  "chrome://passwordmgr/locale/passwordmgr.properties"
 );
 
 XPCOMUtils.defineLazyGetter(

@@ -11,11 +11,11 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-XPCOMUtils.defineLazyGetter(this, "bundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/tabbrowser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "bundle",
+  "chrome://browser/locale/tabbrowser.properties"
+);
 
 /**
  * Utility functions that can be used when opening multiple tabs, that can be

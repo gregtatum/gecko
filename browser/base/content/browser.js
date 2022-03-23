@@ -307,23 +307,23 @@ XPCOMUtils.defineLazyGetter(this, "RTL_UI", () => {
   return Services.locale.isAppLocaleRTL;
 });
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gBrowserBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrowserBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gTabBrowserBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/tabbrowser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gTabBrowserBundle",
+  "chrome://browser/locale/tabbrowser.properties"
+);
 
 XPCOMUtils.defineLazyGetter(this, "gCustomizeMode", () => {
   let { CustomizeMode } = ChromeUtils.import(

@@ -18,7 +18,9 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Services: "resource://gre/modules/Services.jsm",
 });
 
-const domBundle = Services.strings.createBundle(
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "domBundle",
   "chrome://global/locale/dom/dom.properties"
 );
 

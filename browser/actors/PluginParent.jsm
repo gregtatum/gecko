@@ -21,10 +21,11 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/CrashSubmit.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gNavigatorBundle", function() {
-  const url = "chrome://browser/locale/browser.properties";
-  return Services.strings.createBundle(url);
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gNavigatorBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 const PluginManager = {
   gmpCrashes: new Map(),

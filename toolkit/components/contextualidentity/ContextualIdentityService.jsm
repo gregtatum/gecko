@@ -15,11 +15,11 @@ const LAST_CONTAINERS_JSON_VERSION = 4;
 const SAVE_DELAY_MS = 1500;
 const CONTEXTUAL_IDENTITY_ENABLED_PREF = "privacy.userContext.enabled";
 
-XPCOMUtils.defineLazyGetter(this, "gBrowserBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrowserBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 XPCOMUtils.defineLazyGetter(this, "gTextDecoder", function() {
   return new TextDecoder();

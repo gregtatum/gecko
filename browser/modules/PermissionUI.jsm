@@ -91,11 +91,11 @@ XPCOMUtils.defineLazyServiceGetter(
   "nsIContentPrefService2"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gBrowserBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrowserBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 var PermissionUI = {};
 

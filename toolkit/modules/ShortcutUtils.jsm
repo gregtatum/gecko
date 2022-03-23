@@ -15,17 +15,17 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   AppConstants: "resource://gre/modules/AppConstants.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "PlatformKeys", function() {
-  return Services.strings.createBundle(
-    "chrome://global-platform/locale/platformKeys.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "PlatformKeys",
+  "chrome://global-platform/locale/platformKeys.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "Keys", function() {
-  return Services.strings.createBundle(
-    "chrome://global/locale/keys.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "Keys",
+  "chrome://global/locale/keys.properties"
+);
 
 var ShortcutUtils = {
   IS_VALID: "valid",

@@ -25,11 +25,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   HomePage: "resource:///modules/HomePage.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "gWidgetsBundle", function() {
-  const kUrl =
-    "chrome://browser/locale/customizableui/customizableWidgets.properties";
-  return Services.strings.createBundle(kUrl);
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gWidgetsBundle",
+  "chrome://browser/locale/customizableui/customizableWidgets.properties"
+);
 
 const kDefaultThemeID = "default-theme@mozilla.org";
 

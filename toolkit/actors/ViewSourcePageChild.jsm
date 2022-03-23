@@ -4,7 +4,6 @@
 
 /* eslint-env mozilla/frame-script */
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
@@ -12,8 +11,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 var EXPORTED_SYMBOLS = ["ViewSourcePageChild"];
 
 XPCOMUtils.defineLazyGlobalGetters(this, ["NodeFilter"]);
-
-const BUNDLE_URL = "chrome://global/locale/viewSource.properties";
 
 // These are markers used to delimit the selection during processing. They
 // are removed from the final rendering.
@@ -39,9 +36,11 @@ class ViewSourcePageChild extends JSWindowActorChild {
   constructor() {
     super();
 
-    XPCOMUtils.defineLazyGetter(this, "bundle", function() {
-      return Services.strings.createBundle(BUNDLE_URL);
-    });
+    XPCOMUtils.defineStringBundleGetter(
+      this,
+      "bundle",
+      "chrome://global/locale/viewSource.properties"
+    );
   }
 
   static setNeedsDrawSelection(value) {

@@ -919,25 +919,17 @@ var PromptUtilsTemp = {
 
 PromptUtils = PromptUtilsTemp;
 
-XPCOMUtils.defineLazyGetter(PromptUtils, "strBundle", function() {
-  let bundle = Services.strings.createBundle(
-    "chrome://global/locale/commonDialogs.properties"
-  );
-  if (!bundle) {
-    throw new Error("String bundle for Prompter not present!");
-  }
-  return bundle;
-});
+XPCOMUtils.defineStringBundleGetter(
+  PromptUtils,
+  "strBundle",
+  "chrome://global/locale/commonDialogs.properties"
+);
 
-XPCOMUtils.defineLazyGetter(PromptUtils, "brandBundle", function() {
-  let bundle = Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-  if (!bundle) {
-    throw new Error("String bundle for branding not present!");
-  }
-  return bundle;
-});
+XPCOMUtils.defineStringBundleGetter(
+  PromptUtils,
+  "brandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
 XPCOMUtils.defineLazyGetter(PromptUtils, "ellipsis", function() {
   let ellipsis = "\u2026";

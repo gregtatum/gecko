@@ -40,11 +40,11 @@ XPCOMUtils.defineLazyGetter(this, "_prefs", function() {
   return Services.prefs.getBranch(PREF_TASKBAR_BRANCH);
 });
 
-XPCOMUtils.defineLazyGetter(this, "_stringBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/taskbar.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "_stringBundle",
+  "chrome://browser/locale/taskbar.properties"
+);
 
 XPCOMUtils.defineLazyServiceGetter(
   this,

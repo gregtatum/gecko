@@ -16,11 +16,11 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gNavigatorBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gNavigatorBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 XPCOMUtils.defineLazyPreferenceGetter(
   this,

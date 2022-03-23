@@ -879,23 +879,23 @@ if (AppConstants.MOZ_CRASHREPORTER) {
   });
 }
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gBrowserBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrowserBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gTabbrowserBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/tabbrowser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gTabbrowserBundle",
+  "chrome://browser/locale/tabbrowser.properties"
+);
 
 const global = this;
 

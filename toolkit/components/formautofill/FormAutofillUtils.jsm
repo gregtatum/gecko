@@ -1268,17 +1268,17 @@ const LabelUtils = {
 this.log = null;
 FormAutofill.defineLazyLogGetter(this, EXPORTED_SYMBOLS[0]);
 
-XPCOMUtils.defineLazyGetter(FormAutofillUtils, "stringBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://formautofill/locale/formautofill.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  FormAutofillUtils,
+  "stringBundle",
+  "chrome://formautofill/locale/formautofill.properties"
+);
 
-XPCOMUtils.defineLazyGetter(FormAutofillUtils, "brandBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  FormAutofillUtils,
+  "brandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
 XPCOMUtils.defineLazyPreferenceGetter(
   FormAutofillUtils,

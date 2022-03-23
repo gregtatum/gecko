@@ -60,11 +60,11 @@ ChromeUtils.defineModuleGetter(
   "SessionStore",
   "resource:///modules/sessionstore/SessionStore.jsm"
 );
-XPCOMUtils.defineLazyGetter(this, "gWidgetsBundle", function() {
-  const kUrl =
-    "chrome://browser/locale/customizableui/customizableWidgets.properties";
-  return Services.strings.createBundle(kUrl);
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gWidgetsBundle",
+  "chrome://browser/locale/customizableui/customizableWidgets.properties"
+);
 XPCOMUtils.defineLazyServiceGetter(
   this,
   "gTouchBarUpdater",

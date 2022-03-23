@@ -2022,10 +2022,11 @@ XPCOMUtils.defineLazyServiceGetter(
   "nsITaggingService"
 );
 
-XPCOMUtils.defineLazyGetter(this, "bundle", function() {
-  const PLACES_STRING_BUNDLE_URI = "chrome://places/locale/places.properties";
-  return Services.strings.createBundle(PLACES_STRING_BUNDLE_URI);
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "bundle",
+  "chrome://places/locale/places.properties"
+);
 
 // This is just used as a reasonably-random value for copy & paste / drag operations.
 XPCOMUtils.defineLazyGetter(PlacesUtils, "instanceId", () => {

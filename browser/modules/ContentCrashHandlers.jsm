@@ -22,10 +22,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   setTimeout: "resource://gre/modules/Timer.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "gNavigatorBundle", function() {
-  const url = "chrome://browser/locale/browser.properties";
-  return Services.strings.createBundle(url);
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gNavigatorBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 // We don't process crash reports older than 28 days, so don't bother
 // submitting them

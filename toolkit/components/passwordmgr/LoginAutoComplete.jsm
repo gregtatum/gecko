@@ -67,11 +67,11 @@ XPCOMUtils.defineLazyPreferenceGetter(
 XPCOMUtils.defineLazyGetter(this, "log", () => {
   return LoginHelper.createLogger("LoginAutoComplete");
 });
-XPCOMUtils.defineLazyGetter(this, "passwordMgrBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://passwordmgr/locale/passwordmgr.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "passwordMgrBundle",
+  "chrome://passwordmgr/locale/passwordmgr.properties"
+);
 XPCOMUtils.defineLazyGetter(this, "dateAndTimeFormatter", () => {
   return new Services.intl.DateTimeFormat(undefined, {
     dateStyle: "medium",

@@ -24,17 +24,17 @@ ChromeUtils.defineModuleGetter(
   "resource://normandy-content/AboutPages.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gStringBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://global/locale/aboutStudies.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gStringBundle",
+  "chrome://global/locale/aboutStudies.properties"
+);
 
 const NIMBUS_DEBUG_PREF = "nimbus.debug";
 

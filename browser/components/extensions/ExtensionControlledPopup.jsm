@@ -55,11 +55,11 @@ ChromeUtils.defineModuleGetter(
 
 let { makeWidgetId } = ExtensionCommon;
 
-XPCOMUtils.defineLazyGetter(this, "strBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://global/locale/extensions.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "strBundle",
+  "chrome://global/locale/extensions.properties"
+);
 
 const PREF_BRANCH_INSTALLED_ADDON = "extensions.installedDistroAddon.";
 

@@ -25,11 +25,11 @@ XPCOMUtils.defineLazyServiceGetter(
   "nsIAutoCompleteSimpleSearch"
 );
 
-XPCOMUtils.defineLazyGetter(this, "strBundle", () => {
-  return Services.strings.createBundle(
-    "chrome://passwordmgr/locale/passwordmgr.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "strBundle",
+  "chrome://passwordmgr/locale/passwordmgr.properties"
+);
 
 const LoginInfo = Components.Constructor(
   "@mozilla.org/login-manager/loginInfo;1",

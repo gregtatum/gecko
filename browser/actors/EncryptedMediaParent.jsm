@@ -12,17 +12,17 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gNavigatorBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gNavigatorBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 XPCOMUtils.defineLazyGetter(this, "gFluentStrings", function() {
   return new Localization(["branding/brand.ftl", "browser/browser.ftl"], true);

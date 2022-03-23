@@ -29,11 +29,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Weave: "resource://services-sync/main.js",
 });
 
-XPCOMUtils.defineLazyGetter(this, "bundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/places/places.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "bundle",
+  "chrome://browser/locale/places/places.properties"
+);
 
 const gInContentProcess =
   Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT;

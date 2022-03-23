@@ -11,17 +11,17 @@ const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 var EXPORTED_SYMBOLS = ["SiteDataManager"];
 
-XPCOMUtils.defineLazyGetter(this, "gStringBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/siteData.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gStringBundle",
+  "chrome://browser/locale/siteData.properties"
+);
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBrandBundle",
+  "chrome://branding/locale/brand.properties"
+);
 
 var SiteDataManager = {
   // A Map of sites and their disk usage according to Quota Manager.

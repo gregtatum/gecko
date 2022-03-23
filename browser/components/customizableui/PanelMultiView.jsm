@@ -111,11 +111,11 @@ ChromeUtils.defineModuleGetter(
   "resource:///modules/CustomizableUI.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "gBundle", function() {
-  return Services.strings.createBundle(
-    "chrome://browser/locale/browser.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gBundle",
+  "chrome://browser/locale/browser.properties"
+);
 
 /**
  * Safety timeout after which asynchronous events will be canceled if any of the

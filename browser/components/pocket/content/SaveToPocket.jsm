@@ -32,11 +32,11 @@ ChromeUtils.defineModuleGetter(
 
 var EXPORTED_SYMBOLS = ["SaveToPocket"];
 
-XPCOMUtils.defineLazyGetter(this, "gStrings", () => {
-  return Services.strings.createBundle(
-    "chrome://global/locale/aboutReader.properties"
-  );
-});
+XPCOMUtils.defineStringBundleGetter(
+  this,
+  "gStrings",
+  "chrome://global/locale/aboutReader.properties"
+);
 
 var PocketCustomizableWidget = {
   init() {
