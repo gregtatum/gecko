@@ -1041,15 +1041,18 @@ MailUniverse.prototype = {
    * resolved when the task group associated with the request completes.
    */
   async syncRefreshFolder(folderId, why) {
+    const folderType = this.accountManager.getFolderById(folderId)?.type;
     const accountId = accountIdFromFolderId(folderId);
     // sync_refresh explicitly returns a promise corresponding to the task group
     // it creates as its result.  Because we're awaiting a promise for when the
     // planned result completes and that will be resolved with the task group
     // promise, we can't actually independently await the group, so this single
     // await does both things for us.
+    const type =
+      folderType === "inbox-summary" ? "sync_inbox_refresh" : "sync_refresh";
     await this.taskManager.scheduleTaskAndWaitForPlannedResult(
       {
-        type: "sync_refresh",
+        type,
         accountId,
         folderId,
       },

@@ -98,21 +98,6 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       const account = await ctx.universe.acquireAccount(ctx, req.accountId);
       const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
-
-      if (folderInfo.type === "inbox-summary") {
-        return {
-          newData: {
-            tasks: [
-              {
-                type: "sync_inbox_refresh",
-                accountId: account.id,
-                folderId: req.folderId,
-              },
-            ],
-          },
-        };
-      }
-
       const calendarId = folderInfo.serverId;
 
       let syncDate = NOW();

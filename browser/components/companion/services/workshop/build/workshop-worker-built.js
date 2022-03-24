@@ -11943,19 +11943,6 @@ var WorkshopBackend = (() => {
             });
             const rawSyncState = fromDb.syncStates.get(req.folderId);
             const syncState = new GapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
-            if (folderInfo.type === "inbox-summary") {
-              return {
-                newData: {
-                  tasks: [
-                    {
-                      type: "sync_inbox_refresh",
-                      accountId: account.id,
-                      folderId: req.folderId
-                    }
-                  ]
-                }
-              };
-            }
             const syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
             const calendarId = folderInfo.serverId;
@@ -13023,19 +13010,6 @@ var WorkshopBackend = (() => {
             const syncState = new MapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
             const account = await ctx.universe.acquireAccount(ctx, req.accountId);
             const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
-            if (folderInfo.type === "inbox-summary") {
-              return {
-                newData: {
-                  tasks: [
-                    {
-                      type: "sync_inbox_refresh",
-                      accountId: account.id,
-                      folderId: req.folderId
-                    }
-                  ]
-                }
-              };
-            }
             const calendarId = folderInfo.serverId;
             let syncDate = NOW();
             logic(ctx, "syncStart", { syncDate });
@@ -23753,9 +23727,11 @@ var WorkshopBackend = (() => {
       }
     },
     async syncRefreshFolder(folderId, why) {
+      const folderType = this.accountManager.getFolderById(folderId)?.type;
       const accountId = accountIdFromFolderId(folderId);
+      const type = folderType === "inbox-summary" ? "sync_inbox_refresh" : "sync_refresh";
       await this.taskManager.scheduleTaskAndWaitForPlannedResult({
-        type: "sync_refresh",
+        type,
         accountId,
         folderId
       }, why);

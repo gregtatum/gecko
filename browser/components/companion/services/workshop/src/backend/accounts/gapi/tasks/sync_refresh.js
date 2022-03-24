@@ -104,20 +104,6 @@ export default TaskDefiner.defineAtMostOnceTask([
         "refresh"
       );
 
-      if (folderInfo.type === "inbox-summary") {
-        return {
-          newData: {
-            tasks: [
-              {
-                type: "sync_inbox_refresh",
-                accountId: account.id,
-                folderId: req.folderId,
-              },
-            ],
-          },
-        };
-      }
-
       const syncDate = NOW();
 
       logic(ctx, "syncStart", { syncDate });
