@@ -995,11 +995,6 @@ document.addEventListener("DOMContentLoaded", function() {
   richListBox.addEventListener("keypress", function(event) {
     return this._placesView.onKeyPress(event);
   });
-  if (AppConstants.PINEBUILD) {
-    richListBox.addEventListener("click", function(event) {
-      return this._placesView.onDoubleClick(event);
-    });
-  }
   richListBox.addEventListener("dblclick", function(event) {
     return this._placesView.onDoubleClick(event);
   });
