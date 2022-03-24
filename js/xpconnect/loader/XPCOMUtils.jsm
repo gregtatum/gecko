@@ -385,6 +385,57 @@ var XPCOMUtils = {
   },
 
   /**
+   * Defines a getter on a specified object for a string bundle. The
+   * bundle is loaded the first time that the property is accessed,
+   * and is reloaded when the app locales change.
+   *
+   * @param aObject
+   *        The object to define the lazy getter on.
+   * @param aName
+   *        The name of the getter property to define on `aObject`.
+   * @param aBundle
+   *        The name of the bundle to load.
+   */
+  defineStringBundleGetter: function XPCU_defineStringBundleGetter(aObject, aName, aBundle) {
+    // Note: We need to keep a reference to this observer alive as long
+    // as `object` is alive. This means that all of our getters need to
+    // explicitly close over the variable that holds the object, and we
+    // cannot define a value in place of a getter after we load the bundle.
+    let observer = {
+      QueryInterface: XPCU_stringBundleObserverQI,
+
+      value: undefined,
+
+      observe(subject, topic, data) {
+        if (topic === "intl:app-locales-changed") {
+          this.value = undefined;
+        }
+      },
+    }
+
+    let defineGetter = get => {
+      Object.defineProperty(aObject, aName, {
+        configurable: true,
+        enumerable: true,
+        get,
+      });
+    };
+
+    function lazyGetter() {
+      if (observer.value === undefined) {
+        observer.value = Services.strings.createBundle(aBundle);
+      }
+      return observer.value;
+    }
+
+    defineGetter(() => {
+      Services.obs.addObserver(observer, "intl:app-locales-changed", true);
+      defineGetter(lazyGetter);
+      return lazyGetter();
+    });
+  },
+
+  /**
    * Defines a non-writable property on an object.
    */
   defineConstant: function XPCOMUtils__defineConstant(aObj, aName, aValue) {
@@ -579,6 +630,7 @@ class LazyProxyHandler {
 }
 
 var XPCU_lazyPreferenceObserverQI = ChromeUtils.generateQI(["nsIObserver", "nsISupportsWeakReference"]);
+var XPCU_stringBundleObserverQI = ChromeUtils.generateQI(["nsIObserver", "nsISupportsWeakReference"]);
 
 ChromeUtils.defineModuleGetter(this, "Services",
                                "resource://gre/modules/Services.jsm");

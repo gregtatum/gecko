@@ -149,6 +149,35 @@ add_test(function test_defineLazyPreferenceGetter()
     run_next_test();
 });
 
+add_test(function test_stringBundleGetter()
+{
+    let obj = {};
+    XPCOMUtils.defineStringBundleGetter(
+      obj,
+      "bundle",
+      "chrome://fake-bundle.properties"
+    );
+
+    const firstBundle = obj.bundle;
+    ok(firstBundle, "Bundle exists");
+    equal(firstBundle, obj.bundle, "The bundle can be re-retrieved");
+    Services.strings.flushBundles();
+    equal(firstBundle, obj.bundle, "The bundle presists after flushing.");
+
+    // Note, XPC shell tests don't actually have access to bundles, so the following
+    // will fail:
+    // obj.bundle.GetStringFromName("brandShortName");
+
+    // Simulate a switch of app locales.
+    Services.obs.notifyObservers(null, "intl:app-locales-changed");
+    Services.strings.flushBundles();
+
+    ok(obj.bundle, "Bundle exists");
+    notEqual(firstBundle, obj.bundle, "The old bundle is gone and re-generated.");
+
+    run_next_test();
+});
+
 
 add_test(function test_categoryRegistration()
 {
