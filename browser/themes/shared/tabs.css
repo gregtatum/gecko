@@ -46,6 +46,12 @@
   --tab-loading-fill: #0A84FF;
 }
 
+#tabbrowser-tabpanels {
+  background-color: var(--tabpanel-background-color);
+}
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 #appcontent {
   overflow: hidden;
 }
@@ -55,7 +61,6 @@
 }
 
 #tabbrowser-tabpanels {
-  background-color: var(--tabpanel-background-color);
   transition-property: transform, opacity, box-shadow;
   transition-duration: 300ms;
   animation-timing-function: var(--animation-easing-function);
@@ -113,6 +118,8 @@ body[flow-reset] #tabbrowser-tabpanels[session-change="2"] {
     transition-duration: 0s !important;
   }
 }
+}
+/** endif **/
 
 #tabbrowser-tabs,
 #tabbrowser-arrowscrollbox,

@@ -83,10 +83,11 @@ scrollcorner {
   cursor: default;
 }
 
-%ifdef XP_WIN
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 /* Experimental scrollbar styling changes to support pinebuild, which do not
    work in high contrast mode. */
-@supports -moz-bool-pref("browser.pinebuild.styleoverrides") {
+@media (-moz-platform: windows) {
   @media not (prefers-contrast) {
     /* These styles are pulled directly from the devtools
        floating-scrollbars-responsive-design stylesheet, except the selectors
@@ -159,4 +160,5 @@ scrollcorner {
     /* End of pinebuild scrollbar styling */
   }
 }
-%endif
+}
+/** endif **/

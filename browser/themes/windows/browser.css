@@ -232,8 +232,16 @@
 }
 
 .titlebar-buttonbox-container {
+  -moz-box-align: stretch;
+}
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+.titlebar-buttonbox-container {
   -moz-box-align: start;
 }
+}
+/** endif **/
 
 @media (-moz-platform: windows-win7),
        (-moz-platform: windows-win8) {
@@ -303,12 +311,14 @@ menuitem.bookmark-item {
   opacity: 0.7;
 }
 
-/*** START PINEBUILD ***/
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 :root {
   --titlebar-button-hpadding: 12px;
   --titlebar-button-icon-width: 12px;
 }
-/*** END PINEBUILD ***/
+}
+/** endif **/
 
 /* Address bar */
 
@@ -368,10 +378,13 @@ menuitem.bookmark-item {
   --sidebar-border-color: ThreeDLightShadow;
 }
 
-/* PINEBUILD specific override */
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 #browser-outer {
   --sidebar-border-color: var(--chrome-content-separator-color)
 }
+}
+/** endif **/
 
 /* Tabstrip */
 
@@ -380,16 +393,17 @@ menuitem.bookmark-item {
   padding: 0;
 }
 
-/*** START PINEBUILD ***/
-/*
+/** ifndef PINEBUILD **/
+@supports not -moz-bool-pref("browser.pinebuild.enabled") {
 @media (-moz-windows-default-theme: 0) {
-  /* For high contrast themes. *//*
+  /* For high contrast themes. */
   #tabbrowser-tabpanels,
   :root[privatebrowsingmode=temporary] #tabbrowser-tabpanels {
     background-color: -moz-default-background-color;
   }
-}*/
-/*** END PINEBUILD ***/
+}
+}
+/** endif **/
 
 /* All tabs menupopup */
 

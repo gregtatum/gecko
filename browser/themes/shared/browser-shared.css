@@ -25,11 +25,13 @@
 
 @namespace html url("http://www.w3.org/1999/xhtml");
 
-/*** START PINEBUILD ***/
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 * {
   font-family: "Inter", system-ui;
 }
-/*** END PINEBUILD ***/
+}
+/** endif **/
 
 :root {
   --toolbar-bgcolor: var(--toolbar-non-lwt-bgcolor);

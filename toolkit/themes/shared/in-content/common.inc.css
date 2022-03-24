@@ -253,11 +253,13 @@
   }
 }
 
-%ifdef PINEBUILD
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 * {
   font-family: "Inter", system-ui;
 }
-%endif
+}
+/** endif **/
 
 :root {
   font: message-box;

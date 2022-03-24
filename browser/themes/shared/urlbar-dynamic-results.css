@@ -144,6 +144,8 @@
   color: var(--autocomplete-popup-highlight-color);
 }
 
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 /*
  * This section is for urlbar quick actions.
  */
@@ -302,3 +304,5 @@
 .urlbarView-row[dynamicType=contextualSearch]:hover > .urlbarView-row-inner {
   background: var(--autocomplete-popup-hover-background);
 }
+}
+/** endif **/

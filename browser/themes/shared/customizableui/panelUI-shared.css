@@ -260,7 +260,6 @@ panelview .toolbaritem-combined-buttons,
   --arrowpanel-padding: 6px 10px;
   font-weight: 400;
   font-size: 1.1rem;
-  margin-top: 0;
 }
 
 #confirmation-hint::part(content) {
@@ -527,6 +526,8 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
   fill: currentColor;
 }
 
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 :root:[fxastatus="signedin"] #PanelUI-menu-button {
   list-style-image: var(--avatar-image-url);
   -moz-context-properties: fill;
@@ -548,6 +549,8 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 #PanelUI-menu-button > .toolbarbutton-badge-stack {
   padding: 0;
 }
+}
+/** endif **/
 
 /* Handle different UI states. */
 
@@ -690,10 +693,17 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 }
 
 /* Non-signedin statuses icons are not totally round. */
-:root[fxastatus="signedin"] #fxa-avatar-image,
+:root[fxastatus="signedin"] #fxa-avatar-image {
+  border-radius: 50%;
+}
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
 #PanelUI-menu-button {
   border-radius: 50%;
 }
+}
+/** endif **/
 
 .PanelUI-fxa-service-description-label,
 .PanelUI-remotetabs-instruction-label {
@@ -1335,7 +1345,6 @@ panelview .toolbarbutton-1 {
 #identity-popup-securityView > toolbarseparator,
 #editBookmarkPanel toolbarseparator,
 #downloadsFooterButtons > toolbarseparator,
-#page-action-panel-mainview toolbarseparator,
 .cui-widget-panelview menuseparator,
 .cui-widget-panel toolbarseparator {
   appearance: none;
@@ -1345,6 +1354,19 @@ panelview .toolbarbutton-1 {
   margin: var(--panel-separator-margin);
   padding: 0;
 }
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+#page-action-panel-mainview toolbarseparator {
+  appearance: none;
+  min-height: 0;
+  border-top: 1px solid var(--panel-separator-color);
+  border-bottom: none;
+  margin: var(--panel-separator-margin);
+  padding: 0;
+}
+}
+/** endif **/
 
 /* Styled differently to allow for user interaction with menu separator */
 #PlacesToolbar menupopup[placespopup="true"] menuseparator {
@@ -2169,18 +2191,4 @@ description#PanelUI-profiler-locked {
   line-height: 1.5;
   /* Make sure this description is wider than the header's */
   max-width: 310px;
-}
-
-/**
- * TODO: Remove these next two rules after the next merge from
- * mozilla-central, since they'll then be duplicated.
- */
-
-.subviewbutton > .toolbarbutton-icon {
-  margin: 0;
-}
-
-.subviewbutton > .toolbarbutton-text {
-  text-align: start;
-  display: -moz-box;
 }

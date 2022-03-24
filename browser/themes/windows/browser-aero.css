@@ -294,11 +294,13 @@
     color: white;
   }
 
-  @supports not(-moz-bool-pref("browser.pinebuild.styleoverrides")) {
+  /** ifndef PINEBUILD **/
+  @supports not -moz-bool-pref("browser.pinebuild.enabled") {
     #appcontent:not(:-moz-lwtheme) {
       background-color: -moz-dialog;
     }
   }
+  /** endif **/
 }
 
 @media (-moz-windows-glass) {

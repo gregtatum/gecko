@@ -2750,6 +2750,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.sessionstore.resume_from_crash", false);
 
   // Pinebuild specific configurations
+  pref("browser.pinebuild.enabled", true, locked);
   pref("browser.companion.globalhistorydebugging", false);
   pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
   pref("browser.river.activationTimeout", 5000);
