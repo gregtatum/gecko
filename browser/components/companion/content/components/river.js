@@ -94,6 +94,7 @@ export default class River extends MozLitElement {
       containsActive && this.viewGroups.length ? river.pop() : null;
     return html`
       <toolbarbutton
+        part="overflow"
         class="subviewbutton"
         id="river-overflow-button"
         @click=${this.#onOverflowClick}

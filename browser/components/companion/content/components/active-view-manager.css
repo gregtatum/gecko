@@ -14,6 +14,7 @@ workspace-el {
   border-radius: 100px;
 }
 
+workspace-el:not(.selected) > #workspace > river-el::part(overflow),
 workspace-el:not(.selected) > #workspace > pinned-views {
   display: none;
 }
