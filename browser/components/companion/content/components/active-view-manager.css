@@ -12,11 +12,19 @@ active-view-manager {
 workspace-el {
   margin-inline: 20px;
   border-radius: 100px;
+  background-color: var(--colors-cafe-20);
+  box-shadow: inset 0px 2px 4px var(--colors-cafe-40);
+  border: 0.5px solid #F3EEE2;
 }
 
 workspace-el:not(.selected) > #workspace > river-el::part(overflow),
 workspace-el:not(.selected) > #workspace > pinned-views {
   display: none;
+}
+
+.selected.multiple > #workspace > river-el {
+  background: #FFFFFF;
+  border-radius: 100px;
 }
 
 workspace-el[workspace-id="0"] > #workspace > #workspace-indicator-button {
@@ -55,6 +63,7 @@ workspace-el:not(.selected) {
 
 workspace-el.contains-pins:not(.multiple) {
   background-color: var(--colors-cafe-40);
+  border: 0.5px solid var(--colors-cafe-60);
 }
 
 workspace-el.contains-pins:not(.multiple),
@@ -64,12 +73,18 @@ workspace-el.multiple.selected {
 
 workspace-el.multiple.selected[workspace-id="0"] {
   background-color: var(--colors-lavender-20);
+  border: 0.5px solid var(--colors-lavender-30);
+  box-shadow: inset 0px 2px 4px var(--colors-lavender-30);
 }
 
 workspace-el.multiple.selected[workspace-id="1"] {
   background-color: #E1E9FA;
+  border: 0.5px solid #CBD9F7;
+  box-shadow: inset 0px 2px 4px rgba(217, 225, 250, 0.5);
 }
 
 workspace-el.multiple.selected[workspace-id="2"] {
   background-color: #E1F3F5;
+  border: 0.5px solid #CAE9EB;
+  box-shadow: inset 0px 2px 4px rgba(202, 233, 235, 0.5);
 }
