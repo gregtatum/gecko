@@ -70,20 +70,6 @@
   #downloadsListBox .downloadButton > .button-box > .button-icon {
     color: black;
   }
-
-  #downloadsListBox .downloadButton:hover > .button-box {
-    background-color: unset;
-  }
-
-  #downloadsListBox > richlistitem::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    cursor: pointer;
-  }
 }
 
 /*** List items ***/
