@@ -288,7 +288,11 @@ export class ApiClient {
 
         // We got an error but it's likely not a drama so just wait a little
         // and try again.
-        logic(this, "fetchError", { endpointUrl, status, error: e.message });
+        logic(this, "fetchError", {
+          endpointUrl,
+          status,
+          error: e?.message || "",
+        });
         await this.backoff.waitAMoment(retries);
       }
     }

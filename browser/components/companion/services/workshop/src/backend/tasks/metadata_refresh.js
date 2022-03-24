@@ -88,8 +88,8 @@ export default TaskDefiner.defineAtMostOnceTask([
       // ## Begin Mutation
       let messages = new Map();
       for (const items of itemsById.values()) {
-        for (const [id, message] of items) {
-          messages.set([id, message.date], null);
+        for (const messageKey of items) {
+          messages.set(messageKey, null);
         }
       }
       const fromDb = await ctx.beginMutate({ messages });

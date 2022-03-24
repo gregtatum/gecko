@@ -36,6 +36,7 @@ export class VirtualConversationTOC extends ConversationTOC {
   #onFolderAddition_bound;
   #onItemAdded_bound;
   #onItemRemoved_bound;
+  #onItemChanged_bound;
   #onAccountChange_bound;
   #id;
   static _globalId = 0;
@@ -65,9 +66,6 @@ export class VirtualConversationTOC extends ConversationTOC {
     this.#onFolderDeletion_bound = this.onFolderDeletion.bind(this);
     this.#onFolderAddition_bound = this.onFolderAddition.bind(this);
     this.#onAccountChange_bound = this.onAccountChange.bind(this);
-    db.on("fldr!*!remove", this.#onFolderDeletion_bound);
-    db.on("fldr!*!add", this.#onFolderAddition_bound);
-    db.on("accounts!tocChange", this.#onAccountChange_bound);
 
     this.#refreshHelperMaker = refreshHelperMaker;
     this.#metaHelperMaker = metaHelperMaker;
@@ -76,6 +74,12 @@ export class VirtualConversationTOC extends ConversationTOC {
     this.#visibleItemIds = new Map();
     this.#onItemAdded_bound = this.onItemAdded.bind(this);
     this.#onItemRemoved_bound = this.onItemRemoved.bind(this);
+    this.#onItemChanged_bound = this.onItemChanged.bind(this);
+
+    db.on("fldr!*!remove", this.#onFolderDeletion_bound);
+    db.on("fldr!*!add", this.#onFolderAddition_bound);
+    db.on("accounts!tocChange", this.#onAccountChange_bound);
+    db.on("msg!*!change", this.#onItemChanged_bound);
 
     logic.defineScope(this, "VirtualConversationTOC");
   }
@@ -94,6 +98,7 @@ export class VirtualConversationTOC extends ConversationTOC {
       this.db.removeListener("fldr!*!remove", this.#onFolderDeletion_bound);
       this.db.removeListener("fldr!*!add", this.#onFolderAddition_bound);
       this.db.removeListener("accounts!tocChange", this.#onAccountChange_bound);
+      this.db.removeListener("msg!*!change", this.#onItemChanged_bound);
       this.#visibleItemIds.clear();
     }
   }
@@ -112,9 +117,21 @@ export class VirtualConversationTOC extends ConversationTOC {
     }
   }
 
+  onItemChanged(messageId, preInfo, message) {
+    if (!message) {
+      this.onItemRemoved(messageId);
+      return;
+    }
+
+    if (preInfo.date !== message.date && this.#visibleItemIds.has(messageId)) {
+      // The date change so the key [id, date] changed so must update the entry.
+      this.#visibleItemIds.set(messageId, message.date);
+    }
+  }
+
   onItemAdded(gathered) {
     // When an event is brought into the view.
-    this.#visibleItemIds.set(gathered.message.id, gathered.message);
+    this.#visibleItemIds.set(gathered.message.id, gathered.message.date);
     this.refreshMetadata();
   }
 

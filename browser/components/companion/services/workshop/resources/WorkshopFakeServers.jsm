@@ -534,6 +534,7 @@ class GapiFakeServer extends BaseFakeServer {
     const ident = this.server.identity;
     this.domain = `${ident.primaryHost}:${ident.primaryPort}`;
     this.origin = `${ident.primaryScheme}://${this.domain}`;
+    this.specialTitle = "special-0";
 
     this.testUserEmail = `test-user@${ident.primaryHost}`;
 
@@ -557,6 +558,10 @@ class GapiFakeServer extends BaseFakeServer {
         tokenExpires: this.useNowTS + 24 * 60 * 60 * 1000,
       },
     };
+  }
+
+  changeSpecialTitle(title) {
+    this.specialTitle = title;
   }
 
   wrapResults(results, isPaged, args) {
@@ -647,6 +652,10 @@ class GapiFakeServer extends BaseFakeServer {
         error: "Invalid id",
         title: "why not having a title if I want",
       };
+    }
+
+    if (id === "special") {
+      id = this.specialTitle;
     }
     return {
       title: `document: id is ${id}`,

@@ -3403,7 +3403,11 @@ var WorkshopBackend = (() => {
                 this.abortController = new AbortController();
                 throw e;
               }
-              logic(this, "fetchError", { endpointUrl, status, error: e.message });
+              logic(this, "fetchError", {
+                endpointUrl,
+                status,
+                error: e?.message || ""
+              });
               await this.backoff.waitAMoment(retries);
             }
           }
@@ -22899,8 +22903,8 @@ var WorkshopBackend = (() => {
         const docTitleCache = new Map();
         let messages = new Map();
         for (const items of itemsById.values()) {
-          for (const [id, message] of items) {
-            messages.set([id, message.date], null);
+          for (const messageKey of items) {
+            messages.set(messageKey, null);
           }
         }
         const fromDb = await ctx.beginMutate({ messages });
@@ -23053,7 +23057,7 @@ var WorkshopBackend = (() => {
   // src/backend/db/virtual_conv_toc.js
   init_logic();
   init_id_conversions();
-  var _refreshHelperMaker, _metadataRefresher, _metaHelperMaker, _visibleItemIds, _onFolderDeletion_bound, _onFolderAddition_bound, _onItemAdded_bound, _onItemRemoved_bound, _onAccountChange_bound, _id;
+  var _refreshHelperMaker, _metadataRefresher, _metaHelperMaker, _visibleItemIds, _onFolderDeletion_bound, _onFolderAddition_bound, _onItemAdded_bound, _onItemRemoved_bound, _onItemChanged_bound, _onAccountChange_bound, _id;
   var _VirtualConversationTOC = class extends ConversationTOC {
     constructor({
       db,
@@ -23082,21 +23086,24 @@ var WorkshopBackend = (() => {
       __privateAdd(this, _onFolderAddition_bound, void 0);
       __privateAdd(this, _onItemAdded_bound, void 0);
       __privateAdd(this, _onItemRemoved_bound, void 0);
+      __privateAdd(this, _onItemChanged_bound, void 0);
       __privateAdd(this, _onAccountChange_bound, void 0);
       __privateAdd(this, _id, void 0);
       __privateSet(this, _id, _VirtualConversationTOC._globalId++);
       __privateSet(this, _onFolderDeletion_bound, this.onFolderDeletion.bind(this));
       __privateSet(this, _onFolderAddition_bound, this.onFolderAddition.bind(this));
       __privateSet(this, _onAccountChange_bound, this.onAccountChange.bind(this));
-      db.on("fldr!*!remove", __privateGet(this, _onFolderDeletion_bound));
-      db.on("fldr!*!add", __privateGet(this, _onFolderAddition_bound));
-      db.on("accounts!tocChange", __privateGet(this, _onAccountChange_bound));
       __privateSet(this, _refreshHelperMaker, refreshHelperMaker);
       __privateSet(this, _metaHelperMaker, metaHelperMaker);
       __privateSet(this, _metadataRefresher, metadataRefresher);
       __privateSet(this, _visibleItemIds, new Map());
       __privateSet(this, _onItemAdded_bound, this.onItemAdded.bind(this));
       __privateSet(this, _onItemRemoved_bound, this.onItemRemoved.bind(this));
+      __privateSet(this, _onItemChanged_bound, this.onItemChanged.bind(this));
+      db.on("fldr!*!remove", __privateGet(this, _onFolderDeletion_bound));
+      db.on("fldr!*!add", __privateGet(this, _onFolderAddition_bound));
+      db.on("accounts!tocChange", __privateGet(this, _onAccountChange_bound));
+      db.on("msg!*!change", __privateGet(this, _onItemChanged_bound));
       logic.defineScope(this, "VirtualConversationTOC");
     }
     async __activateTOC() {
@@ -23112,6 +23119,7 @@ var WorkshopBackend = (() => {
         this.db.removeListener("fldr!*!remove", __privateGet(this, _onFolderDeletion_bound));
         this.db.removeListener("fldr!*!add", __privateGet(this, _onFolderAddition_bound));
         this.db.removeListener("accounts!tocChange", __privateGet(this, _onAccountChange_bound));
+        this.db.removeListener("msg!*!change", __privateGet(this, _onItemChanged_bound));
         __privateGet(this, _visibleItemIds).clear();
       }
     }
@@ -23125,8 +23133,17 @@ var WorkshopBackend = (() => {
         }
       }
     }
+    onItemChanged(messageId, preInfo, message) {
+      if (!message) {
+        this.onItemRemoved(messageId);
+        return;
+      }
+      if (preInfo.date !== message.date && __privateGet(this, _visibleItemIds).has(messageId)) {
+        __privateGet(this, _visibleItemIds).set(messageId, message.date);
+      }
+    }
     onItemAdded(gathered) {
-      __privateGet(this, _visibleItemIds).set(gathered.message.id, gathered.message);
+      __privateGet(this, _visibleItemIds).set(gathered.message.id, gathered.message.date);
       this.refreshMetadata();
     }
     onItemRemoved(id) {
@@ -23165,6 +23182,7 @@ var WorkshopBackend = (() => {
   _onFolderAddition_bound = new WeakMap();
   _onItemAdded_bound = new WeakMap();
   _onItemRemoved_bound = new WeakMap();
+  _onItemChanged_bound = new WeakMap();
   _onAccountChange_bound = new WeakMap();
   _id = new WeakMap();
   __publicField(VirtualConversationTOC, "_globalId", 0);

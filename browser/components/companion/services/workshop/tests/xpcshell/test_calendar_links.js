@@ -8,7 +8,7 @@
 /**
  * Validate calendar synchronization for the current day.
  */
-async function check_attendees({ configurator, descriptions }) {
+async function check_links({ configurator, descriptions }) {
   const initialEventSketches = [];
   let i = 0;
   for (const description of descriptions) {
@@ -308,14 +308,14 @@ const MAPI_DESCRIPTION_TEST = [
 ];
 
 add_task(async function test_gapi_calendar_links_extraction() {
-  await check_attendees({
+  await check_links({
     configurator: GapiConfigurator,
     descriptions: GAPI_DESCRIPTION_TEST,
   });
 });
 
 add_task(async function test_mapi_calendar_links_extraction() {
-  await check_attendees({
+  await check_links({
     configurator: MapiConfigurator,
     descriptions: MAPI_DESCRIPTION_TEST,
   });
