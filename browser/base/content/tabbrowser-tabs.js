@@ -61,14 +61,6 @@
       );
       this._hiddenSoundPlayingTabs = new Set();
 
-      // Normal tab title is used also in the permanent private browsing mode.
-      let strId =
-        PrivateBrowsingUtils.isWindowPrivate(window) &&
-        !Services.prefs.getBoolPref("browser.privatebrowsing.autostart")
-          ? "emptyPrivateTabTitle"
-          : "emptyTabTitle";
-      this.emptyTabTitle = gTabBrowserBundle.GetStringFromName("tabs." + strId);
-
       var tab = this.allTabs[0];
       tab.label = this.emptyTabTitle;
 
@@ -100,6 +92,7 @@
 
       this.boundObserve = (...args) => this.observe(...args);
       Services.prefs.addObserver("privacy.userContext", this.boundObserve);
+      Services.obs.addObserver(this.boundObserve, "intl:app-locales-changed");
       this.observe(null, "nsPref:changed", "privacy.userContext.enabled");
 
       XPCOMUtils.defineLazyPreferenceGetter(
@@ -132,6 +125,21 @@
       if (gMultiProcessBrowser) {
         this.tabbox.tabpanels.setAttribute("async", "true");
       }
+    }
+
+    get emptyTabTitle() {
+      if (!this._emptyTabTitle) {
+        // Normal tab title is used also in the permanent private browsing mode.
+        let strId =
+          PrivateBrowsingUtils.isWindowPrivate(window) &&
+          !Services.prefs.getBoolPref("browser.privatebrowsing.autostart")
+            ? "emptyPrivateTabTitle"
+            : "emptyTabTitle";
+        this._emptyTabTitle = gTabBrowserBundle.GetStringFromName(
+          "tabs." + strId
+        );
+      }
+      return this._emptyTabTitle;
     }
 
     on_TabSelect(event) {
@@ -1171,6 +1179,12 @@
           }
 
           break;
+
+        case "intl:app-locales-changed":
+          document.l10n.ready.then(() => {
+            this._emptyTabTitle = null;
+          });
+          break;
       }
     }
 
@@ -2144,6 +2158,10 @@
     destroy() {
       if (this.boundObserve) {
         Services.prefs.removeObserver("privacy.userContext", this.boundObserve);
+        Services.obs.removeObserver(
+          this.boundObserve,
+          "intl:app-locales-changed"
+        );
       }
 
       CustomizableUI.removeListener(this);
