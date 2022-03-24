@@ -16,6 +16,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SessionManager: "resource:///modules/SessionManager.jsm",
   Services: "resource://gre/modules/Services.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
+  TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
 
 ChromeUtils.defineModuleGetter(
@@ -1269,7 +1270,7 @@ class WorkspaceHistory extends EventTarget {
 
   /**
    * Called by GlobalHistory to handle tab events such as "TabSelect",
-   * "TabOpen", "TabClose", "TabAttrModified", "TabBrowserDiscarded" and "SSTabRestoring"
+   * "TabOpen", "TabClose", "TabAttrModified", "TabBrowserDiscarding" and "SSTabRestoring"
    * for tabs belonging to this workspace.
    *
    * @param {String} type
@@ -1333,17 +1334,18 @@ class WorkspaceHistory extends EventTarget {
           this.#onBusyChanged(browser, tab.hasAttribute("busy"));
         }
         break;
-      case "TabBrowserDiscarded":
+      case "TabBrowserDiscarding":
         logConsole.debug("Saw a tab discarded");
-
-        // At this point the browser has already lost its history state so update from session store.
-        let state = JSON.parse(SessionStore.getTabState(tab));
-        for (let entry of state.entries) {
-          let internalView = this.historyViews.get(entry.ID);
-          if (internalView) {
-            internalView.discard(entry);
+        TabStateFlusher.flush(browser).then(() => {
+          // At this point the browser has already lost its history state so update from session store.
+          let state = JSON.parse(SessionStore.getTabState(tab));
+          for (let entry of state.entries) {
+            let internalView = this.historyViews.get(entry.ID);
+            if (internalView) {
+              internalView.discard(entry);
+            }
           }
-        }
+        });
         break;
       case "SSTabRestoring":
         logConsole.debug("Saw a tab restored");
@@ -2145,7 +2147,7 @@ class GlobalHistory extends EventTarget {
       this
     );
     this.#window.gBrowser.tabContainer.addEventListener(
-      "TabBrowserDiscarded",
+      "TabBrowserDiscarding",
       this
     );
     this.#window.gBrowser.tabContainer.addEventListener("SSTabRestoring", this);
@@ -2180,7 +2182,7 @@ class GlobalHistory extends EventTarget {
       case "TabOpen":
       case "TabClose":
       case "TabAttrModified":
-      case "TabBrowserDiscarded":
+      case "TabBrowserDiscarding":
         let tab = event.target;
         workspace = this.#workspaces.get(tab.userContextId);
         if (!workspace) {

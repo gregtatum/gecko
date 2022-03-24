@@ -26,6 +26,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   5
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "PAGETHUMBNAILS_CAPTURING_DISABLED",
+  "browser.pagethumbnails.capturing_disabled",
+  false
+);
+
 XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
   return console.createInstance({
     prefix: "HistoryCarousel",
@@ -179,6 +186,12 @@ class HistoryCarousel {
   async showHistoryCarousel(shouldShow) {
     if (this.#enabled == shouldShow) {
       return;
+    }
+
+    if (PAGETHUMBNAILS_CAPTURING_DISABLED) {
+      throw new Error(
+        "Cannot enter history carousel if thumbnail generation is disabled."
+      );
     }
 
     logConsole.debug("Show history carousel: ", shouldShow);

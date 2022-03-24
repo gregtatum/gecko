@@ -2454,6 +2454,9 @@
         return false;
       }
 
+      let evt = new CustomEvent("TabBrowserDiscarding", { bubbles: true });
+      aTab.dispatchEvent(evt);
+
       // Reset sharing state.
       if (aTab._sharingState) {
         this.resetBrowserSharing(browser);
@@ -2513,7 +2516,7 @@
 
       this._createLazyBrowser(aTab);
 
-      let evt = new CustomEvent("TabBrowserDiscarded", { bubbles: true });
+      evt = new CustomEvent("TabBrowserDiscarded", { bubbles: true });
       aTab.dispatchEvent(evt);
       return true;
     },
