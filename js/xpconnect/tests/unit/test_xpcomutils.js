@@ -149,6 +149,38 @@ add_test(function test_defineLazyPreferenceGetter()
     run_next_test();
 });
 
+add_test(async function test_stringBundleGetter()
+{
+    let obj = {};
+    XPCOMUtils.defineStringBundleGetter(
+      obj,
+      "bundle",
+      "chrome://branding/locale/brand.properties"
+    );
+
+    const firstBundle = obj.bundle;
+    ok(firstBundle, "Bundle exists");
+    equal(firstBundle, obj.bundle, "The bundle can be re-retrieved");
+
+    try {
+      obj.bundle.GetStringFromName("brandShortName");
+      // There are no bundles here.
+    } catch (error) {
+      console.log("!!!", error);
+    }
+
+    const originalLocales = Services.locale.requestedLocales;
+    const klingon = "tlh";
+    Services.locale.requestedLocales = [klingon, ...originalLocales];
+
+    await Promise.resolve();
+
+    ok(obj.bundle, "Bundle exists");
+    notEqual(firstBundle, obj.bundle, "The old bundle is gone.");
+
+    run_next_test();
+});
+
 
 add_test(function test_categoryRegistration()
 {
