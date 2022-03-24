@@ -125,9 +125,10 @@ class HideableElement extends HTMLElement {
 }
 
 class SessionList extends HideableElement {
-  constructor({ showTitle = false } = {}) {
+  constructor({ showTitle = false, initialSessionData = null } = {}) {
     super();
     this.className = "last-session-list";
+    this.initialSessionData = initialSessionData;
 
     let template = document.getElementById("template-session-list");
     let fragment = template.content.cloneNode(true);
@@ -145,6 +146,9 @@ class SessionList extends HideableElement {
   }
 
   connectedCallback() {
+    if (this.initialSessionData != null) {
+      this.sessionUpdated(this.initialSessionData);
+    }
     window.addEventListener("Companion:SessionUpdated", this);
     window.addEventListener("Companion:ResetFlowEntered", this);
     window.addEventListener("Companion:ResetFlowExited", this);

@@ -49,9 +49,13 @@ class CompanionChild extends JSWindowActorChild {
         let self = this;
         let CompanionUtils = {
           _tabs: new Map(),
+          _initialSessionData: [],
 
           tabs() {
             return this._tabs.values();
+          },
+          initialSessionData() {
+            return this._initialSessionData;
           },
           getFavicon(url) {
             return self._cachedFavicons.get(url);
@@ -117,6 +121,7 @@ class CompanionChild extends JSWindowActorChild {
           newFavicons,
           connectedServices,
           globalHistory,
+          sessions,
         } = message.data;
 
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
@@ -128,7 +133,7 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.globalHistory = globalHistory;
 
         this.updateFaviconCache(newFavicons);
-
+        waivedContent.CompanionUtils._initialSessionData = sessions;
         break;
       }
       case "Companion:RegisterCalendarEvents":

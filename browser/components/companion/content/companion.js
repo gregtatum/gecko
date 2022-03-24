@@ -34,10 +34,16 @@ window.gInitialized = new Promise(resolve => {
 
 let loadObserved = false;
 let companionSetupObserved = false;
+
+/**
+ * Initialize the UI once the load event and the Companion:Setup message have been observed
+ *
+ */
 function maybeInitializeUI() {
   if (!loadObserved || !companionSetupObserved) {
     return;
   }
+
   let initPromises = [window.gCalendarEventListener.initialized];
 
   let eventsPlaceholder = document.getElementById("events-placeholder");
@@ -64,11 +70,15 @@ function maybeInitializeUI() {
   let browseContent = document.querySelector("#scroll-browse .content");
   let browseList = new BrowseList();
   browseContent.appendChild(browseList);
-  browseContent.appendChild(new LastSessionList({ showTitle: true }));
+
+  let initialSessionData = window.CompanionUtils.initialSessionData();
+  browseContent.appendChild(
+    new LastSessionList({ showTitle: true, initialSessionData })
+  );
   browseContent.appendChild(new RecentlyClosedSnapshotList("Recently Closed"));
 
   let sessionContent = document.querySelector("#sessions .content");
-  sessionContent.appendChild(new FullSessionList());
+  sessionContent.appendChild(new FullSessionList({ initialSessionData }));
 
   let snapshotGroupsContent = document.querySelector(
     "#snapshot-groups .content"

@@ -135,7 +135,7 @@ class CompanionParent extends JSWindowActorParent {
     SessionManager.on("session-set-aside", this._handleSessionUpdate);
     SessionManager.on("sessions-updated", this._handleSessionUpdate);
     // Initialise the display of the last session UI.
-    this.getSessionData();
+    this.retrieveAndSendSessionData();
     this.sessionSetAside();
   }
 
@@ -373,14 +373,19 @@ class CompanionParent extends JSWindowActorParent {
     });
   }
 
+  /**
+   * Retrieves sessions from the SessionManager
+   *
+   * @returns {Session[]}
+   */
   async getSessionData() {
     if (this._destroyed) {
-      return;
+      return null;
     }
     let browser = this.browsingContext.top.embedderElement;
     if (!browser) {
       // The browser element has gone away, so skip the rest.
-      return;
+      return null;
     }
     let results = await SessionManager.query({ includePages: true });
     results = results.filter(session => session.pages.length);
@@ -399,8 +404,20 @@ class CompanionParent extends JSWindowActorParent {
       // If the child has already been closed, then bail out early to avoid
       // errors thrown in tests.
       if (this._destroyed) {
-        return;
+        return null;
       }
+      return results;
+    }
+    return null;
+  }
+
+  /**
+   * Retrieves and sends session data from the SessionManager
+   *
+   */
+  async retrieveAndSendSessionData() {
+    let results = await this.getSessionData();
+    if (results != null) {
       this.sendAsyncMessage("Companion:SessionUpdated", results);
     }
   }
@@ -641,11 +658,11 @@ class CompanionParent extends JSWindowActorParent {
         }
       // Intentional fallthrough: eslint-disable-next-line no-fallthrough
       case "session-replaced":
-        this.getSessionData();
+        this.retrieveAndSendSessionData();
         this.viewTab("now");
         break;
       case "sessions-updated": {
-        this.getSessionData();
+        this.retrieveAndSendSessionData();
         break;
       }
     }
@@ -896,11 +913,13 @@ class CompanionParent extends JSWindowActorParent {
     );
     let newFavicons = this.consumeCachedFaviconsToSend();
     let globalHistory = this.maybeGetGlobalHistory();
+    let sessions = await this.getSessionData();
     this.sendAsyncMessage("Companion:Setup", {
       tabs,
       connectedServices: OnlineServices.connectedServiceTypes,
       newFavicons,
       globalHistory,
+      sessions,
     });
 
     let {
