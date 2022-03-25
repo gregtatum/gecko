@@ -13,7 +13,7 @@
   margin: 0;
 }
 
-@supports -moz-bool-pref("browser.pinebuild.styleoverrides") {
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
   #contentAreaDownloadsView {
     padding: 0;
   }
