@@ -58,11 +58,7 @@ add_task(async function test_cleanup_session_data() {
   });
   // Ensure file was deleted.
   let exists = await IOUtils.exists(
-    PathUtils.join(
-      await PathUtils.getProfileDir(),
-      "sessions",
-      `${sessionGuid}.jsonlz4`
-    )
+    PathUtils.join(PathUtils.profileDir, "sessions", `${sessionGuid}.jsonlz4`)
   );
   Assert.ok(!exists, "Should have no session data file");
 });

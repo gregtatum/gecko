@@ -838,7 +838,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
   async #getSessionFolderPath() {
     if (!this.#profileDir) {
-      this.#profileDir = await PathUtils.getProfileDir();
+      this.#profileDir = PathUtils.profileDir;
     }
     return PathUtils.join(this.#profileDir, "sessions");
   }

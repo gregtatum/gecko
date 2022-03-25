@@ -46,11 +46,7 @@ add_task(async function test_internal_pages_not_saved() {
 
   // Check the session store file as well, the database is tested above.
   let data = await IOUtils.readJSON(
-    PathUtils.join(
-      await PathUtils.getProfileDir(),
-      "sessions",
-      `${sessionGuid}.jsonlz4`
-    ),
+    PathUtils.join(PathUtils.profileDir, "sessions", `${sessionGuid}.jsonlz4`),
     { decompress: true }
   );
 

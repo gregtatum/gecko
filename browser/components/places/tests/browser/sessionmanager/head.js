@@ -162,11 +162,7 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
  */
 async function assertSavedSession(sessionGuid, expectedPages, dateCheckpoint) {
   let exists = await IOUtils.exists(
-    PathUtils.join(
-      await PathUtils.getProfileDir(),
-      "sessions",
-      `${sessionGuid}.jsonlz4`
-    )
+    PathUtils.join(PathUtils.profileDir, "sessions", `${sessionGuid}.jsonlz4`)
   );
   Assert.ok(exists, "Should have written a session data file");
 

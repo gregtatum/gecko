@@ -56,7 +56,7 @@ add_task(async function test_replaceSession_restore_from_places_db() {
   // Now remove the session store file, then attempt recovery.
   await IOUtils.remove(
     PathUtils.join(
-      await PathUtils.getProfileDir(),
+      PathUtils.profileDir,
       "sessions",
       `${originalSessionGuid}.jsonlz4`
     )
