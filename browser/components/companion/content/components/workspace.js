@@ -57,14 +57,15 @@ export default class Workspace extends window.MozHTMLElement {
   }
 
   setActiveView(view) {
-    this.#updateSearchWorkspace();
     this.#river.activeView = null;
     this.#pinnedViews.activeView = null;
 
     if (this.isRiverView(view)) {
       this.#river.activeView = view;
+      this.#updateSearchWorkspace();
     } else if (this.isPinnedView(view)) {
       this.#pinnedViews.activeView = view;
+      this.#updateSearchWorkspace();
     }
   }
 
