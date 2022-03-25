@@ -9,6 +9,7 @@
 #include "nsIStringBundle.h"
 #include "nsStringBundleService.h"
 #include "nsArrayEnumerator.h"
+#include "nsXULAppAPI.h"
 #include "nscore.h"
 #include "nsMemory.h"
 #include "nsNetUtil.h"
@@ -47,6 +48,10 @@ using mozilla::dom::StringBundleDescriptor;
 using mozilla::dom::ipc::SharedStringMap;
 using mozilla::dom::ipc::SharedStringMapBuilder;
 using mozilla::ipc::FileDescriptor;
+
+static const char* gregProcess() {
+  return XRE_GeckoProcessTypeToString(XRE_GetProcessType());
+}
 
 /**
  * A set of string bundle URLs which are loaded by content processes, and
@@ -719,11 +724,13 @@ nsStringBundleService::~nsStringBundleService() {
 }
 
 nsresult nsStringBundleService::Init() {
+  printf("!!! %s nsStringBundleService::Init\n", gregProcess());
   nsCOMPtr<nsIObserverService> os = mozilla::services::GetObserverService();
   if (os) {
     os->AddObserver(this, "memory-pressure", true);
     os->AddObserver(this, "profile-do-change", true);
     os->AddObserver(this, "chrome-flush-caches", true);
+    printf("!!! %s nsStringBundleService::Init add observer\n", gregProcess());
     os->AddObserver(this, "intl:app-locales-changed", true);
   }
 
@@ -748,8 +755,17 @@ nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
   if (strcmp("profile-do-change", aTopic) == 0 ||
       strcmp("chrome-flush-caches", aTopic) == 0 ||
       strcmp("intl:app-locales-changed", aTopic) == 0) {
+    printf(
+        "!!! %s nsStringBundleService::Observe - Flush cache (/* ignoreShared "
+        "= "
+        "*/ false) \"%s\"\n",
+        gregProcess(), aTopic);
     flushBundleCache(/* ignoreShared = */ false);
   } else if (strcmp("memory-pressure", aTopic) == 0) {
+    printf(
+        "!!! %s nsStringBundleService::Observe - Flush cache (/* ignoreShared "
+        "= */ true) \"%s\"\n",
+        gregProcess(), aTopic);
     flushBundleCache(/* ignoreShared = */ true);
   }
 
@@ -757,7 +773,15 @@ nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
 }
 
 void nsStringBundleService::flushBundleCache(bool ignoreShared) {
+  printf("!!! %s nsStringBundleService::flushBundleCache %s\n", gregProcess(),
+         ignoreShared ? "true" : "false");
+
   LinkedList<bundleCacheEntry_t> newList;
+  printf(
+      "!!! %s nsStringBundleService::flushBundleCache before - mBundleMap %u - "
+      "mBundleCache %zu - mSharedBundles %zu\n",
+      gregProcess(), mBundleMap.Count(), mBundleCache.length(),
+      mSharedBundles.length());
 
   while (!mBundleCache.isEmpty()) {
     UniquePtr<bundleCacheEntry_t> entry(mBundleCache.popFirst());
@@ -765,10 +789,23 @@ void nsStringBundleService::flushBundleCache(bool ignoreShared) {
 
     if (ignoreShared && bundle->IsShared()) {
       newList.insertBack(entry.release());
+      printf(
+          "!!! %s nsStringBundleService::flushBundleCache remove insertBack\n",
+          gregProcess());
     } else {
       mBundleMap.Remove(entry->mHashKey);
+      printf(
+          "!!! %s nsStringBundleService::flushBundleCache remove  "
+          "mBundleMap.Count() %u\n",
+          gregProcess(), mBundleMap.Count());
     }
   }
+
+  printf(
+      "!!! %s nsStringBundleService::flushBundleCache after - mBundleMap %u - "
+      "mBundleCache %zu - mSharedBundles %zu\n",
+      gregProcess(), mBundleMap.Count(), mBundleCache.length(),
+      mSharedBundles.length());
 
   mBundleCache = std::move(newList);
 }
@@ -830,7 +867,17 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
 
   RefPtr<SharedStringBundle> shared;
 
+  printf("!!! %s nsStringBundleService::getStringBundle %s\n", gregProcess(),
+         aURLSpec);
+  printf(
+      "!!! %s nsStringBundleService::getStringBundle - mBundleMap %u - "
+      "mBundleCache %zu - mSharedBundles %zu\n",
+      gregProcess(), mBundleMap.Count(), mBundleCache.length(),
+      mSharedBundles.length());
+
   if (cacheEntry) {
+    printf("!!! %s nsStringBundleService::getStringBundle cached\n",
+           gregProcess());
     // Remove the entry from the list so it can be re-inserted at the back.
     cacheEntry->remove();
 
@@ -839,6 +886,10 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
     nsCOMPtr<nsIStringBundle> bundle;
     bool isContent = IsContentBundle(key);
     if (!isContent || !XRE_IsParentProcess()) {
+      printf(
+          "!!! %s nsStringBundleService::getStringBundle no cache "
+          "MakeBundle<nsStringBundle>()\n",
+          gregProcess());
       bundle = MakeBundle<nsStringBundle>(aURLSpec);
     }
 
@@ -857,9 +908,17 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
     // becomes available.
     if (isContent) {
       if (XRE_IsParentProcess()) {
+        printf(
+            "!!! %s nsStringBundleService::getStringBundle no cache "
+            "MakeBundle<SharedStringBundle>()\n",
+            gregProcess());
         shared = MakeBundle<SharedStringBundle>(aURLSpec);
         bundle = shared;
       } else {
+        printf(
+            "!!! %s nsStringBundleService::getStringBundle no cache new "
+            "StringBundleProxy(bundle.forget())\n",
+            gregProcess());
         bundle = new StringBundleProxy(bundle.forget());
       }
     }
@@ -913,6 +972,9 @@ bundleCacheEntry_t* nsStringBundleService::insertIntoCache(
 NS_IMETHODIMP
 nsStringBundleService::CreateBundle(const char* aURLSpec,
                                     nsIStringBundle** aResult) {
+  printf("!!! %s nsStringBundleService::CreateBundle %s\n", gregProcess(),
+         aURLSpec);
+
   getStringBundle(aURLSpec, aResult);
   return NS_OK;
 }

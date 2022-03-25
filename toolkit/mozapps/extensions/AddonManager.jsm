@@ -1758,6 +1758,7 @@ var AddonManagerInternal = {
    * @throws if the aFile or aCallback arguments are not specified
    */
   getInstallForFile(aFile, aMimetype, aTelemetryInfo, aUseSystemLocation) {
+    console.log(`!!! AddonManager.getInstallForFile 1`);
     if (!gStarted) {
       throw Components.Exception(
         "AddonManager is not initialized",
@@ -4017,6 +4018,7 @@ var AddonManager = {
     aTelemetryInfo,
     aUseSystemLocation = false
   ) {
+    console.log(`!!! AddonManager.getInstallForFile 2`);
     return AddonManagerInternal.getInstallForFile(
       aFile,
       aMimetype,

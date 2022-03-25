@@ -1445,6 +1445,7 @@ var AddonTestUtils = {
       throw new Error(`No AddonInstall created for ${file.path}`);
     }
 
+    console.log(`!!! AddonTestUtils.promiseInstallFile - install.state`, install.state);
     if (install.state != AddonManager.STATE_DOWNLOADED) {
       throw new Error(
         `Expected file to be downloaded for install of ${file.path}`

@@ -2,6 +2,10 @@ const { AddonTestUtils } = ChromeUtils.import(
   "resource://testing-common/AddonTestUtils.jsm"
 );
 
+XPCOMUtils.defineLazyModuleGetters(this, {
+  setTimeout: "resource://gre/modules/Timer.jsm",
+});
+
 AddonTestUtils.initMochitest(this);
 
 function langpackId(locale) {
@@ -85,43 +89,80 @@ function createLangpack(options) {
   for (const { path, contents } of files || []) {
     xpiFiles[path] = contents;
   }
+  console.log(xpiFiles);
   return AddonTestUtils.createTempXPIFile(xpiFiles);
 }
 
+requestLongerTimeout(1000);
 add_task(async function toolbarButtons() {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["extensions.langpacks.signatures.required", false],
+    ],
+  });
+
+  info(`@@@ Creating first bundle "chrome://formautofill/locale/formautofill.properties"`);
   const englishBundle = Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
+    "chrome://formautofill/locale/formautofill.properties"
   );
 
-  Assert.equal(englishBundle.GetStringFromName("brandShortName"), "Nightly");
+  // If this assertion fails, then a new string or new bundle needs to be chosen to
+  // test this feature. This string was arbitrarily chosen, and could be updated
+  // to use a .ftl file.
+  Assert.equal(englishBundle.GetStringFromName("autofillHeader"), "Forms and Autofill");
 
-  createLangpack({
-    locale: "tlh", // Klingon
+  info(`@@@ Creating the Klingon langpack.`);
+  const langpack = createLangpack({
+    locale: "es-ES",
     files: [
       {
-        path: `browser/tlh/branding/brand.properties`,
-        contents: `
-          brandShortName=Qapla!
-        `,
+        path: `browser/chrome/features/formautofill@mozilla.org/es-ES/locale/es-ES/formautofill.properties`,
+        contents: `autofillHeader=Qapla`,
       },
     ],
   });
 
-  Services.locale.requestedLocales = ["tlh"];
+  console.log(`@@@ langpack`, langpack.path);
+
+  info(`@@@ Installing file`);
+  await AddonTestUtils.promiseInstallFile(langpack);
+
+  Services.obs.addObserver(() => {
+    console.log(`@@@ "intl:app-locales-changed"`);
+  }, "intl:app-locales-changed");
+
+  info(`@@@ Changing the locale.`);
+  Services.locale.requestedLocales = ["es-ES"];
+  Services.obs.notifyObservers(null, "intl:app-locales-changed");
+  info(`@@@ flushing bundles`);
+  Services.strings.flushBundles()
+  info(`@@@ Waiting on document.l10n to be ready.`);
   await document.l10n.ready;
 
+  info(`@@@ Creating the klingon bundle "chrome://formautofill/locale/formautofill.properties"`);
   const klingonBundle = Services.strings.createBundle(
-    "chrome://branding/locale/brand.properties"
+    "chrome://formautofill/locale/formautofill.properties"
   );
 
+  {
+    const seconds = 1000;
+    const message = "";
+    for (let i = seconds; i > 0; i--) {
+      dump(`!!! Countdown - ${message} ${i}
+  `);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    dump(`!!! Countdown ${message} done.`);
+  }
+
   Assert.equal(
-    englishBundle.GetStringFromName("brandShortName"),
-    "Nightly",
+    englishBundle.GetStringFromName("autofillHeader"),
+    "Forms and Autofill",
     "Bundles do not auto refresh."
   );
   Assert.equal(
-    klingonBundle.GetStringFromName("brandShortName"),
-    "Qapla!",
+    klingonBundle.GetStringFromName("autofillHeader"),
+    "Qapla",
     "The klingon bundle gets the brand short name"
   );
 });
