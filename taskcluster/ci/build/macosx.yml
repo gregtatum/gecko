@@ -433,6 +433,7 @@ macosx64-devedition/opt:
 
 macosx64-x64-pinebuild/opt:
     description: "MacOS X Pinebuild x64 (shippable)"
+    worker-type: b-linux
     use-pgo: macosx64-shippable/opt
     attributes:
         enable-full-crashsymbols: true
@@ -469,6 +470,7 @@ macosx64-x64-pinebuild/opt:
 
 macosx64-aarch64-pinebuild/opt:
     description: "MacOS X Pinebuild Aarch64 (shippable)"
+    worker-type: b-linux
     use-pgo: macosx64-shippable/opt
     attributes:
         enable-full-crashsymbols: true
@@ -507,6 +509,7 @@ macosx64-aarch64-pinebuild/opt:
 
 macosx64-pinebuild/opt:
     description: "MacOS X Pinebuild Universal"
+    worker-type: b-linux
     attributes:
         shippable: true
         enable-build-signing: true
