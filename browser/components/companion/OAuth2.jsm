@@ -78,14 +78,6 @@ const OAuthConnect = {
 
       win.gBrowser.selectedTab = tab;
 
-      // If browser.pinebuild.targetTopLevelLinkClicksToBlank happens to be true, then
-      // the OAuth browser will be configured to target all link clicks to _blank,
-      // which we actually don't want for the OAuth browser, because we want to be
-      // able to easily close the underlying browser in one shot, and not a whole
-      // series of browsers and tabs. So we turn that configuration off manually
-      // here.
-      tab.linkedBrowser.browsingContext.targetTopLevelLinkClicksToBlank = false;
-
       // If the TopLevelNavigationDelegateChild is being used, we need it
       // to never convert a top-level navigation into a new tab. We do this
       // with sharedData instead of sending a message to the

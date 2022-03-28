@@ -2674,12 +2674,6 @@ void CanonicalBrowsingContext::SetTouchEventsOverride(
   SetTouchEventsOverrideInternal(aOverride, aRv);
 }
 
-void CanonicalBrowsingContext::SetTargetTopLevelLinkClicksToBlank(
-    bool aTargetTopLevelLinkClicksToBlank, ErrorResult& aRv) {
-  SetTargetTopLevelLinkClicksToBlankInternal(aTargetTopLevelLinkClicksToBlank,
-                                             aRv);
-}
-
 void CanonicalBrowsingContext::AddPageAwakeRequest() {
   MOZ_ASSERT(IsTop());
   auto count = GetPageAwakeRequestCount();

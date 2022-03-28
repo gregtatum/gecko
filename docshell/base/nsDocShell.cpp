@@ -12850,11 +12850,6 @@ bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
     return false;
   }
 
-  if (mBrowsingContext->TargetTopLevelLinkClicksToBlank() &&
-      mBrowsingContext->IsTop() && UserActivation::IsHandlingUserInput()) {
-    return true;
-  }
-
   // Only check targets that are in extension panels or app tabs.
   // (isAppTab will be false for app tab subframes).
   nsString mmGroup = mBrowsingContext->Top()->GetMessageManagerGroup();
