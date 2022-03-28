@@ -23,6 +23,9 @@ const LoginInfo = Components.Constructor(
   Ci.nsILoginInfo,
   "init"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 /**
  * We don't test the clients or tabs engines because neither has conflict
@@ -194,6 +197,11 @@ add_task(async function test_passwords_change_during_sync() {
 });
 
 add_task(async function test_prefs_change_during_sync() {
+  if (AppConstants.PINEBUILD) {
+    // No prefs sync engine for PINEBUILD
+    ok(true, "Preferences sync is disabled for pinebuild");
+    return;
+  }
   _("Ensure that we don't bump the score when applying prefs.");
 
   const TEST_PREF = "test.duringSync";
