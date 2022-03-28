@@ -504,7 +504,7 @@ add_task(async function testSharedCalendarEventsDeDuplicated() {
       },
     ];
 
-    await helper.setCalendarEvents(events);
+    await helper.setCalendarEvents(events, { expectedEventCount: 1 });
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
