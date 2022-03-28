@@ -29,12 +29,7 @@ export class RelativeTime extends MozLitElement {
   static get styles() {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
-
-      .event-relative-time {
-        font-size: 0.8125em;
-        font-weight: bold;
-        color: var(--in-content-deemphasized-text);
-      }
+      @import url("chrome://browser/content/companion/fonts.css");
 
       .event-is-happening-now {
         color: var(--in-content-accent-color);
@@ -134,7 +129,7 @@ export class RelativeTime extends MozLitElement {
     return html`
       <span
         class=${classMap({
-          "event-relative-time": true,
+          "event-relative-time text-body-xs--med": true,
           "event-is-happening-now": this.isHappeningNow,
         })}
         ?hidden=${this.isHidden}

@@ -10246,7 +10246,7 @@ var WorkshopBackend = (() => {
         {
           name: "Zoom",
           domain: "zoom.us",
-          icon: "chrome://browser/content/companion/zoom.png"
+          icon: "chrome://browser/content/companion/zoom.svg"
         },
         {
           name: "Teams",

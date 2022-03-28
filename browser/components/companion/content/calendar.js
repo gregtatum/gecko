@@ -110,6 +110,7 @@ export class CalendarEventList extends MozLitElement {
   static get styles() {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
+      @import url("chrome://browser/content/companion/fonts.css");
 
       .card {
         box-shadow: 0 2px 6px 0 rgba(58, 57, 68, 0.2);
@@ -149,7 +150,7 @@ export class CalendarEventList extends MozLitElement {
         align-items: center;
         justify-content: center;
         padding: 0 8px;
-        color: var(--in-content-deemphasized-text);
+        color: var(--pine-text-color-primary);
       }
 
       .calendar-break-time-divider {
@@ -162,6 +163,7 @@ export class CalendarEventList extends MozLitElement {
         background-color: var(--in-content-page-background);
         padding: 0 8px;
         display: flex;
+        align-items: center;
       }
 
       .calendar-break-time-icon {
@@ -173,11 +175,6 @@ export class CalendarEventList extends MozLitElement {
         background-position: center;
         fill: currentColor;
         -moz-context-properties: fill;
-      }
-
-      .calendar-break-time-text {
-        font-size: 0.67em;
-        font-weight: 400;
       }
     `;
   }
@@ -382,7 +379,7 @@ export class CalendarEventList extends MozLitElement {
                 <div class="calendar-break-time-label">
                   <span class="calendar-break-time-icon"></span>
                   <span
-                    class="calendar-break-time-text"
+                    class="calendar-break-time-text text-body-xs"
                     data-l10n-id="companion-event-break"
                     data-l10n-args=${JSON.stringify({
                       duration: event.length,
@@ -441,6 +438,7 @@ class CalendarEvent extends MozLitElement {
   static get styles() {
     return css`
       @import url("chrome://global/skin/in-content/common.css");
+      @import url("chrome://browser/content/companion/fonts.css");
 
       .event {
         padding: 16px 8px;
@@ -450,7 +448,6 @@ class CalendarEvent extends MozLitElement {
         display: flex;
         align-items: center;
         gap: 0.5em;
-        font-weight: 600;
         margin-inline-end: 8px;
         white-space: nowrap;
       }
@@ -520,7 +517,7 @@ class CalendarEvent extends MozLitElement {
       }
 
       .summary {
-        font-weight: bold;
+        padding-bottom: 1px;
       }
 
       .line-clamp {
@@ -530,27 +527,38 @@ class CalendarEvent extends MozLitElement {
         overflow: hidden;
       }
 
-      .event-links > .event-link {
+      .event-links > .event-link,
+      .event-links > .event-link:visited {
         display: flex;
+        align-items: center;
+        justify-content: center;
         white-space: normal;
         overflow: hidden;
-        padding: 4px;
-        border: 1px solid var(--in-content-border-color);
+        padding: 4px 8px;
         margin-inline: 0;
+        margin: 4px 0;
         max-width: -moz-fit-content;
         min-width: 50%;
+        text-decoration: none;
+        cursor: default;
+        min-height: auto;
+        background: var(--pine-background-cool-2);
+        border-radius: 16px;
+      }
+
+      .event-links > .event-link:hover {
+        background: var(--pine-background-cool-2-hover);
       }
 
       .event-link > img {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         -moz-context-properties: fill;
         fill: currentColor;
       }
 
       .event-link > span {
         margin-inline-start: 4px;
-        align-self: center;
       }
 
       .event-links {
@@ -565,11 +573,14 @@ class CalendarEvent extends MozLitElement {
 
       .event-links > button.event-link {
         margin: 0;
-        min-width: 0;
+        min-width: 24px;
         align-self: center;
         justify-self: start;
         min-height: 0;
         max-width: initial;
+        padding: 4px;
+        border-radius: 50%;
+        border: none;
       }
 
       .event-top {
@@ -582,8 +593,8 @@ class CalendarEvent extends MozLitElement {
       .event-details {
         display: flex;
         flex-direction: column;
-        gap: 20px;
-        margin-block-start: 20px;
+        gap: 16px;
+        margin-block-start: 16px;
       }
 
       .event-details-none {
@@ -591,21 +602,8 @@ class CalendarEvent extends MozLitElement {
       }
 
       .event-detail-header {
-        font-weight: bold;
-        line-height: 14px;
         margin-block-end: 8px;
         margin-block-start: 0;
-      }
-
-      .conference-info,
-      .date,
-      .event-detail-header,
-      .event-links > .event-link,
-      .event-host-type,
-      .event-host-email,
-      .event-host-name {
-        color: var(--in-content-deemphasized-text);
-        font-size: 0.8125em;
       }
 
       /* Event host templates styles */
@@ -635,9 +633,11 @@ class CalendarEvent extends MozLitElement {
       }
 
       .event-host-email,
-      .event-host-name-email-container {
+      .event-host-name-email-container,
+      .event-links > .event-link span {
         text-overflow: ellipsis;
         overflow: hidden;
+        white-space: nowrap;
       }
 
       .event-host-image-circle {
@@ -647,11 +647,9 @@ class CalendarEvent extends MozLitElement {
         grid-row-start: 2;
         grid-column: 1;
         border-radius: 50%;
-        font-size: 1em;
-        font-weight: bold;
         width: 32px;
         height: 32px;
-        background-color: var(--in-content-border-color);
+        background-color: var(--pine-background-cool-3);
       }
     `;
   }
@@ -812,14 +810,9 @@ class CalendarEvent extends MozLitElement {
     }
 
     return html`
-      <a
-        class="event-link button-link"
-        href=${url}
-        title=${url}
-        @click=${openLink}
-      >
+      <a class="event-link" href=${url} title=${url} @click=${openLink}>
         <img src=${this.getDocumentIcon(link)} />
-        <span class="line-clamp">
+        <span class="text-body-xs">
           ${until(title, intermediate, text)}
         </span>
       </a>
@@ -854,7 +847,7 @@ class CalendarEvent extends MozLitElement {
                   data-l10n-args=${JSON.stringify({
                     linkCount: this.event.links.length - 2,
                   })}
-                  class="event-link"
+                  class="event-link text-body-xs"
                   @click=${this.expandLinksSection}
                 ></button>
               `
@@ -885,7 +878,7 @@ class CalendarEvent extends MozLitElement {
       return "";
     }
     return html`
-      <span class="conference-info">
+      <span class="conference-info text-body-xs">
         <img src=${conference.icon} alt="" />
         ${conference.name}
       </span>
@@ -901,7 +894,7 @@ class CalendarEvent extends MozLitElement {
     )}`;
 
     return html`
-      <span class="date line-clamp">${dateString}</span>
+      <span class="date text-body-xs line-clamp">${dateString}</span>
     `;
   }
 
@@ -931,7 +924,10 @@ class CalendarEvent extends MozLitElement {
   eventDetailHeaderTemplate(id) {
     return !this.detailsCollapsed
       ? html`
-          <h3 class="event-detail-header" data-l10n-id=${id}></h3>
+          <h3
+            class="event-detail-header text-body-xs--med"
+            data-l10n-id=${id}
+          ></h3>
         `
       : "";
   }
@@ -978,7 +974,7 @@ class CalendarEvent extends MozLitElement {
 
     let emailTemplate = email
       ? html`
-          <span class="event-host-email line-clamp">${email}</span>
+          <span class="event-host-email text-body-xs line-clamp">${email}</span>
         `
       : null;
 
@@ -988,7 +984,7 @@ class CalendarEvent extends MozLitElement {
     let nameTemplate =
       name && name !== email
         ? html`
-            <span class="event-host-name line-clamp">${name}</span>
+            <span class="event-host-name text-body-xs line-clamp">${name}</span>
           `
         : null;
 
@@ -998,7 +994,7 @@ class CalendarEvent extends MozLitElement {
       !nameTemplate || !emailTemplate
         ? html`
             <span
-              class="event-host-type line-clamp"
+              class="event-host-type text-body-xs line-clamp"
               data-l10n-id=${hostType === "organizer"
                 ? "companion-event-organizer"
                 : "companion-event-creator"}
@@ -1012,7 +1008,7 @@ class CalendarEvent extends MozLitElement {
     return html`
       <div class="event-host">
         ${this.eventDetailHeaderTemplate("companion-event-host")}
-        <div class="event-host-image-circle">
+        <div class="event-host-image-circle text-body-s--med">
           ${circleLetter}
         </div>
         <div class="event-host-name-email-container">
@@ -1129,7 +1125,9 @@ class CalendarEvent extends MozLitElement {
         </div>
         <div class="event-info">
           <div class="event-content">
-            <div class="summary line-clamp" title=${summary}>${summary}</div>
+            <div class="summary line-clamp text-body-m" title=${summary}>
+              ${summary}
+            </div>
             <div class="event-sub-details">
               ${this.conferenceInfoTemplate()} ${this.eventTimeTemplate()}
             </div>
