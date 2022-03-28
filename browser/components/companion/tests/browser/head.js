@@ -542,43 +542,55 @@ class CompanionHelper {
     );
   }
   /**
+   * @typedef {Object} SetCalendarEventOptions
+   *   Various options that can be passed to modify setCalendarEvents.
+   * @property {number} [expectedEventCount]
+   *   Number of the supplied events expected to be returned from the backend.
+   *   Specified in cases where events should get filtered.
+   * @property {string} [listType]
+   *   Used to specify whether we are targeting the calendar list in the
+   *   "now" or "browse" section to ensure we listen for "calendar-events-updated"
+   *   on the correct element.
+   */
+
+  /**
    * Sets up events needed for a given test and waits for any resulting UI
    * updates to finish before proceeding.
    *
    * @param {Object[]} eventsData Array of events for the current test run.
-   * @param {Number=} expectedEventCount
-   *   Number of the supplied events expected to be returned from the backend.
-   *   Specified in cases where events should get filtered.
+   * @param {SetCalendarEventOptions} options
    * @return {Promise}
    * @resolves {undefined}
    *   Resolves once the events have been received and the DOM has been updated.
    */
-  async setCalendarEvents(eventsData, expectedEventCount) {
+  async setCalendarEvents(eventsData, { expectedEventCount, listType } = {}) {
     if (this.workshopEnabled) {
       await this.workshopHelper.addCalendarEvents(eventsData);
       await this.runCompanionTask(
-        async (events, expectedCount) => {
+        async (events, options) => {
           content.document.dispatchEvent(
             new content.CustomEvent("refresh-events", {})
           );
           // Checking the event list based on the assumption that we're testing
           // the calendar UI whenever we set events, which seems reasonable for now.
-          let calendarEventList = content.document.querySelector(
-            "calendar-event-list"
-          );
+          const selector = options.listType
+            ? "#browse-event-list"
+            : "calendar-event-list";
+          let calendarEventList = content.document.querySelector(selector);
+
           await ContentTaskUtils.waitForEvent(
             calendarEventList,
             "calendar-events-updated",
             false,
             e => {
-              if (expectedCount != undefined) {
-                return e.detail.eventCount === expectedCount;
+              if (options.expectedEventCount != undefined) {
+                return e.detail.eventCount === options.expectedEventCount;
               }
               return e.detail.eventCount === events.length;
             }
           );
         },
-        [eventsData, expectedEventCount]
+        [eventsData, { expectedEventCount, listType }]
       );
     } else {
       let oneHourFromNow = new Date();

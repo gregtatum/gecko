@@ -46,7 +46,7 @@ add_task(async function test12HourEvent() {
       },
     ];
 
-    await helper.setCalendarEvents(events, 0);
+    await helper.setCalendarEvents(events, { expectedEventCount: 0 });
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
@@ -74,7 +74,7 @@ add_task(async function testMultiDayEvent() {
       },
     ];
 
-    await helper.setCalendarEvents(events, 0);
+    await helper.setCalendarEvents(events, { expectedEventCount: 0 });
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
