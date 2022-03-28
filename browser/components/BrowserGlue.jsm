@@ -1328,6 +1328,10 @@ BrowserGlue.prototype = {
       this._matchCBCategory
     );
     Services.prefs.removeObserver(
+      "network.http.referer.disallowCrossSiteRelaxingDefault.top_navigation",
+      this._matchCBCategory
+    );
+    Services.prefs.removeObserver(
       "privacy.partition.network_state.ocsp_cache",
       this._matchCBCategory
     );
@@ -1854,6 +1858,10 @@ BrowserGlue.prototype = {
     );
     Services.prefs.addObserver(
       "network.http.referer.disallowCrossSiteRelaxingDefault",
+      this._matchCBCategory
+    );
+    Services.prefs.addObserver(
+      "network.http.referer.disallowCrossSiteRelaxingDefault.top_navigation",
       this._matchCBCategory
     );
     Services.prefs.addObserver(
@@ -4940,6 +4948,7 @@ var ContentBlockingCategoriesPrefs = {
         "privacy.trackingprotection.cryptomining.enabled": null,
         "privacy.annotate_channels.strict_list.enabled": null,
         "network.http.referer.disallowCrossSiteRelaxingDefault": null,
+        "network.http.referer.disallowCrossSiteRelaxingDefault.top_navigation": null,
         "privacy.partition.network_state.ocsp_cache": null,
       },
       standard: {
@@ -4952,6 +4961,7 @@ var ContentBlockingCategoriesPrefs = {
         "privacy.trackingprotection.cryptomining.enabled": null,
         "privacy.annotate_channels.strict_list.enabled": null,
         "network.http.referer.disallowCrossSiteRelaxingDefault": null,
+        "network.http.referer.disallowCrossSiteRelaxingDefault.top_navigation": null,
         "privacy.partition.network_state.ocsp_cache": null,
       },
     };
@@ -5029,6 +5039,16 @@ var ContentBlockingCategoriesPrefs = {
         case "-rp":
           this.CATEGORY_PREFS[type][
             "network.http.referer.disallowCrossSiteRelaxingDefault"
+          ] = false;
+          break;
+        case "rpTop":
+          this.CATEGORY_PREFS[type][
+            "network.http.referer.disallowCrossSiteRelaxingDefault.top_navigation"
+          ] = true;
+          break;
+        case "-rpTop":
+          this.CATEGORY_PREFS[type][
+            "network.http.referer.disallowCrossSiteRelaxingDefault.top_navigation"
           ] = false;
           break;
         case "ocsp":
