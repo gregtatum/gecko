@@ -72,6 +72,20 @@ XPCOMUtils.defineLazyPreferenceGetter(
   5
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "OPEN_NEW_TAB_FOR_MOST_NAVIGATIONS",
+  "browser.tabs.openNewTabForMostNavigations",
+  true
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK",
+  "browser.pinebuild.targetTopLevelLinkClicksToBlank",
+  false
+);
+
 const DEFAULT_WORKSPACE_ID = 0;
 const MAX_WORKSPACES_LIMIT = 3;
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
@@ -1391,6 +1405,13 @@ class WorkspaceHistory extends EventTarget {
       browser.browsingContext.sessionHistory.addSHistoryListener(listener);
     } catch (e) {
       logConsole.error("Failed to add listener", e);
+    }
+
+    if (
+      TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK &&
+      !OPEN_NEW_TAB_FOR_MOST_NAVIGATIONS
+    ) {
+      browser.browsingContext.targetTopLevelLinkClicksToBlank = true;
     }
   }
 
