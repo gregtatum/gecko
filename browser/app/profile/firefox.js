@@ -2730,6 +2730,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.tabs.openNewTabForMostNavigations", true);
+  pref("browser.pinebuild.targetTopLevelLinkClicksToBlank", false);
   #ifdef MOZILLA_OFFICIAL
     pref("browser.startup.launchOnOSLogin", true);
   #else
