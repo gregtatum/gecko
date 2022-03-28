@@ -577,7 +577,9 @@ var gSyncPane = {
   // preferences used for this engines.
   setupEnginesUI() {
     let observe = (elt, prefName) => {
-      elt.hidden = !Services.prefs.getBoolPref(prefName, false);
+      elt.hidden =
+        !Services.prefs.getBoolPref(prefName, false) ||
+        !Services.prefs.getBoolPref(`${prefName}.available`, true);
     };
 
     for (let elt of document.querySelectorAll("[engine_preference]")) {

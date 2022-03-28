@@ -52,6 +52,8 @@ let gSyncChooseWhatToSync = {
 
     if (AppConstants.PINEBUILD) {
       enginePrefs.push(["services.sync.engine.addons", ".sync-engine-addons"]);
+      enginePrefs.push(["services.sync.engine.tabs", ".sync-engine-tabs"]);
+      enginePrefs.push(["services.sync.engine.prefs", ".sync-engine-prefs"]);
     }
 
     for (let [enabledPref, className] of enginePrefs) {

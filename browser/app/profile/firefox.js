@@ -281,7 +281,7 @@ pref("browser.shell.setDefaultPDFHandler", false);
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last visited page, 3 = resume previous browser session
 // The behavior of option 3 is detailed at: http://wiki.mozilla.org/Session_Restore
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage", "about:flow-reset", locked);
+pref("browser.startup.homepage",            "about:home");
 pref("browser.startup.preXulSkeletonUI", true, locked);
 #ifdef NIGHTLY_BUILD
 pref("browser.startup.homepage.abouthome_cache.enabled", true);
@@ -2699,13 +2699,12 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("startup.homepage_welcome_url", "", locked);
   pref("startup.homepage_override_url", "", locked);
   pref("browser.startup.page", 1, locked);
-  pref("browser.startup.homepage", "about:blank");
+  pref("browser.startup.homepage", "about:flow-reset", locked);
   pref("browser.startup.preXulSkeletonUI", false);
   pref("pref.browser.homepage.disable_button.current_page", true, locked);
   pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
   pref("pref.browser.homepage.disable_button.restore_default", true, locked);
   pref("browser.newtabpage.enabled", false, locked);
-  pref("services.sync.engine.tabs", false, locked);
   pref("browser.urlbar.suggest.engines", false);
   pref("browser.urlbar.suggest.openpage", false, locked);
   pref("browser.sessionstore.warnOnQuit", false, locked);
@@ -2713,14 +2712,11 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.sessionstore.resuming_after_os_restart", false, locked);
   // Always resume session from crashes
   pref("browser.sessionstore.max_resumed_crashes", -1, locked);
-  pref("services.sync.prefs.sync.browser.startup.homepage", false, locked);
-  pref("services.sync.prefs.sync.browser.sessionstore.warnOnQuit", false, locked);
-  pref("services.sync.prefs.sync.browser.sessionstore.resume_session_once", false, locked);
-  pref("services.sync.prefs.sync.browser.sessionstore.resuming_after_os_restart", false, locked);
   pref("dom.security.https_first", true, locked);
   pref("services.sync.prefs.sync.extensions.activeThemeID", false, locked);
-  pref("services.sync.engine.addons", false, locked);
   pref("services.sync.engine.addons.available", false, locked);
+  pref("services.sync.engine.prefs.available", false, locked);
+  pref("services.sync.engine.tabs.available", false, locked);
   pref("browser.tabs.unloadOnLowMemory", true, locked);
   pref("browser.urlbar.openintab", true, locked);
   pref("browser.tabs.warnOnClose", false, locked);
@@ -2795,5 +2791,5 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.snapshots.relevancy.enabled", false);
   pref("browser.pinebuild.login-view-overwriting.enabled", true);
   pref("browser.companion.snapshot-groups.enabled", false);
-
+  pref("identity.fxaccounts.commands.enabled", false);
 #endif

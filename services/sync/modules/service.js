@@ -90,6 +90,15 @@ function getEngineModules() {
     Prefs: { module: "prefs.js", symbol: "PrefsEngine" },
     Tab: { module: "tabs.js", symbol: "TabEngine" },
   };
+  if (!Svc.Prefs.get("engine.addons.available", true)) {
+    delete result.Addons;
+  }
+  if (!Svc.Prefs.get("engine.prefs.available", true)) {
+    delete result.Prefs;
+  }
+  if (!Svc.Prefs.get("engine.tabs.available", true)) {
+    delete result.Tabs;
+  }
   if (Svc.Prefs.get("engine.addresses.available", false)) {
     result.Addresses = {
       module: "resource://autofill/FormAutofillSync.jsm",
