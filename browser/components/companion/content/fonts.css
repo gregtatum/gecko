@@ -1,0 +1,117 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import url("chrome://browser/content/companion/lavender.css");
+
+:root {
+  /* Reset base font-size for rem measurements */
+  font-size: 100%;
+
+  /* Text Colors */
+  --pine-text-color-primary: var(--colors-darkgrey-30);
+  --pine-text-color-primary-dark: var(--colors-darkgrey-60);
+  --pine-text-color-secondary-grey: var(--colors-darkgrey-10);
+  --pine-text-color-lightest-grey: var(--colors-lightgrey-120);
+  --pine-text-color-link: var(--colors-lavender-90);
+  --pine-text-color-error: var(--colors-red-10);
+  --pine-text-color-disabled: var(--colors-lightgrey-80);
+
+  /* Text Sizes */
+  --pine-text-size-xxxs: 0.625rem;
+  --pine-text-size-xxs: 0.6875rem;
+  --pine-text-size-xs: 0.75rem;
+  --pine-text-size-s: 0.875rem;
+  --pine-text-size-m: 1rem;
+  --pine-text-size-xl: 1.125rem;
+
+  /* Font Weights */
+  --pine-font-weight-base: 400;
+  --pine-font-weight-med: 500;
+  --pine-font-weight-semibold: 600;
+  --pine-font-weight-bold: 700;
+}
+
+.text-headline {
+  font-size: var(--pine-text-size-m);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-semibold);
+  line-height: 1;
+}
+
+.text-headline-l {
+  font-size: var(--pine-text-size-xl);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-semibold);
+  line-height: 1.333;
+}
+
+.text-subheading {
+  font-size: var(--pine-text-size-xxs);
+  color: var(--pine-text-color-secondary-grey);
+  font-weight: var(--pine-font-weight-base);
+  line-height: 1.45;
+}
+
+.text-body-m {
+  font-size: var(--pine-text-size-m);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-med);
+  line-height: 1;
+}
+
+.text-body-s {
+  font-size: var(--pine-text-size-s);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-base);
+  line-height: 1.14;
+}
+
+.text-body-s--med {
+  font-size: var(--pine-text-size-s);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-med);
+  line-height: 1.14;
+}
+
+.text-body-s--semi-bold {
+  font-size: var(--pine-text-size-s);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-semibold);
+  line-height: 1.14;
+}
+
+.text-body-xs {
+  font-size: var(--pine-text-size-xs);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-base);
+  line-height: 1.333;
+}
+
+.text-body-xs--med {
+  font-size: var(--pine-text-size-xs);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-med);
+  line-height: 1.333;
+}
+
+.text-body-xxs {
+  font-size: var(--pine-text-size-xxs);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-base);
+  line-height: 1.45;
+}
+
+.text-body-xxs--med {
+  font-size: var(--pine-text-size-xxs);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-med);
+  line-height: 1.45;
+}
+
+.text-body-xxxs {
+  font-size: var(--pine-text-size-xxxs);
+  color: var(--pine-text-color-primary);
+  font-weight: var(--pine-font-weight-base);
+  line-height: 1.6;
+}
