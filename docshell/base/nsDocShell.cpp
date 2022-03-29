@@ -12850,8 +12850,12 @@ bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
     return false;
   }
 
+  nsAutoCString linkHost;
+  bool validHost = !NS_FAILED(aLinkURI->GetHost(linkHost));
+
   if (mBrowsingContext->TargetTopLevelLinkClicksToBlank() &&
-      mBrowsingContext->IsTop() && UserActivation::IsHandlingUserInput()) {
+      mBrowsingContext->IsTop() && UserActivation::IsHandlingUserInput() &&
+      validHost) {
     return true;
   }
 
@@ -12866,8 +12870,7 @@ bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
   // instead of replacing the app tab's page (Bug 575561)
   // nsIURI.host can throw for non-nsStandardURL nsIURIs. If we fail to
   // get either host, just return false to use the original target.
-  nsAutoCString linkHost;
-  if (NS_FAILED(aLinkURI->GetHost(linkHost))) {
+  if (!validHost) {
     return false;
   }
 

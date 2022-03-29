@@ -88,6 +88,11 @@ add_task(async function skip_blank_target_for_some_loads() {
       1,
       "There should only be 1 browser."
     );
+
+    Assert.ok(
+      currentBrowser.browsingContext.targetTopLevelLinkClicksToBlank,
+      "Should still be targeting top-level clicks to _blank"
+    );
   };
 
   // First we'll test a POST request
@@ -158,6 +163,28 @@ add_task(async function skip_blank_target_for_some_loads() {
   await SpecialPowers.spawn(currentBrowser, [], async () => {
     let anchor = content.document.querySelector(`a[href=".."]`);
     anchor.click();
+  });
+  await sameBrowserLoad;
+  ensureSingleBrowser();
+
+  // A javascript:void(0); link should also not target to _blank.
+  sameBrowserLoad = BrowserTestUtils.browserLoaded(
+    currentBrowser,
+    false,
+    TEST_PAGE
+  );
+  await SpecialPowers.spawn(currentBrowser, [TEST_PAGE], async newPageURL => {
+    let anchor = content.document.querySelector(`a[href=".."]`);
+    anchor.href = "javascript:void(0);";
+    anchor.addEventListener("click", e => {
+      content.location.href = newPageURL;
+    });
+    let userInput = content.windowUtils.setHandlingUserInput(true);
+    try {
+      anchor.click();
+    } finally {
+      userInput.destruct();
+    }
   });
   await sameBrowserLoad;
   ensureSingleBrowser();
