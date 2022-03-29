@@ -2762,7 +2762,6 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.calendar.browseEnabled", false);
   pref("browser.pinebuild.companion-service-onboarding.enabled", true);
   pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
-  pref("browser.urlbar.contextualSearch.enabled", true);
   // Don't show the onboarding modal in unofficial (local) builds.
   #ifdef MOZILLA_OFFICIAL
     pref("browser.pinebuild.companion.onboarding.enabled", true);

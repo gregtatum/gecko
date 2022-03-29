@@ -60,7 +60,7 @@ const PREF_URLBAR_DEFAULTS = new Map([
 
   // Whether to show a link for using the search functionality provided by the
   // active view if the the view utilizes OpenSearch.
-  ["contextualSearch.enabled", false],
+  ["contextualSearch.enabled", AppConstants.PINEBUILD],
 
   // Whether best match results can be blocked.
   ["bestMatch.blockingEnabled", false],

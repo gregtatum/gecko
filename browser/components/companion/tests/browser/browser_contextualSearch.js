@@ -36,11 +36,13 @@ add_task(async function init() {
 
 add_task(async function test_selectContextualSearchResult() {
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
-    BrowserTestUtils.loadURI(
+    const ENGINE_TEST_URL = "http://mochi.test:8888/";
+    BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, ENGINE_TEST_URL);
+    await BrowserTestUtils.browserLoaded(
       win.gBrowser.selectedBrowser,
-      "http://mochi.test:8888/"
+      false,
+      ENGINE_TEST_URL
     );
-    await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
 
     await CompanionHelper.whenReady(async () => {
       const query = "search";

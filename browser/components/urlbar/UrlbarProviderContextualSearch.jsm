@@ -112,7 +112,8 @@ class ProviderContextualSearch extends UrlbarProvider {
    */
   async startQuery(queryContext, addCallback) {
     let engine;
-    const hostname = new URL(queryContext.currentPage).hostname;
+    const hostname =
+      queryContext?.currentPage && new URL(queryContext.currentPage).hostname;
 
     // This happens on about pages, which won't have associated engines
     if (!hostname) {
