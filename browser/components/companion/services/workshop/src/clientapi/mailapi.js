@@ -290,10 +290,14 @@ export class MailAPI extends Emitter {
   __bridgeReceive(msg) {
     // Pong messages are used for tests
     if (this._processingMessage && msg.type !== "pong") {
-      logic(this, "deferMessage", { type: msg.type });
+      if (msg.log !== false) {
+        logic(this, "deferMessage", { type: msg.type });
+      }
       this._deferredMessages.push(msg);
     } else {
-      logic(this, "immediateProcess", { type: msg.type });
+      if (msg.log !== false) {
+        logic(this, "immediateProcess", { type: msg.type });
+      }
       this._processMessage(msg);
     }
   }
@@ -305,7 +309,17 @@ export class MailAPI extends Emitter {
       return;
     }
     try {
-      logic(this, "processMessage", { type: msg.type });
+      if (msg.log !== false) {
+        if (msg.type === "promisedResult") {
+          const { handle } = msg;
+          const pending = this._pendingRequests[handle];
+          logic(this, "processMessage", {
+            type: `${msg.type}::${pending.type || ""}`,
+          });
+        } else {
+          logic(this, "processMessage", { type: msg.type });
+        }
+      }
       const promise = this[methodName](msg);
       if (promise && promise.then) {
         this._processingMessage = promise;
@@ -391,6 +405,7 @@ export class MailAPI extends Emitter {
         type: "promised",
         handle,
         wrapped: sendMsg,
+        log: sendMsg.log ?? true,
       });
     });
   }
@@ -1888,6 +1903,20 @@ export class MailAPI extends Emitter {
   TEST_getDBCounts() {
     return this._sendPromisedRequest({
       type: "TEST_getDBCounts",
+    });
+  }
+
+  getLogicBuffer() {
+    return this._sendPromisedRequest({
+      type: "getLogicBuffer",
+      log: false,
+    });
+  }
+
+  getLastLogicEntries() {
+    return this._sendPromisedRequest({
+      type: "getLastLogicEntries",
+      log: false,
     });
   }
 

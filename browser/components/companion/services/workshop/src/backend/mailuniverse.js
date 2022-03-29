@@ -15,6 +15,7 @@
  */
 
 import logic from "logic";
+import { LogicBuffer } from "shared/logic_buffer";
 import { MailDB } from "./maildb";
 
 import { AccountManager } from "./universe/account_manager";
@@ -62,6 +63,8 @@ import { toStringKey } from "./utils/tools";
  * @memberof module:mailuniverse
  */
 export default function MailUniverse({ online, testOptions, appExtensions }) {
+  this._logicBuffer = new LogicBuffer({});
+
   logic.defineScope(this, "Universe");
   this._initialized = false;
   this._appExtensions = appExtensions;
@@ -295,6 +298,26 @@ MailUniverse.prototype = {
 
   async getDBCounts(id) {
     return this.db.getDBCounts(id);
+  },
+
+  getLogicBuffer() {
+    return this._logicBuffer?.getBuffer?.();
+  },
+
+  getLastLogicEntries() {
+    return this._logicBuffer?.getLastEntries?.();
+  },
+
+  addToLogicBuffer(event) {
+    this._logicBuffer?.add?.(event);
+  },
+
+  disableLogic() {
+    if (this._logicBuffer) {
+      this._logicBuffer.destroy();
+      this._logicBuffer = null;
+    }
+    logic.isDisabled = true;
   },
 
   //////////////////////////////////////////////////////////////////////////////

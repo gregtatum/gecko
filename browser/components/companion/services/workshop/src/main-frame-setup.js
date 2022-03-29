@@ -37,12 +37,6 @@ import logic from "logic";
 // backend.
 window.LOGIC = logic;
 logic.tid = "api?";
-try {
-  logic.bc = new BroadcastChannel("logic");
-} catch {
-  // It's okay to not have logging if BroadcastChannel is not available.  We'll
-  // improve things in MR2-1852.
-}
 
 const SCOPE = {};
 logic.defineScope(SCOPE, "MainFrameSetup");
@@ -93,11 +87,23 @@ const control = {
 
  */
 
-export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
+export function MailAPIFactory({
+  mainThreadServices,
+  isHiddenWindow,
+  isLoggingEnabled,
+}) {
+  logic.isDisabled = !isLoggingEnabled;
   const MailAPI = new $mailapi.MailAPI();
   const worker = makeWorker();
   logic.defineScope(worker, "Worker");
   const workerPort = worker.port;
+  let logicEventListener = null;
+
+  if (!isLoggingEnabled) {
+    MailAPI.__bridgeSend({
+      type: "disableLogic",
+    });
+  }
 
   const bridge = {
     name: "bridge",
@@ -110,7 +116,9 @@ export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
         logic.tid = `api${uid}`;
         logic(SCOPE, "gotHello", { uid, storedSends: MailAPI._storedSends });
         MailAPI.__bridgeSend = function(sendMsg) {
-          logic(this, "send", { msg: sendMsg });
+          if (sendMsg?.log !== false) {
+            logic(this, "send", { msg: sendMsg });
+          }
           try {
             workerPort.postMessage({
               uid,
@@ -121,6 +129,18 @@ export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
             console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
           }
         };
+
+        if (!logicEventListener) {
+          logicEventListener = event => {
+            MailAPI.__bridgeSend({
+              type: "addToLogicBuffer",
+              // Avoid to log that we are logging!
+              log: false,
+              data: event.jsonRepresentation,
+            });
+          };
+          logic.on("event", logicEventListener);
+        }
 
         if (isHiddenWindow) {
           workerPort.postMessage({
@@ -151,9 +171,9 @@ export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
   };
 
   const mainThreadServiceModule = {
-    name: "mainThreadService",
+    name: "mainThreadServices",
     process(uid, cmd, args) {
-      if (!mainThreadService?.hasOwnProperty(cmd)) {
+      if (!mainThreadServices?.hasOwnProperty(cmd)) {
         this.sendMessage(
           uid,
           cmd,
@@ -162,7 +182,7 @@ export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
         );
       }
       try {
-        Promise.resolve(mainThreadService[cmd](...args))
+        Promise.resolve(mainThreadServices[cmd](...args))
           .then(res => this.sendMessage(uid, cmd, res, null))
           .catch(err =>
             this.sendMessage(
@@ -184,6 +204,11 @@ export function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
   };
 
   worker.onerror = event => {
+    if (logicEventListener) {
+      logic.removeListener("event", logicEventListener);
+      logicEventListener = null;
+    }
+
     logic(worker, "workerError", {
       message: event.message,
       filename: event.filename,

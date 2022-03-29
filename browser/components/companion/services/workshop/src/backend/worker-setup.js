@@ -20,12 +20,6 @@
 
 import logic from "logic";
 logic.tid = "worker";
-try {
-  logic.bc = new BroadcastChannel("logic");
-} catch {
-  // It's okay to not have logging if BroadcastChannel is not available.  We'll
-  // improve things in MR2-1852.
-}
 
 const SCOPE = {};
 logic.defineScope(SCOPE, "WorkerSetup");
@@ -50,8 +44,10 @@ function createBridgePair(universe, usePort, uid, cleanupPromise) {
   }, usePort);
   const sendMessage = routerInfo.sendMessage;
 
-  TMB.__sendMessage = function(msg) {
-    logic(TMB, "send", { type: msg.type, msg });
+  TMB.__sendMessage = function(msg, log = true) {
+    if (log) {
+      logic(TMB, "send", { type: msg.type, msg });
+    }
     sendMessage(null, msg);
   };
 

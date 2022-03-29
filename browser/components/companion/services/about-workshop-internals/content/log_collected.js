@@ -2,6 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { BroadcastCollector } from "./log-model/collector.js";
+import { LogsCollector } from "./log-model/collector.js";
 
-export const broadcastCollector = (window.LOG_COLLECTOR = new BroadcastCollector());
+export const logsCollector = (window.LOG_COLLECTOR = new LogsCollector());

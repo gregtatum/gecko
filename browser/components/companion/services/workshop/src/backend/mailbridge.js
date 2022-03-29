@@ -110,15 +110,19 @@ MailBridge.prototype = {
     if (msg.type === "promised") {
       const promisedHandle = msg.handle;
       let repliedAlready = false;
-      replyFunc = data => {
+      replyFunc = (data, log = true) => {
         if (repliedAlready) {
           return;
         }
-        this.__sendMessage({
-          type: "promisedResult",
-          handle: promisedHandle,
-          data,
-        });
+        this.__sendMessage(
+          {
+            type: "promisedResult",
+            handle: promisedHandle,
+            data,
+            log,
+          },
+          log
+        );
         repliedAlready = true;
       };
       // pierce the wrapping.
@@ -215,10 +219,12 @@ MailBridge.prototype = {
    *   it anymore because it's not worth the hassle to cart it around.
    */
   _processCommand(msg, implCmdName, replyFunc) {
-    logic(this, "cmd", {
-      type: msg.type,
-      msg,
-    });
+    if (msg.log !== false) {
+      logic(this, "cmd", {
+        type: msg.type,
+        msg,
+      });
+    }
     try {
       let result = this[implCmdName](msg, replyFunc);
       if (result && result.then) {
@@ -243,6 +249,24 @@ MailBridge.prototype = {
   async _promised_TEST_getDBCounts(msg, replyFunc) {
     const data = await this.universe.getDBCounts(msg?.id);
     replyFunc(data);
+  },
+
+  _promised_getLogicBuffer(msg, replyFunc) {
+    // log is set to false in order to not log that stuff which will pollute
+    // the logs!
+    replyFunc(this.universe.getLogicBuffer(), /* log */ false);
+  },
+
+  _promised_getLastLogicEntries(msg, replyFunc) {
+    replyFunc(this.universe.getLastLogicEntries(), /* log */ false);
+  },
+
+  _cmd_addToLogicBuffer(msg) {
+    this.universe.addToLogicBuffer(msg.data);
+  },
+
+  _cmd_disableLogic(msg) {
+    this.universe.disableLogic();
   },
 
   _cmd_TEST_timeWarp(msg) {

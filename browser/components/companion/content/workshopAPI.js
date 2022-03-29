@@ -12,6 +12,10 @@ const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const isLoggingEnabled = Services.prefs.getBoolPref(
+  "browser.pinebuild.workshop-logs.enabled",
+  false
+);
 
 let workshopAPI = null;
 let Workshop = null;
@@ -21,7 +25,11 @@ let workshopEnabled = Services.prefs.getBoolPref(
 
 if (workshopEnabled) {
   const mainThreadServices = OnlineServicesHelper.MainThreadServices(window);
-  workshopAPI = MailAPIFactory(mainThreadServices);
+  workshopAPI = MailAPIFactory({
+    mainThreadServices,
+    isHiddenWindow: false,
+    isLoggingEnabled,
+  });
   // Let mainThreadServices know about the workshopAPI obj
   // so that we can properly handle "beforeunload" events.
   mainThreadServices.registerWorkshopAPI(workshopAPI);

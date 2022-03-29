@@ -434,7 +434,7 @@ var WorkshopBackend = (() => {
     this.maxArrayLength = opts.maxArrayLength || 1e3;
     this.maxObjectLength = opts.maxObjectLength || 100;
   }
-  function LogicEvent(scope4, type, details) {
+  function LogicEvent(scope4, type, details, tid) {
     if (!(scope4 instanceof Scope)) {
       throw new Error('Invalid "scope" passed to LogicEvent(); did you remember to call logic.defineScope()?');
     }
@@ -443,13 +443,7 @@ var WorkshopBackend = (() => {
     this.details = details;
     this.time = Date.now();
     this.id = logic.uniqueId();
-    this.jsonRepresentation = {
-      namespace: this.scope.namespace,
-      type: this.type,
-      details: new ObjectSimplifier().simplify(this.details),
-      time: this.time,
-      id: this.id
-    };
+    this.tid = tid;
   }
   function isPlainObject(obj) {
     if (!obj || typeof obj !== "object") {
@@ -507,6 +501,9 @@ var WorkshopBackend = (() => {
         return new Scope(scope4.namespace, into(shallowClone(scope4.defaultDetails), shallowClone(defaultDetails)));
       };
       logic.event = function(scope4, type, details) {
+        if (logic.isDisabled) {
+          return null;
+        }
         scope4 = toScope(scope4);
         var isDefaultPrevented = false;
         var preprocessEvent = {
@@ -536,16 +533,9 @@ var WorkshopBackend = (() => {
         } else {
           details = shallowClone(details);
         }
-        var event = new LogicEvent(scope4, type, details);
+        var event = new LogicEvent(scope4, type, details, logic.tid);
         logic.emit("censorEvent", event);
         logic.emit("event", event);
-        if (logic.bc) {
-          logic.bc.postMessage({
-            mode: "append",
-            tid: logic.tid,
-            event: event.jsonRepresentation
-          });
-        }
         if (logic.realtimeLogEverything) {
           dump(`logic[${logic.tid}]: ${JSON.stringify(event)}
 `);
@@ -571,7 +561,7 @@ var WorkshopBackend = (() => {
       };
       logic.isCensored = false;
       logic.realtimeLogEverything = false;
-      logic.bc = null;
+      logic.isDisabled = false;
       interceptions = {};
       logic.interceptable = function(type, fn) {
         if (interceptions[type]) {
@@ -650,7 +640,10 @@ var WorkshopBackend = (() => {
           if (typeof x === "number") {
             return x;
           } else if (typeof x === "string") {
-            return x.slice(0, this.maxStringLength);
+            if (x.length > this.maxStringLength) {
+              return `${x.slice(0, this.maxStringLength)}... (truncated)`;
+            }
+            return x;
           } else if (x && x.BYTES_PER_ELEMENT) {
             return x.slice(0, this.maxArrayLength);
           } else if (Array.isArray(x)) {
@@ -694,7 +687,7 @@ var WorkshopBackend = (() => {
         }
       };
       LogicEvent.fromJSON = function(data) {
-        var event = new LogicEvent(new Scope(data.namespace), data.type, data.details);
+        var event = new LogicEvent(new Scope(data.namespace), data.type, data.details, data.tid);
         event.time = data.time;
         event.id = data.id;
         return event;
@@ -702,6 +695,16 @@ var WorkshopBackend = (() => {
       LogicEvent.prototype = {
         get namespace() {
           return this.scope.namespace;
+        },
+        get jsonRepresentation() {
+          return {
+            namespace: this.namespace,
+            type: this.type,
+            details: new ObjectSimplifier().simplify(this.details),
+            time: this.time,
+            id: this.id,
+            tid: this.tid
+          };
         },
         toJSON() {
           return this.jsonRepresentation;
@@ -781,6 +784,9 @@ var WorkshopBackend = (() => {
         return promise;
       };
       logic.await = function(scope4, type, details, promise) {
+        if (logic.isDisabled) {
+          return Promise.resolve();
+        }
         if (!promise && details.then) {
           promise = details;
           details = null;
@@ -886,7 +892,7 @@ var WorkshopBackend = (() => {
   }
   async function callOnMainThread({ cmd, args }) {
     const { args: result } = await eventuallySendToDefault({
-      type: "mainThreadService",
+      type: "mainThreadServices",
       cmd,
       args
     });
@@ -15850,11 +15856,12 @@ var WorkshopBackend = (() => {
       this._stuffToRelease.push(acquireable);
       return acquireable.__acquire(this);
     }
-    sendMessage(type, data) {
+    sendMessage(type, data, log = true) {
       this._bridgeContext.bridge.__sendMessage({
         type,
         handle: this.name,
-        data
+        data,
+        log
       });
     }
     runAtCleanup(func) {
@@ -16373,15 +16380,16 @@ var WorkshopBackend = (() => {
       if (msg.type === "promised") {
         const promisedHandle = msg.handle;
         let repliedAlready = false;
-        replyFunc = (data) => {
+        replyFunc = (data, log = true) => {
           if (repliedAlready) {
             return;
           }
           this.__sendMessage({
             type: "promisedResult",
             handle: promisedHandle,
-            data
-          });
+            data,
+            log
+          }, log);
           repliedAlready = true;
         };
         msg = msg.wrapped;
@@ -16448,10 +16456,12 @@ var WorkshopBackend = (() => {
       });
     },
     _processCommand(msg, implCmdName, replyFunc) {
-      logic(this, "cmd", {
-        type: msg.type,
-        msg
-      });
+      if (msg.log !== false) {
+        logic(this, "cmd", {
+          type: msg.type,
+          msg
+        });
+      }
       try {
         let result = this[implCmdName](msg, replyFunc);
         if (result && result.then) {
@@ -16474,6 +16484,18 @@ var WorkshopBackend = (() => {
     async _promised_TEST_getDBCounts(msg, replyFunc) {
       const data = await this.universe.getDBCounts(msg?.id);
       replyFunc(data);
+    },
+    _promised_getLogicBuffer(msg, replyFunc) {
+      replyFunc(this.universe.getLogicBuffer(), false);
+    },
+    _promised_getLastLogicEntries(msg, replyFunc) {
+      replyFunc(this.universe.getLastLogicEntries(), false);
+    },
+    _cmd_addToLogicBuffer(msg) {
+      this.universe.addToLogicBuffer(msg.data);
+    },
+    _cmd_disableLogic(msg) {
+      this.universe.disableLogic();
     },
     _cmd_TEST_timeWarp(msg) {
       logic(this, "timeWarp", { fakeNow: msg.fakeNow });
@@ -16890,6 +16912,90 @@ var WorkshopBackend = (() => {
 
   // src/backend/mailuniverse.js
   init_logic();
+
+  // src/shared/logic_buffer.js
+  init_logic();
+  init_logic();
+  var LogicBuffer = class {
+    #buffer;
+    #currentPosition;
+    #lastPosition;
+    #onEventBound;
+    #onCensorEventBound;
+    constructor({ maxSize = 65536, censor = true }) {
+      this.#buffer = new Array(maxSize);
+      this.#currentPosition = 0;
+      this.#lastPosition = maxSize;
+      this.#onEventBound = this.#onEvent.bind(this);
+      logic.on("event", this.#onEventBound);
+      if (censor) {
+        this.#onCensorEventBound = this.#onCensorEvent.bind(this);
+        logic.on("censorEvent", this.#onCensorEventBound);
+      }
+    }
+    destroy() {
+      logic.removeListener("event", this.#onEventBound);
+      if (this.#onCensorEventBound) {
+        logic.removeListener("censorEvent", this.#onCensorEventBound);
+      }
+      this.#buffer = null;
+    }
+    #onEvent(event) {
+      if (!event) {
+        return;
+      }
+      this.#buffer[this.#currentPosition] = event.jsonRepresentation;
+      this.#currentPosition = (this.#currentPosition + 1) % this.#buffer.length;
+    }
+    #censorValue(obj) {
+      if (!obj || !logic.isPlainObject(obj)) {
+        return obj;
+      }
+      for (const [key, value] of Object.entries(obj)) {
+        if (key.charAt(0) === "_") {
+          obj[key] = "Censored";
+        } else if (Array.isArray(value)) {
+          obj[key] = value.map(this.#censorValue.bind(this)).filter((x) => !!x);
+        } else {
+          obj[key] = this.#censorValue(value);
+        }
+      }
+      return obj;
+    }
+    #onCensorEvent(event) {
+      const { details } = event;
+      if (!logic.isPlainObject(details)) {
+        return;
+      }
+      this.#censorValue(details);
+    }
+    add(entry) {
+      const event = LogicEvent.fromJSON(entry);
+      this.#censorValue(event);
+      this.#onEvent(event);
+    }
+    getBuffer() {
+      this.#lastPosition = this.#currentPosition;
+      const firstPart = this.#buffer.slice(this.#currentPosition);
+      const secondPart = this.#buffer.slice(0, this.#currentPosition);
+      return firstPart.concat(secondPart).filter((line) => !!line);
+    }
+    getLastEntries() {
+      if (this.#lastPosition === this.#currentPosition) {
+        return null;
+      }
+      let entries;
+      if (this.#lastPosition <= this.#currentPosition) {
+        entries = this.#buffer.slice(this.#lastPosition, this.#currentPosition);
+      } else {
+        const firstPart = this.#buffer.slice(this.#lastPosition);
+        const secondPart = this.#buffer.slice(0, this.#currentPosition);
+        entries = firstPart.concat(secondPart);
+      }
+      this.#lastPosition = this.#currentPosition;
+      return entries.filter((line) => !!line);
+    }
+  };
 
   // src/backend/maildb.js
   var import_evt3 = __toModule(require_evt());
@@ -23190,6 +23296,7 @@ var WorkshopBackend = (() => {
   // src/backend/mailuniverse.js
   init_tools();
   function MailUniverse({ online, testOptions, appExtensions }) {
+    this._logicBuffer = new LogicBuffer({});
     logic.defineScope(this, "Universe");
     this._initialized = false;
     this._appExtensions = appExtensions;
@@ -23319,6 +23426,22 @@ var WorkshopBackend = (() => {
     },
     async getDBCounts(id) {
       return this.db.getDBCounts(id);
+    },
+    getLogicBuffer() {
+      return this._logicBuffer?.getBuffer?.();
+    },
+    getLastLogicEntries() {
+      return this._logicBuffer?.getLastEntries?.();
+    },
+    addToLogicBuffer(event) {
+      this._logicBuffer?.add?.(event);
+    },
+    disableLogic() {
+      if (this._logicBuffer) {
+        this._logicBuffer.destroy();
+        this._logicBuffer = null;
+      }
+      logic.isDisabled = true;
     },
     _onConnectionChange(isOnline) {
       var wasOnline = this.online;
@@ -23918,10 +24041,6 @@ var WorkshopBackend = (() => {
 
   // src/backend/worker-setup.js
   logic.tid = "worker";
-  try {
-    logic.bc = new BroadcastChannel("logic");
-  } catch {
-  }
   var SCOPE = {};
   logic.defineScope(SCOPE, "WorkerSetup");
   var routerBridgeMaker = registerInstanceType("bridge");
@@ -23935,8 +24054,10 @@ var WorkshopBackend = (() => {
       TMB.__receiveMessage(data.msg);
     }, usePort);
     const sendMessage = routerInfo.sendMessage;
-    TMB.__sendMessage = function(msg) {
-      logic(TMB, "send", { type: msg.type, msg });
+    TMB.__sendMessage = function(msg, log = true) {
+      if (log) {
+        logic(TMB, "send", { type: msg.type, msg });
+      }
       sendMessage(null, msg);
     };
     TMB.__sendMessage({

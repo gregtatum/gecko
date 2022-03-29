@@ -200,7 +200,7 @@ export function shutdown() {
 
 export async function callOnMainThread({ cmd, args }) {
   const { args: result } = await eventuallySendToDefault({
-    type: "mainThreadService",
+    type: "mainThreadServices",
     cmd,
     args,
   });

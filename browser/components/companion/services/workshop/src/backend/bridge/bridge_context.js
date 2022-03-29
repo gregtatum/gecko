@@ -66,11 +66,12 @@ class NamedContext {
    * Helper to send a message with the given `data` to the associated bridge
    * using the handle that names us.
    */
-  sendMessage(type, data) {
+  sendMessage(type, data, log = true) {
     this._bridgeContext.bridge.__sendMessage({
       type,
       handle: this.name,
       data,
+      log,
     });
   }
 

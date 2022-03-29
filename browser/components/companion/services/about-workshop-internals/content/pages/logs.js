@@ -6,7 +6,7 @@ import { css, html } from "../lit_glue.js";
 
 import { Page } from "../page.js";
 import "../elements/log_container.js";
-import { broadcastCollector } from "../log_collected.js";
+import { logsCollector } from "../log_collected.js";
 
 export default class LogsPage extends Page {
   static get styles() {
@@ -22,11 +22,12 @@ export default class LogsPage extends Page {
       title: "Logs",
       pageId: "page-logs",
     });
+    logsCollector.setWorkshop(this.workshopAPI);
   }
 
   render(pageElem) {
     return html`
-      <log-container .collector=${broadcastCollector} />
+      <log-container .collector=${logsCollector} />
     `;
   }
 }

@@ -267,7 +267,7 @@ export class LogContainer extends LitElement {
   }
 
   renderNewLogs() {
-    if (!this.logContainer) {
+    if (!this.logContainer || !this.collector.entries) {
       return;
     }
 

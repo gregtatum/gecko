@@ -264,6 +264,9 @@ logic.subscope = function(scope, defaultDetails) {
  *   by the Scope.
  */
 logic.event = function(scope, type, details) {
+  if (logic.isDisabled) {
+    return null;
+  }
   scope = toScope(scope);
 
   // Give others a chance to intercept this event before we do lots of hard
@@ -306,17 +309,9 @@ logic.event = function(scope, type, details) {
     details = shallowClone(details);
   }
 
-  var event = new LogicEvent(scope, type, details);
+  var event = new LogicEvent(scope, type, details, logic.tid);
   logic.emit("censorEvent", event);
   logic.emit("event", event);
-  // If we have an associated BroadcastChannel, broadcast the event.
-  if (logic.bc) {
-    logic.bc.postMessage({
-      mode: "append",
-      tid: logic.tid,
-      event: event.jsonRepresentation,
-    });
-  }
 
   if (logic.realtimeLogEverything) {
     //dump('logic: ' + event.toString() + '\n');
@@ -363,7 +358,7 @@ logic.uniqueId = function() {
 // Hacky way to pass around a global config:
 logic.isCensored = false;
 logic.realtimeLogEverything = false;
-logic.bc = null;
+logic.isDisabled = false;
 
 var interceptions = {};
 
@@ -675,7 +670,10 @@ ObjectSimplifier.prototype = {
     if (typeof x === "number") {
       return x;
     } else if (typeof x === "string") {
-      return x.slice(0, this.maxStringLength);
+      if (x.length > this.maxStringLength) {
+        return `${x.slice(0, this.maxStringLength)}... (truncated)`;
+      }
+      return x;
     } else if (x && x.BYTES_PER_ELEMENT) {
       // TypedArray
       return x.slice(0, this.maxArrayLength);
@@ -730,7 +728,7 @@ ObjectSimplifier.prototype = {
   },
 };
 
-function LogicEvent(scope, type, details) {
+export function LogicEvent(scope, type, details, tid) {
   if (!(scope instanceof Scope)) {
     throw new Error(
       'Invalid "scope" passed to LogicEvent(); ' +
@@ -743,20 +741,15 @@ function LogicEvent(scope, type, details) {
   this.details = details;
   this.time = Date.now();
   this.id = logic.uniqueId();
-  this.jsonRepresentation = {
-    namespace: this.scope.namespace,
-    type: this.type,
-    details: new ObjectSimplifier().simplify(this.details),
-    time: this.time,
-    id: this.id,
-  };
+  this.tid = tid;
 }
 
 LogicEvent.fromJSON = function(data) {
   var event = new LogicEvent(
     new Scope(data.namespace),
     data.type,
-    data.details
+    data.details,
+    data.tid
   );
   event.time = data.time;
   event.id = data.id;
@@ -766,6 +759,17 @@ LogicEvent.fromJSON = function(data) {
 LogicEvent.prototype = {
   get namespace() {
     return this.scope.namespace;
+  },
+
+  get jsonRepresentation() {
+    return {
+      namespace: this.namespace,
+      type: this.type,
+      details: new ObjectSimplifier().simplify(this.details),
+      time: this.time,
+      id: this.id,
+      tid: this.tid,
+    };
   },
 
   toJSON() {
@@ -923,6 +927,10 @@ logic.async = function(scope, type, details, fn) {
  * created with `logic.async`, we can link the two semantically.
  */
 logic.await = function(scope, type, details, promise) {
+  if (logic.isDisabled) {
+    return Promise.resolve();
+  }
+
   if (!promise && details.then) {
     promise = details;
     details = null;

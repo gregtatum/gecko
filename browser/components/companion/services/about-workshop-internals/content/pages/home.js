@@ -8,6 +8,7 @@ import { Page } from "../page.js";
 
 import "../elements/list_view.js";
 import "../elements/account_list_item.js";
+import { logsCollector } from "../log_collected.js";
 
 export default class HomePage extends Page {
   constructor(opts) {
@@ -15,6 +16,42 @@ export default class HomePage extends Page {
       title: "Workshop Internals Home",
       pageId: "page-home",
     });
+  }
+
+  async getLogs() {
+    const buffer = await this.workshopAPI.getLogicBuffer();
+    const jsonString = JSON.stringify(buffer);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "worshop_log.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async openLogs() {
+    const input = document.createElement("input");
+    input.type = "file";
+    const promise = new Promise(resolve => {
+      input.onchange = () => {
+        const { files } = input;
+        if (files.length === 0) {
+          resolve(null);
+          return;
+        }
+        resolve(input.files.item(0));
+      };
+    });
+    input.click();
+
+    const file = await promise;
+    if (!file) {
+      return;
+    }
+
+    const jsonString = await file.text();
+    const json = JSON.parse(jsonString);
+    logsCollector.loadData(json);
   }
 
   static get styles() {
@@ -31,7 +68,7 @@ export default class HomePage extends Page {
       <section class="card">
         <h2>Accounts</h2>
         <awi-list-view
-          .listView=${this.workshopAPI.accounts}
+          .listView=${[] /* this.workshopAPI.accounts */}
           .factory=${account =>
             html`
               <awi-account-list-item
@@ -46,6 +83,7 @@ export default class HomePage extends Page {
         <button
           id="home-show-add-account"
           type="button"
+          disabled
           @click=${() => {
             this.router.navigateTo(["add"]);
           }}
@@ -68,7 +106,33 @@ export default class HomePage extends Page {
             this.router.navigateTo(["logs"]);
           }}
         >
-          Logs
+          Live logs
+        </button>
+        <button
+          id="home-download-logs"
+          type="button"
+          @click=${() => {
+            this.getLogs();
+          }}
+        >
+          Download logs
+        </button>
+        <button
+          id="home-load-logs"
+          type="button"
+          @click=${async () => {
+            try {
+              await this.openLogs();
+              this.router.navigateTo(["logs"]);
+            } catch (e) {
+              console.error(
+                "Something went wrong when getting logs from a local file",
+                e
+              );
+            }
+          }}
+        >
+          Load logs
         </button>
       </section>
     `;

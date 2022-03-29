@@ -7,14 +7,22 @@ const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const isLoggingEnabled = Services.prefs.getBoolPref(
+  "browser.pinebuild.workshop-logs.enabled",
+  false
+);
+
 window.onunhandledrejection = event => {
   console.warn("UNHANDLED PROMISE REJECTION", event.reason);
 };
 
 import { MailAPIFactory } from "./workshop_glue.js";
-const workshopAPI = (window.WORKSHOP_API = MailAPIFactory(
-  OnlineServicesHelper.MainThreadServices(window)
-));
+const workshopAPI = (window.WORKSHOP_API = MailAPIFactory({
+  mainThreadServices: OnlineServicesHelper.MainThreadServices(window),
+  isHiddenWindow: false,
+  isLoggingEnabled,
+}));
 
 const unloadListener = evt => {
   window.removeEventListener("beforeunload", unloadListener);

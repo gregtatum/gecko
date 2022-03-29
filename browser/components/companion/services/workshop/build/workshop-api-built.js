@@ -511,6 +511,9 @@ logic.subscope = function(scope, defaultDetails) {
   return new Scope(scope.namespace, into(shallowClone(scope.defaultDetails), shallowClone(defaultDetails)));
 };
 logic.event = function(scope, type, details) {
+  if (logic.isDisabled) {
+    return null;
+  }
   scope = toScope(scope);
   var isDefaultPrevented = false;
   var preprocessEvent = {
@@ -540,16 +543,9 @@ logic.event = function(scope, type, details) {
   } else {
     details = shallowClone(details);
   }
-  var event = new LogicEvent(scope, type, details);
+  var event = new LogicEvent(scope, type, details, logic.tid);
   logic.emit("censorEvent", event);
   logic.emit("event", event);
-  if (logic.bc) {
-    logic.bc.postMessage({
-      mode: "append",
-      tid: logic.tid,
-      event: event.jsonRepresentation
-    });
-  }
   if (logic.realtimeLogEverything) {
     dump(`logic[${logic.tid}]: ${JSON.stringify(event)}
 `);
@@ -575,7 +571,7 @@ logic.uniqueId = function() {
 };
 logic.isCensored = false;
 logic.realtimeLogEverything = false;
-logic.bc = null;
+logic.isDisabled = false;
 var interceptions = {};
 logic.interceptable = function(type, fn) {
   if (interceptions[type]) {
@@ -769,7 +765,10 @@ ObjectSimplifier.prototype = {
     if (typeof x === "number") {
       return x;
     } else if (typeof x === "string") {
-      return x.slice(0, this.maxStringLength);
+      if (x.length > this.maxStringLength) {
+        return `${x.slice(0, this.maxStringLength)}... (truncated)`;
+      }
+      return x;
     } else if (x && x.BYTES_PER_ELEMENT) {
       return x.slice(0, this.maxArrayLength);
     } else if (Array.isArray(x)) {
@@ -812,7 +811,7 @@ ObjectSimplifier.prototype = {
     return x;
   }
 };
-function LogicEvent(scope, type, details) {
+function LogicEvent(scope, type, details, tid) {
   if (!(scope instanceof Scope)) {
     throw new Error('Invalid "scope" passed to LogicEvent(); did you remember to call logic.defineScope()?');
   }
@@ -821,16 +820,10 @@ function LogicEvent(scope, type, details) {
   this.details = details;
   this.time = Date.now();
   this.id = logic.uniqueId();
-  this.jsonRepresentation = {
-    namespace: this.scope.namespace,
-    type: this.type,
-    details: new ObjectSimplifier().simplify(this.details),
-    time: this.time,
-    id: this.id
-  };
+  this.tid = tid;
 }
 LogicEvent.fromJSON = function(data) {
-  var event = new LogicEvent(new Scope(data.namespace), data.type, data.details);
+  var event = new LogicEvent(new Scope(data.namespace), data.type, data.details, data.tid);
   event.time = data.time;
   event.id = data.id;
   return event;
@@ -838,6 +831,16 @@ LogicEvent.fromJSON = function(data) {
 LogicEvent.prototype = {
   get namespace() {
     return this.scope.namespace;
+  },
+  get jsonRepresentation() {
+    return {
+      namespace: this.namespace,
+      type: this.type,
+      details: new ObjectSimplifier().simplify(this.details),
+      time: this.time,
+      id: this.id,
+      tid: this.tid
+    };
   },
   toJSON() {
     return this.jsonRepresentation;
@@ -931,6 +934,9 @@ logic.async = function(scope, type, details, fn) {
   return promise;
 };
 logic.await = function(scope, type, details, promise) {
+  if (logic.isDisabled) {
+    return Promise.resolve();
+  }
   if (!promise && details.then) {
     promise = details;
     details = null;
@@ -3150,10 +3156,14 @@ var MailAPI = class extends import_evt14.Emitter {
   }
   __bridgeReceive(msg) {
     if (this._processingMessage && msg.type !== "pong") {
-      logic(this, "deferMessage", { type: msg.type });
+      if (msg.log !== false) {
+        logic(this, "deferMessage", { type: msg.type });
+      }
       this._deferredMessages.push(msg);
     } else {
-      logic(this, "immediateProcess", { type: msg.type });
+      if (msg.log !== false) {
+        logic(this, "immediateProcess", { type: msg.type });
+      }
       this._processMessage(msg);
     }
   }
@@ -3164,7 +3174,17 @@ var MailAPI = class extends import_evt14.Emitter {
       return;
     }
     try {
-      logic(this, "processMessage", { type: msg.type });
+      if (msg.log !== false) {
+        if (msg.type === "promisedResult") {
+          const { handle } = msg;
+          const pending = this._pendingRequests[handle];
+          logic(this, "processMessage", {
+            type: `${msg.type}::${pending.type || ""}`
+          });
+        } else {
+          logic(this, "processMessage", { type: msg.type });
+        }
+      }
       const promise = this[methodName](msg);
       if (promise && promise.then) {
         this._processingMessage = promise;
@@ -3209,7 +3229,8 @@ var MailAPI = class extends import_evt14.Emitter {
       this.__bridgeSend({
         type: "promised",
         handle,
-        wrapped: sendMsg
+        wrapped: sendMsg,
+        log: sendMsg.log ?? true
       });
     });
   }
@@ -3907,6 +3928,18 @@ var MailAPI = class extends import_evt14.Emitter {
   TEST_getDBCounts() {
     return this._sendPromisedRequest({
       type: "TEST_getDBCounts"
+    });
+  }
+  getLogicBuffer() {
+    return this._sendPromisedRequest({
+      type: "getLogicBuffer",
+      log: false
+    });
+  }
+  getLastLogicEntries() {
+    return this._sendPromisedRequest({
+      type: "getLastLogicEntries",
+      log: false
     });
   }
   flushNewAggregates() {
@@ -4643,10 +4676,6 @@ function makeWorker() {
 // src/main-frame-setup.js
 window.LOGIC = logic;
 logic.tid = "api?";
-try {
-  logic.bc = new BroadcastChannel("logic");
-} catch {
-}
 var SCOPE = {};
 logic.defineScope(SCOPE, "MainFrameSetup");
 var control = {
@@ -4665,11 +4694,22 @@ var control = {
     unregister(control);
   }
 };
-function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
+function MailAPIFactory({
+  mainThreadServices,
+  isHiddenWindow,
+  isLoggingEnabled
+}) {
+  logic.isDisabled = !isLoggingEnabled;
   const MailAPI2 = new MailAPI();
   const worker = makeWorker();
   logic.defineScope(worker, "Worker");
   const workerPort2 = worker.port;
+  let logicEventListener = null;
+  if (!isLoggingEnabled) {
+    MailAPI2.__bridgeSend({
+      type: "disableLogic"
+    });
+  }
   const bridge = {
     name: "bridge",
     sendMessage: null,
@@ -4680,7 +4720,9 @@ function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
         logic.tid = `api${uid}`;
         logic(SCOPE, "gotHello", { uid, storedSends: MailAPI2._storedSends });
         MailAPI2.__bridgeSend = function(sendMsg) {
-          logic(this, "send", { msg: sendMsg });
+          if (sendMsg?.log !== false) {
+            logic(this, "send", { msg: sendMsg });
+          }
           try {
             workerPort2.postMessage({
               uid,
@@ -4691,6 +4733,16 @@ function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
             console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
           }
         };
+        if (!logicEventListener) {
+          logicEventListener = (event) => {
+            MailAPI2.__bridgeSend({
+              type: "addToLogicBuffer",
+              log: false,
+              data: event.jsonRepresentation
+            });
+          };
+          logic.on("event", logicEventListener);
+        }
         if (isHiddenWindow) {
           workerPort2.postMessage({
             type: "hiddenWindow"
@@ -4712,19 +4764,23 @@ function MailAPIFactory(mainThreadService, isHiddenWindow = false) {
     }
   };
   const mainThreadServiceModule = {
-    name: "mainThreadService",
+    name: "mainThreadServices",
     process(uid, cmd, args) {
-      if (!mainThreadService?.hasOwnProperty(cmd)) {
+      if (!mainThreadServices?.hasOwnProperty(cmd)) {
         this.sendMessage(uid, cmd, args, `No service ${cmd} in the main thread.`);
       }
       try {
-        Promise.resolve(mainThreadService[cmd](...args)).then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
+        Promise.resolve(mainThreadServices[cmd](...args)).then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
       } catch (ex) {
         this.sendMessage(uid, cmd, args, `Main thread service threw: ${ex.message}`);
       }
     }
   };
   worker.onerror = (event) => {
+    if (logicEventListener) {
+      logic.removeListener("event", logicEventListener);
+      logicEventListener = null;
+    }
     logic(worker, "workerError", {
       message: event.message,
       filename: event.filename,

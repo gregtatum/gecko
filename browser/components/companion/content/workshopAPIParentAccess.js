@@ -14,9 +14,18 @@ const workshopEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled"
 );
 
+const isLoggingEnabled = Services.prefs.getBoolPref(
+  "browser.pinebuild.workshop-logs.enabled",
+  false
+);
+
 if (workshopEnabled) {
   const mainThreadServices = OnlineServicesHelper.MainThreadServices(window);
-  workshopAPI = window.WORKSHOP_API = MailAPIFactory(mainThreadServices);
+  workshopAPI = window.WORKSHOP_API = MailAPIFactory({
+    mainThreadServices,
+    isHiddenWindow: false,
+    isLoggingEnabled,
+  });
   mainThreadServices.registerWorkshopAPI(workshopAPI);
   window.dispatchEvent(new CustomEvent("workshopLoaded"));
 }
