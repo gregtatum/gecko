@@ -65,7 +65,8 @@ class ServiceRow extends HTMLElement {
     super();
     this.service = service;
     this.data = data;
-    if (this.service) {
+    // Firefox accounts don't have a listener
+    if (this.service?.addListener) {
       let handleStatus = ({ status }) => this.setAttribute("status", status);
       this.service.addListener("status", handleStatus);
       window.addEventListener("unload", () => {
