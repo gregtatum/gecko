@@ -673,15 +673,15 @@ var gPageIcons = {
 
 var gInitialPages = [
   "about:blank",
-  "about:home",
-  "about:myfirefox",
-  "about:newtab",
-  "about:privatebrowsing",
-  "about:welcomeback",
-  "about:sessionrestore",
-  "about:welcome",
   "about:flow-reset",
   "about:historycarousel",
+  "about:home",
+  ...(AppConstants.NIGHTLY_BUILD ? ["about:myfirefox"] : []),
+  "about:newtab",
+  "about:privatebrowsing",
+  "about:sessionrestore",
+  "about:welcome",
+  "about:welcomeback",
 ];
 
 function isInitialPage(url) {
