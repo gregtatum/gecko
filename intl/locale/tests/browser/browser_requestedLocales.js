@@ -101,23 +101,29 @@ add_task(async function toolbarButtons() {
     ],
   });
 
+  info(`@@@ First flush"`);
+  Services.strings.flushBundles()
+
   info(`@@@ Creating first bundle "chrome://formautofill/locale/formautofill.properties"`);
   const englishBundle = Services.strings.createBundle(
     "chrome://formautofill/locale/formautofill.properties"
   );
+
+  // info(`@@@ Second flush"`);
+  // Services.strings.flushBundles()
 
   // If this assertion fails, then a new string or new bundle needs to be chosen to
   // test this feature. This string was arbitrarily chosen, and could be updated
   // to use a .ftl file.
   Assert.equal(englishBundle.GetStringFromName("autofillHeader"), "Forms and Autofill");
 
-  info(`@@@ Creating the Klingon langpack.`);
+  info(`@@@ Creating the Spanish langpack.`);
   const langpack = createLangpack({
     locale: "es-ES",
     files: [
       {
         path: `browser/chrome/features/formautofill@mozilla.org/es-ES/locale/es-ES/formautofill.properties`,
-        contents: `autofillHeader=Qapla`,
+        contents: `autofillHeader=Formas`,
       },
     ],
   });
@@ -133,27 +139,16 @@ add_task(async function toolbarButtons() {
 
   info(`@@@ Changing the locale.`);
   Services.locale.requestedLocales = ["es-ES"];
-  Services.obs.notifyObservers(null, "intl:app-locales-changed");
-  info(`@@@ flushing bundles`);
-  Services.strings.flushBundles()
-  info(`@@@ Waiting on document.l10n to be ready.`);
+  // Services.obs.notifyObservers(null, "intl:app-locales-changed");
+  // info(`@@@ flushing bundles`);
+  // Services.strings.flushBundles()
+  // info(`@@@ Waiting on document.l10n to be ready.`);
   await document.l10n.ready;
 
-  info(`@@@ Creating the klingon bundle "chrome://formautofill/locale/formautofill.properties"`);
+  info(`@@@ Creating the Spanish bundle "chrome://formautofill/locale/formautofill.properties"`);
   const klingonBundle = Services.strings.createBundle(
     "chrome://formautofill/locale/formautofill.properties"
   );
-
-  {
-    const seconds = 1000;
-    const message = "";
-    for (let i = seconds; i > 0; i--) {
-      dump(`!!! Countdown - ${message} ${i}
-  `);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    dump(`!!! Countdown ${message} done.`);
-  }
 
   Assert.equal(
     englishBundle.GetStringFromName("autofillHeader"),
@@ -162,7 +157,7 @@ add_task(async function toolbarButtons() {
   );
   Assert.equal(
     klingonBundle.GetStringFromName("autofillHeader"),
-    "Qapla",
-    "The klingon bundle gets the brand short name"
+    "Formas",
+    "The Spanish bundle gets the brand short name"
   );
 });
