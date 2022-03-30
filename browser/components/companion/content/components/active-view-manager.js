@@ -458,10 +458,12 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       document.getSelection().removeAllRanges();
     }
 
+    let titleEl = document.getElementById("site-info-title");
     let editImg = document.getElementById("site-info-edit-icon");
     if (event.target == editImg) {
-      let titleEl = document.getElementById("site-info-title");
       titleEl.focus();
+    } else if (event.target != titleEl) {
+      titleEl.blur();
     }
   }
 
