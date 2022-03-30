@@ -104,9 +104,9 @@ async function testScreenContent(
       unexpectedSelectors: unexpected,
     }) => {
       function selectorIsVisible(selector) {
-        const el = content.document.querySelector(selector);
+        const els = content.document.querySelectorAll(selector);
         // The offsetParent will be null if element is hidden through "display: none;"
-        return el && el.offsetParent !== null;
+        return [...els].some(el => el.offsetParent !== null);
       }
 
       for (let selector of expected) {
@@ -155,7 +155,7 @@ function eventsMatch(
 const liveLanguageSwitchSelectors = [
   ".screen-1",
   `[data-l10n-id*="onboarding-live-language"]`,
-  `[data-l10n-id="onboarding-live-language-header"]`,
+  `[data-l10n-id="onboarding-live-language-header2"]`,
 ];
 
 /**
@@ -185,7 +185,7 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
-      `[data-l10n-id="onboarding-live-language-header"]`,
+      `[data-l10n-id="onboarding-live-language-header2"]`,
       `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ],
@@ -204,8 +204,8 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
-      `[data-l10n-id="onboarding-live-language-switch-button-label"]`,
-      `[data-l10n-id="onboarding-live-language-not-now-button-label"]`,
+      `button.primary[value="primary_button"]`,
+      `button.secondary[value="decline"]`,
     ],
     // Unexpected selectors:
     [
@@ -298,7 +298,7 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
-      `[data-l10n-id="onboarding-live-language-header"]`,
+      `[data-l10n-id="onboarding-live-language-header2"]`,
       `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ],
@@ -317,8 +317,8 @@ add_task(async function test_aboutwelcome_languageSwitcher_accept() {
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
-      `[data-l10n-id="onboarding-live-language-switch-button-label"]`,
-      `[data-l10n-id="onboarding-live-language-not-now-button-label"]`,
+      `button.primary[value="primary_button"]`,
+      `button.secondary[value="decline"]`,
     ],
     // Unexpected selectors:
     [
@@ -399,7 +399,7 @@ add_task(async function test_aboutwelcome_languageSwitcher_decline() {
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
-      `[data-l10n-id="onboarding-live-language-header"]`,
+      `[data-l10n-id="onboarding-live-language-header2"]`,
       `button[disabled] [data-l10n-id="onboarding-live-language-waiting-button"]`,
       `[data-l10n-id="onboarding-live-language-skip-button-label"]`,
     ],
@@ -419,8 +419,8 @@ add_task(async function test_aboutwelcome_languageSwitcher_decline() {
     // Expected selectors:
     [
       ...liveLanguageSwitchSelectors,
-      `[data-l10n-id="onboarding-live-language-switch-button-label"]`,
-      `[data-l10n-id="onboarding-live-language-not-now-button-label"]`,
+      `button.primary[value="primary_button"]`,
+      `button.secondary[value="decline"]`,
     ],
     // Unexpected selectors:
     [
@@ -515,7 +515,7 @@ add_task(async function test_aboutwelcome_languageSwitcher_noMatch() {
     // Unexpected selectors:
     [
       `[data-l10n-id*="onboarding-live-language"]`,
-      `[data-l10n-id="onboarding-live-language-header"]`,
+      `[data-l10n-id="onboarding-live-language-header2"]`,
     ]
   );
   sinon.assert.notCalled(mockable.setRequestedAppLocales);
@@ -546,7 +546,7 @@ add_task(async function test_aboutwelcome_languageSwitcher_bidiNotSupported() {
     // Unexpected selectors:
     [
       `[data-l10n-id*="onboarding-live-language"]`,
-      `[data-l10n-id="onboarding-live-language-header"]`,
+      `[data-l10n-id="onboarding-live-language-header2"]`,
     ]
   );
 
