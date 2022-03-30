@@ -40,7 +40,7 @@ add_task(async function preview_removal() {
     "HistoryCarouselIndexUpdated"
   );
   // Let's close the last view, which is the selected one.
-  gGlobalHistory.closeView(views[3]);
+  gStageManager.closeView(views[3]);
   await indexUpdated;
 
   ({
@@ -57,7 +57,7 @@ add_task(async function preview_removal() {
     "HistoryCarouselIndexUpdated"
   );
   // Let's close the last view, which is the selected one.
-  gGlobalHistory.closeView(views[2]);
+  gStageManager.closeView(views[2]);
   await indexUpdated;
 
   ({

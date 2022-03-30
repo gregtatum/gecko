@@ -353,11 +353,8 @@ class AsyncTabSwitcher {
   }
 
   setViewTransitionAnimationAttributes(showPanel) {
-    // This is gated behind PINEBUILD as gGlobalHistory won't exist otherwise.
-    if (
-      AppConstants.PINEBUILD &&
-      this.window.gGlobalHistory.navigatingForward
-    ) {
+    // This is gated behind PINEBUILD as gStageManager won't exist otherwise.
+    if (AppConstants.PINEBUILD && this.window.gStageManager.navigatingForward) {
       showPanel.setAttribute("was-forward", "true");
     } else {
       showPanel.removeAttribute("was-forward");

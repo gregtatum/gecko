@@ -15,7 +15,7 @@ const LINK_URL = "https://example.com/";
  * browser window.
  *
  * This test is extremely similar to
- * browser_GlobalHistory_TopLevelNavigationDelegate.js because both
+ * browser_StageManager_TopLevelNavigationDelegate.js because both
  * mechanisms have the same goals. The difference in this variation is
  * that a new window must be opened after the targetTopLevelLinkClicksToBlank
  * pref is set because the behaviour change only manifests in browser elements

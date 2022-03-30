@@ -58,7 +58,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     );
 
     for (let event of ActiveViewManager.EVENTS) {
-      window.gGlobalHistory.addEventListener(event, this);
+      window.gStageManager.addEventListener(event, this);
     }
 
     this.addEventListener("UserAction:OpenOverflowPanel", this);
@@ -90,7 +90,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
 
     for (let event of ActiveViewManager.EVENTS) {
-      window.gGlobalHistory.removeEventListener(event, this);
+      window.gStageManager.removeEventListener(event, this);
     }
     this.removeEventListener("UserAction:OpenOverflowPanel", this);
     this.removeEventListener("UserAction:ViewSelected", this);
@@ -124,7 +124,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       // Intentional fall-through
       case "ViewUpdated": {
         let workspaceId = event.view.workspaceId;
-        let workspace = window.gGlobalHistory.getWorkspaceWithId(workspaceId);
+        let workspace = window.gStageManager.getWorkspaceWithId(workspaceId);
         let workspaceEl = this.querySelector(
           "[workspace-id='" + workspaceId + "']"
         );
@@ -140,7 +140,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
         let allWorkspaces = this.querySelectorAll("workspace-el");
         allWorkspaces.forEach(w => {
-          w.setActiveView(window.gGlobalHistory.currentView);
+          w.setActiveView(window.gStageManager.currentView);
           w.classList.toggle("selected", w == workspaceEl);
         });
         break;
@@ -240,15 +240,15 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   #viewSelected(view) {
-    window.gGlobalHistory.setView(view);
+    window.gStageManager.setView(view);
   }
 
   #viewGroupSelected(viewGroup) {
-    window.gGlobalHistory.setViewInGroup(viewGroup);
+    window.gStageManager.setViewInGroup(viewGroup);
   }
 
   #viewGroupCloseOne(viewGroup) {
-    window.gGlobalHistory.closeViewInGroup(viewGroup);
+    window.gStageManager.closeViewInGroup(viewGroup);
   }
 
   /**
@@ -354,7 +354,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     CustomizableUI.removePanelCloseListeners(this.#pageActionPanel);
 
     // Restart view activation timer once PAM is closed.
-    window.gGlobalHistory.startActivationTimer();
+    window.gStageManager.startActivationTimer();
 
     this.#pageActionView = null;
     let siteSecurityIcon = document.getElementById("site-security-icon");
@@ -371,7 +371,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     CustomizableUI.addPanelCloseListeners(this.#pageActionPanel);
 
     // Clear activation timeout if the page action menu is open.
-    window.gGlobalHistory.clearActivationTimer();
+    window.gStageManager.clearActivationTimer();
 
     let view = this.#pageActionView;
     let pinView = document.getElementById("page-action-pin-view");
@@ -479,10 +479,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   pageActionEditViewTitle(event) {
-    window.gGlobalHistory.setUserTitle(
-      this.#pageActionView,
-      event.target.value
-    );
+    window.gStageManager.setUserTitle(this.#pageActionView, event.target.value);
   }
 
   pageActionPinView(event) {
@@ -562,7 +559,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   contextMenuCloseViewGroup(event) {
     let views = this.#contextMenuViewGroup.viewGroup;
     for (let view of views) {
-      window.gGlobalHistory.closeView(view);
+      window.gStageManager.closeView(view);
     }
   }
 
@@ -581,7 +578,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     state,
     { index = undefined, appMode = false } = {}
   ) {
-    window.gGlobalHistory.setViewPinnedState(view, state, appMode, index);
+    window.gStageManager.setViewPinnedState(view, state, appMode, index);
     this.#viewSelected(view);
   }
 

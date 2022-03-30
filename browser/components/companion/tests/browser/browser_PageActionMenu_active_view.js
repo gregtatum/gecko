@@ -54,7 +54,7 @@ add_task(async function test_PageActionMenu_active_view() {
     "The Active ViewGroup order does not change when opening the Page " +
       "Action Menu for the last View in the Active ViewGroup."
   );
-  Assert.equal(gGlobalHistory.currentView, view5);
+  Assert.equal(gStageManager.currentView, view5);
   await PinebuildTestUtils.closePageActionMenu(pam);
 
   // Now select the second-to-last breadcrumb in this ViewGroup,
@@ -69,7 +69,7 @@ add_task(async function test_PageActionMenu_active_view() {
       "Action Menu for the second-last View in the Active ViewGroup."
   );
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view4,
     "Should not have changed the current View."
   );
@@ -90,7 +90,7 @@ add_task(async function test_PageActionMenu_active_view() {
       "Action Menu for the second-last View in the Active ViewGroup."
   );
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view1,
     "Should not have changed the current View."
   );

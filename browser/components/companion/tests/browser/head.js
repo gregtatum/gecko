@@ -59,7 +59,7 @@ registerCleanupFunction(async () => {
 
   // No matter what happens, blow away window history after tests run
   // in this directory to avoid leaking state between tests.
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   // Cleanup the Workshop object used in the tests.
   sharedWorkshopAPI?.willDie();
@@ -744,7 +744,7 @@ var PinebuildTestUtils = {
    */
   async waitForNewView(browser, wantLoad = null) {
     await BrowserTestUtils.browserLoaded(browser, false, wantLoad);
-    return browser.ownerGlobal.gGlobalHistory.currentView;
+    return browser.ownerGlobal.gStageManager.currentView;
   },
 
   /**
@@ -759,18 +759,18 @@ var PinebuildTestUtils = {
   async setCurrentView(view, win = window) {
     let viewChangedPromise = this.waitForSelectedView(view, win);
     let viewUpdatedPromise = BrowserTestUtils.waitForEvent(
-      win.gGlobalHistory,
+      win.gStageManager,
       "ViewUpdated",
       false,
       event => event.view == view
     );
-    win.gGlobalHistory.setView(view);
+    win.gStageManager.setView(view);
     await Promise.all([viewUpdatedPromise, viewChangedPromise]);
     return viewChangedPromise;
   },
 
   /**
-   * Waits for a particular View to be made current in GlobalHistory. If
+   * Waits for a particular View to be made current in StageManager. If
    * this view needs to load, then that will be waited for too.
    *
    * @param {View} view The View that is expected to become current.
@@ -781,14 +781,14 @@ var PinebuildTestUtils = {
    */
   async waitForSelectedView(view, win = window) {
     let viewChanged = BrowserTestUtils.waitForEvent(
-      win.gGlobalHistory,
+      win.gStageManager,
       "ViewChanged",
       false,
       event => event.view == view
     );
     let controller = new AbortController();
     let viewLoaded = BrowserTestUtils.waitForEvent(
-      win.gGlobalHistory,
+      win.gStageManager,
       "ViewLoaded",
       false,
       event => event.view == view,
@@ -835,7 +835,7 @@ var PinebuildTestUtils = {
    *   The window the views are from, the current window is used by default
    */
   assertUrlsAre(urls, win = window) {
-    let riverUrls = win.gGlobalHistory.views.map(view => view.url.spec);
+    let riverUrls = win.gStageManager.views.map(view => view.url.spec);
     Assert.deepEqual(riverUrls, urls);
   },
 
@@ -844,19 +844,19 @@ var PinebuildTestUtils = {
    * Views with viewArray and logs information if they don't match.
    *
    * @param {View[]} viewArray
-   *   An Array of Views to compare with gGlobalHistory.views.
+   *   An Array of Views to compare with gStageManager.views.
    * @param {Window?} win
    *   The window the views are from, the current window is used by default
    */
   assertViewsAre(viewArray, win = window) {
-    if (win.gGlobalHistory.views.length != viewArray.length) {
+    if (win.gStageManager.views.length != viewArray.length) {
       Assert.ok(false, "View lengths do not match.");
       return;
     }
 
     for (let i = 0; i < viewArray.length; ++i) {
       info(`Checking View at index ${i}`);
-      this.assertEqualViews(win.gGlobalHistory.views[i], viewArray[i]);
+      this.assertEqualViews(win.gStageManager.views[i], viewArray[i]);
     }
   },
 
@@ -870,10 +870,10 @@ var PinebuildTestUtils = {
    */
   async goBack(win = window) {
     let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      win.gGlobalHistory,
+      win.gStageManager,
       "ViewChanged"
     );
-    win.gGlobalHistory.goBack();
+    win.gStageManager.goBack();
     return viewChangedPromise;
   },
 
@@ -887,10 +887,10 @@ var PinebuildTestUtils = {
    */
   async goForward(win = window) {
     let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      win.gGlobalHistory,
+      win.gStageManager,
       "ViewChanged"
     );
-    win.gGlobalHistory.goForward();
+    win.gStageManager.goForward();
     return viewChangedPromise;
   },
 
@@ -960,11 +960,11 @@ var PinebuildTestUtils = {
 
     for (let url of urls) {
       let viewAddedPromise = BrowserTestUtils.waitForEvent(
-        win.gGlobalHistory,
+        win.gStageManager,
         "ViewAdded"
       );
       let viewChangedPromise = BrowserTestUtils.waitForEvent(
-        win.gGlobalHistory,
+        win.gStageManager,
         "ViewChanged"
       );
       let loaded = BrowserTestUtils.browserLoaded(browser, false, url);
@@ -1221,7 +1221,7 @@ var PinebuildTestUtils = {
    *   The index of the preview to scroll to.
    * @return {Promise}
    * @resolves {undefined}
-   *   Resolves once both GlobalHistory and the history carousel have
+   *   Resolves once both StageManager and the history carousel have
    *   acknowledged that the current preview index has changed.
    */
   async selectHistoryCarouselIndex(browser, previewIndex) {
@@ -1248,7 +1248,7 @@ var PinebuildTestUtils = {
    *   The index of the preview that is expected to be selected.
    * @return {Promise}
    * @resolves {undefined}
-   *   Resolves once both GlobalHistory and the history carousel have
+   *   Resolves once both StageManager and the history carousel have
    *   acknowledged that the current preview index has changed.
    */
   async waitForSelectedHistoryCarouselIndex(browser, previewIndex) {

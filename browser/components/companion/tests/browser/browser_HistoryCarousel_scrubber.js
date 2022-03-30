@@ -23,7 +23,7 @@ add_task(async function test_scrubber() {
   // Test for MR2-1598 - currently, we're choosing not to show previews
   // for pinned views. The scrubber should reflect that.
   await PinebuildTestUtils.setCurrentView(views[0]);
-  gGlobalHistory.setViewPinnedState(views[0], true);
+  gStageManager.setViewPinnedState(views[0], true);
   await PinebuildTestUtils.setCurrentView(views[3]);
 
   let browser = await PinebuildTestUtils.enterHistoryCarousel();
@@ -62,16 +62,16 @@ add_task(async function test_scrubber() {
     let waitForSelectedIndex = index => {
       let avmUpdated = SpecialPowers.spawnChrome([index], viewIndex => {
         let window = this.browsingContext.topChromeWindow;
-        let { gGlobalHistory } = window;
-        let view = gGlobalHistory.views[viewIndex];
+        let { gStageManager } = window;
+        let view = gStageManager.views[viewIndex];
         return new Promise(resolve => {
           let onViewChanged = event => {
             if (event.view == view) {
-              gGlobalHistory.removeEventListener("ViewChanged", onViewChanged);
+              gStageManager.removeEventListener("ViewChanged", onViewChanged);
               resolve();
             }
           };
-          gGlobalHistory.addEventListener("ViewChanged", onViewChanged);
+          gStageManager.addEventListener("ViewChanged", onViewChanged);
         });
       });
       let carouselUpdated = ContentTaskUtils.waitForEvent(

@@ -32,35 +32,35 @@ add_task(async function test_back_forward() {
     "https://example.org/",
   ]);
 
-  Assert.equal(gGlobalHistory.currentView, view4, "Starting at view4");
+  Assert.equal(gStageManager.currentView, view4, "Starting at view4");
 
   let wentBack = PinebuildTestUtils.waitForSelectedView(view3);
   pressCtrlTab({ shiftKey: true });
   await wentBack;
-  Assert.equal(gGlobalHistory.currentView, view3, "Went back to view3");
+  Assert.equal(gStageManager.currentView, view3, "Went back to view3");
 
   wentBack = PinebuildTestUtils.waitForSelectedView(view2);
   pressCtrlTab({ shiftKey: true });
   await wentBack;
-  Assert.equal(gGlobalHistory.currentView, view2, "Went back to view2");
+  Assert.equal(gStageManager.currentView, view2, "Went back to view2");
 
   wentBack = PinebuildTestUtils.waitForSelectedView(view1);
   pressCtrlTab({ shiftKey: true });
   await wentBack;
-  Assert.equal(gGlobalHistory.currentView, view1, "Went back to view1");
+  Assert.equal(gStageManager.currentView, view1, "Went back to view1");
 
   let wentFwd = PinebuildTestUtils.waitForSelectedView(view2);
   pressCtrlTab({ shiftKey: false });
   await wentFwd;
-  Assert.equal(gGlobalHistory.currentView, view2, "Went forward to view2");
+  Assert.equal(gStageManager.currentView, view2, "Went forward to view2");
 
   wentFwd = PinebuildTestUtils.waitForSelectedView(view3);
   pressCtrlTab({ shiftKey: false });
   await wentFwd;
-  Assert.equal(gGlobalHistory.currentView, view3, "Went forward to view3");
+  Assert.equal(gStageManager.currentView, view3, "Went forward to view3");
 
   wentFwd = PinebuildTestUtils.waitForSelectedView(view4);
   pressCtrlTab({ shiftKey: false });
   await wentFwd;
-  Assert.equal(gGlobalHistory.currentView, view4, "Went forward to view4");
+  Assert.equal(gStageManager.currentView, view4, "Went forward to view4");
 });

@@ -22,7 +22,7 @@ add_task(async function preview_construction() {
   // Test for MR2-1598 - currently, we're choosing not to show previews
   // for pinned views.
   await PinebuildTestUtils.setCurrentView(views[0]);
-  gGlobalHistory.setViewPinnedState(views[0], true);
+  gStageManager.setViewPinnedState(views[0], true);
   await PinebuildTestUtils.setCurrentView(views[3]);
 
   // Test for MR2-1379 - we'll provide a user-edited title on one of
@@ -30,7 +30,7 @@ add_task(async function preview_construction() {
   // This will be verified in the loop, since views[1].title should then
   // match TEST_USER_TITLE.
   const TEST_USER_TITLE = "This is a user-provided title";
-  gGlobalHistory.setUserTitle(views[1], TEST_USER_TITLE);
+  gStageManager.setUserTitle(views[1], TEST_USER_TITLE);
   registerCleanupFunction(async () => {
     // Setting a title adds a Snapshot, so let's be sure to clean up.
     await Snapshots.reset();

@@ -36,7 +36,7 @@ function waitForLazyBrowserLoad(browser) {
 /* Verify that the river functions correctly after a session restore */
 add_task(async function testSessionRestore() {
   let win = await BrowserTestUtils.openNewBrowserWindow();
-  let { gBrowser, gGlobalHistory } = win;
+  let { gBrowser, gStageManager } = win;
 
   let windowState = {
     extData: {
@@ -112,16 +112,13 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL2, TEST_URL4]);
   assertLazyBrowsers(win, [false, true, true]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[4]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[4]);
 
   // Change to a view in a lazy browser. Can't use the browser loaded event here
   // as it isn't a real browser yet.
-  let viewPromise = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
-    "ViewChanged"
-  );
+  let viewPromise = BrowserTestUtils.waitForEvent(gStageManager, "ViewChanged");
   let loadPromise = waitForLazyBrowserLoad(gBrowser.browsers[1]);
-  gGlobalHistory.setView(gGlobalHistory.views[1]);
+  gStageManager.setView(gStageManager.views[1]);
   await Promise.all([loadPromise, viewPromise]);
 
   PinebuildTestUtils.assertUrlsAre(
@@ -131,11 +128,11 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL3, TEST_URL4]);
   assertLazyBrowsers(win, [false, false, true]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[1]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[1]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[1]);
 
   // Change to a view in a different history position in the browser.
   loadPromise = BrowserTestUtils.browserLoaded(gBrowser.browsers[1]);
-  gGlobalHistory.setView(gGlobalHistory.views[0]);
+  gStageManager.setView(gStageManager.views[0]);
   await loadPromise;
 
   PinebuildTestUtils.assertUrlsAre(
@@ -145,12 +142,12 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL2, TEST_URL4]);
   assertLazyBrowsers(win, [false, false, true]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[1]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[0]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[0]);
 
   // Change to a view in another lazy browser.
   loadPromise = waitForLazyBrowserLoad(gBrowser.browsers[2]);
-  viewPromise = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewChanged");
-  gGlobalHistory.setView(gGlobalHistory.views[2]);
+  viewPromise = BrowserTestUtils.waitForEvent(gStageManager, "ViewChanged");
+  gStageManager.setView(gStageManager.views[2]);
   await Promise.all([loadPromise, viewPromise]);
 
   PinebuildTestUtils.assertUrlsAre(
@@ -160,7 +157,7 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL2, TEST_URL4]);
   assertLazyBrowsers(win, [false, false, false]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[2]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[2]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[2]);
 
   // Discard a browser
   let discardPromise = BrowserTestUtils.waitForEvent(
@@ -177,12 +174,12 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL2, TEST_URL4]);
   assertLazyBrowsers(win, [true, false, false]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[2]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[2]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[2]);
 
   // Recreate it.
   loadPromise = waitForLazyBrowserLoad(gBrowser.browsers[0]);
-  viewPromise = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewChanged");
-  gGlobalHistory.setView(gGlobalHistory.views[4]);
+  viewPromise = BrowserTestUtils.waitForEvent(gStageManager, "ViewChanged");
+  gStageManager.setView(gStageManager.views[4]);
   await Promise.all([loadPromise, viewPromise]);
 
   PinebuildTestUtils.assertUrlsAre(
@@ -192,14 +189,14 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL2, TEST_URL4]);
   assertLazyBrowsers(win, [false, false, false]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[4]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[4]);
 
   // Simulate history expiration
   loadPromise = BrowserTestUtils.waitForContentEvent(
     gBrowser.browsers[1],
     "pageshow"
   );
-  gGlobalHistory.setView(gGlobalHistory.views[1]);
+  gStageManager.setView(gStageManager.views[1]);
   await loadPromise;
 
   Assert.equal(gBrowser.browsers[1].browsingContext.sessionHistory.count, 2);
@@ -218,7 +215,7 @@ add_task(async function testSessionRestore() {
 
   // Recreate the missing history entry
   loadPromise = BrowserTestUtils.waitForNewTab(gBrowser);
-  gGlobalHistory.setView(gGlobalHistory.views[0]);
+  gStageManager.setView(gStageManager.views[0]);
   await loadPromise;
 
   PinebuildTestUtils.assertUrlsAre(
@@ -228,11 +225,11 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL3, TEST_URL4, TEST_URL2]);
   assertLazyBrowsers(win, [false, false, false, false]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[3]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[0]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[0]);
 
   // Browse to a view that never existed
   loadPromise = BrowserTestUtils.waitForNewTab(gBrowser);
-  gGlobalHistory.setView(gGlobalHistory.views[3]);
+  gStageManager.setView(gStageManager.views[3]);
   await loadPromise;
 
   PinebuildTestUtils.assertUrlsAre(
@@ -242,7 +239,7 @@ add_task(async function testSessionRestore() {
   assertTabUrls(win, [TEST_URL1, TEST_URL3, TEST_URL4, TEST_URL2, TEST_URL5]);
   assertLazyBrowsers(win, [false, false, false, false, false]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[4]);
-  Assert.equal(gGlobalHistory.currentView, gGlobalHistory.views[3]);
+  Assert.equal(gStageManager.currentView, gStageManager.views[3]);
 
   await BrowserTestUtils.closeWindow(win);
 });
@@ -253,14 +250,14 @@ add_task(async function testSessionRestore() {
  */
 add_task(async function testSessionRestoreNoChange() {
   let win = await BrowserTestUtils.openNewBrowserWindow();
-  let { gBrowser, gGlobalHistory } = win;
+  let { gBrowser, gStageManager } = win;
 
   let [view1] = await PinebuildTestUtils.loadViews([TEST_URL1], win);
 
   PinebuildTestUtils.assertUrlsAre([TEST_URL1], win);
   assertTabUrls(win, [TEST_URL1]);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
-  Assert.equal(gGlobalHistory.currentView, view1);
+  Assert.equal(gStageManager.currentView, view1);
 
   let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
   Assert.ok(guid, "A session has been started.");
@@ -299,7 +296,7 @@ add_task(async function testSessionRestoreNoChange() {
  */
 add_task(async function testSessionSetAsideNoFlowReset() {
   let win = await BrowserTestUtils.openNewBrowserWindow();
-  let { gGlobalHistory } = win;
+  let { gStageManager } = win;
 
   await PinebuildTestUtils.loadViews([TEST_URL1], win);
 
@@ -309,13 +306,9 @@ add_task(async function testSessionSetAsideNoFlowReset() {
   await PinebuildTestUtils.setAsideSession(win);
   let [view2] = await PinebuildTestUtils.loadViews([TEST_URL2], win);
 
-  Assert.equal(gGlobalHistory.views.length, 1, "Should only be 1 View");
-  console.log(gGlobalHistory.views);
-  Assert.equal(
-    gGlobalHistory.currentView,
-    view2,
-    "Should be looking at View 2"
-  );
+  Assert.equal(gStageManager.views.length, 1, "Should only be 1 View");
+  console.log(gStageManager.views);
+  Assert.equal(gStageManager.currentView, view2, "Should be looking at View 2");
 
   let viewGroups = await PinebuildTestUtils.getViewGroups(win);
   Assert.equal(viewGroups.length, 1, "Should only be 1 ViewGroup");

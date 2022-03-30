@@ -6,7 +6,7 @@
 registerCleanupFunction(async () => {
   // No matter what happens, blow away window history after this file runs
   // to avoid leaking state between tests.
-  gGlobalHistory.reset();
+  gStageManager.reset();
 });
 
 add_setup(async function setup() {

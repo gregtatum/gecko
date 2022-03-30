@@ -27,7 +27,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   CFRPageActions: "resource://activity-stream/lib/CFRPageActions.jsm",
   Color: "resource://gre/modules/Color.jsm",
-  GlobalHistory: "resource:///modules/GlobalHistory.jsm",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.jsm",
   CustomizableUI: "resource:///modules/CustomizableUI.jsm",
@@ -78,6 +77,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   SiteDataManager: "resource:///modules/SiteDataManager.jsm",
   SitePermissions: "resource:///modules/SitePermissions.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
+  StageManager: "resource:///modules/StageManager.jsm",
   SubDialog: "resource://gre/modules/SubDialog.jsm",
   SubDialogManager: "resource://gre/modules/SubDialog.jsm",
   TabModalPrompt: "chrome://global/content/tabprompts.jsm",
@@ -340,8 +340,8 @@ XPCOMUtils.defineLazyGetter(this, "gNavToolbox", () => {
   return document.getElementById("navigator-toolbox");
 });
 
-XPCOMUtils.defineLazyGetter(this, "gGlobalHistory", () => {
-  return new GlobalHistory(window);
+XPCOMUtils.defineLazyGetter(this, "gStageManager", () => {
+  return new StageManager(window);
 });
 
 XPCOMUtils.defineLazyGetter(this, "gActiveViewManager", () => {
@@ -766,7 +766,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
   let canGoBack = AppConstants.PINEBUILD
-    ? gGlobalHistory.canGoBack
+    ? gStageManager.canGoBack
     : aWebNavigation.canGoBack;
   if (backDisabled == canGoBack) {
     if (backDisabled) {
@@ -777,7 +777,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
   }
 
   let canGoForward = AppConstants.PINEBUILD
-    ? gGlobalHistory.canGoForward
+    ? gStageManager.canGoForward
     : aWebNavigation.canGoForward;
   if (forwardDisabled == canGoForward) {
     if (forwardDisabled) {
@@ -788,7 +788,7 @@ function UpdateBackForwardCommands(aWebNavigation) {
   }
 
   if (AppConstants.PINEBUILD) {
-    let hasViews = !!gGlobalHistory.views.length;
+    let hasViews = !!gStageManager.views.length;
     UpdateSetAsideButton(hasViews);
   }
 }
@@ -1769,11 +1769,11 @@ var gBrowserInit = {
     gBrowser.init();
 
     if (AppConstants.PINEBUILD) {
-      gGlobalHistory.init();
-      gGlobalHistory.addEventListener("ViewChanged", UpdateBackForwardCommands);
-      gGlobalHistory.addEventListener("ViewAdded", UpdateBackForwardCommands);
-      gGlobalHistory.addEventListener("ViewRemoved", UpdateBackForwardCommands);
-      gGlobalHistory.addEventListener("ViewMoved", UpdateBackForwardCommands);
+      gStageManager.init();
+      gStageManager.addEventListener("ViewChanged", UpdateBackForwardCommands);
+      gStageManager.addEventListener("ViewAdded", UpdateBackForwardCommands);
+      gStageManager.addEventListener("ViewRemoved", UpdateBackForwardCommands);
+      gStageManager.addEventListener("ViewMoved", UpdateBackForwardCommands);
       document.getElementById(
         "session-setaside-button"
       ).hidden = !gPerWindowSessionsEnabled;
@@ -2764,7 +2764,7 @@ function gotoHistoryIndex(aEvent) {
 function BrowserForward(aEvent) {
   // goForward returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (AppConstants.PINEBUILD && gGlobalHistory.goForward()) {
+  if (AppConstants.PINEBUILD && gStageManager.goForward()) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);
@@ -2781,7 +2781,7 @@ function BrowserForward(aEvent) {
 function BrowserBack(aEvent) {
   // goBack returns true if it handled the request.
   // otherwise, let the current code do its thing.
-  if (AppConstants.PINEBUILD && gGlobalHistory.goBack()) {
+  if (AppConstants.PINEBUILD && gStageManager.goBack()) {
     return;
   }
   let where = whereToOpenLink(aEvent, false, true);

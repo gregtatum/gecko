@@ -49,7 +49,7 @@ add_task(async function test_replaceSession_set_aside_reordered_session() {
       await BrowserTestUtils.openNewForegroundTab(win.gBrowser, TEST_URL3);
 
       let promise = BrowserTestUtils.waitForEvent(
-        win.gGlobalHistory,
+        win.gStageManager,
         "ViewMoved"
       );
       win.gBrowser.selectedTab = originalTab;

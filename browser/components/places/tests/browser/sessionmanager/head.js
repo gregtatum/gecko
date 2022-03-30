@@ -138,7 +138,7 @@ async function testSetAsideSession(win, loadPagesCallback, expectedPages) {
   );
 
   Assert.equal(
-    win.gGlobalHistory.views.length,
+    win.gStageManager.views.length,
     0,
     "There should be no views in the global history"
   );

@@ -120,7 +120,7 @@ class CompanionChild extends JSWindowActorChild {
           tabs,
           newFavicons,
           connectedServices,
-          globalHistory,
+          stageManager,
           sessions,
         } = message.data;
 
@@ -130,7 +130,7 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.connectedServices = connectedServices;
-        waivedContent.CompanionUtils.globalHistory = globalHistory;
+        waivedContent.CompanionUtils.stageManager = stageManager;
 
         this.updateFaviconCache(newFavicons);
         waivedContent.CompanionUtils._initialSessionData = sessions;
@@ -156,11 +156,11 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils._tabs.delete(message.data.browserId);
         break;
       }
-      case "Companion:GlobalHistoryEvent": {
-        let { globalHistory } = message.data;
+      case "Companion:StageManagerEvent": {
+        let { stageManager } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         // Used for debugging.
-        waivedContent.CompanionUtils.globalHistory = globalHistory;
+        waivedContent.CompanionUtils.stageManager = stageManager;
         break;
       }
       case "Companion:ViewTab":

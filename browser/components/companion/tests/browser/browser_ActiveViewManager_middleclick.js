@@ -20,7 +20,7 @@ async function assertMiddleClickClosesAndSwitchesTo(viewGroup, view) {
     gBrowser,
     view.url.spec
   );
-  let viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
+  let viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
   EventUtils.synthesizeMouseAtCenter(viewGroup, { button: 1 }, window);
   await viewClosed;
   await navigate;

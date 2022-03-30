@@ -26,7 +26,7 @@ add_task(async function test_pinned_view() {
 
   let [view1] = await PinebuildTestUtils.loadViews(["https://example.com/"]);
   let observed = TestUtils.topicObserved("places-snapshots-added");
-  gGlobalHistory.setViewPinnedState(view1, true);
+  gStageManager.setViewPinnedState(view1, true);
 
   Assert.ok(view1.pinned, "View should now be pinned.");
 

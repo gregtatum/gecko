@@ -20,7 +20,7 @@ browser.jar:
     content/browser/companion/flow-reset-bg.jpg (content/flow-reset-bg.jpg)
     content/browser/companion/flow-reset-placeholder.png (content/flow-reset-placeholder.png)
     content/browser/companion/fonts.css (content/fonts.css)
-    content/browser/companion/globalhistorydebugging.js (content/globalhistorydebugging.js)
+    content/browser/companion/stagemanagerdebugging.js (content/stagemanagerdebugging.js)
     content/browser/companion/googleAccount.png (content/googleAccount.png)
     content/browser/companion/historyCarousel.css (content/historyCarousel.css)
     content/browser/companion/historyCarousel.html (content/historyCarousel.html)

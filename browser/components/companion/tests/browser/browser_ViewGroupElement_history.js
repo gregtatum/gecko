@@ -10,7 +10,7 @@
  */
 
 /**
- * This class matches the interface for View from GlobalHistory, but lets us
+ * This class matches the interface for View from StageManager, but lets us
  * prepare it with whatever URL or title data we'd like.
  */
 class FakeView {
@@ -68,7 +68,7 @@ function generateGroupableViews(numViews) {
  * Constructs a ViewGroupElement with some FakeViews and inserts it into
  * the DOM for testing. This utility function sets up the ViewGroupElement
  * so that it thinks it is active, and so that it suppresses the
- * UserAction:ViewSelected events if they fire so that GlobalHistory
+ * UserAction:ViewSelected events if they fire so that StageManager
  * doesn't try to do anything about it. This function also handles
  * cleaning up the ViewGroupElement when the test is over.
  *

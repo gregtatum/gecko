@@ -11,7 +11,6 @@ DIRS += [
 JAR_MANIFESTS += ["jar.mn"]
 
 EXTRA_JS_MODULES += [
-    "GlobalHistory.jsm",
     "HParser.jsm",
     "LaunchOnOSLogin.jsm",
     "OAuth2.jsm",
@@ -19,6 +18,7 @@ EXTRA_JS_MODULES += [
     "OnlineServicesHelper.jsm",
     "OnnxRuntimeService.jsm",
     "PyodideService.jsm",
+    "StageManager.jsm",
     "WorkshopBootstrap.jsm",
     "WorkshopParentAccess.jsm",
 ]

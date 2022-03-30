@@ -76,7 +76,7 @@ add_task(async function test_set_aside_session() {
   });
 
   Assert.equal(
-    win.gGlobalHistory.views.length,
+    win.gStageManager.views.length,
     0,
     "There should be no views in the global history."
   );

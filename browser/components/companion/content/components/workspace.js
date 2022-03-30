@@ -30,7 +30,7 @@ export default class Workspace extends window.MozHTMLElement {
     this.addEventListener("dragstart", this);
     this.addEventListener("dragend", this);
     this.addEventListener("click", this);
-    window.gGlobalHistory.addEventListener("RiverRebuilt", this);
+    window.gStageManager.addEventListener("RiverRebuilt", this);
 
     this.#id = this.getAttribute("workspace-id");
     this.#updateSearchWorkspace();
@@ -154,7 +154,7 @@ export default class Workspace extends window.MozHTMLElement {
         if (event.target.id == "workspace-indicator-button") {
           if (this.#isEmpty()) {
             this.#updateSearchWorkspace();
-            window.gGlobalHistory.loadEmptyWorkspace(this.#id);
+            window.gStageManager.loadEmptyWorkspace(this.#id);
           }
         }
         break;

@@ -2,13 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-export class GlobalHistoryDebugging extends HTMLElement {
+export class StageManagerDebugging extends HTMLElement {
   constructor() {
     super();
     this.render = this.render.bind(this);
     let listTitle = document.createElement("h2");
     listTitle.setAttribute("class", "list-title");
-    listTitle.textContent = "Global History";
+    listTitle.textContent = "Stage Manager";
 
     let historyList = document.createElement("ul");
     historyList.setAttribute("class", "history-list");
@@ -18,17 +18,17 @@ export class GlobalHistoryDebugging extends HTMLElement {
   }
 
   connectedCallback() {
-    window.addEventListener("Companion:GlobalHistoryEvent", this.render);
+    window.addEventListener("Companion:StageManagerEvent", this.render);
     this.render();
   }
 
   disconnectedCallback() {
-    window.removeEventListener("Companion:GlobalHistoryEvent", this.render);
+    window.removeEventListener("Companion:StageManagerEvent", this.render);
   }
 
   get enabled() {
     return window.CompanionUtils.getBoolPref(
-      "browser.companion.globalhistorydebugging"
+      "browser.companion.stagemanagerdebugging"
     );
   }
 
@@ -43,7 +43,7 @@ export class GlobalHistoryDebugging extends HTMLElement {
     }
 
     this.hidden = false;
-    let views = window.CompanionUtils.globalHistory;
+    let views = window.CompanionUtils.stageManager;
     let elements = [];
     views.forEach(view => {
       let item = document.createElement("li");
@@ -67,7 +67,7 @@ export class GlobalHistoryDebugging extends HTMLElement {
 
       item.addEventListener("click", () =>
         window.CompanionUtils.sendAsyncMessage(
-          "Companion:SetGlobalHistoryViewIndex",
+          "Companion:SetStageManagerViewIndex",
           { index: view.index }
         )
       );
@@ -77,4 +77,4 @@ export class GlobalHistoryDebugging extends HTMLElement {
   }
 }
 
-customElements.define("e-global-nav-debugging", GlobalHistoryDebugging);
+customElements.define("e-global-nav-debugging", StageManagerDebugging);

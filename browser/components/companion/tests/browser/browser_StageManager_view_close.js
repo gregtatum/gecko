@@ -47,9 +47,9 @@ add_task(async function test_remove_browser_on_last_view() {
     2,
     "Should have 2 browsers in the window"
   );
-  Assert.equal(gGlobalHistory.views.length, 2, "Should be 2 views now");
+  Assert.equal(gStageManager.views.length, 2, "Should be 2 views now");
   Assert.equal(
-    gGlobalHistory.currentView.url.spec,
+    gStageManager.currentView.url.spec,
     PAGE_2,
     "The current view is for the second page"
   );
@@ -57,10 +57,10 @@ add_task(async function test_remove_browser_on_last_view() {
   // Now close the original view. The original browser should get removed.
   let originalTab = gBrowser.getTabForBrowser(originalBrowser);
   let tabClose = BrowserTestUtils.waitForTabClosing(originalTab, "TabClose");
-  gGlobalHistory.closeView(view);
+  gStageManager.closeView(view);
   await tabClose;
 
-  Assert.equal(gGlobalHistory.views.length, 1, "Should only be 1 view");
+  Assert.equal(gStageManager.views.length, 1, "Should only be 1 view");
   Assert.equal(gBrowser.browsers.length, 1, "Should only be 1 browser");
   Assert.equal(
     gBrowser.selectedBrowser,
@@ -69,7 +69,7 @@ add_task(async function test_remove_browser_on_last_view() {
   );
   Assert.ok(!originalBrowser.isConnected, "Original browser was removed");
 
-  gGlobalHistory.reset();
+  gStageManager.reset();
 });
 
 /**
@@ -124,31 +124,31 @@ add_task(async function test_remove_browser_on_last_view() {
   );
 
   Assert.equal(
-    gGlobalHistory.views.length,
+    gStageManager.views.length,
     5,
     "Should have 5 views in the window"
   );
 
-  gGlobalHistory.closeView(view1);
-  Assert.equal(gGlobalHistory.views.length, 4, "Should be 4 views left");
+  gStageManager.closeView(view1);
+  Assert.equal(gStageManager.views.length, 4, "Should be 4 views left");
   Assert.equal(gBrowser.browsers.length, 2, "Should still be 2 browsers");
 
-  gGlobalHistory.closeView(view3);
-  Assert.equal(gGlobalHistory.views.length, 3, "Should be 3 views left");
+  gStageManager.closeView(view3);
+  Assert.equal(gStageManager.views.length, 3, "Should be 3 views left");
   Assert.equal(gBrowser.browsers.length, 2, "Should still be 2 browsers");
 
-  gGlobalHistory.closeView(view2);
-  Assert.equal(gGlobalHistory.views.length, 2, "Should be 2 views left");
+  gStageManager.closeView(view2);
+  Assert.equal(gStageManager.views.length, 2, "Should be 2 views left");
   Assert.equal(gBrowser.browsers.length, 2, "Should still be 2 browsers");
 
   // Now close the last view associated with the staged browser.
   let tab = gBrowser.selectedTab;
   let tabSwitch = BrowserTestUtils.waitForEvent(gBrowser, "TabSwitchDone");
   let tabClose = BrowserTestUtils.waitForTabClosing(tab, "TabClose");
-  gGlobalHistory.closeView(view4);
+  gStageManager.closeView(view4);
   await tabClose;
   await tabSwitch;
-  Assert.equal(gGlobalHistory.views.length, 1, "Should be 1 view left");
+  Assert.equal(gStageManager.views.length, 1, "Should be 1 view left");
 
   // tabbrowser will automatically create a new browser when the
   // last one is destroyed, so there should be one left, but it

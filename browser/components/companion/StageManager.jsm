@@ -1,10 +1,10 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-const EXPORTED_SYMBOLS = ["GlobalHistory"];
+const EXPORTED_SYMBOLS = ["StageManager"];
 
 /**
- * This component tracks the views that a user visits. Instances of GlobalHistory track the views
+ * This component tracks the views that a user visits. Instances of StageManager track the views
  * for a single top-level window.
  */
 const { XPCOMUtils } = ChromeUtils.import(
@@ -32,15 +32,15 @@ ChromeUtils.defineModuleGetter(
 
 XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
   return console.createInstance({
-    prefix: "GlobalHistory",
-    maxLogLevelPref: "browser.companion.globalhistorydebugging.logLevel",
+    prefix: "StageManager",
+    maxLogLevelPref: "browser.companion.stagemanagerdebugging.logLevel",
   });
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
   this,
   "DEBUG",
-  "browser.companion.globalhistorydebugging",
+  "browser.companion.stagemanagerdebugging",
   false
 );
 
@@ -158,7 +158,7 @@ function getHistoryIndex(browser, historyId) {
 }
 
 /**
- * A single view in the global history. These are intended to be non-mutable.
+ * A single view in the StageManager. These are intended to be non-mutable.
  */
 class View {
   #internalView;
@@ -898,7 +898,7 @@ class InternalView {
 
     this.#pinned = isPinned;
 
-    // If GlobalHistory debugging is enabled, then we want to also update
+    // If StageManager debugging is enabled, then we want to also update
     // the historyState object that gets shown in the sidebar.
     if (DEBUG) {
       let browser = this.getBrowser();
@@ -968,7 +968,7 @@ class InternalView {
 }
 
 /**
- * An event fired from GlobalHistory to inform about changes
+ * An event fired from StageManager to inform about changes
  * to the view stack. Can be one of the following types:
  *
  * `WorkspaceAdded` - A new workspace has been added to the AVM.
@@ -980,7 +980,7 @@ class InternalView {
  * `RiverRebuilt` - The rivers have been replaced with a new state and should be rebuilt.
  * `ViewLoaded` - A view has finished loading.
  */
-class GlobalHistoryEvent extends Event {
+class StageManagerEvent extends Event {
   #view;
   #detail;
 
@@ -999,7 +999,7 @@ class GlobalHistoryEvent extends Event {
     this.#detail = detail;
 
     if (view && !(view instanceof View)) {
-      logConsole.error("Emitting a global history event with a non-view", view);
+      logConsole.error("Emitting a StageManagerEvent with a non-view", view);
     }
   }
 
@@ -1012,7 +1012,7 @@ class GlobalHistoryEvent extends Event {
   }
 
   /**
-   * Optional detail information about the GlobalHistoryEvent.
+   * Optional detail information about the StageManagerEvent.
    * @type {Object}
    */
   get detail() {
@@ -1211,8 +1211,8 @@ class WorkspaceHistory extends EventTarget {
    */
   #window;
 
-  /** @type {GlobalHistory} */
-  #globalHistory;
+  /** @type {StageManager} */
+  #stageManager;
 
   /**
    * @type {Number}
@@ -1271,7 +1271,7 @@ class WorkspaceHistory extends EventTarget {
 
     this.#workspaceId = workspaceId;
     this.#window = window;
-    this.#globalHistory = window.gGlobalHistory;
+    this.#stageManager = window.gStageManager;
 
     for (let tab of this.#window.gBrowser.tabs) {
       if (tab.userContextId !== this.#workspaceId) {
@@ -1283,7 +1283,7 @@ class WorkspaceHistory extends EventTarget {
   }
 
   /**
-   * Called by GlobalHistory to handle tab events such as "TabSelect",
+   * Called by StageManager to handle tab events such as "TabSelect",
    * "TabOpen", "TabClose", "TabAttrModified", "TabBrowserDiscarding" and "SSTabRestoring"
    * for tabs belonging to this workspace.
    *
@@ -1305,7 +1305,7 @@ class WorkspaceHistory extends EventTarget {
     let browser = tab.linkedBrowser;
     switch (type) {
       case "TabSelect":
-        if (this.#globalHistory.windowRestoring) {
+        if (this.#stageManager.windowRestoring) {
           return;
         }
 
@@ -1313,7 +1313,7 @@ class WorkspaceHistory extends EventTarget {
         this._onBrowserNavigate(browser);
         break;
       case "TabOpen":
-        if (this.#globalHistory.windowRestoring) {
+        if (this.#stageManager.windowRestoring) {
           return;
         }
 
@@ -1322,7 +1322,7 @@ class WorkspaceHistory extends EventTarget {
         this._onBrowserNavigate(browser);
         break;
       case "TabClose":
-        if (this.#globalHistory.windowRestoring) {
+        if (this.#stageManager.windowRestoring) {
           return;
         }
 
@@ -1333,12 +1333,12 @@ class WorkspaceHistory extends EventTarget {
             view => view.browserId == browser.browserId
           );
           for (let internalView of viewsToRemove) {
-            this.#globalHistory.closeView(internalView.view);
+            this.#stageManager.closeView(internalView.view);
           }
         }
         break;
       case "TabAttrModified":
-        if (this.#globalHistory.windowRestoring) {
+        if (this.#stageManager.windowRestoring) {
           return;
         }
 
@@ -1429,12 +1429,12 @@ class WorkspaceHistory extends EventTarget {
       return;
     }
 
-    this.viewStack.splice(this.#globalHistory.currentIndex, 1);
+    this.viewStack.splice(this.#stageManager.currentIndex, 1);
     this.viewStack.push(internalView);
   }
 
   /**
-   * Called by GlobalHistory to remove browser listeners.
+   * Called by StageManager to remove browser listeners.
    */
   clean() {
     let browsers =
@@ -1502,7 +1502,7 @@ class WorkspaceHistory extends EventTarget {
     }
 
     internalView.iconURL = browser.mIconURL;
-    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+    this.#stageManager.notifyEvent("ViewUpdated", internalView);
   }
 
   /**
@@ -1519,7 +1519,7 @@ class WorkspaceHistory extends EventTarget {
     }
 
     internalView.busy = busy;
-    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+    this.#stageManager.notifyEvent("ViewUpdated", internalView);
   }
 
   /**
@@ -1536,7 +1536,7 @@ class WorkspaceHistory extends EventTarget {
     }
 
     internalView.setTitle(entry.title);
-    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+    this.#stageManager.notifyEvent("ViewUpdated", internalView);
   }
 
   _onPasswordFormSubmit(browser) {
@@ -1581,7 +1581,7 @@ class WorkspaceHistory extends EventTarget {
           // Don't store initial pages in the river.
           this.viewStack.splice(pos, 1);
           let currentInternalView = InternalView.viewMap.get(
-            this.#globalHistory.currentView
+            this.#stageManager.currentView
           );
           if (previousView == currentInternalView) {
             logConsole.trace(`Setting currentInternalView to NULL`);
@@ -1590,13 +1590,13 @@ class WorkspaceHistory extends EventTarget {
             });
             this.dispatchEvent(event);
           }
-          this.#globalHistory.notifyEvent("ViewRemoved", previousView);
+          this.#stageManager.notifyEvent("ViewRemoved", previousView);
 
           currentInternalView = InternalView.viewMap.get(
-            this.#globalHistory.currentView
+            this.#stageManager.currentView
           );
           if (currentInternalView === null) {
-            this.#globalHistory.notifyEvent("ViewChanged", null, {
+            this.#stageManager.notifyEvent("ViewChanged", null, {
               navigating: true,
               browser,
             });
@@ -1607,8 +1607,8 @@ class WorkspaceHistory extends EventTarget {
         previousView.update(browser, newEntry);
         this.historyViews.set(newEntry.ID, previousView);
 
-        this.#globalHistory.notifyEvent("ViewUpdated", previousView);
-        this.#globalHistory.updateSessionStore();
+        this.#stageManager.notifyEvent("ViewUpdated", previousView);
+        this.#stageManager.updateSessionStore();
         return;
       }
       logConsole.error(
@@ -1710,7 +1710,7 @@ class WorkspaceHistory extends EventTarget {
         logConsole.error
       );
 
-      this.#globalHistory.notifyEvent("ViewAdded", internalView);
+      this.#stageManager.notifyEvent("ViewAdded", internalView);
     } else {
       logConsole.debug(`Updating InternalView ${internalView.toString()}.`);
       // This is a navigation to an existing view.
@@ -1719,12 +1719,12 @@ class WorkspaceHistory extends EventTarget {
       });
 
       let currentInternalView = InternalView.viewMap.get(
-        this.#globalHistory.currentView
+        this.#stageManager.currentView
       );
       if (internalView == currentInternalView) {
         logConsole.trace(`Updated InternalView is the current index.`);
         logConsole.groupEnd();
-        this.#globalHistory.notifyEvent("ViewUpdated", internalView);
+        this.#stageManager.notifyEvent("ViewUpdated", internalView);
         return;
       }
 
@@ -1740,13 +1740,13 @@ class WorkspaceHistory extends EventTarget {
         logConsole.warn("Navigated to a view not in the existing stack.");
         this.viewStack.push(internalView);
 
-        this.#globalHistory.notifyEvent("ViewAdded", internalView);
+        this.#stageManager.notifyEvent("ViewAdded", internalView);
       }
     }
 
-    this.#globalHistory.startActivationTimer();
-    this.#globalHistory.updateSessionStore();
-    this.#globalHistory.notifyEvent("ViewChanged", internalView, {
+    this.#stageManager.startActivationTimer();
+    this.#stageManager.updateSessionStore();
+    this.#stageManager.notifyEvent("ViewChanged", internalView, {
       navigating: !viaTabSwitch,
       browser,
     });
@@ -1801,11 +1801,11 @@ class WorkspaceHistory extends EventTarget {
       }
     }
 
-    if (this.#globalHistory.pendingView?.url.spec == newEntry.URI.spec) {
+    if (this.#stageManager.pendingView?.url.spec == newEntry.URI.spec) {
       logConsole.debug(
-        `Found pending View ${this.#globalHistory.pendingView.toString()}.`
+        `Found pending View ${this.#stageManager.pendingView.toString()}.`
       );
-      internalView = InternalView.viewMap.get(this.#globalHistory.pendingView);
+      internalView = InternalView.viewMap.get(this.#stageManager.pendingView);
       this.historyViews.delete(internalView.historyId);
       this.historyViews.set(newEntry.ID, internalView);
       let event = new CustomEvent("ClearPendingInternalView");
@@ -1924,7 +1924,7 @@ class WorkspaceHistory extends EventTarget {
       }
     }
 
-    this.#globalHistory.updateSessionStore();
+    this.#stageManager.updateSessionStore();
   }
 
   /**
@@ -2001,7 +2001,7 @@ class WorkspaceHistory extends EventTarget {
       }
     } else {
       // We don't want to remove Pinned Views from the viewStack Array,
-      // since so much of GlobalHistory relies on all available Views
+      // since so much of StageManager relies on all available Views
       // existing in it.
       //
       // To accommodate Pinned Views, we borrow the organizational model
@@ -2016,7 +2016,7 @@ class WorkspaceHistory extends EventTarget {
       // [Pinned View 3, Unpinned View 1, Unpinned View 2]
       //
       // This way, we can keep pinned Views within #viewStack and not have
-      // to treat them specially throughout GlobalHistory.
+      // to treat them specially throughout StageManager.
       let viewIndex = this.viewStack.indexOf(internalView);
       this.viewStack.splice(viewIndex, 1);
 
@@ -2032,8 +2032,8 @@ class WorkspaceHistory extends EventTarget {
     }
 
     internalView.pinned = shouldPin;
-    this.#globalHistory.notifyEvent("ViewUpdated", internalView);
-    this.#globalHistory.notifyEvent("ViewChanged", internalView);
+    this.#stageManager.notifyEvent("ViewUpdated", internalView);
+    this.#stageManager.notifyEvent("ViewChanged", internalView);
   }
 
   /**
@@ -2068,7 +2068,7 @@ class WorkspaceHistory extends EventTarget {
  * `RiverRebuilt` - The rivers have been replaced with a new state and should be rebuilt.
  * `ViewLoaded` - A view has finished loading.
  */
-class GlobalHistory extends EventTarget {
+class StageManager extends EventTarget {
   /**
    * The window this instance is managing workspaces for.
    * @type {DOMWindow}
@@ -2117,7 +2117,7 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * True if our most recent navigation was forward in the global history.
+   * True if our most recent navigation was forward in the StageManager.
    */
   #navigatingForward = false;
 
@@ -2371,9 +2371,9 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Dispatches a GlobalHistoryEvent of type "type" on this.
+   * Dispatches a StageManagerEvent of type "type" on this.
    *
-   * @param {String} type The type of GlobalHistoryEvent to dispatch.
+   * @param {String} type The type of StageManagerEvent to dispatch.
    * @param {InternalView} internalView The InternalView associated with the
    *   event. Note that the associated View will be attached to the event, and
    *   not the InternalView.
@@ -2386,9 +2386,7 @@ class GlobalHistory extends EventTarget {
       workspace.regroup();
     }
 
-    this.dispatchEvent(
-      new GlobalHistoryEvent(type, internalView?.view, detail)
-    );
+    this.dispatchEvent(new StageManagerEvent(type, internalView?.view, detail));
   }
 
   #sessionRestoreStarted() {
@@ -2435,7 +2433,7 @@ class GlobalHistory extends EventTarget {
       try {
         state = JSON.parse(stateStr);
       } catch (e) {
-        logConsole.warn("Failed to deserialize global history state.", e);
+        logConsole.warn("Failed to deserialize StageManager state.", e);
       }
     }
 
@@ -2632,7 +2630,7 @@ class GlobalHistory extends EventTarget {
       this.clearActivationTimer();
     }
 
-    let timeout = GlobalHistory.activationTimeout;
+    let timeout = StageManager.activationTimeout;
     if (timeout == 0) {
       return;
     }
@@ -2694,7 +2692,7 @@ class GlobalHistory extends EventTarget {
   /**
    * Returns a snapshot of the current stack of InternalViews. This is
    * an encapsulation violation and only returns a non-null value when
-   * running with browser.companion.globalhistorydebugging set to `true`.
+   * running with browser.companion.stagemanagerdebugging set to `true`.
    *
    * Do not use this for production code.
    *
@@ -3104,7 +3102,7 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * True if the most recent navigation was forward in the global history.
+   * True if the most recent navigation was forward in the StageManager.
    * @returns {bool}
    */
   get navigatingForward() {
@@ -3133,7 +3131,7 @@ class GlobalHistory extends EventTarget {
   }
 
   /**
-   * Public method for removing a View from GlobalHistory.
+   * Public method for removing a View from StageManager.
    *
    * @param {View} view The View to close.
    */
@@ -3454,7 +3452,7 @@ class GlobalHistory extends EventTarget {
 }
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  GlobalHistory,
+  StageManager,
   "activationTimeout",
   "browser.river.activationTimeout",
   5000

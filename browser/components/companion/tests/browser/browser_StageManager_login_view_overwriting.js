@@ -41,7 +41,7 @@ add_task(async function test_view_overwriting() {
   let browser = gBrowser.selectedBrowser;
 
   let viewUpdated = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
+    gStageManager,
     "ViewUpdated",
     false,
     e => {

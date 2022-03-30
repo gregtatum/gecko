@@ -27,10 +27,10 @@ add_task(async function selection_change() {
     browser
   );
   Assert.equal(currentIndex, 3, "Should have the last preview index selected.");
-  Assert.ok(gGlobalHistory.canGoBack, "Should be able to go back");
+  Assert.ok(gStageManager.canGoBack, "Should be able to go back");
 
   // First, check that changing selections within the carousel update
-  // the selected view in GlobalHistory.
+  // the selected view in StageManager.
   let selected = PinebuildTestUtils.waitForSelectedView(view1);
   await PinebuildTestUtils.selectHistoryCarouselIndex(browser, 0);
   await selected;
@@ -47,40 +47,40 @@ add_task(async function selection_change() {
   await PinebuildTestUtils.selectHistoryCarouselIndex(browser, 3);
   await selected;
 
-  // Check that updating the selected view in GlobalHistory changes the
+  // Check that updating the selected view in StageManager changes the
   // selection within the carousel.
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 1);
-  await gGlobalHistory.setView(view2);
+  await gStageManager.setView(view2);
   await selected;
 
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 2);
-  await gGlobalHistory.setView(view3);
+  await gStageManager.setView(view3);
   await selected;
 
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 0);
-  await gGlobalHistory.setView(view1);
+  await gStageManager.setView(view1);
   await selected;
 
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 3);
-  await gGlobalHistory.setView(view4);
+  await gStageManager.setView(view4);
   await selected;
 
   // Now make sure we can use the back button to go back through the
   // carousel.
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 2);
-  await gGlobalHistory.goBack();
+  await gStageManager.goBack();
   await selected;
 
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 1);
-  await gGlobalHistory.goBack();
+  await gStageManager.goBack();
   await selected;
 
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 0);
-  await gGlobalHistory.goBack();
+  await gStageManager.goBack();
   await selected;
 
   // We're at the earliest view, so going back should no longer be possible.
-  Assert.ok(!gGlobalHistory.canGoBack, "Should not be able to go back");
+  Assert.ok(!gStageManager.canGoBack, "Should not be able to go back");
 
   // Now make sure that by selecting the last View, we only cause a
   // single HistoryCarouselIndexUpdated event to fire in content, rather
@@ -93,7 +93,7 @@ add_task(async function selection_change() {
     indexUpdatedHandler
   );
   selected = PinebuildTestUtils.waitForSelectedHistoryCarouselIndex(browser, 3);
-  await gGlobalHistory.setView(view4);
+  await gStageManager.setView(view4);
   await selected;
 
   removeContentEventListener();

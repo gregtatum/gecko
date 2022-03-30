@@ -16,7 +16,7 @@ import {
   SuggestedSnapshotList,
   RecentlyClosedSnapshotList,
 } from "./snapshots.js";
-import { GlobalHistoryDebugging } from "./globalhistorydebugging.js";
+import { StageManagerDebugging } from "./stagemanagerdebugging.js";
 import { initNotifications } from "./notifications.js";
 import { Workshop, workshopEnabled } from "./workshopAPI.js";
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
@@ -64,7 +64,7 @@ function maybeInitializeUI() {
 
   let content = document.getElementById("content");
   content.appendChild(new MediaList("Media"));
-  content.appendChild(new GlobalHistoryDebugging());
+  content.appendChild(new StageManagerDebugging());
   content.appendChild(new SuggestedSnapshotList("Suggested"));
 
   let browseContent = document.querySelector("#scroll-browse .content");

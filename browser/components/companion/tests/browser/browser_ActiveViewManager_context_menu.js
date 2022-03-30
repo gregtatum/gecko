@@ -55,7 +55,7 @@ add_task(async function test_context_menu_close_group() {
   );
 
   let contextMenuClosed = BrowserTestUtils.waitForPopupEvent(menu, "hidden");
-  let viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
+  let viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
   menu.activateItem(closeGroupMenuItem);
   await viewClosed;
   await contextMenuClosed;
@@ -79,7 +79,7 @@ add_task(async function test_context_menu_close_group() {
   contextMenuClosed = BrowserTestUtils.waitForPopupEvent(menu, "hidden");
   let expectedTimes = 3;
   let viewGroupClosed = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
+    gStageManager,
     "ViewRemoved",
     false,
     () => {

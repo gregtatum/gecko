@@ -2754,8 +2754,8 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
 
   // Pinebuild specific configurations
   pref("browser.pinebuild.enabled", true, locked);
-  pref("browser.companion.globalhistorydebugging", false);
-  pref("browser.companion.globalhistorydebugging.logLevel", "Warn");
+  pref("browser.companion.stagemanagerdebugging", false);
+  pref("browser.companion.stagemanagerdebugging.logLevel", "Warn");
   pref("browser.river.activationTimeout", 5000);
   pref("browser.river.maxGroups", 5);
   pref("browser.pinebuild.workspaces.enabled", false);

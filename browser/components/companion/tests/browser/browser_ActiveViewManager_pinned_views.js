@@ -16,7 +16,7 @@ const TEST_URL3 = "https://example.com/browser/browser/";
  * River so that no "top" View is displayed.
  */
 add_task(async function test_no_top_view() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let [, , view3] = await PinebuildTestUtils.loadViews([
     TEST_URL1,
@@ -24,7 +24,7 @@ add_task(async function test_no_top_view() {
     TEST_URL3,
   ]);
 
-  gGlobalHistory.setViewPinnedState(view3, true, 0);
+  gStageManager.setViewPinnedState(view3, true, 0);
 
   // Despite there being two items still in the River, there
   // should be no "top" ViewGroup.

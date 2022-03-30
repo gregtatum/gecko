@@ -37,8 +37,8 @@
     <command id="cmd_help_importFromAnotherBrowser" oncommand="MigrationUtils.showMigrationWizard(window, [MigrationUtils.MIGRATION_ENTRYPOINT_HELP_MENU]);"/>
 
 #ifdef PINEBUILD
-    <command id="cmd_close" oncommand="gGlobalHistory.closeCurrentView();"/>
-    <command id="Browser:StartNewWorkspace" oncommand="gGlobalHistory.createWorkspace();"/>
+    <command id="cmd_close" oncommand="gStageManager.closeCurrentView();"/>
+    <command id="Browser:StartNewWorkspace" oncommand="gStageManager.createWorkspace();"/>
 #else
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow(event);"/>
 #endif

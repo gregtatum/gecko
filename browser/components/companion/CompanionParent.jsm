@@ -76,10 +76,10 @@ class CompanionParent extends JSWindowActorParent {
 
     this._observer = this.observe.bind(this);
     this._handleTabEvent = this.handleTabEvent.bind(this);
-    this._handleGlobalHistoryEvent = this.handleGlobalHistoryEvent.bind(this);
+    this._handleStageManagerEvent = this.handleStageManagerEvent.bind(this);
     this._pageDataFound = this.pageDataFound.bind(this);
     this._handleSessionUpdate = this.handleSessionUpdate.bind(this);
-    this._setupGlobalHistoryPrefObservers = this.setUpGlobalHistoryDebuggingObservers.bind(
+    this._setupStageManagerPrefObservers = this.setUpStageManagerDebuggingObservers.bind(
       this
     );
 
@@ -115,8 +115,8 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.addObserver(this._observer, "places-snapshot-group-deleted");
 
     Services.prefs.addObserver(
-      "browser.companion.globalhistorydebugging",
-      this._setupGlobalHistoryPrefObservers
+      "browser.companion.stagemanagerdebugging",
+      this._setupStageManagerPrefObservers
     );
 
     for (let win of BrowserWindowTracker.orderedWindows) {
@@ -129,7 +129,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   actorCreated() {
-    this.setUpGlobalHistoryDebuggingObservers();
+    this.setUpStageManagerDebuggingObservers();
     this._destroyed = false;
     SessionManager.on("session-replaced", this._handleSessionUpdate);
     SessionManager.on("session-set-aside", this._handleSessionUpdate);
@@ -139,11 +139,9 @@ class CompanionParent extends JSWindowActorParent {
     this.sessionSetAside();
   }
 
-  setUpGlobalHistoryDebuggingObservers() {
-    if (
-      Services.prefs.getBoolPref("browser.companion.globalhistorydebugging")
-    ) {
-      let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+  setUpStageManagerDebuggingObservers() {
+    if (Services.prefs.getBoolPref("browser.companion.stagemanagerdebugging")) {
+      let hist = this.browsingContext.topChromeWindow.gStageManager;
       for (let event of [
         "ViewChanged",
         "ViewAdded",
@@ -151,18 +149,18 @@ class CompanionParent extends JSWindowActorParent {
         "ViewUpdated",
         "ViewMoved",
       ]) {
-        hist.addEventListener(event, this._handleGlobalHistoryEvent);
+        hist.addEventListener(event, this._handleStageManagerEvent);
       }
     } else {
-      this.removeGlobalHistoryDebuggingObservers();
+      this.removeStageManagerDebuggingObservers();
     }
   }
 
-  removeGlobalHistoryDebuggingObservers() {
+  removeStageManagerDebuggingObservers() {
     if (!this.browsingContext.topChromeWindow) {
       return;
     }
-    let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+    let hist = this.browsingContext.topChromeWindow.gStageManager;
     for (let event of [
       "ViewChanged",
       "ViewAdded",
@@ -170,7 +168,7 @@ class CompanionParent extends JSWindowActorParent {
       "ViewUpdated",
       "ViewMoved",
     ]) {
-      hist.removeEventListener(event, this._handleGlobalHistoryEvent);
+      hist.removeEventListener(event, this._handleStageManagerEvent);
     }
   }
 
@@ -216,11 +214,11 @@ class CompanionParent extends JSWindowActorParent {
     );
 
     Services.prefs.removeObserver(
-      "browser.companion.globalhistorydebugging",
-      this._setupGlobalHistoryPrefObservers
+      "browser.companion.stagemanagerdebugging",
+      this._setupStageManagerPrefObservers
     );
 
-    this.removeGlobalHistoryDebuggingObservers();
+    this.removeStageManagerDebuggingObservers();
 
     for (let win of BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
@@ -630,10 +628,10 @@ class CompanionParent extends JSWindowActorParent {
     this.sendAsyncMessage("Companion:ViewTab", { tab });
   }
 
-  handleGlobalHistoryEvent(event) {
-    let globalHistory = this.maybeGetGlobalHistory();
-    this.sendAsyncMessage("Companion:GlobalHistoryEvent", {
-      globalHistory,
+  handleStageManagerEvent(event) {
+    let stageManager = this.maybeGetStageManager();
+    this.sendAsyncMessage("Companion:StageManagerEvent", {
+      stageManager,
     });
   }
 
@@ -705,10 +703,10 @@ class CompanionParent extends JSWindowActorParent {
     return result;
   }
 
-  maybeGetGlobalHistory() {
+  maybeGetStageManager() {
     if (
       !Services.prefs.getBoolPref(
-        "browser.companion.globalhistorydebugging",
+        "browser.companion.stagemanagerdebugging",
         false
       )
     ) {
@@ -718,7 +716,7 @@ class CompanionParent extends JSWindowActorParent {
     let {
       internalViewsDebuggingOnly,
       currentView,
-    } = this.browsingContext.topChromeWindow.gGlobalHistory;
+    } = this.browsingContext.topChromeWindow.gStageManager;
     return internalViewsDebuggingOnly.map((v, i) => ({
       title: v.title,
       urlSpec: v.url.spec,
@@ -801,8 +799,8 @@ class CompanionParent extends JSWindowActorParent {
         this._onSetIntPref(message);
         break;
       }
-      case "Companion:SetGlobalHistoryViewIndex": {
-        this._onSetGlobalHistoryViewIndex(message);
+      case "Companion:SetStageManagerViewIndex": {
+        this._onSetStageManagerViewIndex(message);
         break;
       }
       case "Companion:GetDocumentTitle": {
@@ -912,19 +910,19 @@ class CompanionParent extends JSWindowActorParent {
       w.gBrowser.tabs.map(t => this.getTabData(t))
     );
     let newFavicons = this.consumeCachedFaviconsToSend();
-    let globalHistory = this.maybeGetGlobalHistory();
+    let stageManager = this.maybeGetStageManager();
     let sessions = await this.getSessionData();
     this.sendAsyncMessage("Companion:Setup", {
       tabs,
       connectedServices: OnlineServices.connectedServiceTypes,
       newFavicons,
-      globalHistory,
+      stageManager,
       sessions,
     });
 
     let {
       gBrowser,
-      gGlobalHistory,
+      gStageManager,
     } = this.browsingContext.top.embedderElement.ownerGlobal;
     this.snapshotSelector = new SnapshotSelector({
       count: 5,
@@ -938,7 +936,7 @@ class CompanionParent extends JSWindowActorParent {
         false
       ),
       getCurrentSessionUrls: () =>
-        new Set(gGlobalHistory.views.map(view => view.url)),
+        new Set(gStageManager.views.map(view => view.url)),
     });
     let referrerUrl =
       gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
@@ -1099,9 +1097,9 @@ class CompanionParent extends JSWindowActorParent {
     Services.prefs.setIntPref(name, value);
   }
 
-  _onSetGlobalHistoryViewIndex(message) {
+  _onSetStageManagerViewIndex(message) {
     let { index } = message.data;
-    let hist = this.browsingContext.topChromeWindow.gGlobalHistory;
+    let hist = this.browsingContext.topChromeWindow.gStageManager;
     hist.setView(hist.views[index]);
   }
 

@@ -207,25 +207,25 @@ var PineBuildUIUtils = {
     switch (action) {
       case ShortcutUtils.CYCLE_TABS: {
         if (event.shiftKey) {
-          gGlobalHistory.goBack();
+          gStageManager.goBack();
         } else {
-          gGlobalHistory.goForward();
+          gStageManager.goForward();
         }
         event.preventDefault();
         break;
       }
       case ShortcutUtils.CLOSE_TAB: {
-        gGlobalHistory.closeCurrentView();
+        gStageManager.closeCurrentView();
         event.preventDefault();
         break;
       }
       case ShortcutUtils.NEXT_TAB: {
-        gGlobalHistory.goForward();
+        gStageManager.goForward();
         event.preventDefault();
         break;
       }
       case ShortcutUtils.PREVIOUS_TAB: {
-        gGlobalHistory.goBack();
+        gStageManager.goBack();
         event.preventDefault();
         break;
       }

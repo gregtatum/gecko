@@ -69,9 +69,9 @@ async function simulateViewGroupDragAndEnd(viewGroup, destination) {
     );
   };
 
-  if (gGlobalHistory.currentView != viewGroup.lastView) {
+  if (gStageManager.currentView != viewGroup.lastView) {
     let viewChanged = BrowserTestUtils.waitForEvent(
-      gGlobalHistory,
+      gStageManager,
       "ViewChanged"
     );
     drop();
@@ -86,7 +86,7 @@ async function simulateViewGroupDragAndEnd(viewGroup, destination) {
  * into the dragging state.
  */
 add_task(async function test_pinned_views_dragging_state() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   await PinebuildTestUtils.loadViews([TEST_URL1]);
 
@@ -144,7 +144,7 @@ add_task(async function test_pinned_views_dragging_state() {
  * Test that ViewGroups can be dragged to pin and unpin.
  */
 add_task(async function test_drag_and_drop_pin_unpin() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let [view1, view2, view3, view4, view5] = await PinebuildTestUtils.loadViews([
     TEST_URL1,
@@ -171,7 +171,7 @@ add_task(async function test_drag_and_drop_pin_unpin() {
     await pinnedViews.updateComplete;
   });
 
-  Assert.equal(gGlobalHistory.currentView, view5, "view5 is on the stage.");
+  Assert.equal(gStageManager.currentView, view5, "view5 is on the stage.");
   Assert.ok(!view5.pinned, "view5 is not pinned.");
 
   // Drag the active ViewGroup, which should pin the last View (view5)

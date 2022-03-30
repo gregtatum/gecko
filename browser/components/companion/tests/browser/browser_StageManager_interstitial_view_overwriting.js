@@ -50,12 +50,12 @@ add_task(async function setup() {
  * the previous View being overwritten.
  */
 add_task(async function test_view_overwriting() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 
   let viewUpdated = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
+    gStageManager,
     "ViewUpdated",
     false,
     e => {
@@ -80,7 +80,7 @@ add_task(async function test_view_overwriting() {
  * the previous View, and creates a new View instead.
  */
 add_task(async function test_no_overwriting_with_interaction() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 
@@ -98,7 +98,7 @@ add_task(async function test_no_overwriting_with_interaction() {
   );
 
   let viewAdded = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
+    gStageManager,
     "ViewAdded",
     false,
     e => {
@@ -127,12 +127,12 @@ add_task(async function test_no_overwriting_with_interaction() {
     set: [["browser.pinebuild.interstitial-view-overwriting.threshold_ms", 0]],
   });
 
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 
   let viewAdded = BrowserTestUtils.waitForEvent(
-    gGlobalHistory,
+    gStageManager,
     "ViewAdded",
     false,
     e => {

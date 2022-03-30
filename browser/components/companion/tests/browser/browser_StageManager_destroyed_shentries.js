@@ -10,7 +10,7 @@ const PAGE_3 = "http://mochi.test:8888/";
 registerCleanupFunction(() => {
   // No matter what happens, blow away window history after this file runs
   // to avoid leaking state between tests.
-  gGlobalHistory.reset();
+  gStageManager.reset();
 });
 
 /**
@@ -26,7 +26,7 @@ registerCleanupFunction(() => {
  * This tests a destroyed SHEntry for a normal page load.
  */
 add_task(async function test_destroyed_shentry() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 
@@ -53,7 +53,7 @@ add_task(async function test_destroyed_shentry() {
   await PinebuildTestUtils.goBack();
 
   PinebuildTestUtils.assertEqualViews(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view2,
     "Went back to View 2"
   );
@@ -64,7 +64,7 @@ add_task(async function test_destroyed_shentry() {
  * This tests a destroyed SHEntry for a History.pushState load.
  */
 add_task(async function test_destroyed_shentry() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 
@@ -79,7 +79,7 @@ add_task(async function test_destroyed_shentry() {
   });
 
   Assert.equal(
-    gGlobalHistory.views.length,
+    gStageManager.views.length,
     3,
     "Should have 3 Views in the River"
   );
@@ -88,7 +88,7 @@ add_task(async function test_destroyed_shentry() {
   await PinebuildTestUtils.goBack();
 
   Assert.equal(
-    gGlobalHistory.views.length,
+    gStageManager.views.length,
     3,
     "Should still have 3 Views in the River"
   );
@@ -102,33 +102,33 @@ add_task(async function test_destroyed_shentry() {
   });
 
   Assert.equal(
-    gGlobalHistory.views.length,
+    gStageManager.views.length,
     4,
     "Should now have 4 Views in the River"
   );
 
-  let views = gGlobalHistory.views;
+  let views = gStageManager.views;
 
   // Since View 3 has a destroyed SHEntry, going back to it should result
   // in the View reloading itself with a new SHEntry.
   info("Going back to View 3");
   await PinebuildTestUtils.goBack();
-  Assert.equal(gGlobalHistory.currentView, views[2], "Should be at View 3");
+  Assert.equal(gStageManager.currentView, views[2], "Should be at View 3");
 
   // Now move away from that reloaded View...
   info("Going forward to View 4");
   await PinebuildTestUtils.goForward();
-  Assert.equal(gGlobalHistory.currentView, views[3], "Should be at View 4");
+  Assert.equal(gStageManager.currentView, views[3], "Should be at View 4");
 
   // And then back again, and we should still have 4 Views.
   info("Going back to View 3");
   await PinebuildTestUtils.goBack();
 
   Assert.equal(
-    gGlobalHistory.views.length,
+    gStageManager.views.length,
     4,
     "Should still have 4 Views in the River"
   );
 
-  Assert.equal(gGlobalHistory.currentView, views[2], "Should be at View 3");
+  Assert.equal(gStageManager.currentView, views[2], "Should be at View 3");
 });

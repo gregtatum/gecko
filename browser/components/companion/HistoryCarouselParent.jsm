@@ -196,7 +196,7 @@ class HistoryCarousel {
 
     logConsole.debug("Show history carousel: ", shouldShow);
 
-    if (shouldShow && this.#window.top.gGlobalHistory.views.length <= 1) {
+    if (shouldShow && this.#window.top.gStageManager.views.length <= 1) {
       throw new Error(
         "Cannot enter history carousel mode without multiple views"
       );
@@ -272,7 +272,7 @@ class HistoryCarousel {
       this.#container.hidden = true;
 
       await new Promise(resolve => {
-        this.#window.gGlobalHistory.addEventListener(
+        this.#window.gStageManager.addEventListener(
           "ExitedHistoryCarousel",
           resolve,
           { once: true }
@@ -295,39 +295,39 @@ class HistoryCarousel {
 
 /**
  * HistoryCarouselParent acts as a mediator between an about:historycarousel
- * page and the GlobalHistory instance in the associated window.
+ * page and the StageManager instance in the associated window.
  */
 class HistoryCarouselParent extends JSWindowActorParent {
-  // We hold a reference to GlobalHistory because accessing the browsingContext
+  // We hold a reference to StageManager because accessing the browsingContext
   // embedderElement won't work in didDestroy.
-  #globalHistory;
+  #stageManager;
   #historyCarousel;
 
   actorCreated() {
     let window = this.browsingContext.embedderElement.ownerGlobal;
-    this.#globalHistory = window.gGlobalHistory;
+    this.#stageManager = window.gStageManager;
     this.#historyCarousel = window.gHistoryCarousel;
-    this.#globalHistory.addEventListener("ViewChanged", this);
-    this.#globalHistory.addEventListener("ViewRemoved", this);
+    this.#stageManager.addEventListener("ViewChanged", this);
+    this.#stageManager.addEventListener("ViewRemoved", this);
   }
 
   didDestroy() {
-    this.#globalHistory.removeEventListener("ViewChanged", this);
-    this.#globalHistory.removeEventListener("ViewRemoved", this);
+    this.#stageManager.removeEventListener("ViewChanged", this);
+    this.#stageManager.removeEventListener("ViewRemoved", this);
   }
 
   /**
-   * Handles GlobalHistory ViewChanged events so that the carousel
+   * Handles StageManager ViewChanged events so that the carousel
    * can then select the appropriate index to match.
    *
-   * @param {GlobalHistoryEvent} event
-   *   The ViewChanged GlobalHistoryEvent indicating a change of
+   * @param {StageManagerEvent} event
+   *   The ViewChanged StageManagerEvent indicating a change of
    *   View selection in the parent process.
    */
   handleEvent(event) {
     switch (event.type) {
       case "ViewChanged": {
-        let index = this.#globalHistory.views.indexOf(event.view);
+        let index = this.#stageManager.views.indexOf(event.view);
         this.sendAsyncMessage("SelectIndex", { index });
         break;
       }
@@ -341,7 +341,7 @@ class HistoryCarouselParent extends JSWindowActorParent {
 
   /**
    * Handles messages sent by the HistoryCarouselChild, and passes
-   * them along to the GlobalHistory instance for the current window.
+   * them along to the StageManager instance for the current window.
    *
    * @param {Object} message
    *   The message received from the HistoryCarouselChild.
@@ -357,11 +357,11 @@ class HistoryCarouselParent extends JSWindowActorParent {
       // The empty carousel has loaded, so we now populate it with enough
       // information to render the currently selected View.
       case "Init": {
-        return this.#globalHistory.getInitialHistoryCarouselData();
+        return this.#stageManager.getInitialHistoryCarouselData();
       }
       // The currently selected View has had its image populated, meaning we're
       // ready to switch the carousel <browser> to the foreground. Dispatches a
-      // custom HistoryCarousel:Ready event so that GlobalHistory can do the
+      // custom HistoryCarousel:Ready event so that StageManager can do the
       // switch.
       case "Ready": {
         browser.dispatchEvent(
@@ -374,7 +374,7 @@ class HistoryCarouselParent extends JSWindowActorParent {
       // The HistoryCarouselChild has requested preview image data for a
       // particular index.
       case "GetPreview": {
-        return this.#globalHistory.getHistoryCarouselDataForIndex(
+        return this.#stageManager.getHistoryCarouselDataForIndex(
           message.data.index
         );
       }
@@ -385,8 +385,8 @@ class HistoryCarouselParent extends JSWindowActorParent {
       }
       // The selection inside of the carousel has changed.
       case "SetVisibleIndex": {
-        let view = this.#globalHistory.views[message.data.index];
-        this.#globalHistory.setView(view);
+        let view = this.#stageManager.views[message.data.index];
+        this.#stageManager.setView(view);
         break;
       }
     }

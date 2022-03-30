@@ -12,16 +12,16 @@
  */
 add_task(async function test_pinned_view_close_single() {
   let [view1] = await PinebuildTestUtils.loadViews(["https://example.com/"]);
-  gGlobalHistory.setViewPinnedState(view1, true);
-  gGlobalHistory.closeView(view1);
+  gStageManager.setViewPinnedState(view1, true);
+  gStageManager.closeView(view1);
 
   Assert.equal(
-    gGlobalHistory.views.length,
+    gStageManager.views.length,
     0,
     "Should have been able to close a single pinned View"
   );
   await BrowserTestUtils.waitForCondition(
-    () => gGlobalHistory.currentView === null,
+    () => gStageManager.currentView === null,
     "currentView should be null"
   );
 });
@@ -31,17 +31,17 @@ add_task(async function test_pinned_view_close_single() {
  * in the River.
  */
 add_task(async function test_pinned_view_close_only_multiple_pinned() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
     "https://example.org/browser",
     "https://example.org/browser/browser/components",
   ]);
-  gGlobalHistory.setViewPinnedState(view1, true, false, 0);
-  gGlobalHistory.setViewPinnedState(view2, true, false, 1);
-  gGlobalHistory.setViewPinnedState(view3, true, false, 2);
-  gGlobalHistory.setViewPinnedState(view4, true, false, 3);
+  gStageManager.setViewPinnedState(view1, true, false, 0);
+  gStageManager.setViewPinnedState(view2, true, false, 1);
+  gStageManager.setViewPinnedState(view3, true, false, 2);
+  gStageManager.setViewPinnedState(view4, true, false, 3);
 
   await PinebuildTestUtils.setCurrentView(view1);
 
@@ -49,14 +49,14 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
     gBrowser,
     view2.url.spec
   );
-  let viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
-  gGlobalHistory.closeView(view1);
+  let viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
+  gStageManager.closeView(view1);
   await viewClosed;
   await navigate;
 
-  Assert.equal(gGlobalHistory.views.length, 3, "There should be 3 Views left.");
+  Assert.equal(gStageManager.views.length, 3, "There should be 3 Views left.");
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view2,
     "Should have chosen the next pinned View"
   );
@@ -68,14 +68,14 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
   await PinebuildTestUtils.setCurrentView(view4);
 
   navigate = BrowserTestUtils.waitForLocationChange(gBrowser, view3.url.spec);
-  viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
-  gGlobalHistory.closeView(view4);
+  viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
+  gStageManager.closeView(view4);
   await viewClosed;
   await navigate;
 
-  Assert.equal(gGlobalHistory.views.length, 2, "There should be 2 Views left.");
+  Assert.equal(gStageManager.views.length, 2, "There should be 2 Views left.");
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view3,
     "Should have chosen the previous View"
   );
@@ -84,23 +84,23 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
   await PinebuildTestUtils.setCurrentView(view2);
 
   navigate = BrowserTestUtils.waitForLocationChange(gBrowser, view3.url.spec);
-  viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
-  gGlobalHistory.closeView(view2);
+  viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
+  gStageManager.closeView(view2);
   await viewClosed;
   await navigate;
 
-  Assert.equal(gGlobalHistory.views.length, 1, "There should be 1 View left.");
+  Assert.equal(gStageManager.views.length, 1, "There should be 1 View left.");
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view3,
     "Should have chosen the next View"
   );
   PinebuildTestUtils.assertViewsAre([view3]);
 
-  viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
-  gGlobalHistory.closeView(view3);
+  viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
+  gStageManager.closeView(view3);
   await viewClosed;
-  Assert.equal(gGlobalHistory.views.length, 0, "There should be 0 Views left.");
+  Assert.equal(gStageManager.views.length, 0, "There should be 0 Views left.");
 });
 
 /**
@@ -108,7 +108,7 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
  * also in the River.
  */
 add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
-  gGlobalHistory.reset();
+  gStageManager.reset();
 
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
@@ -116,8 +116,8 @@ add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
     "https://example.com/browser/browser/components",
     "https://example.org/",
   ]);
-  gGlobalHistory.setViewPinnedState(view1, true, false, 0);
-  gGlobalHistory.setViewPinnedState(view2, true, false, 1);
+  gStageManager.setViewPinnedState(view1, true, false, 0);
+  gStageManager.setViewPinnedState(view2, true, false, 1);
 
   await PinebuildTestUtils.setCurrentView(view1);
 
@@ -125,14 +125,14 @@ add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
     gBrowser,
     view2.url.spec
   );
-  let viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
-  gGlobalHistory.closeView(view1);
+  let viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
+  gStageManager.closeView(view1);
   await viewClosed;
   await navigate;
 
-  Assert.equal(gGlobalHistory.views.length, 3, "There should be 3 Views left.");
+  Assert.equal(gStageManager.views.length, 3, "There should be 3 Views left.");
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view2,
     "Should have chosen the next pinned View"
   );
@@ -140,14 +140,14 @@ add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
   PinebuildTestUtils.assertViewsAre([view2, view3, view4]);
 
   navigate = BrowserTestUtils.waitForLocationChange(gBrowser, view4.url.spec);
-  viewClosed = BrowserTestUtils.waitForEvent(gGlobalHistory, "ViewRemoved");
-  gGlobalHistory.closeView(view2);
+  viewClosed = BrowserTestUtils.waitForEvent(gStageManager, "ViewRemoved");
+  gStageManager.closeView(view2);
   await viewClosed;
   await navigate;
 
-  Assert.equal(gGlobalHistory.views.length, 2, "There should be 2 Views left.");
+  Assert.equal(gStageManager.views.length, 2, "There should be 2 Views left.");
   Assert.equal(
-    gGlobalHistory.currentView,
+    gStageManager.currentView,
     view4,
     "Should have chosen the View at the end of the River"
   );

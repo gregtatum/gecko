@@ -23,7 +23,7 @@ add_task(async function test_user_title_snapshot() {
   Assert.notEqual(view1.title, CUSTOM_USER_TITLE);
 
   let observed = TestUtils.topicObserved("places-snapshots-added");
-  gGlobalHistory.setUserTitle(view1, CUSTOM_USER_TITLE);
+  gStageManager.setUserTitle(view1, CUSTOM_USER_TITLE);
   Assert.equal(
     view1.title,
     CUSTOM_USER_TITLE,

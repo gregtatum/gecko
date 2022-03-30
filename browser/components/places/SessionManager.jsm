@@ -307,7 +307,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
 
     SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     this.emit("session-set-aside", window);
-    await window.gGlobalHistory.reset({
+    await window.gStageManager.reset({
       url: "about:flow-reset",
       // runBeforeUnloadForTabs has been called above.
       skipPermitUnload: true,

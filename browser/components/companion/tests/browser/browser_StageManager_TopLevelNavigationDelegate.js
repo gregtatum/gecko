@@ -42,7 +42,7 @@ add_task(async function delegate_to_new_browser() {
     );
   });
 
-  gGlobalHistory.reset();
+  gStageManager.reset();
 });
 
 /**

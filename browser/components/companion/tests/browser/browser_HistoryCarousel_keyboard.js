@@ -85,5 +85,5 @@ add_task(async function test_keyboard_controls() {
   await historyCarouselClosed;
   await viewChangedPromise;
 
-  Assert.equal(gGlobalHistory.currentView, view2);
+  Assert.equal(gStageManager.currentView, view2);
 });
