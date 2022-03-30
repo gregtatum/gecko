@@ -112,6 +112,9 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
         let urlbar = document.getElementById("urlbar");
         urlbar.setAttribute("workspace-id", id);
+
+        // Update state in other previously opened workspaces.
+        this.#updateWorkspaces(id);
         break;
       }
       case "ViewAdded":
@@ -137,12 +140,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           "contains-pins",
           workspace?.pinnedViewGroups.length
         );
-
-        let allWorkspaces = this.querySelectorAll("workspace-el");
-        allWorkspaces.forEach(w => {
-          w.setActiveView(window.gStageManager.currentView);
-          w.classList.toggle("selected", w == workspaceEl);
-        });
+        this.#updateWorkspaces(workspaceId);
         break;
       }
       case "UserAction:ViewSelected": {
@@ -214,6 +212,17 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         }
         break;
     }
+  }
+
+  #updateWorkspaces(activeWorkspaceId) {
+    let workspaceEl = this.querySelector(
+      "[workspace-id='" + activeWorkspaceId + "']"
+    );
+    let allWorkspaces = this.querySelectorAll("workspace-el");
+    allWorkspaces.forEach(w => {
+      w.setActiveView(window.gStageManager.currentView);
+      w.classList.toggle("selected", w == workspaceEl);
+    });
   }
 
   #createWorkspaceElement(id) {

@@ -2261,6 +2261,10 @@ class StageManager extends EventTarget {
       if (!this.#workspaces.has(workspaceId)) {
         this.#createWorkspaceHistory(workspaceId);
         this.loadEmptyWorkspace(workspaceId);
+
+        // Deselect any previously selected view.
+        this.#currentInternalView = null;
+
         this.notifyEvent("WorkspaceAdded", null, { workspaceId });
         break;
       }
