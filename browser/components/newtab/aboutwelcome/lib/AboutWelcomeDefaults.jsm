@@ -19,7 +19,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 const DEFAULT_WELCOME_CONTENT = {
   id: "DEFAULT_ABOUTWELCOME_PROTON",
   template: "multistage",
-  transitions: true,
+  // Allow tests to easily disable transitions.
+  transitions: Services.prefs.getBoolPref(
+    "browser.aboutwelcome.transitions",
+    true
+  ),
   backdrop:
     "#212121 url(chrome://activity-stream/content/data/content/assets/proton-bkg.avif) center/cover no-repeat fixed",
   screens: [
