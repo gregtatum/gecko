@@ -1143,7 +1143,8 @@ function useLanguageSwitcher(appAndSystemLocaleInfo, screens, screenIndex, setSc
           langPackDisplayName: langPackDN.of(langPack.target_locale),
           appDisplayName: appDN.of(appAndSystemLocaleInfo.appLocaleRaw),
           langPack,
-          requestSystemLocales: [langPack.target_locale, appAndSystemLocaleInfo.appLocaleRaw]
+          requestSystemLocales: [langPack.target_locale, appAndSystemLocaleInfo.appLocaleRaw],
+          originalAppLocales: [appAndSystemLocaleInfo.appLocaleRaw]
         });
       } else {
         setNegotiatedLanguage({
@@ -1328,7 +1329,10 @@ function LanguageSwitcher(props) {
     type: "button",
     className: "secondary",
     value: "decline",
-    onClick: handleAction
+    onClick: event => {
+      window.AWSetRequestedLocales(negotiatedLanguage.originalAppLocales);
+      handleAction(event);
+    }
   }, // This is the localized name from the Intl.DisplayNames API.
   negotiatedLanguage === null || negotiatedLanguage === void 0 ? void 0 : negotiatedLanguage.appDisplayName))));
 }
