@@ -14,6 +14,10 @@ companion-refresh-services-button =
 companion-refresh-services-button-syncing =
     .title = Syncing services
 companion-fake-time = Fake time to 10m:20 before
+companion-conference-zoom =
+    .alt = Zoom meeting icon
+companion-conference-google =
+    .alt = Google Meet icon
 
 # This is a short label to show how many more links are available to be
 # shown for a calendar event in the companion.

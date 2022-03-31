@@ -888,9 +888,18 @@ class CalendarEvent extends MozLitElement {
     if (!conference) {
       return "";
     }
+
+    let l10nId = "";
+
+    if (conference.name === "Zoom") {
+      l10nId = "companion-conference-zoom";
+    } else if (conference.name === "Meet") {
+      l10nId = "companion-conference-google";
+    }
+
     return html`
       <span class="conference-info text-body-xs">
-        <img src=${conference.icon} alt="" />
+        <img src=${conference.icon} data-l10n-id=${l10nId} />
         ${conference.name}
       </span>
     `;
