@@ -100,7 +100,12 @@ export default TaskDefiner.defineAtMostOnceTask([
       const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
       const calendarId = folderInfo.serverId;
 
-      let syncDate = NOW();
+      const syncDate = NOW();
+      if (!ctx.universe.isTestingMode() && syncState.syncDate >= syncDate) {
+        // We're using a fake time so we must sync around it.
+        syncState.syncUrl = null;
+      }
+
       logic(ctx, "syncStart", { syncDate });
 
       const params = Object.create(null);
@@ -220,6 +225,7 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       // Update sync state before processing the batch; things like the
       // calUpdatedTS need to be available.
+      syncState.syncDate = syncDate;
       syncState.syncUrl = results["@odata.deltaLink"];
       syncState.updatedTime = syncDate;
 

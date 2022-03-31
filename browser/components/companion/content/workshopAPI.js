@@ -222,6 +222,10 @@ if (workshopEnabled) {
       await workshopAPI.cleanupAllAccounts(spec);
     },
   };
+} else {
+  workshopAPI = {
+    now: () => new Date(),
+  };
 }
 
 export { setExtendedTimeout, Workshop, workshopAPI, workshopEnabled };

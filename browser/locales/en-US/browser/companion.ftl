@@ -13,6 +13,7 @@ companion-refresh-services-button =
     .title = Refresh services
 companion-refresh-services-button-syncing =
     .title = Syncing services
+companion-fake-time = Fake time to 10m:20 before
 
 # This is a short label to show how many more links are available to be
 # shown for a calendar event in the companion.

@@ -37,7 +37,9 @@ export default TaskDefiner.defineSimpleTask([
             globalClobbers.set(["debugLogging"], val);
             logic.realtimeLogEverything = val === "realtime";
             break;
-
+          case "testingMode":
+            ctx.universe.setTestingMode();
+            break;
           default:
             logic(ctx, "badModifyConfigKey", { key });
             break;

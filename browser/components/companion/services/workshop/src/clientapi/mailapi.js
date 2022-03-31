@@ -58,7 +58,7 @@ const normalizeFoldersToIds = folders => folders?.map(folder => folder.id);
 // For testing
 export { MailFolder as _MailFolder };
 
-const LEGAL_CONFIG_KEYS = ["debugLogging"];
+const LEGAL_CONFIG_KEYS = ["debugLogging", "testingMode"];
 
 /**
  * The public API exposed to the client via the MailAPI global.
@@ -171,6 +171,11 @@ export class MailAPI extends Emitter {
      * We don't remap unknown types, so this doesn't need defaults.
      */
     this.l10n_folder_names = {};
+    this.fakeNow = null;
+  }
+
+  now() {
+    return this.fakeNow ? new Date(this.fakeNow) : new Date();
   }
 
   toString() {
@@ -205,6 +210,10 @@ export class MailAPI extends Emitter {
         logic(this, "accountsLoaded");
         this.emit("accountsLoaded");
       });
+    });
+
+    this.on("time-warp", ({ fakeNow }) => {
+      this.fakeNow = fakeNow;
     });
   }
 

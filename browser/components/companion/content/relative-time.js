@@ -4,6 +4,7 @@
 
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
+import { workshopAPI } from "./workshopAPI.js";
 
 function dispatchUpdateRelativeTime() {
   document.dispatchEvent(new CustomEvent("update-relative-time", {}));
@@ -49,7 +50,7 @@ export class RelativeTime extends MozLitElement {
   }
 
   static getNow() {
-    return new Date();
+    return workshopAPI.now();
   }
 
   updateTimeStamp() {

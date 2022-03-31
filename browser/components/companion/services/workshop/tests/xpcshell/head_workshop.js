@@ -312,6 +312,7 @@ class WorkshopHelperClass {
 
     await workshopAPI.modifyConfig({
       debugLogging: "realtime",
+      testingMode: true,
     });
     this.#gotLogicInstance(workshopAPI.logic);
 

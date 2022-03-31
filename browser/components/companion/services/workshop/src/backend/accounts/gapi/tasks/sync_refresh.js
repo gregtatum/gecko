@@ -105,6 +105,10 @@ export default TaskDefiner.defineAtMostOnceTask([
       );
 
       const syncDate = NOW();
+      if (!ctx.universe.isTestingMode() && syncState.syncDate >= syncDate) {
+        // We're using a fake time so we must sync around it.
+        syncState.syncToken = null;
+      }
 
       logic(ctx, "syncStart", { syncDate });
 
@@ -391,6 +395,7 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       // Update sync state before processing the batch; things like the
       // calUpdatedTS need to be available.
+      syncState.syncDate = syncDate;
       syncState.syncToken = results.nextSyncToken;
       syncState.etag = results.etag;
       syncState.updatedTime = results.updatedTime;

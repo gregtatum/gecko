@@ -184,6 +184,7 @@ export class CalendarEventList extends MozLitElement {
     this.events = [];
     this.listView = null;
     this.listType = "";
+    this.isFakeTime = false;
   }
 
   maybeStopListening() {
@@ -206,6 +207,7 @@ export class CalendarEventList extends MozLitElement {
       });
       workshopAPI.accounts.on("add", this, this.updateCalendarListView);
       workshopAPI.accounts.on("remove", this, this.updateCalendarListView);
+      workshopAPI.on("time-warp", this, this.onTimeWarp);
     }
 
     super.connectedCallback();
@@ -224,11 +226,18 @@ export class CalendarEventList extends MozLitElement {
         this,
         this.updateCalendarListView
       );
+      workshopAPI.removeListener("time-warp", this, this.onTimeWarp);
     }
 
     document.removeEventListener("refresh-events", this);
     document.removeEventListener("refresh-view", this);
     super.disconnectedCallback();
+  }
+
+  async onTimeWarp() {
+    this.isFakeTime = true;
+    await Workshop.refreshServices();
+    this.updateCalendarListView();
   }
 
   onListViewUpdated() {
@@ -278,8 +287,8 @@ export class CalendarEventList extends MozLitElement {
       // TODO: remove this method: this stuff is done in workshop.
       // Return all meetings that start in the next hour or are currently in
       // progress.
-      let now = new Date();
-      let oneHourFromNow = new Date();
+      let now = workshopAPI.now();
+      let oneHourFromNow = workshopAPI.now();
       oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
       uniqueEvents = uniqueEvents.filter(event => {
         let startDate = new Date(event.startDate);
@@ -391,6 +400,7 @@ export class CalendarEventList extends MozLitElement {
           : html`
               <div class="calendar-event">
                 <calendar-event
+                  .isFakeTime=${this.isFakeTime}
                   .event=${event}
                   .serial=${event.serial}
                 ></calendar-event>
@@ -431,6 +441,7 @@ class CalendarEvent extends MozLitElement {
       linksCollapsed: { type: Boolean },
       upcoming: { type: Boolean },
       detailsCollapsed: { type: Boolean },
+      isFakeTime: { type: Boolean },
       serial: { type: Number },
     };
   }
@@ -1074,7 +1085,7 @@ class CalendarEvent extends MozLitElement {
     clearTimeout(this._eventUpcomingTimer?.id);
     let endDate = new Date(end);
     let eventStartTimeMinus10 = new Date(start) - 60 * 10 * 1000;
-    let now = new Date();
+    let now = workshopAPI.now();
     if (eventStartTimeMinus10 > now) {
       this.upcoming = false;
       this._eventUpcomingTimer = setExtendedTimeout(
@@ -1090,6 +1101,15 @@ class CalendarEvent extends MozLitElement {
         endDate - now
       );
     }
+  }
+
+  setTimeWarp() {
+    const tenMinutes = 10 * 60 * 1000;
+    const twentySeconds = 20 * 1000;
+    let { startDate } = this.event;
+    let startTime = new Date(Date.parse(startDate));
+    let fakeNow = startTime.valueOf() - (tenMinutes + twentySeconds);
+    workshopAPI.TEST_timeWarp({ fakeNow });
   }
 
   willUpdate() {
@@ -1148,6 +1168,12 @@ class CalendarEvent extends MozLitElement {
             class="event-item-open-calendar-action"
             data-l10n-id="companion-open-calendar"
             @click=${this.openCalendar}
+          ></panel-item>
+          <panel-item
+            class="event-item-open-calendar-action"
+            data-l10n-id="companion-fake-time"
+            @click=${this.setTimeWarp}
+            ?hidden=${!this.isFakeTime}
           ></panel-item>
         </panel-list>
       </div>

@@ -54,6 +54,19 @@ export default class HomePage extends Page {
     logsCollector.loadData(json);
   }
 
+  setTimeWarp() {
+    const input = this.renderRoot.querySelector("#home-time-warp");
+    const fakeNow = new Date(input.value).valueOf();
+    this.workshopAPI.TEST_timeWarp({ fakeNow });
+  }
+
+  now() {
+    const now = new Date();
+    now.setHours(8);
+    now.setMinutes(-now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  }
+
   static get styles() {
     return css`
       :host {
@@ -68,7 +81,7 @@ export default class HomePage extends Page {
       <section class="card">
         <h2>Accounts</h2>
         <awi-list-view
-          .listView=${[] /* this.workshopAPI.accounts */}
+          .listView=${null /* this.workshopAPI.accounts */}
           .factory=${account =>
             html`
               <awi-account-list-item
@@ -108,13 +121,7 @@ export default class HomePage extends Page {
         >
           Live logs
         </button>
-        <button
-          id="home-download-logs"
-          type="button"
-          @click=${() => {
-            this.getLogs();
-          }}
-        >
+        <button id="home-download-logs" type="button" @click=${this.getLogs}>
           Download logs
         </button>
         <button
@@ -134,6 +141,18 @@ export default class HomePage extends Page {
         >
           Load logs
         </button>
+      </section>
+      <section class="card">
+        <h2>Time warp!</h2>
+        <label for="home-time-warp"
+          >Choose a date and a time to use for now():</label
+        >
+        <input
+          type="datetime-local"
+          id="home-time-warp"
+          value=${this.now()}
+          @change=${this.setTimeWarp}
+        />
       </section>
     `;
   }

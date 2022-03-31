@@ -4,6 +4,8 @@
 
 "use strict";
 
+import { workshopAPI } from "./workshopAPI.js";
+
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 const { XPCOMUtils } = ChromeUtils.import(
@@ -95,7 +97,7 @@ function processEvents(events) {
   for (let event of events) {
     let notificationTime =
       new Date(event.startDate) - 60 * notificationTimeout * 1000;
-    let now = Date.now();
+    let now = workshopAPI.now().valueOf();
     if (notificationTime > now) {
       logConsole.debug("Adding timer for", event.summary);
       notificationTimers.add(

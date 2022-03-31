@@ -56,6 +56,7 @@ export default class MapiCalFolderSyncStateHelper {
         // For now we're syncing ~8 weeks into the future in order to provide
         // some buffer time to make sure the time window shifting is reliable.
         rangeNewestTS: makeDaysAgo(-max),
+        syncDate: 0,
       };
     }
 
@@ -82,6 +83,14 @@ export default class MapiCalFolderSyncStateHelper {
 
   set syncUrl(nextSyncUrl) {
     this.rawSyncState.syncUrl = nextSyncUrl;
+  }
+
+  get syncDate() {
+    return this.rawSyncState.syncDate;
+  }
+
+  set syncDate(syncDate) {
+    this.rawSyncState.syncDate = syncDate;
   }
 
   set updatedTime(updatedTimeDateStr) {

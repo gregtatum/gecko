@@ -61,6 +61,7 @@ export default class GapiCalFolderSyncStateHelper {
         // For now we're syncing ~8 weeks into the future in order to provide
         // some buffer time to make sure the time window shifting is reliable.
         rangeNewestTS: makeDaysAgo(-max),
+        syncDate: 0,
       };
     }
 
@@ -83,6 +84,14 @@ export default class GapiCalFolderSyncStateHelper {
 
   set syncToken(nextSyncToken) {
     this.rawSyncState.syncToken = nextSyncToken;
+  }
+
+  get syncDate() {
+    return this.rawSyncState.syncDate;
+  }
+
+  set syncDate(syncDate) {
+    this.rawSyncState.syncDate = syncDate;
   }
 
   get etag() {

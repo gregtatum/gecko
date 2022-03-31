@@ -270,8 +270,10 @@ MailBridge.prototype = {
   },
 
   _cmd_TEST_timeWarp(msg) {
-    logic(this, "timeWarp", { fakeNow: msg.fakeNow });
-    TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
+    const { fakeNow } = msg;
+    logic(this, "timeWarp", { fakeNow });
+    TEST_LetsDoTheTimewarpAgain(fakeNow);
+    this.universe.broadcastOverBridges("time-warp", { fakeNow });
   },
 
   async _promised_TEST_parseFeed(msg, replyFunc) {

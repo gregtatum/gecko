@@ -180,6 +180,7 @@ export default function MailUniverse({ online, testOptions, appExtensions }) {
   this.config = null;
   this._logReaper = null;
   this._logBacklog = null;
+  this._testingMode = false;
 
   this._LOG = null;
   //this._cronSync = null;
@@ -614,7 +615,7 @@ MailUniverse.prototype = {
 
     const folderIds = this.accountManager.getFolderIdsByTag(
       accountId,
-      spec?.filter.tag || null
+      spec?.filter?.tag || null
     );
     spec.folderIds.push(...folderIds);
 
@@ -879,6 +880,14 @@ MailUniverse.prototype = {
 
     // XXX shutting up the linter
     return null;
+  },
+
+  setTestingMode() {
+    this.testingMode = true;
+  },
+
+  isTestingMode() {
+    return this.testingMode;
   },
 
   modifyConfig(mods, why) {

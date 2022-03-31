@@ -3079,7 +3079,7 @@ var CalEventsListView = class extends WindowedListView {
 
 // src/clientapi/mailapi.js
 var normalizeFoldersToIds = (folders) => folders?.map((folder) => folder.id);
-var LEGAL_CONFIG_KEYS = ["debugLogging"];
+var LEGAL_CONFIG_KEYS = ["debugLogging", "testingMode"];
 var MailAPI = class extends import_evt14.Emitter {
   constructor() {
     super();
@@ -3100,6 +3100,10 @@ var MailAPI = class extends import_evt14.Emitter {
     this.oauthBindings = OauthBindings;
     this.utils = linkify_exports;
     this.l10n_folder_names = {};
+    this.fakeNow = null;
+  }
+  now() {
+    return this.fakeNow ? new Date(this.fakeNow) : new Date();
   }
   toString() {
     return "[MailAPI]";
@@ -3121,6 +3125,9 @@ var MailAPI = class extends import_evt14.Emitter {
         logic(this, "accountsLoaded");
         this.emit("accountsLoaded");
       });
+    });
+    this.on("time-warp", ({ fakeNow }) => {
+      this.fakeNow = fakeNow;
     });
   }
   eventuallyGetAccountById(accountId) {

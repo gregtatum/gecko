@@ -11019,7 +11019,8 @@ var WorkshopBackend = (() => {
               inboxFeedCacheState: null,
               calUpdatedTS: null,
               rangeOldestTS: makeDaysAgo(-min),
-              rangeNewestTS: makeDaysAgo(-max)
+              rangeNewestTS: makeDaysAgo(-max),
+              syncDate: 0
             };
           }
           this._accountId = accountId;
@@ -11033,6 +11034,12 @@ var WorkshopBackend = (() => {
         }
         set syncToken(nextSyncToken) {
           this.rawSyncState.syncToken = nextSyncToken;
+        }
+        get syncDate() {
+          return this.rawSyncState.syncDate;
+        }
+        set syncDate(syncDate) {
+          this.rawSyncState.syncDate = syncDate;
         }
         get etag() {
           return this.rawSyncState.etag;
@@ -11954,6 +11961,9 @@ var WorkshopBackend = (() => {
             const rawSyncState = fromDb.syncStates.get(req.folderId);
             const syncState = new GapiCalFolderSyncStateHelper(ctx, rawSyncState, req.accountId, req.folderId, "refresh");
             const syncDate = NOW();
+            if (!ctx.universe.isTestingMode() && syncState.syncDate >= syncDate) {
+              syncState.syncToken = null;
+            }
             logic(ctx, "syncStart", { syncDate });
             const calendarId = folderInfo.serverId;
             const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`;
@@ -12113,6 +12123,7 @@ var WorkshopBackend = (() => {
               }
               syncState.ingestEvent(event);
             }
+            syncState.syncDate = syncDate;
             syncState.syncToken = results.nextSyncToken;
             syncState.etag = results.etag;
             syncState.updatedTime = results.updatedTime;
@@ -12327,7 +12338,8 @@ var WorkshopBackend = (() => {
               syncUrl: null,
               calUpdatedTS: null,
               rangeOldestTS: makeDaysAgo(-min),
-              rangeNewestTS: makeDaysAgo(-max)
+              rangeNewestTS: makeDaysAgo(-max),
+              syncDate: 0
             };
           }
           this._accountId = accountId;
@@ -12343,6 +12355,12 @@ var WorkshopBackend = (() => {
         }
         set syncUrl(nextSyncUrl) {
           this.rawSyncState.syncUrl = nextSyncUrl;
+        }
+        get syncDate() {
+          return this.rawSyncState.syncDate;
+        }
+        set syncDate(syncDate) {
+          this.rawSyncState.syncDate = syncDate;
         }
         set updatedTime(updatedTimeDateStr) {
           this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
@@ -13021,7 +13039,10 @@ var WorkshopBackend = (() => {
             const account = await ctx.universe.acquireAccount(ctx, req.accountId);
             const folderInfo = account.foldersTOC.foldersById.get(req.folderId);
             const calendarId = folderInfo.serverId;
-            let syncDate = NOW();
+            const syncDate = NOW();
+            if (!ctx.universe.isTestingMode() && syncState.syncDate >= syncDate) {
+              syncState.syncUrl = null;
+            }
             logic(ctx, "syncStart", { syncDate });
             const params = Object.create(null);
             let endpoint;
@@ -13103,6 +13124,7 @@ var WorkshopBackend = (() => {
               }
               syncState.ingestEvent(event, priority);
             }
+            syncState.syncDate = syncDate;
             syncState.syncUrl = results["@odata.deltaLink"];
             syncState.updatedTime = syncDate;
             syncState.processEvents();
@@ -16498,8 +16520,10 @@ var WorkshopBackend = (() => {
       this.universe.disableLogic();
     },
     _cmd_TEST_timeWarp(msg) {
-      logic(this, "timeWarp", { fakeNow: msg.fakeNow });
-      TEST_LetsDoTheTimewarpAgain(msg.fakeNow);
+      const { fakeNow } = msg;
+      logic(this, "timeWarp", { fakeNow });
+      TEST_LetsDoTheTimewarpAgain(fakeNow);
+      this.universe.broadcastOverBridges("time-warp", { fakeNow });
     },
     async _promised_TEST_parseFeed(msg, replyFunc) {
       logic(this, "parseFeed", {
@@ -22958,6 +22982,9 @@ var WorkshopBackend = (() => {
               globalClobbers.set(["debugLogging"], val);
               logic.realtimeLogEverything = val === "realtime";
               break;
+            case "testingMode":
+              ctx.universe.setTestingMode();
+              break;
             default:
               logic(ctx, "badModifyConfigKey", { key });
               break;
@@ -23359,6 +23386,7 @@ var WorkshopBackend = (() => {
     this.config = null;
     this._logReaper = null;
     this._logBacklog = null;
+    this._testingMode = false;
     this._LOG = null;
   }
   MailUniverse.prototype = {
@@ -23608,7 +23636,7 @@ var WorkshopBackend = (() => {
       if (engineFacts.syncGranularity === "account") {
         syncStampSource = this.accountManager.getAccountDefById(accountId);
       }
-      const folderIds = this.accountManager.getFolderIdsByTag(accountId, spec?.filter.tag || null);
+      const folderIds = this.accountManager.getFolderIdsByTag(accountId, spec?.filter?.tag || null);
       spec.folderIds.push(...folderIds);
       for (const folderId of folderIds) {
         if (metaHelpers) {
@@ -23775,6 +23803,12 @@ var WorkshopBackend = (() => {
         }
       }
       return null;
+    },
+    setTestingMode() {
+      this.testingMode = true;
+    },
+    isTestingMode() {
+      return this.testingMode;
     },
     modifyConfig(mods, why) {
       return this.taskManager.scheduleTaskAndWaitForPlannedResult({
