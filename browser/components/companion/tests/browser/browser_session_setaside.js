@@ -17,7 +17,7 @@ XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
 let isHidden = (win, id) =>
   BrowserTestUtils.is_hidden(win.document.getElementById(id));
 
-add_task(async function setup() {
+add_task(async function test_session_setaside() {
   // Run test in a new window to avoid affecting the main test window.
   let win = await BrowserTestUtils.openNewBrowserWindow();
 

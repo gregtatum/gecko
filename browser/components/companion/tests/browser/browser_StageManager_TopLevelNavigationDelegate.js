@@ -9,7 +9,7 @@ const TEST_PAGE_2 = "https://example.com/browser/components/";
 // that we will click, which should take us up a level.
 const LINK_URL = "https://example.com/";
 
-add_task(async function setup() {
+add_setup(async function() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.tabs.openNewTabForMostNavigations", true]],
   });

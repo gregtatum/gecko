@@ -14,7 +14,7 @@ let CustomizableUIBSPass = ChromeUtils.import(
 );
 let { CustomizableUIInternal } = CustomizableUIBSPass;
 
-add_task(async function setup() {
+add_setup(async function() {
   const oldMigrationValue = Services.prefs.getIntPref(
     kPrefPinebuildToolbarVersion,
     0

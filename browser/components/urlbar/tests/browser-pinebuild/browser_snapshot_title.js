@@ -17,7 +17,7 @@ const PAGES = [
     snapshotTitle: "Snapshot two",
   },
 ];
-add_task(async function setup() {
+add_setup(async function() {
   await PlacesUtils.history.clear();
   await PlacesUtils.bookmarks.eraseEverything();
   let now = Date.now();

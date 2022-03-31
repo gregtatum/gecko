@@ -21,7 +21,7 @@ let win2;
 let dateCheckpoint;
 let sessionGuid;
 
-add_task(async function setup() {
+add_setup(async function() {
   // Run tests in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
 

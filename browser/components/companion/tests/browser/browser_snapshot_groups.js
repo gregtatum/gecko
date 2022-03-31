@@ -69,7 +69,7 @@ async function addInteractionsAndSnapshots(data) {
   }
 }
 
-add_task(async function setup() {
+add_setup(async function() {
   Services.prefs.setIntPref("browser.places.snapshots.minGroupSize", 4);
   await Snapshots.reset();
   await addInteractionsAndSnapshots(TEST_URLS);

@@ -27,7 +27,7 @@ function getSessionLastSavedAt(guid) {
   );
 }
 
-add_task(async function setup() {
+add_setup(async function() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.sessionstore.interval", 200]],
   });

@@ -34,7 +34,7 @@ const PAGE_1_URL_AUTO = PAGE_1_URL + "&auto=true";
  * appropriate.
  */
 
-add_task(async function setup() {
+add_setup(async function() {
   // We enable overwriting, and then set the threshold to a large
   // number so that every navigation is considered quick for testing.
   await SpecialPowers.pushPrefEnv({

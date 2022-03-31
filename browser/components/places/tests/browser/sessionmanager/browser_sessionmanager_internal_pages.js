@@ -11,7 +11,7 @@ const TEST_URL = "https://example.org/";
 
 let win;
 
-add_task(async function setup() {
+add_setup(async function() {
   // Run tests in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
 

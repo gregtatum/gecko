@@ -15,7 +15,7 @@ const { sinon } = ChromeUtils.import("resource://testing-common/Sinon.jsm");
 let dateCheckpoint;
 let sessionGuids = [];
 
-add_task(async function setup() {
+add_setup(async function() {
   await clearSessionDatabase();
 });
 

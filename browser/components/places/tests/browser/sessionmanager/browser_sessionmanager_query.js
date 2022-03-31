@@ -12,7 +12,7 @@ const TEST_URL2 = "https://example.com/browser/";
 
 let dateCheckpoint;
 
-add_task(async function setup() {
+add_setup(async function() {
   await clearSessionDatabase();
 });
 

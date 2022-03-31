@@ -7,7 +7,7 @@ const ONE_MINUTE = 60 * 1000;
 
 const { generateEventTimes } = PinebuildTestUtils;
 
-add_task(async function setup() {
+add_setup(async function() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.companion.debugUI", true]],
   });

@@ -67,7 +67,7 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
   );
 }
 
-add_task(async function setup() {
+add_setup(async function() {
   // Add a file URI to test.
   const TEST_FILE = "file_pdfjs_object_stream.pdf";
   let testFileUri = getChromeDir(getResolvedURI(gTestPath));
