@@ -944,6 +944,9 @@ DownloadsPlacesView.prototype = {
   },
 
   onDrop(aEvent) {
+    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+      return;
+    }
     let dt = aEvent.dataTransfer;
     // If dragged item is from our source, do not try to
     // redownload already downloaded file.
