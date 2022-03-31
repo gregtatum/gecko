@@ -458,8 +458,9 @@ void WinWebAuthnManager::Register(
     nsTArray<uint8_t> attObject;
     if (winAttestation == WEBAUTHN_ATTESTATION_CONVEYANCE_PREFERENCE_NONE) {
       // Zero AAGuid
+      const uint8_t zeroGuid[16] = {0};
       authenticatorData.ReplaceElementsAt(32 + 1 + 4 /*AAGuid offset*/, 16,
-                                          0x0);
+                                          zeroGuid, 16);
 
       CryptoBuffer authData;
       authData.Assign(authenticatorData);
