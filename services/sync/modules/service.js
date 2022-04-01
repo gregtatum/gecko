@@ -22,6 +22,9 @@ const { Async } = ChromeUtils.import("resource://services-common/async.js");
 const { CommonUtils } = ChromeUtils.import(
   "resource://services-common/utils.js"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 const {
   CLIENT_NOT_CONFIGURED,
   CREDENTIALS_CHANGED,
@@ -82,22 +85,24 @@ const { fxAccounts } = ChromeUtils.import(
 
 function getEngineModules() {
   let result = {
-    Addons: { module: "addons.js", symbol: "AddonsEngine" },
     Bookmarks: { module: "bookmarks.js", symbol: "BookmarksEngine" },
     Form: { module: "forms.js", symbol: "FormEngine" },
     History: { module: "history.js", symbol: "HistoryEngine" },
     Password: { module: "passwords.js", symbol: "PasswordEngine" },
-    Prefs: { module: "prefs.js", symbol: "PrefsEngine" },
-    Tab: { module: "tabs.js", symbol: "TabEngine" },
   };
-  if (!Svc.Prefs.get("engine.addons.available", true)) {
-    delete result.Addons;
-  }
-  if (!Svc.Prefs.get("engine.prefs.available", true)) {
-    delete result.Prefs;
-  }
-  if (!Svc.Prefs.get("engine.tabs.available", true)) {
-    delete result.Tabs;
+  if (!AppConstants.PINEBUILD) {
+    result.Addons = {
+      module: "addons.js",
+      symbol: "AddonsEngine",
+    };
+    result.Prefs = {
+      module: "prefs.js",
+      symbol: "PrefsEngine",
+    };
+    result.Tab = {
+      module: "tabs.js",
+      symbol: "TabEngine",
+    };
   }
   if (Svc.Prefs.get("engine.addresses.available", false)) {
     result.Addresses = {

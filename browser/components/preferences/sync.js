@@ -577,9 +577,7 @@ var gSyncPane = {
   // preferences used for this engines.
   setupEnginesUI() {
     let observe = (elt, prefName) => {
-      elt.hidden =
-        !Services.prefs.getBoolPref(prefName, false) ||
-        !Services.prefs.getBoolPref(`${prefName}.available`, true);
+      elt.hidden = !Services.prefs.getBoolPref(prefName, false);
     };
 
     for (let elt of document.querySelectorAll("[engine_preference]")) {
@@ -590,6 +588,17 @@ var gSyncPane = {
       window.addEventListener("unload", () => {
         Services.prefs.removeObserver(prefName, obs);
       });
+    }
+    if (AppConstants.PINEBUILD) {
+      document.querySelector(
+        "[engine_preference='services.sync.engine.addons']"
+      ).hidden = true;
+      document.querySelector(
+        "[engine_preference='services.sync.engine.prefs']"
+      ).hidden = true;
+      document.querySelector(
+        "[engine_preference='services.sync.engine.tabs']"
+      ).hidden = true;
     }
   },
 };

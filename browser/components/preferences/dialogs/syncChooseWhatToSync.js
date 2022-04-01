@@ -50,12 +50,6 @@ let gSyncChooseWhatToSync = {
       ["services.sync.engine.creditcards", ".sync-engine-creditcards"],
     ];
 
-    if (AppConstants.PINEBUILD) {
-      enginePrefs.push(["services.sync.engine.addons", ".sync-engine-addons"]);
-      enginePrefs.push(["services.sync.engine.tabs", ".sync-engine-tabs"]);
-      enginePrefs.push(["services.sync.engine.prefs", ".sync-engine-prefs"]);
-    }
-
     for (let [enabledPref, className] of enginePrefs) {
       let availablePref = enabledPref + ".available";
       // If the engine is enabled we force it to be available, otherwise we see
@@ -67,6 +61,11 @@ let gSyncChooseWhatToSync = {
         let elt = document.querySelector(className);
         elt.hidden = true;
       }
+    }
+    if (AppConstants.PINEBUILD) {
+      document.querySelector(".sync-engine-addons").hidden = true;
+      document.querySelector(".sync-engine-prefs").hidden = true;
+      document.querySelector(".sync-engine-tabs").hidden = true;
     }
   },
 };
