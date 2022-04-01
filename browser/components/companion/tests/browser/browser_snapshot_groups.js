@@ -113,11 +113,23 @@ add_task(async function test_snapshot_group_titles() {
     await helper.selectCompanionTab("browse");
 
     let group = (await SnapshotGroups.query())[0];
+    let oldTitle = group.title;
     group.title = "User";
+    // We must remove the "title" property from the group because otherwise we
+    // end up having both a title and a fluentTitle in the metadata, that is a
+    // not supported, nor expected, condition for groups.
     group.builderMetadata = {
+      title: null,
       fluentTitle: { id: "snapshot-group-pinned-header" },
     };
     await SnapshotGroups.updateMetadata(group);
+    registerCleanupFunction(async () => {
+      group.builderMetadata = {
+        title: oldTitle,
+        fluentTitle: null,
+      };
+      await SnapshotGroups.updateMetadata(group);
+    });
 
     await helper.runCompanionTask(async () => {
       content.document.querySelector("button.snapshot-groups").click();
