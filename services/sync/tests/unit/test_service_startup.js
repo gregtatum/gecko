@@ -1,6 +1,10 @@
 /* Any copyright is dedicated to the Public Domain.
  * http://creativecommons.org/publicdomain/zero/1.0/ */
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 Svc.Prefs.set("registerEngines", "Tab,Bookmarks,Form,History");
 
 add_task(async function run_test() {
@@ -30,10 +34,14 @@ add_task(async function run_test() {
 
   _("Engines are registered.");
   let engines = Service.engineManager.getAll();
+  let engineList = ["bookmarks", "forms", "history"];
+  if (!AppConstants.PINEBUILD) {
+    engineList.append("tabs");
+  }
   Assert.ok(
     Utils.deepEquals(
       engines.map(engine => engine.name),
-      ["tabs", "bookmarks", "forms", "history"]
+      engineList
     )
   );
 
