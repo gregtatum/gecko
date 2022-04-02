@@ -33,7 +33,8 @@
       slice = Array.prototype.slice,
       props = ['_events', '_pendingEvents', 'on', 'once', 'latest',
                'latestOnce', 'removeObjectListener', 'removeListener',
-               'emitWhenListener', 'emit'];
+               'emitWhenListener', 'emit', 'promisedOnce', 'promisedLatestOnce',
+              ];
 
   // Converts possible call styles to a normalized array of:
   // [object, (prop || function)].

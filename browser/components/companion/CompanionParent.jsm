@@ -534,6 +534,11 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async getEvents() {
+    // _onSubscribe still calls this method, so stop that from doing anything
+    // when workshop is enabled.
+    if (workshopEnabled) {
+      return [];
+    }
     let events = OnlineServices.getEventsFromCache();
     await this.populateAdditionalEventData(events);
     return events;

@@ -22,7 +22,7 @@ import { BatchManager } from "./bridge/batch_manager";
 
 import EntireListProxy from "./bridge/entire_list_proxy";
 import WindowedListProxy from "./bridge/windowed_list_proxy";
-import { TEST_LetsDoTheTimewarpAgain } from "shared/date";
+import { TEST_getTimeWarp, TEST_LetsDoTheTimewarpAgain } from "shared/date";
 import { TEST_parseFeed } from "./parsers/parsers";
 
 /**
@@ -267,6 +267,12 @@ MailBridge.prototype = {
 
   _cmd_disableLogic(msg) {
     this.universe.disableLogic();
+  },
+
+  exposeInitExtraForClient() {
+    return {
+      fakeNow: TEST_getTimeWarp(),
+    };
   },
 
   _cmd_TEST_timeWarp(msg) {

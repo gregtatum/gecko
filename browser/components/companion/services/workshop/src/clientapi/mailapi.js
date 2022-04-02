@@ -191,7 +191,8 @@ export class MailAPI extends Emitter {
    * we can set flags and emit events and such.  We can probably also move more
    * of its logic into this file if it makes sense.
    */
-  __universeAvailable() {
+  __universeAvailable(initExtra) {
+    this.fakeNow = initExtra?.fakeNow;
     this.configLoaded = true;
     this.emit("configLoaded");
     logic(this, "configLoaded");

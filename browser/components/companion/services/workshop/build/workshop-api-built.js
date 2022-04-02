@@ -50,7 +50,9 @@ var require_evt = __commonJS({
         "removeObjectListener",
         "removeListener",
         "emitWhenListener",
-        "emit"
+        "emit",
+        "promisedOnce",
+        "promisedLatestOnce"
       ];
       function objFnPair(obj, fn) {
         if (!fn) {
@@ -3111,7 +3113,8 @@ var MailAPI = class extends import_evt14.Emitter {
   toJSON() {
     return { type: "MailAPI" };
   }
-  __universeAvailable() {
+  __universeAvailable({ fakeNow }) {
+    this.fakeNow = fakeNow;
     this.configLoaded = true;
     this.emit("configLoaded");
     logic(this, "configLoaded");
@@ -3126,8 +3129,8 @@ var MailAPI = class extends import_evt14.Emitter {
         this.emit("accountsLoaded");
       });
     });
-    this.on("time-warp", ({ fakeNow }) => {
-      this.fakeNow = fakeNow;
+    this.on("time-warp", ({ fakeNow: fakeNow2 }) => {
+      this.fakeNow = fakeNow2;
     });
   }
   eventuallyGetAccountById(accountId) {
@@ -4764,7 +4767,7 @@ function MailAPIFactory({
         MailAPI2._storedSends.forEach(function(storedMsg) {
           MailAPI2.__bridgeSend(storedMsg);
         });
-        MailAPI2.__universeAvailable();
+        MailAPI2.__universeAvailable(msg.initExtra);
       } else {
         MailAPI2.__bridgeReceive(msg);
       }

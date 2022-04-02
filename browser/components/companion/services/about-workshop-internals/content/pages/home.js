@@ -16,6 +16,20 @@ export default class HomePage extends Page {
       title: "Workshop Internals Home",
       pageId: "page-home",
     });
+
+    this.workshopAPI.promisedLatestOnce("configLoaded").then(() => {
+      this.requestUpdate();
+    });
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.workshopAPI.on("time-warp", this, this.onTimeWarped);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.workshopAPI.removeListener("time-warp", this, this.onTimeWarped);
   }
 
   async getLogs() {
@@ -54,10 +68,20 @@ export default class HomePage extends Page {
     logsCollector.loadData(json);
   }
 
+  onTimeWarped() {
+    this.requestUpdate();
+  }
+
   setTimeWarp() {
     const input = this.renderRoot.querySelector("#home-time-warp");
     const fakeNow = new Date(input.value).valueOf();
     this.workshopAPI.TEST_timeWarp({ fakeNow });
+    this.requestUpdate();
+  }
+
+  clearTimeWarp() {
+    this.workshopAPI.TEST_timeWarp({ fakeNow: null });
+    this.requestUpdate();
   }
 
   now() {
@@ -77,6 +101,13 @@ export default class HomePage extends Page {
   }
 
   render(pageElem) {
+    let maybeWarp;
+    if (this.workshopAPI.fakeNow) {
+      maybeWarp = html`
+        <h4>current warp: ${this.workshopAPI.now()}</h4>
+      `;
+    }
+
     return html`
       <section class="card">
         <h2>Accounts</h2>
@@ -144,15 +175,21 @@ export default class HomePage extends Page {
       </section>
       <section class="card">
         <h2>Time warp!</h2>
+        ${maybeWarp}
         <label for="home-time-warp"
           >Choose a date and a time to use for now():</label
         >
-        <input
-          type="datetime-local"
-          id="home-time-warp"
-          value=${this.now()}
-          @change=${this.setTimeWarp}
-        />
+        <input type="datetime-local" id="home-time-warp" value=${this.now()} />
+        <button id="home-timewarp-set" type="button" @click=${this.setTimeWarp}>
+          Set Time Warp
+        </button>
+        <button
+          id="home-timewarp-clear"
+          type="button"
+          @click=${this.clearTimeWarp}
+        >
+          Clear Time Warp
+        </button>
       </section>
     `;
   }

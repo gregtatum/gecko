@@ -1114,10 +1114,10 @@ class CalendarEvent extends MozLitElement {
 
   setTimeWarp() {
     const tenMinutes = 10 * 60 * 1000;
-    const twentySeconds = 20 * 1000;
+    const tenSeconds = 10 * 1000;
     let { startDate } = this.event;
     let startTime = new Date(Date.parse(startDate));
-    let fakeNow = startTime.valueOf() - (tenMinutes + twentySeconds);
+    let fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
     workshopAPI.TEST_timeWarp({ fakeNow });
   }
 

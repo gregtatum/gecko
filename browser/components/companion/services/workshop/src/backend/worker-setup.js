@@ -56,6 +56,7 @@ function createBridgePair(universe, usePort, uid, cleanupPromise) {
   TMB.__sendMessage({
     type: "hello",
     config: universe.exposeConfigForClient(),
+    initExtra: TMB.exposeInitExtraForClient(),
   });
 }
 

@@ -200,6 +200,10 @@ export function TEST_LetsDoTheTimewarpAgain(fakeNow) {
   TIME_WARPED_NOW = fakeNow;
 }
 
+export function TEST_getTimeWarp() {
+  return TIME_WARPED_NOW;
+}
+
 /**
  * Now in epoch milliseconds, the JS timestamp standard.
  */

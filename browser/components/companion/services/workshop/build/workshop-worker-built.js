@@ -82,7 +82,9 @@ var WorkshopBackend = (() => {
           "removeObjectListener",
           "removeListener",
           "emitWhenListener",
-          "emit"
+          "emit",
+          "promisedOnce",
+          "promisedLatestOnce"
         ];
         function objFnPair(obj, fn) {
           if (!fn) {
@@ -987,6 +989,9 @@ var WorkshopBackend = (() => {
       fakeNow = fakeNow.valueOf();
     }
     TIME_WARPED_NOW = fakeNow;
+  }
+  function TEST_getTimeWarp() {
+    return TIME_WARPED_NOW;
   }
   function NOW() {
     return TIME_WARPED_NOW || Date.now();
@@ -16519,6 +16524,11 @@ var WorkshopBackend = (() => {
     _cmd_disableLogic(msg) {
       this.universe.disableLogic();
     },
+    exposeInitExtraForClient() {
+      return {
+        fakeNow: TEST_getTimeWarp()
+      };
+    },
     _cmd_TEST_timeWarp(msg) {
       const { fakeNow } = msg;
       logic(this, "timeWarp", { fakeNow });
@@ -23322,6 +23332,7 @@ var WorkshopBackend = (() => {
 
   // src/backend/mailuniverse.js
   init_tools();
+  init_date();
   function MailUniverse({ online, testOptions, appExtensions }) {
     this._logicBuffer = new LogicBuffer({});
     logic.defineScope(this, "Universe");
@@ -24096,7 +24107,8 @@ var WorkshopBackend = (() => {
     };
     TMB.__sendMessage({
       type: "hello",
-      config: universe2.exposeConfigForClient()
+      config: universe2.exposeConfigForClient(),
+      initExtra: TMB.exposeInitExtraForClient()
     });
   }
   var universe = null;

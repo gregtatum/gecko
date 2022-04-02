@@ -163,7 +163,7 @@ export function MailAPIFactory({
         // XXX
         //MailAPI._storedSends = [];
 
-        MailAPI.__universeAvailable();
+        MailAPI.__universeAvailable(msg.initExtra);
       } else {
         MailAPI.__bridgeReceive(msg);
       }

@@ -4,6 +4,8 @@
 
 import { MailAPIFactory } from "chrome://browser/content/companion/workshop-api-built.js";
 
+import { initNotifications } from "./notifications.js";
+
 const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
@@ -27,5 +29,8 @@ if (workshopEnabled) {
     isLoggingEnabled,
   });
   mainThreadServices.registerWorkshopAPI(workshopAPI);
+
+  initNotifications(workshopAPI);
+
   window.dispatchEvent(new CustomEvent("workshopLoaded"));
 }
