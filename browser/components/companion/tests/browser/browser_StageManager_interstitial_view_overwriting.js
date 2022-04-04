@@ -89,12 +89,16 @@ add_task(async function test_no_overwriting_with_interaction() {
   let view1 = await newViewCreated;
 
   // We're simulating a user interaction here, which means that if the
-  // TopLevelNavigationDelegate is enabled, then the newly created View
-  // will also have a newly created <browser>, which means we can't use
-  // `PinebuildTestUtils.waitForNewView`.
+  // TopLevelNavigationDelegate / targetTopLevelLinkClicksToBlank is enabled,
+  // then the newly created View will also have a newly created <browser>,
+  // which means we can't use `PinebuildTestUtils.waitForNewView`.
   Assert.ok(
-    Services.prefs.getBoolPref("browser.tabs.openNewTabForMostNavigations"),
-    "TopLevelNavigationDelegate should be enabled for this test to work."
+    Services.prefs.getBoolPref("browser.tabs.openNewTabForMostNavigations") ||
+      Services.prefs.getBoolPref(
+        "browser.pinebuild.targetTopLevelLinkClicksToBlank"
+      ),
+    "TopLevelNavigationDelegate or targetTopLevelLinkClicksToBLank should " +
+      "be enabled for this test to work."
   );
 
   let viewAdded = BrowserTestUtils.waitForEvent(
