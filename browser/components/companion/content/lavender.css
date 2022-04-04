@@ -2,140 +2,140 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-:root {
-  /* Full Color Palette */
+@media not (prefers-contrast) {
+  :root {
+    /* Full Color Palette */
 
-  /* Lavender */
-  --colors-lavender-10: #f3f0fa;
-  --colors-lavender-20: #efe9fb;
-  --colors-lavender-30: #e4d9fa;
-  --colors-lavender-40: #dbcdf9;
-  --colors-lavender-50: #cfbcf7;
-  --colors-lavender-60: #b79bf2;
-  --colors-lavender-70: #9974e8;
-  --colors-lavender-80: #845bdc;
-  --colors-lavender-90: #6940c2;
-  --colors-lavender-100: #562ea6;
-  --colors-lavender-110: #452487;
-  --colors-lavender-120: #371e69;
+    /* Lavender */
+    --colors-lavender-10: #f3f0fa;
+    --colors-lavender-20: #efe9fb;
+    --colors-lavender-30: #e4d9fa;
+    --colors-lavender-40: #dbcdf9;
+    --colors-lavender-50: #cfbcf7;
+    --colors-lavender-60: #b79bf2;
+    --colors-lavender-70: #9974e8;
+    --colors-lavender-80: #845bdc;
+    --colors-lavender-90: #6940c2;
+    --colors-lavender-100: #562ea6;
+    --colors-lavender-110: #452487;
+    --colors-lavender-120: #371e69;
 
-  /* Cafe au Lait */
-  --colors-cafe-10: #fffefc;
-  --colors-cafe-20: #faf7f2;
-  --colors-cafe-30: #f3ece0;
-  --colors-cafe-40: #f0e8da;
-  --colors-cafe-50: #f0e6d5;
-  --colors-cafe-60: #ebdec7;
-  --colors-cafe-70: #e0ceac;
-  --colors-cafe-80: #ceb382;
-  --colors-cafe-90: #bc9d65;
-  --colors-cafe-100: #9b8052;
-  --colors-cafe-110: #846a41;
-  --colors-cafe-120: #695333;
+    /* Cafe au Lait */
+    --colors-cafe-10: #fffefc;
+    --colors-cafe-20: #faf7f2;
+    --colors-cafe-30: #f3ece0;
+    --colors-cafe-40: #f0e8da;
+    --colors-cafe-50: #f0e6d5;
+    --colors-cafe-60: #ebdec7;
+    --colors-cafe-70: #e0ceac;
+    --colors-cafe-80: #ceb382;
+    --colors-cafe-90: #bc9d65;
+    --colors-cafe-100: #9b8052;
+    --colors-cafe-110: #846a41;
+    --colors-cafe-120: #695333;
 
-  /* Teal */
-  --colors-teal-10: #edfaf9;
-  --colors-teal-20: #e1faf9;
-  --colors-teal-30: #d4f7f6;
-  --colors-teal-40: #aef2f2;
-  --colors-teal-50: #84e8e8;
-  --colors-teal-60: #67d8dc;
-  --colors-teal-70: #40bec2;
-  --colors-teal-80: #2ea0a6;
-  --colors-teal-90: #248287;
-  --colors-teal-100: #1e6569;
+    /* Teal */
+    --colors-teal-10: #edfaf9;
+    --colors-teal-20: #e1faf9;
+    --colors-teal-30: #d4f7f6;
+    --colors-teal-40: #aef2f2;
+    --colors-teal-50: #84e8e8;
+    --colors-teal-60: #67d8dc;
+    --colors-teal-70: #40bec2;
+    --colors-teal-80: #2ea0a6;
+    --colors-teal-90: #248287;
+    --colors-teal-100: #1e6569;
 
-  /* Yellow */
-  --colors-yellow-10: #fcfad2;
-  --colors-yellow-20: #faf6b1;
-  --colors-yellow-30: #f5f17d;
-  --colors-yellow-40: #f0eb4a;
-  --colors-yellow-50: #eae419;
+    /* Yellow */
+    --colors-yellow-10: #fcfad2;
+    --colors-yellow-20: #faf6b1;
+    --colors-yellow-30: #f5f17d;
+    --colors-yellow-40: #f0eb4a;
+    --colors-yellow-50: #eae419;
 
-  /* Light Grey */
-  --colors-lightgrey-10: #fafafa;
-  --colors-lightgrey-20: #f7f7f8;
-  --colors-lightgrey-30: #f2f0f1;
-  --colors-lightgrey-40: #edebeb;
-  --colors-lightgrey-50: #e5e2e2;
-  --colors-lightgrey-60: #dbd9d7;
-  --colors-lightgrey-70: #c9c7c5;
-  --colors-lightgrey-80: #b7b6b3;
-  --colors-lightgrey-90: #a4a4a1;
-  --colors-lightgrey-100: #92928f;
-  --colors-lightgrey-110: #7f807d;
-  --colors-lightgrey-120: #6d6e6b;
+    /* Light Grey */
+    --colors-lightgrey-10: #fafafa;
+    --colors-lightgrey-20: #f7f7f8;
+    --colors-lightgrey-30: #f2f0f1;
+    --colors-lightgrey-40: #edebeb;
+    --colors-lightgrey-50: #e5e2e2;
+    --colors-lightgrey-60: #dbd9d7;
+    --colors-lightgrey-70: #c9c7c5;
+    --colors-lightgrey-80: #b7b6b3;
+    --colors-lightgrey-90: #a4a4a1;
+    --colors-lightgrey-100: #92928f;
+    --colors-lightgrey-110: #7f807d;
+    --colors-lightgrey-120: #6d6e6b;
 
-  /* Dark Grey */
-  --colors-darkgrey-10: #60605c;
-  --colors-darkgrey-20: #4f504c;
-  --colors-darkgrey-30: #4a4b49;
-  --colors-darkgrey-40: #444544;
-  --colors-darkgrey-50: #404140;
-  --colors-darkgrey-60: #2f2f2e;
-  --colors-darkgrey-70: #232423;
-  --colors-darkgrey-80: #202120;
-  --colors-darkgrey-90: #161616;
-  --colors-darkgrey-100: #0e0f0f;
+    /* Dark Grey */
+    --colors-darkgrey-10: #60605c;
+    --colors-darkgrey-20: #4f504c;
+    --colors-darkgrey-30: #4a4b49;
+    --colors-darkgrey-40: #444544;
+    --colors-darkgrey-50: #404140;
+    --colors-darkgrey-60: #2f2f2e;
+    --colors-darkgrey-70: #232423;
+    --colors-darkgrey-80: #202120;
+    --colors-darkgrey-90: #161616;
+    --colors-darkgrey-100: #0e0f0f;
 
-  /* Black/White */
-  --colors-black: #000000;
-  --colors-white: #ffffff;
+    /* Black/White */
+    --colors-black: #000000;
+    --colors-white: #ffffff;
 
-  /* Red */
+    /* Red */
 
-  --colors-red-10: #e85474;
-  --colors-red-20: #e53e62;
-  --colors-red-30: #e11e48;
+    --colors-red-10: #e85474;
+    --colors-red-20: #e53e62;
+    --colors-red-30: #e11e48;
 
-  /* Blue */
-  --colors-blue-10: #637cff;
+    /* Blue */
+    --colors-blue-10: #637cff;
 
-  /* Background Colors */
-  --pine-background-cool-1: var(--colors-white);
-  --pine-background-cool-2: var(--colors-lightgrey-20);
-  --pine-background-cool-3: var(--colors-lightgrey-30);
-  --pine-background-cool-4: var(--colors-lightgrey-50);
-  --pine-background-cool-1-hover: var(--colors-lightgrey-30);
-  --pine-background-cool-2-hover: var(--colors-lightgrey-40);
-  --pine-background-cool-3-hover: var(--colors-lightgrey-50);
-  --pine-background-cool-4-hover: var(--colors-lightgrey-70);
-  --pine-background-cool-1-pressed: var(--colors-lightgrey-40);
-  --pine-background-cool-2-pressed: var(--colors-lightgrey-50);
-  --pine-background-cool-3-pressed: var(--colors-lightgrey-60);
-  --pine-background-cool-4-pressed: var(--colors-lightgrey-80);
-  --pine-background-lavender: var(--colors-lavender-20);
-  --pine-background-warm-1: var(--colors-cafe-10);
-  --pine-background-warm-2: var(--colors-cafe-20);
-  --pine-background-warm-3: var(--colors-cafe-40);
-  --pine-background-warm-1-hover: var(--colors-cafe-30);
-  --pine-background-warm-2-hover: var(--colors-cafe-40);
-  --pine-background-warm-3-hover: var(--colors-cafe-60);
-  --pine-background-warm-1-pressed: var(--colors-cafe-40);
-  --pine-background-warm-2-pressed: var(--colors-cafe-50);
-  --pine-background-warm-3-pressed: var(--colors-cafe-70);
+    /* Background Colors */
+    --pine-background-cool-1: var(--colors-white);
+    --pine-background-cool-2: var(--colors-lightgrey-20);
+    --pine-background-cool-3: var(--colors-lightgrey-30);
+    --pine-background-cool-4: var(--colors-lightgrey-50);
+    --pine-background-cool-1-hover: var(--colors-lightgrey-30);
+    --pine-background-cool-2-hover: var(--colors-lightgrey-40);
+    --pine-background-cool-3-hover: var(--colors-lightgrey-50);
+    --pine-background-cool-4-hover: var(--colors-lightgrey-70);
+    --pine-background-cool-1-pressed: var(--colors-lightgrey-40);
+    --pine-background-cool-2-pressed: var(--colors-lightgrey-50);
+    --pine-background-cool-3-pressed: var(--colors-lightgrey-60);
+    --pine-background-cool-4-pressed: var(--colors-lightgrey-80);
+    --pine-background-lavender: var(--colors-lavender-20);
+    --pine-background-warm-1: var(--colors-cafe-10);
+    --pine-background-warm-2: var(--colors-cafe-20);
+    --pine-background-warm-3: var(--colors-cafe-40);
+    --pine-background-warm-1-hover: var(--colors-cafe-30);
+    --pine-background-warm-2-hover: var(--colors-cafe-40);
+    --pine-background-warm-3-hover: var(--colors-cafe-60);
+    --pine-background-warm-1-pressed: var(--colors-cafe-40);
+    --pine-background-warm-2-pressed: var(--colors-cafe-50);
+    --pine-background-warm-3-pressed: var(--colors-cafe-70);
 
-  --colors-primarygrey: #4e4a55;
-  --colors-secondarygrey: #5f5b66;
+    --colors-primarygrey: #4e4a55;
+    --colors-secondarygrey: #5f5b66;
 
-  --colors-icons: #5f5b66;
+    --colors-icons: #5f5b66;
 
-  --colors-warm-hover-02: #f0e6d5;
-  --colors-warm-pressed-02: #ebdec7;
+    --colors-warm-hover-02: #f0e6d5;
+    --colors-warm-pressed-02: #ebdec7;
 
-  --colors-border-focus: #637cff;
-  --colors-quickactions-topsites-border: #e5e2e2;
-  --colors-quickactions-topsites-background: white;
+    --colors-border-focus: #637cff;
+    --colors-quickactions-topsites-border: #e5e2e2;
+    --colors-quickactions-topsites-background: white;
 
-  --quickactions-topsites-outset-shadow: -1px 1px 4px 0px rgba(69, 36, 135, 0.14);
+    --quickactions-topsites-outset-shadow: -1px 1px 4px 0px rgba(69, 36, 135, 0.14);
 
-  --urlbar-default-border: 1px solid var(--colors-warm-pressed-02);
-  --urlbar-hover-border: unset;
-  --urlbar-selected-border: 1px solid var(--colors-lavender-70);
-  --urlbar-focus-border: 2px solid var(--colors-border-focus);
-  --urlbar-breakout-background: white;
+    --urlbar-default-border: 1px solid var(--colors-warm-pressed-02);
+    --urlbar-hover-border: unset;
+    --urlbar-selected-border: 1px solid var(--colors-lavender-70);
+    --urlbar-focus-border: 2px solid var(--colors-border-focus);
+    --urlbar-breakout-background: white;
 
-
-  --pam-btn-focus-border: 2px solid var(--colors-border-focus);
-
+    --pam-btn-focus-border: 2px solid var(--colors-border-focus);
+  }
 }
