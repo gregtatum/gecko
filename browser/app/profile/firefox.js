@@ -2743,8 +2743,8 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("privacy.userContext.ui.enabled", false, locked);
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
-  pref("browser.tabs.openNewTabForMostNavigations", true);
-  pref("browser.pinebuild.targetTopLevelLinkClicksToBlank", false);
+  pref("browser.tabs.openNewTabForMostNavigations", false);
+  pref("browser.pinebuild.targetTopLevelLinkClicksToBlank", true);
   #ifdef MOZILLA_OFFICIAL
     pref("browser.startup.launchOnOSLogin", true);
   #else
