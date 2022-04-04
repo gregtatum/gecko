@@ -164,7 +164,7 @@ const HistoryCarousel = {
    * The list of DOM events that we listen for on this page. These get event
    * listeners set up for them, and are then handled in handleDOMEvent.
    */
-  DOM_EVENTS: ["visibilitychange", "click", "keydown", "input"],
+  DOM_EVENTS: ["visibilitychange", "click", "keydown", "input", "wheel"],
 
   /**
    * An Array that contains the list of View indexes that still need
@@ -350,6 +350,10 @@ const HistoryCarousel = {
       }
       case "visibilitychange": {
         this.onVisibilityChange(event);
+        break;
+      }
+      case "wheel": {
+        this.onWheel(event);
         break;
       }
     }
@@ -731,6 +735,33 @@ const HistoryCarousel = {
         },
         { once: true }
       );
+    }
+  },
+
+  /**
+   * Handles wheel events. Specifically, wheel events that aren't using
+   * DOM_DELTA_PIXEL delta modes. This allows us to change the carousel
+   * preview by one index for each "click" of a mousewheel.
+   *
+   * @param {WheelEvent} event
+   *   The WheelEvent event to handle.
+   */
+  onWheel(event) {
+    if (event.deltaMode != WheelEvent.DOM_DELTA_PIXEL) {
+      // If a smooth-scroll was already in progress, we should treat that
+      // smooth-scroll's target index as the "current index" to calculate
+      // the delta from. This helps us avoid races where the "current index"
+      // hasn't yet been updated because the target preview hasn't intersected
+      // the viewport yet.
+      let currentIndex =
+        this.selectedIndex > -1
+          ? this.selectedIndex
+          : CarouselUtils.getCurrentIndex();
+      let targetIndex = Math.max(
+        this.minIndex,
+        Math.min(this.maxIndex, currentIndex + event.deltaY)
+      );
+      this.selectIndex(targetIndex);
     }
   },
 };
