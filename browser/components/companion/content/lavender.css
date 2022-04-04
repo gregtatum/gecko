@@ -127,6 +127,9 @@
     --colors-border-focus: #637cff;
     --colors-quickactions-topsites-border: #e5e2e2;
     --colors-quickactions-topsites-background: white;
+    --focus-outline-color: var(--colors-border-focus);
+    --toolbarbutton-hover-background: var(--colors-warm-hover-02);
+    --toolbarbutton-active-background: var(--colors-warm-pressed-02);
 
     --quickactions-topsites-outset-shadow: -1px 1px 4px 0px rgba(69, 36, 135, 0.14);
 
@@ -137,5 +140,18 @@
     --urlbar-breakout-background: white;
 
     --pam-btn-focus-border: 2px solid var(--colors-border-focus);
+    --page-action-menu-button-border-color: var(--colors-lightgrey-30);
+    --page-action-menu-button-fill-color: var(--colors-icons);
+    --page-action-menu-button-bgcolor: var(--colors-lightgrey-20);
+    --page-action-menu-button-color: var(--colors-darkgrey-10);
+    --page-action-menu-textfield-focused-border-color: var(--colors-lavender-90);
+    --page-action-menu-textfield-focused-bgcolor: var(--colors-lavender-10);
+
+    --pinebuild-global-background: var(--colors-cafe-10);
+    --pinebuild-highlight-color: var(--colors-lavender-50);
+    --pinebuild-highlight-text-color: #562ea6;
+    --pinebuild-pre-flow-reset-background-color: #8d77b4;
+    --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
+    --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
   }
 }

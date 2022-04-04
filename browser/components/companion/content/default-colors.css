@@ -1,0 +1,12 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+:root {
+  --page-action-menu-button-border-color: ButtonText;
+  --page-action-menu-button-fill-color: ButtonText;
+  --page-action-menu-button-bgcolor: ButtonFace;
+  --page-action-menu-button-color: ButtonText;
+  --page-action-menu-textfield-focused-border-color: ButtonText;
+  --page-action-menu-textfield-focused-bgcolor: ButtonFace;
+}

@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+@import url("chrome://browser/content/companion/default-colors.css");
 @import url("chrome://browser/content/companion/lavender.css");
 
 :root {
@@ -18,30 +19,21 @@
   --urlbar-height: 44px;
   --urlbarbutton-border-radius: 4px;
   --urlbar-margin-inline: 8px;
-  --focus-outline-color: var(--colors-border-focus);
-  --toolbarbutton-hover-background: var(--colors-warm-hover-02);
-  --toolbarbutton-active-background: var(--colors-warm-pressed-02);
 
   /* pinebuild-specific variables: */
   --companion-width: 340px;
   --companion-min-width: 300px;
   --companion-max-width: 600px;
-  --pinebuild-global-background: var(--colors-cafe-10);
-  --pinebuild-highlight-color: var(--colors-lavender-50);
-  --pinebuild-highlight-text-color: #562ea6;
   --pinebuild-flow-reset-transition-duration: 1s;
   /* I tried using --animation-timing-function for this, but it was too steep
      a curve. We may want to define a different curve than ease-out though. */
   --pinebuild-flow-reset-transition-timing: ease-out;
-  --pinebuild-pre-flow-reset-background-color: #8d77b4;
   /* I tried overriding this w/o pinebuild prefix, but it seems to be reset
    * to 64px later. I'll investigate at a later date */
   --pinebuild-urlbar-toolbar-height: 40px;
   --pinebuild-urlbar-toolbar-breakout-width: 720px;
 
   --pinebuild-toast-transition-duration: .2s;
-  --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
-  --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
 }
 
 @media (prefers-contrast: more) {
@@ -584,14 +576,15 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 }
 
 #page-actions-section > toolbarbutton > .toolbarbutton-icon {
-  padding: 16px;
+  padding: 15px;
+  border: 1px solid var(--page-action-menu-button-border-color);
   border-radius: 100px;
   -moz-context-properties: fill;
-  fill: var(--colors-icons);
+  fill: var(--page-action-menu-button-fill-color);
   background-size: 15px;
   background-repeat: no-repeat;
   background-position: center;
-  background-color: var(--colors-lightgrey-30);
+  background-color: var(--page-action-menu-button-bgcolor);
 }
 
 #page-actions-section > toolbarbutton:hover > .toolbarbutton-icon {
@@ -638,7 +631,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 
 #page-actions-section > toolbarbutton > .toolbarbutton-text {
   margin-block-start: 8px;
-  color: var(--colors-icons);
+  color: var(--page-action-menu-button-color);
 }
 
 #site-info-section {
@@ -659,6 +652,8 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 #site-info-edit-icon {
   background: url("chrome://global/skin/icons/edit.svg") no-repeat right;
   width: 16px;
+  -moz-context-properties: fill;
+  fill: currentColor;
 }
 
 #site-info-title:focus ~ #site-info-edit-icon,
@@ -672,9 +667,9 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 
 #site-info-url:focus-visible,
 #site-info-title:focus-visible {
-  outline: 0.5px solid var(--colors-lavender-90);
+  outline: 0.5px solid var(--page-action-menu-textfield-focused-border-color);
   border-radius: 4px;
-  background: #F0F0F4;
+  background-color: var(--page-action-menu-textfield-focused-bg-color);
   text-overflow: unset;
 }
 
@@ -725,6 +720,8 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
    * this by shaving off the 2px with a negative margin.
    */
   margin-inline: -2px;
+  -moz-context-properties: fill;
+  fill: currentColor;
 }
 
 #site-security-info {
