@@ -35,6 +35,8 @@
  *   the given notification at the appropriate time.
  **/
 
+import { workshopAPI } from "./workshopAPI.js";
+
 var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 const { XPCOMUtils } = ChromeUtils.import(
@@ -164,8 +166,8 @@ let observer = {
 };
 
 class WorkshopNotificationDriver {
-  constructor(workshopAPI) {
-    this.workshopAPI = workshopAPI;
+  constructor(wAPI) {
+    this.workshopAPI = wAPI;
 
     // The view will update whenever the set of items in it changes or their
     // properties change.  However, if a fake time is in use, we only want to
@@ -173,7 +175,7 @@ class WorkshopNotificationDriver {
     // to avoid sync events from rolling the clock back.  This avoids delaying
     // the notifications more than expected and avoids the notifications
     // happening when we don't want them to.
-    this.useFakeNow = workshopAPI.fakeNow;
+    this.useFakeNow = wAPI.fakeNow;
     this.workshopAPI.on("time-warp", this, this.onTimeWarp);
 
     this.listView = null;
@@ -245,7 +247,7 @@ class WorkshopNotificationDriver {
 // We need to keep this object alive.
 // eslint-disable-next-line no-unused-vars
 let workshopNotificationDriver;
-export function initNotifications(workshopAPI) {
+export function initNotifications(wAPI) {
   // Note: Currently we set the notification machinery and have the preference
   // to disable notifications take effect conditionally when we go to actually
   // show the notification.  It would be arguably more efficient to only start
@@ -253,7 +255,9 @@ export function initNotifications(workshopAPI) {
   // work!
   logConsole.debug("initNotifications", { workshopEnabled });
   if (workshopEnabled) {
-    workshopNotificationDriver = new WorkshopNotificationDriver(workshopAPI);
+    workshopNotificationDriver = new WorkshopNotificationDriver(
+      wAPI || workshopAPI
+    );
   } else if (
     Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
   ) {

@@ -23332,7 +23332,6 @@ var WorkshopBackend = (() => {
 
   // src/backend/mailuniverse.js
   init_tools();
-  init_date();
   function MailUniverse({ online, testOptions, appExtensions }) {
     this._logicBuffer = new LogicBuffer({});
     logic.defineScope(this, "Universe");

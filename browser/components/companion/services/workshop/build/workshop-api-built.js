@@ -3113,8 +3113,8 @@ var MailAPI = class extends import_evt14.Emitter {
   toJSON() {
     return { type: "MailAPI" };
   }
-  __universeAvailable({ fakeNow }) {
-    this.fakeNow = fakeNow;
+  __universeAvailable(initExtra) {
+    this.fakeNow = initExtra?.fakeNow;
     this.configLoaded = true;
     this.emit("configLoaded");
     logic(this, "configLoaded");
@@ -3129,8 +3129,8 @@ var MailAPI = class extends import_evt14.Emitter {
         this.emit("accountsLoaded");
       });
     });
-    this.on("time-warp", ({ fakeNow: fakeNow2 }) => {
-      this.fakeNow = fakeNow2;
+    this.on("time-warp", ({ fakeNow }) => {
+      this.fakeNow = fakeNow;
     });
   }
   eventuallyGetAccountById(accountId) {
