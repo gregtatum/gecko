@@ -125,7 +125,15 @@ add_setup(async function() {
     TEST_URLS[3].uri
   );
 
+  // Disable the idle service and make sure Interactions is active.
+  let idleService = Cc["@mozilla.org/widget/useridleservice;1"].getService(
+    Ci.nsIUserIdleService
+  );
+  idleService.disabled = true;
+  Interactions.observe("active");
+
   registerCleanupFunction(async () => {
+    idleService.disabled = false;
     tmpFile.remove(false);
     await BrowserTestUtils.closeWindow(win);
     await Snapshots.reset();
