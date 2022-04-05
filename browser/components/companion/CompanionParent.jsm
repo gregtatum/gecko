@@ -631,6 +631,11 @@ class CompanionParent extends JSWindowActorParent {
 
   viewTab(tab) {
     this.sendAsyncMessage("Companion:ViewTab", { tab });
+    let win = this.browsingContext.topChromeWindow;
+    let companion = win.document.getElementById("companion-box");
+    if (!companion.isOpen) {
+      companion.toggleVisible();
+    }
   }
 
   handleStageManagerEvent(event) {

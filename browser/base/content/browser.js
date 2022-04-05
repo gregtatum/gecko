@@ -4620,6 +4620,15 @@ function FillHistoryMenu(aParent) {
 }
 
 function BrowserDownloadsUI() {
+  if (AppConstants.PINEBUILD) {
+    let actor = document
+      .getElementById("companion-browser")
+      .browsingContext.currentWindowGlobal.getActor("Companion");
+    if (actor) {
+      actor.viewTab("downloads");
+    }
+    return;
+  }
   if (PrivateBrowsingUtils.isWindowPrivate(window)) {
     openTrustedLinkIn("about:downloads", "tab");
   } else {
