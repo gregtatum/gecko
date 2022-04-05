@@ -178,12 +178,16 @@ const MultiStageAboutWelcome = props => {
   }, screens.map((screen, order) => {
     const isFirstCenteredScreen = screen.content.position !== "corner" && screen.order === centeredScreens[0].order;
     const isLastCenteredScreen = screen.content.position !== "corner" && screen.order === centeredScreens[centeredScreens.length - 1].order;
+    /* If first screen is corner positioned, don't include it in the count for the steps indicator. This assumes corner positioning will only be used on the first screen. */
+
+    const totalNumberOfScreens = screens[0].content.position === "corner" ? screens.length - 1 : screens.length;
     return index === order ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(WelcomeScreen, {
       key: screen.id + order,
       id: screen.id,
-      totalNumberOfScreens: screens.length,
+      totalNumberOfScreens: totalNumberOfScreens,
       isFirstCenteredScreen: isFirstCenteredScreen,
       isLastCenteredScreen: isLastCenteredScreen,
+      startsWithCorner: screens[0].content.position === "corner",
       order: order,
       content: screen.content,
       navigate: handleTransition,
@@ -274,14 +278,14 @@ class WelcomeScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCo
     });
   }
 
-  async handleAction(event, target) {
+  async handleAction(event) {
     let {
       props
     } = this;
     let {
       value
     } = event.currentTarget;
-    let targetContent = target || props.content[value] || props.content.tiles || props.content.languageSwitcher;
+    let targetContent = props.content[value] || props.content.tiles || props.content.languageSwitcher;
 
     if (!(targetContent && targetContent.action)) {
       return;
@@ -322,7 +326,7 @@ class WelcomeScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCo
       id: this.props.id,
       order: this.props.order,
       activeTheme: this.props.activeTheme,
-      totalNumberOfScreens: this.props.totalNumberOfScreens - 1,
+      totalNumberOfScreens: this.props.totalNumberOfScreens,
       appAndSystemLocaleInfo: this.props.appAndSystemLocaleInfo,
       negotiatedLanguage: this.props.negotiatedLanguage,
       langPackInstallPhase: this.props.langPackInstallPhase,
@@ -330,6 +334,7 @@ class WelcomeScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCo
       messageId: this.props.messageId,
       isFirstCenteredScreen: this.props.isFirstCenteredScreen,
       isLastCenteredScreen: this.props.isLastCenteredScreen,
+      startsWithCorner: this.props.startsWithCorner,
       autoAdvance: this.props.autoAdvance
     });
   }
@@ -350,10 +355,12 @@ __webpack_require__.r(__webpack_exports__);
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const MS_STRING_PROP = "string_id";
+const CONFIGURABLE_STYLES = ["color", "fontSize"];
+const ZAP_SIZE_THRESHOLD = 160;
 /**
  * Based on the .text prop, localizes an inner element if a string_id
  * is provided, OR renders plain text, OR hides it if nothing is provided.
+ * Allows configuring of some styles including zap underline and color.
  *
  * Examples:
  *
@@ -368,6 +375,7 @@ const MS_STRING_PROP = "string_id";
  * Unlocalized text
  * jsx:
  *   <Localized text="Welcome"><h1 /></Localized>
+ *   <Localized text={{raw: "Welcome"}}><h1 /></Localized>
  * output:
  *   <h1>Welcome</h1>
  */
@@ -376,29 +384,55 @@ const Localized = ({
   text,
   children
 }) => {
+  // Dynamically determine the size of the zap style.
+  const zapRef = /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createRef();
+  (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+    const {
+      current
+    } = zapRef;
+    if (current) requestAnimationFrame(() => current === null || current === void 0 ? void 0 : current.classList.replace("short", current.getBoundingClientRect().width > ZAP_SIZE_THRESHOLD ? "long" : "short"));
+  }); // Skip rendering of children with no text.
+
   if (!text) {
     return null;
-  }
+  } // Allow augmenting existing child container properties.
 
-  let props = children ? children.props : {};
-  let textNode;
 
-  if (typeof text === "object" && text[MS_STRING_PROP]) {
-    props = { ...props
-    };
-    props["data-l10n-id"] = text[MS_STRING_PROP];
+  const props = {
+    children: [],
+    className: "",
+    style: {},
+    ...(children === null || children === void 0 ? void 0 : children.props)
+  }; // Support nested Localized by starting with their children.
+
+  const textNodes = props.children; // Pick desired fluent or raw/plain text to render.
+
+  if (text.string_id) {
+    props["data-l10n-id"] = text.string_id;
     if (text.args) props["data-l10n-args"] = JSON.stringify(text.args);
+  } else if (text.raw) {
+    textNodes.push(text.raw);
   } else if (typeof text === "string") {
-    textNode = text;
-  }
+    textNodes.push(text);
+  } // Add zap style and content in a way that allows fluent to insert too.
 
-  if (!children) {
-    return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", props, textNode);
-  } else if (textNode) {
-    return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().cloneElement(children, props, textNode);
-  }
 
-  return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().cloneElement(children, props);
+  if (text.zap) {
+    props.className += " welcomeZap";
+    textNodes.push( /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+      className: "short zap",
+      "data-l10n-name": "zap",
+      ref: zapRef
+    }, text.zap));
+  } // Apply certain configurable styles.
+
+
+  CONFIGURABLE_STYLES.forEach(style => {
+    if (text[style]) props.style[style] = text[style];
+  });
+  return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().cloneElement( // Provide a default container for the text if necessary.
+  children ?? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null), props, // Conditionally pass in as void elements can't accept empty array.
+  textNodes.length ? textNodes : null);
 };
 
 /***/ }),
@@ -492,9 +526,7 @@ const DEFAULT_RTAMO_CONTENT = {
       string_id: "return-to-amo-addon-title"
     },
     help_text: {
-      text: {
-        string_id: "mr1-onboarding-welcome-image-caption"
-      }
+      string_id: "mr1-onboarding-welcome-image-caption"
     },
     backdrop: "#212121 url(chrome://activity-stream/content/data/content/assets/proton-bkg.avif) center/cover no-repeat fixed",
     primary_button: {
@@ -591,6 +623,7 @@ const MultiStageProtonScreen = props => {
     handleAction: props.handleAction,
     isFirstCenteredScreen: props.isFirstCenteredScreen,
     isLastCenteredScreen: props.isLastCenteredScreen,
+    startsWithCorner: props.startsWithCorner,
     autoAdvance: props.autoAdvance,
     isRtamo: props.isRtamo,
     addonName: props.addonName,
@@ -673,7 +706,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
   }
 
   render() {
-    var _this$props$appAndSys, _content$primary_butt;
+    var _this$props$appAndSys, _content$primary_butt, _content$primary_butt2;
 
     const {
       autoAdvance,
@@ -686,7 +719,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
     } = this.props;
     const includeNoodles = content.has_noodles;
     const isCornerPosition = content.position === "corner";
-    const hideStepsIndicator = autoAdvance || isCornerPosition || total === 0;
+    const hideStepsIndicator = autoAdvance || isCornerPosition || isFirstCenteredScreen && isLastCenteredScreen;
     const textColorClass = content.text_color ? `${content.text_color}-text` : ""; // Assign proton screen style 'screen-1' or 'screen-2' by checking
     // if screen order is even or odd.
 
@@ -710,11 +743,11 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
       text: content.hero_text
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", null)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: "spacer-bottom"
-    })), content.help_text && content.help_text.text ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
-      text: content.help_text.text
+    })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
+      text: content.help_text
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
       className: "attrib-text"
-    })) : null) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    }))) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: "section-main"
     }, content.secondary_button_top ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__.SecondaryCTA, {
       content: content,
@@ -743,19 +776,19 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
       text: content.title
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", {
       id: "mainContentHeader"
-    })), content.subtitle ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
+    })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
       text: content.subtitle
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", {
       "data-l10n-args": JSON.stringify({
         "addon-name": this.props.addonName,
         ...((_this$props$appAndSys = this.props.appAndSystemLocaleInfo) === null || _this$props$appAndSys === void 0 ? void 0 : _this$props$appAndSys.displayNames)
       })
-    })) : null), this.renderContentTiles(), this.renderLanguageSwitcher(), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
-      text: content.primary_button ? content.primary_button.label : null
+    }))), this.renderContentTiles(), this.renderLanguageSwitcher(), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
+      text: (_content$primary_butt = content.primary_button) === null || _content$primary_butt === void 0 ? void 0 : _content$primary_butt.label
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
       className: "primary",
       value: "primary_button",
-      disabled: ((_content$primary_butt = content.primary_button) === null || _content$primary_butt === void 0 ? void 0 : _content$primary_butt.disabled) === true,
+      disabled: ((_content$primary_butt2 = content.primary_button) === null || _content$primary_butt2 === void 0 ? void 0 : _content$primary_butt2.disabled) === true,
       onClick: this.props.handleAction
     })), content.secondary_button ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__.SecondaryCTA, {
       content: content,
@@ -768,7 +801,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
         total
       })
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("br", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__.StepsIndicator, {
-      order: this.props.order - 1,
+      order: this.props.startsWithCorner ? this.props.order - 1 : this.props.order,
       totalNumberOfScreens: total
     })))));
   }
@@ -982,27 +1015,21 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const MarketplaceButtons = props => {
-  const {
-    ios_link: iosLink,
-    android_link: androidLink
-  } = props.links;
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("ul", {
     className: "mobile-download-buttons"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("li", {
-    className: "android"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
-    "data-l10n-id": "spotlight-android-marketplace-button",
-    onClick: e => {
-      props.handleAction(e, androidLink);
-    }
-  })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("li", {
+  }, props.buttons.includes("ios") ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("li", {
     className: "ios"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     "data-l10n-id": "spotlight-ios-marketplace-button",
-    onClick: e => {
-      props.handleAction(e, iosLink);
-    }
-  })));
+    value: "ios",
+    onClick: props.handleAction
+  })) : null, props.buttons.includes("android") ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("li", {
+    className: "android"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+    "data-l10n-id": "spotlight-android-marketplace-button",
+    value: "android",
+    onClick: props.handleAction
+  })) : null);
 };
 const MobileDownloads = props => {
   var _QRCode$image_overrid;
@@ -1022,11 +1049,10 @@ const MobileDownloads = props => {
     text: props.data.email.link_text
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     className: "email-link",
-    onClick: e => {
-      props.handleAction(e, props.data.email.link);
-    }
+    value: "email_link",
+    onClick: props.handleAction
   }))) : null, props.data.marketplace_buttons ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(MarketplaceButtons, {
-    links: props.data.marketplace_buttons,
+    buttons: props.data.marketplace_buttons,
     handleAction: props.handleAction
   }) : null);
 };
@@ -1078,7 +1104,7 @@ const Themes = props => {
     onClick: props.handleAction
   })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: `icon ${theme === props.activeTheme ? " selected" : ""} ${theme}`
-  }), label && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
     text: label
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "text"
@@ -1129,22 +1155,23 @@ function useLanguageSwitcher(appAndSystemLocaleInfo, screens, screenIndex, setSc
     }
 
     (async () => {
-      const langPack = await window.AWNegotiateLangPackForLanguageMismatch(appAndSystemLocaleInfo);
+      const {
+        langPack,
+        langPackDisplayName
+      } = await window.AWNegotiateLangPackForLanguageMismatch(appAndSystemLocaleInfo);
 
       if (langPack) {
-        // Convert the BCP 47 identifiers into the proper display names.
-        // e.g. "fr-CA" -> "Canadian French".
-        const displayNames = new Intl.DisplayNames(appAndSystemLocaleInfo.appLocaleRaw, {
-          type: "language"
-        });
         setNegotiatedLanguage({
-          displayName: displayNames.of(langPack.target_locale),
+          langPackDisplayName,
+          appDisplayName: appAndSystemLocaleInfo.displayNames.appLanguage,
           langPack,
-          requestSystemLocales: [langPack.target_locale, appAndSystemLocaleInfo.appLocaleRaw]
+          requestSystemLocales: [langPack.target_locale, appAndSystemLocaleInfo.appLocaleRaw],
+          originalAppLocales: [appAndSystemLocaleInfo.appLocaleRaw]
         });
       } else {
         setNegotiatedLanguage({
-          displayName: null,
+          langPackDisplayName: null,
+          appDisplayName: null,
           langPack: null,
           requestSystemLocales: null
         });
@@ -1227,12 +1254,12 @@ function LanguageSwitcher(props) {
   }, [isAwaitingLangpack, langPackInstallPhase]); // The message args are the localized language names.
 
   const withMessageArgs = obj => {
-    const displayName = negotiatedLanguage === null || negotiatedLanguage === void 0 ? void 0 : negotiatedLanguage.displayName;
+    const langPackDisplayName = negotiatedLanguage === null || negotiatedLanguage === void 0 ? void 0 : negotiatedLanguage.langPackDisplayName;
 
-    if (displayName) {
+    if (langPackDisplayName) {
       return { ...obj,
         args: { ...obj.args,
-          negotiatedLanguage: displayName
+          negotiatedLanguage: langPackDisplayName
         }
       };
     }
@@ -1312,25 +1339,24 @@ function LanguageSwitcher(props) {
     style: {
       display: showReadyScreen ? "block" : "none"
     }
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
-    text: withMessageArgs(content.languageSwitcher.switch)
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     className: "primary",
     value: "primary_button",
     onClick: () => {
       _lib_aboutwelcome_utils__WEBPACK_IMPORTED_MODULE_2__.AboutWelcomeUtils.sendActionTelemetry(messageId, "download_langpack");
       setIsAwaitingLangpack(true);
     }
-  }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "secondary-cta"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MSLocalized__WEBPACK_IMPORTED_MODULE_1__.Localized, {
-    text: content.languageSwitcher.not_now
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+  }, // This is the localized name from the Intl.DisplayNames API.
+  negotiatedLanguage === null || negotiatedLanguage === void 0 ? void 0 : negotiatedLanguage.langPackDisplayName)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     type: "button",
-    className: "secondary text-link",
+    className: "secondary",
     value: "decline",
-    onClick: handleAction
-  })))));
+    onClick: event => {
+      window.AWSetRequestedLocales(negotiatedLanguage.originalAppLocales);
+      handleAction(event);
+    }
+  }, // This is the localized name from the Intl.DisplayNames API.
+  negotiatedLanguage === null || negotiatedLanguage === void 0 ? void 0 : negotiatedLanguage.appDisplayName))));
 }
 
 /***/ }),

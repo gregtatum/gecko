@@ -2652,12 +2652,6 @@
   value: true
   mirror: always
 
-# Enable Directory API. By default, disabled.
-- name: dom.input.dirpicker
-  type: bool
-  value: false
-  mirror: always
-
 # Whether to allow or disallow web apps to cancel `beforeinput` events caused
 # by MozEditableElement#setUserInput() which is used by autocomplete, autofill
 # and password manager.
@@ -6637,7 +6631,7 @@
 
 - name: javascript.options.wasm_caching
   type: bool
-  value: true
+  value: false
   mirror: always
 
 # The amount of time we wait between a request to GC (due to leaving a page) and doing the actual GC, in ms.
@@ -6983,9 +6977,7 @@
 
 - name: layers.gpu-process.enabled
   type: bool
-#if defined(MOZ_WIDGET_ANDROID)
-  value: @IS_NIGHTLY_BUILD@
-#elif defined(XP_WIN)
+#if defined(XP_WIN) || defined(MOZ_WIDGET_ANDROID)
   value: true
 #else
   value: false
@@ -7275,6 +7267,13 @@
 - name: layout.css.cascade-layers.enabled
   type: RelaxedAtomicBool
   value: true
+  mirror: always
+  rust: true
+
+# Whether Container Queries are enabled
+- name: layout.css.container-queries.enabled
+  type: RelaxedAtomicBool
+  value: false
   mirror: always
   rust: true
 
@@ -8369,12 +8368,6 @@
 - name: mathml.scriptsizemultiplier_attribute.disabled
   type: bool
   value: @IS_NIGHTLY_BUILD@
-  mirror: always
-
-# Whether to disable support for XLink on MathML elements.
-- name: mathml.xlink.disabled
-  type: bool
-  value: true
   mirror: always
 
 # Whether to disable support for stretching operators with STIXGeneral fonts.
@@ -9523,6 +9516,11 @@
 #endif
   mirror: always
 
+- name: media.webrtc.platformencoder.sw_mft
+  type: RelaxedAtomicBool
+  value: @IS_EARLY_BETA_OR_EARLIER@
+  mirror: always
+
 - name: media.block-autoplay-until-in-foreground
   type: bool
 #if !defined(MOZ_WIDGET_ANDROID)
@@ -9989,7 +9987,7 @@
 # 'origin-when-cross-origin'.
 - name: network.http.referer.disallowCrossSiteRelaxingDefault
   type: bool
-  value: @IS_EARLY_BETA_OR_EARLIER@
+  value: true
   mirror: always
 
 # Whether we ignore less restricted referrer policies for top navigations.

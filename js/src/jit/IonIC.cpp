@@ -8,11 +8,13 @@
 
 #include "jit/CacheIRCompiler.h"
 #include "jit/CacheIRGenerator.h"
+#include "jit/IonScript.h"
 #include "jit/VMFunctions.h"
 #include "util/DiagnosticAssertions.h"
 #include "vm/EqualityOperations.h"
 
 #include "vm/Interpreter-inl.h"
+#include "vm/JSScript-inl.h"
 
 using namespace js;
 using namespace js::jit;
@@ -454,7 +456,7 @@ bool IonInstanceOfIC::update(JSContext* cx, HandleScript outerScript,
 
   TryAttachIonStub<InstanceOfIRGenerator>(cx, ic, ionScript, lhs, rhs);
 
-  return HasInstance(cx, rhs, lhs, res);
+  return InstanceofOperator(cx, rhs, lhs, res);
 }
 
 /*  static */

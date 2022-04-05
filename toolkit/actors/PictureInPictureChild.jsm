@@ -436,10 +436,19 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
         this.onMouseOut(event);
         break;
       }
+      case "click":
+        if (event.detail == 0) {
+          let shadowRoot = event.originalTarget.containingShadowRoot;
+          let toggle = this.getToggleElement(shadowRoot);
+          if (event.originalTarget == toggle) {
+            this.startPictureInPicture(event, shadowRoot.host, toggle);
+            return;
+          }
+        }
+      // fall through
       case "mousedown":
       case "pointerup":
-      case "mouseup":
-      case "click": {
+      case "mouseup": {
         this.onMouseButtonEvent(event);
         break;
       }
@@ -784,37 +793,41 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       state.clickedElement = Cu.getWeakReference(event.originalTarget);
       event.stopImmediatePropagation();
 
-      Services.telemetry.keyedScalarAdd(
-        "pictureinpicture.opened_method",
-        "toggle",
-        1
-      );
-      let args = {
-        method: "toggle",
-        firstTimeToggle: (!Services.prefs.getBoolPref(
-          "media.videocontrols.picture-in-picture.video-toggle.has-used"
-        )).toString(),
-      };
-      Services.telemetry.recordEvent(
-        "pictureinpicture",
-        "opened_method",
-        "method",
-        null,
-        args
-      );
-
-      let pipEvent = new this.contentWindow.CustomEvent(
-        "MozTogglePictureInPicture",
-        {
-          bubbles: true,
-        }
-      );
-      video.dispatchEvent(pipEvent);
-
-      // Since we've initiated Picture-in-Picture, we can go ahead and
-      // hide the toggle now.
-      this.onMouseLeaveVideo(video);
+      this.startPictureInPicture(event, video, toggle);
     }
+  }
+
+  startPictureInPicture(event, video, toggle) {
+    Services.telemetry.keyedScalarAdd(
+      "pictureinpicture.opened_method",
+      "toggle",
+      1
+    );
+    let args = {
+      method: "toggle",
+      firstTimeToggle: (!Services.prefs.getBoolPref(
+        "media.videocontrols.picture-in-picture.video-toggle.has-used"
+      )).toString(),
+    };
+    Services.telemetry.recordEvent(
+      "pictureinpicture",
+      "opened_method",
+      "method",
+      null,
+      args
+    );
+
+    let pipEvent = new this.contentWindow.CustomEvent(
+      "MozTogglePictureInPicture",
+      {
+        bubbles: true,
+      }
+    );
+    video.dispatchEvent(pipEvent);
+
+    // Since we've initiated Picture-in-Picture, we can go ahead and
+    // hide the toggle now.
+    this.onMouseLeaveVideo(video);
   }
 
   /**
@@ -1033,7 +1046,10 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       // We only want to show the PiP icon in this experiment scenario
       let pipExpanded = shadowRoot.querySelector(".pip-expanded");
       pipExpanded.style.display = "none";
-      let pipIcon = shadowRoot.querySelector(".pip-icon");
+      let pipSmall = shadowRoot.querySelector(".pip-small");
+      pipSmall.style.opacity = "1";
+
+      let pipIcon = shadowRoot.querySelectorAll(".pip-icon")[1];
       pipIcon.style.display = "block";
     }
 

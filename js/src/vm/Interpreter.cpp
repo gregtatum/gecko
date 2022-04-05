@@ -32,8 +32,6 @@
 #include "jit/BaselineJIT.h"
 #include "jit/Jit.h"
 #include "jit/JitRuntime.h"
-#include "js/CallAndConstruct.h"  // JS::Construct, JS::IsCallable, JS::IsConstructor
-#include "js/CharacterEncoding.h"
 #include "js/experimental/JitInfo.h"  // JSJitInfo
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
 #include "js/friend/StackLimits.h"    // js::AutoCheckRecursionLimit
@@ -45,7 +43,6 @@
 #include "vm/BigIntType.h"
 #include "vm/BytecodeUtil.h"        // JSDVG_SEARCH_STACK
 #include "vm/EqualityOperations.h"  // js::StrictlyEqual
-#include "vm/FunctionFlags.h"       // js::FunctionFlags
 #include "vm/GeneratorObject.h"
 #include "vm/Iteration.h"
 #include "vm/JSAtom.h"
@@ -73,8 +70,6 @@
 #include "vm/ArgumentsObject-inl.h"
 #include "vm/EnvironmentObject-inl.h"
 #include "vm/GeckoProfiler-inl.h"
-#include "vm/JSAtom-inl.h"
-#include "vm/JSFunction-inl.h"
 #include "vm/JSScript-inl.h"
 #include "vm/NativeObject-inl.h"
 #include "vm/ObjectOperations-inl.h"
@@ -803,8 +798,8 @@ bool js::Execute(JSContext* cx, HandleScript script, HandleObject envChain,
 /*
  * ES6 (4-25-16) 12.10.4 InstanceofOperator
  */
-extern bool JS::InstanceofOperator(JSContext* cx, HandleObject obj,
-                                   HandleValue v, bool* bp) {
+bool js::InstanceofOperator(JSContext* cx, HandleObject obj, HandleValue v,
+                            bool* bp) {
   /* Step 1. is handled by caller. */
 
   /* Step 2. */
@@ -836,14 +831,6 @@ extern bool JS::InstanceofOperator(JSContext* cx, HandleObject obj,
 
   /* Step 5. */
   return OrdinaryHasInstance(cx, obj, v, bp);
-}
-
-bool js::HasInstance(JSContext* cx, HandleObject obj, HandleValue v, bool* bp) {
-  if (MOZ_UNLIKELY(obj->is<ProxyObject>())) {
-    RootedValue local(cx, v);
-    return Proxy::hasInstance(cx, obj, &local, bp);
-  }
-  return JS::InstanceofOperator(cx, obj, v, bp);
 }
 
 JSType js::TypeOfObject(JSObject* obj) {
@@ -4142,7 +4129,7 @@ static MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER bool Interpret(JSContext* cx,
       }
       ReservedRooted<JSObject*> obj(&rootObject0, &rref.toObject());
       bool cond = false;
-      if (!HasInstance(cx, obj, REGS.stackHandleAt(-2), &cond)) {
+      if (!InstanceofOperator(cx, obj, REGS.stackHandleAt(-2), &cond)) {
         goto error;
       }
       REGS.sp--;

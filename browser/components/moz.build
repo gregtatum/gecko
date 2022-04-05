@@ -68,7 +68,10 @@ if CONFIG["PINEBUILD"]:
     ]
 
 if CONFIG["NIGHTLY_BUILD"]:
-    DIRS += ["myfirefox"]
+    DIRS += [
+        "colorways",
+        "myfirefox",
+    ]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
     DIRS += ["touchbar"]

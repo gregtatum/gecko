@@ -485,6 +485,7 @@ th {
   vertical-align: inherit;
   font-weight: bold;
   padding: 1px;
+  text-align: -moz-center-or-inherit;
 }
 
 tr > form:-moz-is-html, tbody > form:-moz-is-html,
@@ -829,6 +830,9 @@ dialog:not([open]) {
  * Avoid doing this if the dialog is explicitly inert though. */
 dialog:not([inert]):-moz-topmost-modal-dialog {
   -moz-inert: none;
+  /* Topmost modal dialog needs to be selectable even though ancestors are
+   * inert, but allow users to override this if they want to. */
+  user-select: text;
 }
 
 dialog:-moz-modal-dialog {
