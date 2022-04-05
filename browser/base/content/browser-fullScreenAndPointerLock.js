@@ -385,28 +385,17 @@ var FullScreen = {
     // don't need that kind of precision in our CSS.
     shiftSize = shiftSize.toFixed(2);
     let toolbox = document.getElementById("navigator-toolbox");
-
-    // The offset of the urlbar is broken by the transform because it is
-    // a fixed positioned descendant (see MR2-2125). So, get its y-position
-    // and manually adjust it to avoid the urlbar jumping around, but also
-    // subtract the `shiftSize`, because its ancestors are shifting down,
-    // but we don't want it to appear that the urlbar is also shifting down.
-    let urlbar = document.getElementById("urlbar");
-    let yOffset = urlbar.getBoundingClientRect().y;
-
     if (shiftSize > 0) {
       toolbox.style.setProperty("transform", `translateY(${shiftSize}px)`);
       toolbox.style.setProperty("z-index", "2");
       if (AppConstants.PINEBUILD) {
         toolbox.setAttribute("shifted", true);
-        urlbar.setAttribute("style", `top: ${yOffset - shiftSize}px`);
       }
     } else {
       toolbox.style.removeProperty("transform");
       toolbox.style.removeProperty("z-index");
       if (AppConstants.PINEBUILD) {
         toolbox.removeAttribute("shifted");
-        urlbar.removeAttribute("style");
       }
     }
   },
