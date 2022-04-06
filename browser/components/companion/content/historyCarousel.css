@@ -33,8 +33,14 @@ li {
   margin-block: 0;
   padding: 0;
   opacity: 1;
-  transition: opacity 500ms ease-in;
-  transition-delay: 200ms;
+
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  li {
+    transition: opacity 500ms ease-in;
+    transition-delay: 200ms;
+  }
 }
 
 figure {
@@ -57,10 +63,15 @@ nav {
 }
 
 .preview-image {
-  transition: scale 500ms var(--transition-timing-function);
   scale: 0.8;
   border-radius: 12px;
   box-shadow: 0px 4px 12px 0px rgba(0.23, 0.22, 0.27, 0.2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .preview-image {
+    transition: scale 500ms var(--transition-timing-function);
+  }
 }
 
 body:is([invisible],[exiting]) .preview-image {
@@ -87,7 +98,6 @@ nav {
   position: absolute;
   bottom: 0;
   transform: translateY(0);
-  transition: transform 500ms var(--transition-timing-function);
   /**
    * We set pointer-events: none; here so that swipe gestures can
    * got through the majority of the <nav> element to the underlying
@@ -95,6 +105,12 @@ nav {
    * within nav.
    */
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  nav {
+    transition: transform 500ms var(--transition-timing-function);
+  }
 }
 
 nav > button,
@@ -142,8 +158,14 @@ button {
 #scrubber::-moz-range-thumb {
   border-radius: 50px;
   transform: scaleY(0.5);
-  transition: transform 50ms var(--transition-timing-function);
   height: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #scrubber::-moz-range-track,
+  #scrubber::-moz-range-thumb {
+    transition: transform 50ms var(--transition-timing-function);
+  }
 }
 
 #scrubber:hover::-moz-range-track {
