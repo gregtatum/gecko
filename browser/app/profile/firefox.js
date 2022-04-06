@@ -2811,4 +2811,5 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.login-view-overwriting.enabled", true);
   pref("browser.companion.snapshot-groups.enabled", false);
   pref("identity.fxaccounts.commands.enabled", false);
+  pref("extensions.pocket.enabled", false);
 #endif
