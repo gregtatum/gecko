@@ -82,6 +82,7 @@ class UAWidgetsChild extends JSWindowActorChild {
     // UAWidget that receives the changed pref name as the first argument, and
     // the updated value as the second.
     let prefKeys = [];
+    console.log(`!!! aElement.localName`, aElement.localName);
     switch (aElement.localName) {
       case "video":
       case "audio":
@@ -104,6 +105,9 @@ class UAWidgetsChild extends JSWindowActorChild {
         uri = "chrome://global/content/elements/marquee.js";
         widgetName = "MarqueeWidget";
         break;
+      case "img":
+        uri = "chrome://global/content/elements/imagetextrecognition.js";
+        widgetName = "ImageTextRecognitionWidget"
     }
 
     if (!uri || !widgetName) {

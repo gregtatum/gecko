@@ -63,11 +63,22 @@ auto TextRecognition::DoFindText(gfx::DataSourceSurface& aSurface) -> RefPtr<Nat
                           printf("Found text: %s\n", [recognizedText.string UTF8String]);
 
                           // https://developer.apple.com/documentation/vision/vnrecognizedtext?language=objc
-                          //
-                          // TODO: Fill quad points.
                           auto& quad = *pResult->quads().AppendElement();
                           CopyCocoaStringToXPCOMString(recognizedText.string, quad.string());
                           quad.confidence() = recognizedText.confidence;
+
+                          auto bottomLeft = quad.points().AppendElement();
+                          bottomLeft->x = [obj bottomLeft].x;
+                          bottomLeft->y = [obj bottomLeft].y;
+                          auto topLeft = quad.points().AppendElement();
+                          topLeft->x = [obj topLeft].x;
+                          topLeft->y = [obj topLeft].y;
+                          auto topRight = quad.points().AppendElement();
+                          topRight->x = [obj topRight].x;
+                          topRight->y = [obj topRight].y;
+                          auto bottomRight = quad.points().AppendElement();
+                          bottomRight->x = [obj bottomRight].x;
+                          bottomRight->y = [obj bottomRight].y;
                         }];
                   }];
 

@@ -173,8 +173,88 @@ class ContextMenuChild extends JSWindowActorChild {
       }
 
       case "ContextMenu:GetImageText": {
-        let target = ContentDOMReference.resolve(message.data.targetIdentifier);
-        target.recognizeCurrentImageText();
+        let img = ContentDOMReference.resolve(message.data.targetIdentifier);
+        img.recognizeCurrentImageText().then(() => {
+          const [div] = img.openOrClosedShadowRoot.children;
+          const spans = [...div.children];
+          console.log(`!!! img.openOrClosedShadowRoot`, img.openOrClosedShadowRoot);
+          console.log(`!!! img`, img);
+          console.log(`!!! div`, div);
+          console.log(`!!! spans`, spans);
+          console.log("!!! result", { div, spans, img });
+          // TODO - Add mutation observer.
+          const imgRect = img.getBoundingClientRect();
+          const overrides = {
+            lineHeight: "1.3",
+            textAlign: "left !important",
+            font: "normal normal normal 100%/normal sans-serif !important",
+            textDecoration: "none !important",
+            whiteSpace: "normal !important",
+          }
+          console.log(`!!! Setting style`, {
+            width: imgRect.width + "px",
+            height: imgRect.height + "px",
+            position: "absolute",
+            outline: 'red 1px solid',
+            /* Prevent inheritance */
+
+          });
+          Object.assign(div.style, {
+            width: imgRect.width + "px",
+            height: imgRect.height + "px",
+            position: "absolute",
+            outline: 'red 1px solid',
+            /* Prevent inheritance */
+            lineHeight: "1.3",
+            textAlign: "left",
+            font: "normal normal normal 100%/normal sans-serif !important",
+            textDecoration: "none !important",
+            whiteSpace: "normal !important",
+          });
+          for (const span of spans) {
+            // Use the points in the string, e.g.
+            // "0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273"
+            //  0         1       2         3        4        5        6        7
+            //  ^ bottomleft      ^ topleft          ^ topright        ^ bottomright
+            const points = span.dataset.points.split(',').map(p => Number(p))
+            // Don't account for skew yet, assume the text is orthogonal to the screen.
+            const left = (points[0] + points[2]) / 2
+            const right = (points[4] + points[6]) / 2
+            const top = 1 - (points[3] + points[5]) / 2
+            const bottom = 1 - (points[1] + points[7]) / 2
+            const width = right - left;
+            const height = bottom - top;
+            const spanRect = span.getBoundingClientRect();
+            const scaleX = (width * img.width) / spanRect.width;
+            const scaleY = (height * img.height) / spanRect.height;
+
+            console.log({
+              points: span.dataset.points,
+              left,
+              right,
+              top,
+              bottom,
+              width,
+              height,
+              spanRect,
+              scaleX,
+              scaleY,
+            })
+
+            Object.assign(span.style, {
+              position: "absolute",
+              top: (top * imgRect.height) + 'px',
+              left: (left * imgRect.width) + 'px',
+              transformOrigin: "top left",
+              transform: `scale(${scaleX}, ${scaleY})`,
+              color: 'transparent',
+              outline: 'blue 1px solid',
+              padding: "1px",
+              margin: "-1px",
+              borderRadius: "3px",
+            });
+          }
+        });
         break;
       }
 

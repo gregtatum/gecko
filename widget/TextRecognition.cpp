@@ -72,13 +72,18 @@ void TextRecognition::FillShadow(ShadowRoot& aShadow,
   auto& doc = *aShadow.OwnerDoc();
   RefPtr<Element> div = doc.CreateHTMLElement(nsGkAtoms::div);
   for (const auto& quad : aResult.quads()) {
+    printf("!!! quad confidence: %f %s\n", quad.confidence(),
+           quad.string().get());
+
     RefPtr<Element> span = doc.CreateHTMLElement(nsGkAtoms::span);
     // TODO: We probably want to position them here and so on. For now, expose
     // the data as attributes so that it's easy to play with the returned values
     // in JS.
     {
       nsAutoString points;
+
       for (auto& point : quad.points()) {
+        printf("!!! Point %f %f\n", point.x, point.y);
         points.AppendFloat(point.x);
         points.Append(u',');
         points.AppendFloat(point.y);
