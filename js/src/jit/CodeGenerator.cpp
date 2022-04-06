@@ -2207,7 +2207,6 @@ static bool PrepareAndExecuteRegExp(JSContext* cx, MacroAssembler& masm,
   }
 #endif
 
-  Label success;
   masm.bind(&checkSuccess);
   masm.branch32(Assembler::Equal, temp1,
                 Imm32(RegExpRunStatus_Success_NotFound), notFound);
@@ -3478,46 +3477,12 @@ void CodeGenerator::visitLambda(LLambda* lir) {
   masm.createGCObject(output, tempReg, templateObject, gc::DefaultHeap,
                       ool->entry());
 
-  emitLambdaInit(output, envChain);
-
-  masm.bind(ool->rejoin());
-}
-
-void CodeGenerator::visitLambdaArrow(LLambdaArrow* lir) {
-  Register envChain = ToRegister(lir->environmentChain());
-  ValueOperand newTarget = ToValue(lir, LLambdaArrow::NewTargetIndex);
-  Register output = ToRegister(lir->output());
-  Register temp = ToRegister(lir->temp0());
-
-  JSFunction* fun = lir->mir()->templateFunction();
-
-  using Fn =
-      JSObject* (*)(JSContext*, HandleFunction, HandleObject, HandleValue);
-  OutOfLineCode* ool = oolCallVM<Fn, LambdaArrow>(
-      lir, ArgList(ImmGCPtr(fun), envChain, newTarget),
-      StoreRegisterTo(output));
-
-  TemplateObject templateObject(fun);
-  masm.createGCObject(output, temp, templateObject, gc::DefaultHeap,
-                      ool->entry());
-
-  emitLambdaInit(output, envChain);
-
-  // Lexical new.target is stored in the first extended slot.
-  MOZ_ASSERT(fun->isExtended());
-  static_assert(FunctionExtended::ARROW_NEWTARGET_SLOT == 0,
-                "|new.target| must be stored in first slot");
-  masm.storeValue(newTarget,
-                  Address(output, FunctionExtended::offsetOfExtendedSlot(0)));
-
-  masm.bind(ool->rejoin());
-}
-
-void CodeGenerator::emitLambdaInit(Register output, Register envChain) {
   masm.storeValue(JSVAL_TYPE_OBJECT, envChain,
                   Address(output, JSFunction::offsetOfEnvironment()));
   // No post barrier needed because output is guaranteed to be allocated in
   // the nursery.
+
+  masm.bind(ool->rejoin());
 }
 
 void CodeGenerator::visitFunctionWithProto(LFunctionWithProto* lir) {
@@ -5668,7 +5633,7 @@ void CodeGenerator::emitPopArguments(Register extraStackSpace) {
 
 void CodeGenerator::emitPushArguments(Register argcreg,
                                       Register extraStackSpace,
-                                      Register copyreg) {
+                                      Register copyreg, uint32_t extraFormals) {
   Label end;
 
   // Skip the copy of arguments if there are none.
@@ -5684,7 +5649,8 @@ void CodeGenerator::emitPushArguments(Register argcreg,
   // clang-format on
 
   // Compute the source and destination offsets into the stack.
-  size_t argvSrcOffset = frameSize() + JitFrameLayout::offsetOfActualArgs();
+  size_t argvSrcOffset = frameSize() + JitFrameLayout::offsetOfActualArgs() +
+                         extraFormals * sizeof(JS::Value);
   size_t argvDstOffset = 0;
 
   // Save the extra stack space, and re-use the register as a base.
@@ -5721,10 +5687,11 @@ void CodeGenerator::emitPushArguments(LApplyArgsGeneric* apply,
   // Holds the function nargs. Initially the number of args to the caller.
   Register argcreg = ToRegister(apply->getArgc());
   Register copyreg = ToRegister(apply->getTempObject());
+  uint32_t extraFormals = apply->numExtraFormals();
 
   emitAllocateSpaceForApply(argcreg, extraStackSpace);
 
-  emitPushArguments(argcreg, extraStackSpace, copyreg);
+  emitPushArguments(argcreg, extraStackSpace, copyreg, extraFormals);
 
   // Push |this|.
   masm.addPtr(Imm32(sizeof(Value)), extraStackSpace);
@@ -5848,12 +5815,13 @@ void CodeGenerator::emitPushArguments(LConstructArgsGeneric* construct,
   // Holds the function nargs. Initially the number of args to the caller.
   Register argcreg = ToRegister(construct->getArgc());
   Register copyreg = ToRegister(construct->getTempObject());
+  uint32_t extraFormals = construct->numExtraFormals();
 
   // Allocate space for the values.
   // After this call "newTarget" has become "extraStackSpace".
   emitAllocateSpaceForConstructAndPushNewTarget(argcreg, extraStackSpace);
 
-  emitPushArguments(argcreg, extraStackSpace, copyreg);
+  emitPushArguments(argcreg, extraStackSpace, copyreg, extraFormals);
 
   // Push |this|.
   masm.addPtr(Imm32(sizeof(Value)), extraStackSpace);
@@ -7663,13 +7631,6 @@ void CodeGenerator::visitImplicitThis(LImplicitThis* lir) {
   using Fn = bool (*)(JSContext*, HandleObject, HandlePropertyName,
                       MutableHandleValue);
   callVM<Fn, ImplicitThisOperation>(lir);
-}
-
-void CodeGenerator::visitArrowNewTarget(LArrowNewTarget* lir) {
-  Register callee = ToRegister(lir->callee());
-  ValueOperand output = ToOutValue(lir);
-  masm.loadValue(
-      Address(callee, FunctionExtended::offsetOfArrowNewTargetSlot()), output);
 }
 
 void CodeGenerator::visitArrayLength(LArrayLength* lir) {
@@ -10172,8 +10133,6 @@ void CodeGenerator::visitSameValue(LSameValue* lir) {
   ValueOperand lhs = ToValue(lir, LSameValue::LhsIndex);
   ValueOperand rhs = ToValue(lir, LSameValue::RhsIndex);
   Register output = ToRegister(lir->output());
-
-  Label call, done;
 
   using Fn = bool (*)(JSContext*, HandleValue, HandleValue, bool*);
   OutOfLineCode* ool =
@@ -14913,24 +14872,6 @@ void CodeGenerator::visitAssertShape(LAssertShape* ins) {
                                               ins->mir()->shape(), &success);
   masm.assumeUnreachable("Wrong Shape during run-time");
   masm.bind(&success);
-}
-
-void CodeGenerator::visitAssertResultV(LAssertResultV* ins) {
-#ifdef DEBUG
-  const ValueOperand value = ToValue(ins, LAssertResultV::InputIndex);
-  emitAssertResultV(value, ins->mirRaw());
-#else
-  MOZ_CRASH("LAssertResultV is debug only");
-#endif
-}
-
-void CodeGenerator::visitAssertResultT(LAssertResultT* ins) {
-#ifdef DEBUG
-  Register input = ToRegister(ins->input());
-  emitAssertGCThingResult(input, ins->mirRaw());
-#else
-  MOZ_CRASH("LAssertResultT is debug only");
-#endif
 }
 
 void CodeGenerator::visitAssertRangeI(LAssertRangeI* ins) {

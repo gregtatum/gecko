@@ -3671,8 +3671,7 @@ static bool RemoveComponentRegistries(nsIFile* aProfileDir,
 
   file->SetNativeLeafName("startupCache"_ns);
   nsresult rv = file->Remove(true);
-  return NS_SUCCEEDED(rv) || rv == NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ||
-         rv == NS_ERROR_FILE_NOT_FOUND;
+  return NS_SUCCEEDED(rv) || rv == NS_ERROR_FILE_NOT_FOUND;
 }
 
 // When we first initialize the crash reporter we don't have a profile,
@@ -5625,9 +5624,9 @@ nsresult XREMain::XRE_mainRun() {
       NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
 #  ifdef MOZILLA_OFFICIAL
-      // Check if we're running from a DMG and allow the user to install to the
-      // Applications directory.
-      if (MacRunFromDmgUtils::MaybeInstallFromDmgAndRelaunch()) {
+      // Check if we're running from a DMG or an app translocated location and
+      // allow the user to install to the Applications directory.
+      if (MacRunFromDmgUtils::MaybeInstallAndRelaunch()) {
         bool userAllowedQuit = true;
         appStartup->Quit(nsIAppStartup::eForceQuit, 0, &userAllowedQuit);
       }

@@ -352,22 +352,14 @@ class RInstructionResults {
 };
 
 struct MaybeReadFallback {
-  enum NoGCValue { NoGC_UndefinedValue, NoGC_MagicOptimizedOut };
-
   enum FallbackConsequence { Fallback_Invalidate, Fallback_DoNothing };
 
-  JSContext* maybeCx;
-  JitActivation* activation;
-  const JSJitFrameIter* frame;
-  const NoGCValue unreadablePlaceholder_;
-  const FallbackConsequence consequence;
+  JSContext* maybeCx = nullptr;
+  JitActivation* activation = nullptr;
+  const JSJitFrameIter* frame = nullptr;
+  const FallbackConsequence consequence = Fallback_Invalidate;
 
-  explicit MaybeReadFallback(const Value& placeholder = UndefinedValue())
-      : maybeCx(nullptr),
-        activation(nullptr),
-        frame(nullptr),
-        unreadablePlaceholder_(noGCPlaceholder(placeholder)),
-        consequence(Fallback_Invalidate) {}
+  MaybeReadFallback() = default;
 
   MaybeReadFallback(JSContext* cx, JitActivation* activation,
                     const JSJitFrameIter* frame,
@@ -375,24 +367,9 @@ struct MaybeReadFallback {
       : maybeCx(cx),
         activation(activation),
         frame(frame),
-        unreadablePlaceholder_(NoGC_UndefinedValue),
         consequence(consequence) {}
 
   bool canRecoverResults() { return maybeCx; }
-
-  Value unreadablePlaceholder() const {
-    if (unreadablePlaceholder_ == NoGC_MagicOptimizedOut) {
-      return MagicValue(JS_OPTIMIZED_OUT);
-    }
-    return UndefinedValue();
-  }
-
-  NoGCValue noGCPlaceholder(const Value& v) const {
-    if (v.isMagic(JS_OPTIMIZED_OUT)) {
-      return NoGC_MagicOptimizedOut;
-    }
-    return NoGC_UndefinedValue;
-  }
 };
 
 class RResumePoint;
@@ -682,8 +659,7 @@ class InlineFrameIterator {
   void readFrameArgsAndLocals(JSContext* cx, ArgOp& argOp, LocalOp& localOp,
                               JSObject** envChain, bool* hasInitialEnv,
                               Value* rval, ArgumentsObject** argsObj,
-                              Value* thisv, Value* newTarget,
-                              ReadFrameArgsBehavior behavior,
+                              Value* thisv, ReadFrameArgsBehavior behavior,
                               MaybeReadFallback& fallback) const {
     SnapshotIterator s(si_);
 
@@ -701,13 +677,6 @@ class InlineFrameIterator {
       *rval = s.maybeRead(fallback);
     } else {
       s.skip();
-    }
-
-    if (newTarget) {
-      // For now, only support reading new.target when we are reading
-      // overflown arguments.
-      MOZ_ASSERT(behavior != ReadFrame_Formals);
-      newTarget->setUndefined();
     }
 
     // Read arguments, which only function frames have.
@@ -751,23 +720,16 @@ class InlineFrameIterator {
           }
 
           // Get the overflown arguments
-          MaybeReadFallback unusedFallback;
           parent_s.skip();  // env chain
           parent_s.skip();  // return value
           parent_s.readFunctionFrameArgs(argOp, nullptr, nullptr, nformal,
                                          nactual, it.script(), fallback);
-          if (newTarget && isConstructing()) {
-            *newTarget = parent_s.maybeRead(fallback);
-          }
         } else {
           // There is no parent frame to this inlined frame, we can read
           // from the frame's Value vector directly.
           Value* argv = frame_->actualArgs();
           for (unsigned i = nformal; i < nactual; i++) {
             argOp(argv[i]);
-          }
-          if (newTarget && isConstructing()) {
-            *newTarget = argv[nactual];
           }
         }
       }
@@ -786,7 +748,7 @@ class InlineFrameIterator {
                               MaybeReadFallback& fallback) const {
     Nop nop;
     readFrameArgsAndLocals(cx, op, nop, nullptr, nullptr, nullptr, nullptr,
-                           nullptr, nullptr, behavior, fallback);
+                           nullptr, behavior, fallback);
   }
 
   JSScript* script() const { return script_; }
