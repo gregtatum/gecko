@@ -18,6 +18,7 @@ class FlowResetChild extends JSWindowActorChild {
         this.sendAsyncMessage(event.type);
         break;
       case "DOMContentLoaded":
+        this.sendAsyncMessage("FlowResetLoaded");
         let hasSession = await this.sendQuery("HasSession");
         this.contentWindow.document.dispatchEvent(
           new this.contentWindow.CustomEvent("HasSession", {

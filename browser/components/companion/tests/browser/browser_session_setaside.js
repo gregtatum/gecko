@@ -79,6 +79,11 @@ add_task(async function test_session_setaside() {
       "Active View Manager hidden"
     );
 
+    await TestUtils.waitForCondition(
+      () => win.document.activeElement === win.gURLBar.inputField
+    );
+    Assert.ok(true, "URLBar is focused when flow-reset page loads");
+
     // Navigate to an about: page to test that the reset flow state
     // is still exited on navigation.
     await UrlbarTestUtils.promiseAutocompleteResultPopup({
