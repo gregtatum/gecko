@@ -332,9 +332,12 @@ class WorkshopHelper {
       const OnlineServicesHelper = ChromeUtils.import(
         "resource:///modules/OnlineServicesHelper.jsm"
       );
-      const workshopAPI = (window.WORKSHOP_API = MailAPIFactory(
-        OnlineServicesHelper.MainThreadServices(window)
-      ));
+      const mainThreadServices = OnlineServicesHelper.MainThreadServices(window);
+      const workshopAPI = (window.WORKSHOP_API = MailAPIFactory({
+        mainThreadServices,
+        isHiddenWindow: false,
+        isLoggingEnabled: true,
+      }));
       window.dispatchEvent(new CustomEvent("apiLoaded"));
 `.replace(/\n/g, "");
     const doc = this.chromeShell.document;
