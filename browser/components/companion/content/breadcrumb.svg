@@ -7,11 +7,11 @@
   #medium = 8 x 3
   #small = 4 x 3
 -->
-<svg height="3" xmlns="http://www.w3.org/2000/svg" stroke="context-stroke">
+<svg height="3" xmlns="http://www.w3.org/2000/svg" rendering="geometricPrecision" fill="context-fill" stroke="context-stroke">
   <view id="large" viewBox="0 0 16 3"/>
-  <path stroke-width="3" stroke-linecap="round" d="M2 2h12"/>
+  <rect x="0" y="0" width="16" height="3" stroke-width="1" ry="5" rx="5"/>
   <view id="medium" viewBox="0 4 8 3"/>
-  <path stroke-width="3" stroke-linecap="round" d="M2 6h4"/>
+  <rect x="0" y="4" width="8" height="3" stroke-width="1" ry="5" rx="5"/>
   <view id="small" viewBox="0 8 4 3"/>
-  <path stroke-width="3" stroke-linecap="round" d="M2 10h0"/>
+  <rect x="0" y="8" width="4" height="3" stroke-width="1" ry="5" rx="5"/>
 </svg>

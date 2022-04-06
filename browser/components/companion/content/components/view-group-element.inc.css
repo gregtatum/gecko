@@ -199,8 +199,9 @@
   background-repeat: no-repeat;
   background-position: center center;
   background-repeat: no-repeat;
-  -moz-context-properties: stroke;
+  -moz-context-properties: stroke, fill;
   stroke: var(--colors-lightgrey-80);
+  fill: var(--colors-lightgrey-80);
   cursor: pointer;
   height: 12px;
 }
@@ -232,6 +233,7 @@
 .view-history > .history:hover,
 .view-history > .active {
   stroke: var(--colors-lavender-90);
+  fill: var(--colors-lavender-90);
 }
 
 .page-action-button[hidden] {
