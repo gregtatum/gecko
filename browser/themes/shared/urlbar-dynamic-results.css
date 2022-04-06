@@ -158,14 +158,17 @@
 }
 
 .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row {
-  background: rgba(255, 255, 255, .1);
-  border-radius: 8px;
+  height: 66px;
+  background-color: var(--colors-quickactions-topsites-background);
+  border-radius: 12px;
+  box-sizing: border-box;
   margin-inline-end: 1em;
   margin-block-end: 1em;
   display: flex;
-  align-items: center;
-  padding: 6px;
-  border: .5px solid rgba(207,207,216, .6);
+  align-items: start;
+  flex-direction: column;
+  padding: 8px 10px;
+  border: 0.5px solid var(--colors-quickactions-topsites-border);
   margin-top: 2px;
   position: relative;
 }
@@ -283,6 +286,54 @@
 .urlbarView-row[dynamicType=quickActions] .urlbarView-title,
 .urlbarView-row[dynamicType=quickActions] .urlbarView-label {
   display: flex
+}
+
+/* Since we want topSitesButtons to have no margin, but it can't be positioned
+   absolutely, we set margin-inline on each row, instead of the entire view. */
+.urlbarView-row:not([dynamicType=topSitesButtons]) {
+  margin-inline: var(--urlbar-margin-inline);
+}
+
+.urlbarView-row[dynamicType=topSitesButtons] {
+  background-color: unset;
+  margin-block-start: calc(-1 * var(--urlbar-view-padding-block));
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row,
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
+  box-shadow: var(--quickactions-topsites-outset-shadow);
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner {
+  height: 70px;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon {
+  width: unset;
+  height: unset;
+  border: unset;
+  border-radius: unset;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-favicon-img {
+  width: 12px;
+  height: 12px;
+}
+
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-title {
+  padding-inline-start: 6px;
+  font-size: 11px;
+  color: var(--colors-secondarygrey);
+}
+
+.urlbarView-row[dynamicType=quickActions][label]::before {
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.urlbarView-row[dynamicType=quickActions] .urlbarView-label {
+  font-size: 12px;
+  color: var(--colors-primarygrey);
 }
 
 /**
