@@ -757,9 +757,10 @@ const HistoryCarousel = {
         this.selectedIndex > -1
           ? this.selectedIndex
           : CarouselUtils.getCurrentIndex();
+      let delta = event.deltaY > 0 ? 1 : -1;
       let targetIndex = Math.max(
         this.minIndex,
-        Math.min(this.maxIndex, currentIndex + event.deltaY)
+        Math.min(this.maxIndex, currentIndex + delta)
       );
       this.selectIndex(targetIndex);
     }
