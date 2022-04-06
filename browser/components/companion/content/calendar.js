@@ -822,7 +822,7 @@ class CalendarEvent extends MozLitElement {
 
     return html`
       <a class="event-link" href=${url} title=${url} @click=${openLink}>
-        <img src=${this.getDocumentIcon(link)} />
+        <img src=${this.getDocumentIcon(link)} role="presentation" />
         <span class="text-body-xs">
           ${until(title, intermediate, text)}
         </span>
@@ -889,17 +889,9 @@ class CalendarEvent extends MozLitElement {
       return "";
     }
 
-    let l10nId = "";
-
-    if (conference.name === "Zoom") {
-      l10nId = "companion-conference-zoom";
-    } else if (conference.name === "Meet") {
-      l10nId = "companion-conference-google";
-    }
-
     return html`
       <span class="conference-info text-body-xs">
-        <img src=${conference.icon} data-l10n-id=${l10nId} />
+        <img src=${conference.icon} role="presentation" />
         ${conference.name}
       </span>
     `;
@@ -1028,7 +1020,10 @@ class CalendarEvent extends MozLitElement {
     return html`
       <div class="event-host">
         ${this.eventDetailHeaderTemplate("companion-event-host")}
-        <div class="event-host-image-circle text-body-s--med">
+        <div
+          class="event-host-image-circle text-body-s--med"
+          aria-hidden="true"
+        >
           ${circleLetter}
         </div>
         <div class="event-host-name-email-container">
