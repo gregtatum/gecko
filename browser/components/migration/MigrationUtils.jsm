@@ -649,16 +649,16 @@ var MigrationUtils = Object.seal({
         // and try again. This will repeat a maximum of RETRYLIMIT times.
         let db;
         let didOpen = false;
-        let exceptionSeen;
+        let previousException = { message: null };
         try {
           db = await Sqlite.openConnection(dbOptions);
           didOpen = true;
           rows = await db.execute(selectQuery);
         } catch (ex) {
-          if (!exceptionSeen) {
+          if (previousException.message != ex.message) {
             Cu.reportError(ex);
           }
-          exceptionSeen = ex;
+          previousException = ex;
         } finally {
           try {
             if (didOpen) {
@@ -666,7 +666,7 @@ var MigrationUtils = Object.seal({
             }
           } catch (ex) {}
         }
-        if (exceptionSeen) {
+        if (previousException) {
           await new Promise(resolve => setTimeout(resolve, RETRYINTERVAL));
         }
       }
