@@ -42,7 +42,6 @@ FINAL_TARGET_FILES.actors += [
     "ViewActivationParent.jsm",
 ]
 BROWSER_CHROME_MANIFESTS += [
-    "tests/browser/browser-workshop.ini",
     "tests/browser/browser.ini",
 ]
 
