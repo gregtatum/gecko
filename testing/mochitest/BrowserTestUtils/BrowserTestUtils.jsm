@@ -307,7 +307,7 @@ var BrowserTestUtils = {
     if (element.parentNode != element.ownerDocument) {
       let parent = element.parentNode;
 
-      if (parent instanceof element.ownerGlobal.ShadowRoot) {
+      if (element.ownerGlobal.ShadowRoot.isInstance(parent)) {
         parent = parent.host;
       }
       return BrowserTestUtils.is_hidden(parent);

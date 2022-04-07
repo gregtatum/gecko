@@ -57,7 +57,7 @@ class ViewActivationChild extends JSWindowActorChild {
     let isUserActivity = false;
     if (event.type == "wheel") {
       isUserActivity = true;
-    } else if (event instanceof KeyboardEvent) {
+    } else if (KeyboardEvent.isInstance(event)) {
       let winUtils = this.contentWindow.windowUtils;
       isUserActivity = winUtils.isKeyboardEventUserActivity(event);
     }
