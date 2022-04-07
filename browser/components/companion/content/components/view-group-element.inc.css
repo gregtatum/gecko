@@ -5,6 +5,10 @@
 @import url("chrome://browser/content/companion/default-colors.css");
 @import url("chrome://browser/content/companion/lavender.css");
 
+:host {
+  border-radius: 100px;
+}
+
 :host,
 .view-el {
   display: flex;

@@ -58,3 +58,7 @@ view-group:not([app]) + view-group[app]::before {
   height: 100%;
   inset-inline-start: -8px;
 }
+
+view-group:focus-visible {
+  outline: 2px solid var(--colors-border-focus);
+}

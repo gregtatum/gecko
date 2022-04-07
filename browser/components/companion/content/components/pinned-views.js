@@ -109,6 +109,7 @@ class PinnedViews extends MozLitElement {
           viewGroup =>
             html`
               <view-group
+                tabindex="0"
                 exportparts="domain, history"
                 ?active=${viewGroup.includes(this.activeView)}
                 .viewGroup=${viewGroup}

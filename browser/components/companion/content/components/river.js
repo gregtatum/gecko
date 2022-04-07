@@ -113,6 +113,7 @@ export default class River extends MozLitElement {
               html`
                 <view-group
                   exportparts="domain, history"
+                  tabindex="0"
                   ?active=${viewGroup.includes(this.activeView)}
                   .viewGroup=${viewGroup}
                   .activeView=${this.activeView}
@@ -124,6 +125,7 @@ export default class River extends MozLitElement {
       <view-group
         ?hidden=${!topViewGroup}
         top="true"
+        tabindex="0"
         exportparts="domain, history"
         ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
         .viewGroup=${topViewGroup || null}

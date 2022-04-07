@@ -103,9 +103,11 @@ view-group[top][hidden] {
 }
 
 view-group[top] {
-  border-start-end-radius: 25px;
-  border-end-end-radius: 25px;
   padding: 4px;
+}
+
+view-group:focus-visible {
+  outline: 2px solid var(--colors-border-focus);
 }
 
 #river:not([hidden]) + view-group[top] {
