@@ -11,8 +11,10 @@ class ViewActivationParent extends JSWindowActorParent {
     if (message.name == "RequestActivation") {
       let {
         gStageManager,
-      } = this.browsingContext.top.embedderElement.ownerGlobal;
-      gStageManager.activateCurrentView();
+      } = this.browsingContext.top.embedderElement?.ownerGlobal;
+      if (gStageManager) {
+        gStageManager.activateCurrentView();
+      }
     }
   }
 }
