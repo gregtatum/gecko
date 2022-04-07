@@ -64,7 +64,7 @@ const OAuthConnect = {
       // when the user returns from the OAuth flow.
       let id = Services.uuid.generateUUID().toString();
 
-      let url = new URL(oauth.url);
+      let url = new URL(oauth.url || oauth.authorizationEndpoint);
       url.searchParams.set("state", id);
 
       // If there's an authorizationEndpoint, then add the OAuth config.
