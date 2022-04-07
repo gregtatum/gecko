@@ -1201,10 +1201,13 @@ var gSync = {
       // The regular flow leaves a tab laying around that doesn't make sense in
       // PINEBUILD. We'll use the oauth flow handler to register our listeners
       // to clean up after the sign in.
-      const redirectionEndpoint = "https://accounts.firefox.com/pair";
+      const redirectionEndpoints = [
+        "https://accounts.firefox.com/pair",
+        "https://accounts.firefox.com/connect_another_device",
+      ];
       await OAuthConnect.connect({
         url,
-        redirectionEndpoint,
+        redirectionEndpoints,
         serviceType: "fxa",
       });
     } else {

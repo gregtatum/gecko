@@ -155,8 +155,13 @@ const OAuthConnect = {
     }
 
     let { oauth, resolve, reject } = this.connections.get(id);
+    let currentLocation = uri.prePath + uri.filePath;
 
-    if (uri.prePath + uri.filePath != oauth.redirectionEndpoint) {
+    if (Array.isArray(oauth.redirectionEndpoints)) {
+      if (!oauth.redirectionEndpoints.includes(currentLocation)) {
+        return;
+      }
+    } else if (currentLocation != oauth.redirectionEndpoint) {
       return;
     }
 
