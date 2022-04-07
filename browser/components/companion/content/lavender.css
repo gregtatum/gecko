@@ -139,7 +139,11 @@
     --urlbar-focus-border: 2px solid var(--colors-border-focus);
     --urlbar-breakout-background: white;
 
-    --pam-btn-focus-border: 2px solid var(--colors-border-focus);
+    --avm-button-border-color: transparent;
+    --avm-button-fill-color: var(--colors-icons);
+    --avm-button-bgcolor: transparent;
+    --avm-button-hover-bgcolor: var(--colors-warm-hover-02);
+    --avm-button-active-bgcolor: var(--colors-warm-pressed-02);
     --page-action-menu-button-border-color: var(--colors-lightgrey-30);
     --page-action-menu-button-fill-color: var(--colors-icons);
     --page-action-menu-button-bgcolor: var(--colors-lightgrey-20);
@@ -153,5 +157,23 @@
     --pinebuild-pre-flow-reset-background-color: #8d77b4;
     --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
     --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
+
+    --avm-workspace-bg-color: var(--colors-cafe-20);
+    --avm-workspace-contains-pins-bg-color: var(--colors-cafe-40);
+    --avm-workspace-box-shadow-color: var(--colors-cafe-40);
+    --avm-workspace-border-color: #F3EEE2;
+    --avm-workspace-contains-pins-border-color: var(--colors-cafe-60);
+    --avm-river-outline-color: transparent;
+    --avm-view-group-element-bg-color: var(--colors-white);
+    --avm-view-group-element-icon-border-color: var(--colors-cafe-50);
+    --avm-view-group-element-icon-bg-color: var(--colors-white);
+    --avm-view-group-element-active-icon-shadow-color: rgba(166,145,121,0.32);
+    --avm-view-group-element-active-icon-bg-color: var(--colors-white);
+    --avm-view-group-element-breadcrumb-stroke-color: var(--colors-lightgrey-80);
+    --avm-view-group-element-breadcrumb-fill-color: var(--colors-lightgrey-80);
+    --avm-view-group-element-breadcrumb-hover-stroke-color: var(--colors-lavender-90);
+    --avm-view-group-element-breadcrumb-hover-fill-color: var(--colors-lavender-90);
+    --avm-view-group-element-breadcrumb-active-stroke-color: var(--colors-lavender-90);
+    --avm-view-group-element-breadcrumb-active-fill-color: var(--colors-lavender-90);
   }
 }

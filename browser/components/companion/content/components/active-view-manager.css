@@ -12,9 +12,9 @@ active-view-manager {
 workspace-el {
   margin-inline: 20px;
   border-radius: 100px;
-  background-color: var(--colors-cafe-20);
-  box-shadow: inset 0px 2px 4px var(--colors-cafe-40);
-  border: 0.5px solid #F3EEE2;
+  background-color: var(--avm-workspace-bg-color);
+  box-shadow: inset 0px 2px 4px var(--avm-workspace-box-shadow-color);
+  border: 0.5px solid var(--avm-workspace-border-color);
 }
 
 workspace-el:not(.selected) > #workspace > river-el::part(overflow),
@@ -58,12 +58,12 @@ workspace-el[workspace-id="2"]:not(.selected) > #workspace > #workspace-indicato
 }
 
 workspace-el:not(.selected) {
-  background: var(--colors-cafe-20);
+  background-color: var(--avm-workspace-bg-color);
 }
 
 workspace-el.contains-pins:not(.multiple) {
-  background-color: var(--colors-cafe-40);
-  border: 0.5px solid var(--colors-cafe-60);
+  background-color: var(--avm-workspace-contains-pins-bg-color);
+  border: 0.5px solid var(--avm-workspace-contains-pins-border-color);
 }
 
 workspace-el.contains-pins:not(.multiple),

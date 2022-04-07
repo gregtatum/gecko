@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+@import url("chrome://browser/content/companion/default-colors.css");
 @import url("chrome://browser/content/companion/lavender.css");
 
 :host,
@@ -16,7 +17,7 @@
   position: absolute;
   width: 30px;
   height: 30px;
-  border: 1px solid #f0f0f4;
+  border: 1px solid var(--avm-view-group-element-icon-border-color);
 }
 
 .view-el > .view-loading-spinner-container {
@@ -69,7 +70,7 @@
 }
 
 :host([active]) .view-icon-container {
-  box-shadow: 0px 2px 6px rgba(58,57,68,0.2);
+  box-shadow: 0px 2px 6px var(--avm-view-group-element-active-icon-shadow-color);
 }
 
 .view-icon-container {
@@ -79,8 +80,7 @@
   height: 32px;
   padding: 4px;
   box-sizing: border-box;
-  background-color: #fff;
-  color: #15141A;
+  background-color: var(--avm-view-group-element-icon-bg-color);
 }
 
 .view-icon-overlay,
@@ -91,6 +91,7 @@
 
 :host([top][active])) .view-icon-container {
   margin-inline-end: 5px;
+  background-color: var(--avm-view-group-element-active-icon-bg-color);
 }
 
 .view-icon:not([src]) {
@@ -134,6 +135,8 @@
   background-repeat: no-repeat;
   background-size: 10px 10px;
   background-position: center;
+  -moz-context-properties: fill;
+  fill: currentColor;
 }
 
 /* View security icons */
@@ -200,8 +203,8 @@
   background-position: center center;
   background-repeat: no-repeat;
   -moz-context-properties: stroke, fill;
-  stroke: var(--colors-lightgrey-80);
-  fill: var(--colors-lightgrey-80);
+  stroke: var(--avm-view-group-element-breadcrumb-stroke-color);
+  fill: var(--avm-view-group-element-breadcrumb-fill-color);
   cursor: pointer;
   height: 12px;
 }
@@ -230,10 +233,15 @@
   margin-inline-start: 6px;
 }
 
-.view-history > .history:hover,
+.view-history > .history:hover {
+  stroke: var(--avm-view-group-element-breadcrumb-hover-stroke-color);
+  fill: var(--avm-view-group-element-breadcrumb-hover-fill-color);
+}
+
+.view-history > .active:hover,
 .view-history > .active {
-  stroke: var(--colors-lavender-90);
-  fill: var(--colors-lavender-90);
+  stroke: var(--avm-view-group-element-breadcrumb-active-stroke-color);
+  fill: var(--avm-view-group-element-breadcrumb-active-fill-color);
 }
 
 .page-action-button[hidden] {
@@ -243,11 +251,12 @@
 .page-action-button {
   appearance: none;
   background: url(chrome://global/skin/icons/arrow-down.svg) center center no-repeat;
+  background-color: var(--avm-button-bgcolor);
   -moz-context-properties: fill;
-  fill: var(--toolbarbutton-icon-fill);
+  fill: var(--avm-button-fill-color);
   border-radius: 50%;
-  border-width: 0;
-  box-sizing: content-box;
+  border: 1px solid var(--avm-button-border-color);
+  box-sizing: border-box;
   min-width: 32px;
   min-height: 32px;
   padding: 0px;
@@ -255,15 +264,15 @@
 }
 
 .page-action-button:focus-visible {
-  outline: var(--pam-btn-focus-border);
+  outline: 2px solid var(--focus-outline-color);
   outline-offset: var(--focus-outline-offset);
 }
 
 :host([open="true"]) .page-action-button,
 .page-action-button:hover {
-  background-color: var(--colors-warm-hover-02);
+  background-color: var(--avm-button-hover-bgcolor);
 }
 
 .page-action-button:active {
-  background-color: var(--colors-warm-pressed-02);
+  background-color: var(--avm-button-active-bgcolor);
 }
