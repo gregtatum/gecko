@@ -158,6 +158,7 @@ const HistoryCarousel = {
     "HistoryCarousel:Setup",
     "HistoryCarousel:SelectIndex",
     "HistoryCarousel:RemovePreview",
+    "HistoryCarousel:BeginExit",
   ],
 
   /**
@@ -329,6 +330,10 @@ const HistoryCarousel = {
       }
       case "HistoryCarousel:RemovePreview": {
         this.removePreview(event.detail.viewID);
+        break;
+      }
+      case "HistoryCarousel:BeginExit": {
+        this.beginExit();
         break;
       }
     }
@@ -654,6 +659,37 @@ const HistoryCarousel = {
       newSelectedIndex
     );
     this.selectIndex(newSelectedIndex);
+  },
+
+  /**
+   * Called by HistoryCarouselChild whenever a request to exit the
+   * HistoryCarousel is being fulfilled. This does the work of running
+   * the exit transition (if transitions are enabled), and causes a
+   * HistoryCarousel:ExitDone event to bubble up when that is completed.
+   * If transitions are not enabled, the HistoryCarousel:ExitDone event is
+   * dispatched immediately.
+   *
+   * Note: This is not something that should be called directly to exit
+   * HistoryCarousel. You want to call CarouselUtils.requestExit() to do
+   * that.
+   */
+  beginExit() {
+    document.body.setAttribute("exiting", "true");
+    if (this.prefersReducedMotion) {
+      document.dispatchEvent(
+        new CustomEvent("HistoryCarousel:ExitDone", { bubbles: true })
+      );
+    } else {
+      document.body.addEventListener(
+        "transitionend",
+        () => {
+          document.dispatchEvent(
+            new CustomEvent("HistoryCarousel:ExitDone", { bubbles: true })
+          );
+        },
+        { once: true }
+      );
+    }
   },
 
   // DOM event handlers

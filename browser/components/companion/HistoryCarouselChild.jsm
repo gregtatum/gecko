@@ -115,15 +115,15 @@ class HistoryCarouselChild extends JSWindowActorChild {
       // The Exit message is sent when the parent has requested that the carousel
       // tear itself down.
       case "Exit": {
-        this.document.body.setAttribute("exiting", "true");
         return new Promise(resolve => {
-          this.document.body.addEventListener(
-            "transitionend",
+          this.contentWindow.addEventListener(
+            "HistoryCarousel:ExitDone",
             () => {
               resolve(this.currentIndex);
             },
             { once: true }
           );
+          this.sendMessageEvent("HistoryCarousel:BeginExit");
         });
       }
       // The SelectIndex message is sent when the parent has requested that the
