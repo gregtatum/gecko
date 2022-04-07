@@ -995,7 +995,26 @@ var PinebuildTestUtils = {
     let river = win.document.querySelector("river-el");
     // Make sure LitElement has finished any in-flight DOM update jobs.
     await river.updateComplete;
-    return river.shadowRoot.querySelectorAll("view-group:not([hidden])");
+    return Array.from(
+      river.shadowRoot.querySelectorAll("view-group:not([hidden])")
+    );
+  },
+
+  /**
+   * Returns the top-most View in the River (the "active" View).
+   *
+   * @param {Window?} win
+   *   The window to get the active View for. The current window is used by
+   *   default
+   * @return {Promise}
+   * @resolves {View} The active View.
+   */
+  async getActiveView(win = window) {
+    let viewGroups = await this.getViewGroups(win);
+    let topGroup = viewGroups.at(-1);
+    Assert.ok(topGroup, "Found a top-most ViewGroupElement.");
+    Assert.ok(topGroup.lastView, "Top-most ViewGroupElement contains a View.");
+    return topGroup.lastView;
   },
 
   /**
@@ -1022,7 +1041,7 @@ var PinebuildTestUtils = {
       );
     }
 
-    return viewGroups;
+    return Array.from(viewGroups);
   },
 
   /**

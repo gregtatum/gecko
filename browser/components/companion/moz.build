@@ -38,6 +38,8 @@ FINAL_TARGET_FILES.actors += [
     "PyodideParent.jsm",
     "TopLevelNavigationDelegateChild.jsm",
     "TopLevelNavigationDelegateParent.jsm",
+    "ViewActivationChild.jsm",
+    "ViewActivationParent.jsm",
 ]
 BROWSER_CHROME_MANIFESTS += [
     "tests/browser/browser-workshop.ini",

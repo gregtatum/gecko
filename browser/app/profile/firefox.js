@@ -2769,7 +2769,7 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
   pref("browser.pinebuild.enabled", true, locked);
   pref("browser.companion.stagemanagerdebugging", false);
   pref("browser.companion.stagemanagerdebugging.logLevel", "Warn");
-  pref("browser.river.activationTimeout", 5000);
+  pref("browser.river.activationTimeout", 30000);
   pref("browser.river.maxGroups", 5);
   pref("browser.pinebuild.workspaces.enabled", false);
   pref("browser.pinebuild.workshop.enabled", false);

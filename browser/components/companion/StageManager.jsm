@@ -2641,14 +2641,14 @@ class StageManager extends EventTarget {
 
     logConsole.debug(`Starting activation timer.`);
     this.#activationTimer = this.#window.setTimeout(() => {
-      this.#activateCurrentView();
+      this.activateCurrentView();
     }, timeout);
   }
 
   /**
    * This function moves the current/staged view to the top of the river.
    */
-  #activateCurrentView() {
+  activateCurrentView() {
     logConsole.debug(`Activating current InternalView.`);
     this.#activationTimer = null;
 
@@ -3459,5 +3459,5 @@ XPCOMUtils.defineLazyPreferenceGetter(
   StageManager,
   "activationTimeout",
   "browser.river.activationTimeout",
-  5000
+  30000
 );

@@ -1243,6 +1243,23 @@ BrowserGlue.prototype = {
         wantUntrusted: true,
       };
       JSWINDOWACTORS.AboutLogins.child.events.contextmenu = { capture: true };
+
+      JSWINDOWACTORS.ViewActivation = {
+        parent: {
+          moduleURI: "resource:///actors/ViewActivationParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/ViewActivationChild.jsm",
+          events: {
+            keydown: { mozSystemGroup: true },
+            click: { mozSystemGroup: true },
+            wheel: { mozSystemGroup: true },
+          },
+        },
+        messageManagerGroups: ["browsers"],
+        includeParent: true,
+        allFrames: true,
+      };
     }
 
     let os = Services.obs;
