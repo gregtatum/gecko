@@ -770,7 +770,7 @@ const HistoryCarousel = {
   },
 
   /**
-   * Handles changes to the document visibility. This is currentl
+   * Handles changes to the document visibility. This is currently
    * used to show the "shrinking" animation when the carousel first
    * becomes visible.
    *
@@ -780,13 +780,17 @@ const HistoryCarousel = {
   onVisibilityChange(event) {
     if (!document.hidden) {
       document.body.removeAttribute("invisible");
-      addEventListener(
-        "transitionend",
-        () => {
-          this.whenVisibleResolver();
-        },
-        { once: true }
-      );
+      if (this.prefersReducedMotion) {
+        setTimeout(() => this.whenVisibleResolver(), 0);
+      } else {
+        addEventListener(
+          "transitionend",
+          () => {
+            this.whenVisibleResolver();
+          },
+          { once: true }
+        );
+      }
     }
   },
 
