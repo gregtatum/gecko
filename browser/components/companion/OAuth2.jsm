@@ -6,7 +6,7 @@
  * Provides OAuth 2.0 authentication.
  * @see RFC 6749
  */
-var EXPORTED_SYMBOLS = ["OAuth2"];
+var EXPORTED_SYMBOLS = ["OAuth2", "OAuthConnect"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
@@ -64,14 +64,18 @@ const OAuthConnect = {
       // when the user returns from the OAuth flow.
       let id = Services.uuid.generateUUID().toString();
 
-      let url = new URL(oauth.authorizationEndpoint);
-      url.searchParams.set("client_id", oauth.clientId);
-      url.searchParams.set("redirect_uri", oauth.redirectionEndpoint);
-      url.searchParams.set("response_type", "code");
-      url.searchParams.set("scope", oauth.scope);
-      url.searchParams.set("access_type", "offline");
+      let url = new URL(oauth.url);
       url.searchParams.set("state", id);
-      url.searchParams.set("prompt", "select_account");
+
+      // If there's an authorizationEndpoint, then add the OAuth config.
+      if (oauth.authorizationEndpoint) {
+        url.searchParams.set("client_id", oauth.clientId);
+        url.searchParams.set("redirect_uri", oauth.redirectionEndpoint);
+        url.searchParams.set("response_type", "code");
+        url.searchParams.set("scope", oauth.scope);
+        url.searchParams.set("access_type", "offline");
+        url.searchParams.set("prompt", "select_account");
+      }
 
       let tab = win.gBrowser.addTrustedTab("about:blank");
       tab.setAttribute("pinebuild-oauth-flow", oauth.serviceType || "true");
@@ -143,68 +147,58 @@ const OAuthConnect = {
    * request that has a `state` parameter that we have used in the OAuth flow
    * the request will be treated as the user returning from their OAuth flow.
    */
-  onStateChange(progress, request, flags) {
-    if (
-      (progress.isTopLevel &&
-        request &&
-        request.URI &&
-        flags &
-          (Ci.nsIWebProgressListener.STATE_START |
-            Ci.nsIWebProgressListener.STATE_IS_NETWORK)) ||
-      request instanceof Ci.nsIChannel
-    ) {
-      let params = new URLSearchParams(request.URI.query);
-      let id = params.get("state");
-      if (!this.connections.has(id)) {
-        return;
-      }
+  handleLocation(uri) {
+    let params = new URLSearchParams(uri.query);
+    let id = params.get("state");
+    if (!this.connections.has(id)) {
+      return;
+    }
 
-      let { oauth, resolve, reject } = this.connections.get(id);
+    let { oauth, resolve, reject } = this.connections.get(id);
 
-      if (
-        request.URI.prePath + request.URI.filePath !=
-        oauth.redirectionEndpoint
-      ) {
-        return;
-      }
+    if (uri.prePath + uri.filePath != oauth.redirectionEndpoint) {
+      return;
+    }
 
-      Services.obs.notifyObservers(
-        null,
-        "oauth-refresh-token-received",
-        oauth.serviceType
-      );
+    Services.obs.notifyObservers(
+      null,
+      "oauth-refresh-token-received",
+      oauth.serviceType
+    );
 
-      // Cleanup any OAuth tabs we opened for this service.
-      // 1. Get all stored connections related to the service type.
-      // 2. Remove the stored connections from our global list.
-      // 3. Remove all tabs related to the connections.
-      // 4. Remove the history for the browsers we created.
-      let serviceConnections = [...this.connections.entries()].filter(
-        ([, connection]) => connection.oauth.serviceType == oauth.serviceType
-      );
-      const browserIds = serviceConnections.map(
-        ([, connection]) =>
-          connection.tab.linkedBrowser.browsingContext.browserId
-      );
-      let tabsPerWindow = new Map();
-      for (let [, connection] of serviceConnections) {
-        if (!tabsPerWindow.has(connection.tab.ownerGlobal)) {
-          tabsPerWindow.set(connection.tab.ownerGlobal, []);
-        }
-        tabsPerWindow.get(connection.tab.ownerGlobal).push(connection.tab);
+    // Cleanup any OAuth tabs we opened for this service.
+    // 1. Get all stored connections related to the service type.
+    // 2. Remove the stored connections from our global list.
+    // 3. Remove all tabs related to the connections.
+    // 4. Remove the history for the browsers we created.
+    let serviceConnections = [...this.connections.entries()].filter(
+      ([, connection]) => connection.oauth.serviceType == oauth.serviceType
+    );
+    const browserIds = serviceConnections.map(
+      ([, connection]) => connection.tab.linkedBrowser.browsingContext.browserId
+    );
+    let tabsPerWindow = new Map();
+    for (let [, connection] of serviceConnections) {
+      if (!tabsPerWindow.has(connection.tab.ownerGlobal)) {
+        tabsPerWindow.set(connection.tab.ownerGlobal, []);
       }
+      tabsPerWindow.get(connection.tab.ownerGlobal).push(connection.tab);
+    }
 
-      for (let [connectionId] of serviceConnections) {
-        this.connections.delete(connectionId);
-      }
-      for (let [window, _tabs] of tabsPerWindow.entries()) {
-        window.gBrowser.removeTabs(_tabs, { animate: false });
-      }
-      for (let browserId of browserIds) {
-        const { sharedData } = Services.ppmm;
-        sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
-      }
+    for (let [connectionId] of serviceConnections) {
+      this.connections.delete(connectionId);
+    }
+    for (let [window, _tabs] of tabsPerWindow.entries()) {
+      window.gBrowser.removeTabs(_tabs, { animate: false });
+    }
+    for (let browserId of browserIds) {
+      const { sharedData } = Services.ppmm;
+      sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
+    }
 
+    if (oauth.serviceType == "fxa") {
+      resolve();
+    } else {
       // Reach out to the OAuth provider's server to turn our "code" into an
       // authenticated access token.
       let code = params.get("code");
@@ -216,6 +210,32 @@ const OAuthConnect = {
         resolve(token);
       }, reject);
     }
+  },
+
+  /**
+   * In most cases, the state change listener will catch the navigation to the
+   * completed OAuth flow.
+   */
+  onStateChange(progress, request, flags) {
+    if (
+      (progress.isTopLevel &&
+        request &&
+        request.URI &&
+        flags &
+          (Ci.nsIWebProgressListener.STATE_START |
+            Ci.nsIWebProgressListener.STATE_IS_NETWORK)) ||
+      request instanceof Ci.nsIChannel
+    ) {
+      this.handleLocation(request.URI);
+    }
+  },
+
+  /**
+   * There's no top-level redirect for the FxA login flow, catch that the
+   * location changed from JS.
+   */
+  onLocationChange(aWebProgress, aRequest, aLocation, aFlags) {
+    this.handleLocation(aLocation);
   },
 
   QueryInterface: ChromeUtils.generateQI([

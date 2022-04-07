@@ -9,17 +9,16 @@ const { OnlineServices } = ChromeUtils.import(
   "resource:///modules/OnlineServices.jsm"
 );
 
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
-  "FXA_ROOT_URL",
-  "identity.fxaccounts.remote.root"
-);
-const FXA_SIGNUP_URL = new URL("/signup", FXA_ROOT_URL).href;
+XPCOMUtils.defineLazyModuleGetters(this, {
+  OAuthConnect: "resource:///modules/OAuth2.jsm",
+});
 
 const workshopEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled",
   false
 );
+
+const TOPIC_SYNC_STATE_CHANGED = "sync-ui-state:update";
 
 const extraServices = [
   {
@@ -238,18 +237,22 @@ class ServiceRow extends HTMLElement {
 customElements.define("service-row", ServiceRow);
 
 class FxaServiceRow extends ServiceRow {
-  constructor(service, data) {
-    super(service, data);
-  }
-
   getServiceStatus() {
     return this.service ? "connected" : "disconnected";
   }
 
+  setService(service) {
+    this.service = service;
+    this.setAttribute("status", this.getServiceStatus());
+    this.render();
+  }
+
   async signin() {
-    // This will cause a location change to the FxA sign-in page. So there's no need
-    // to trigger an attributeChanged callback here.
-    gSyncPane.signIn();
+    // TODO: Maybe this should just duplicate the OAuthConnect call rather than
+    // reach into gBrowser.gSync to use its method?
+    window.docShell.chromeEventHandler.ownerGlobal.gSync.openFxAEmailFirstPage(
+      gSyncPane._getEntryPoint()
+    );
   }
 
   async signout() {
@@ -282,7 +285,7 @@ class FxaServiceRow extends ServiceRow {
     primaryLabel.textContent = this.service.displayName
       ? this.service.displayName
       : this.service.email;
-    name.append(primaryLabel);
+    name.replaceChildren(primaryLabel);
     if (this.service.displayName) {
       name.append(new Text(" "), new Text(this.service.email));
     }
@@ -334,7 +337,9 @@ class FxaServiceRow extends ServiceRow {
 customElements.define("fxa-service-row", FxaServiceRow);
 
 function oauthObserver(subject, topic, data) {
-  let serviceRow = document.querySelector(`service-row[service-type="${data}"`);
+  let serviceRow = document.querySelector(
+    `service-row[service-type="${data}"]`
+  );
   if (!serviceRow) {
     return;
   }
@@ -342,6 +347,14 @@ function oauthObserver(subject, topic, data) {
     serviceRow.setAttribute("status", "connecting");
   } else if (topic == "oauth-access-token-error") {
     serviceRow.setAttribute("status", "disconnected");
+  }
+}
+
+async function fxaStatusObserver(subject, topic, data) {
+  if (topic == TOPIC_SYNC_STATE_CHANGED) {
+    const account = await fxAccounts.getSignedInUser();
+    const row = document.querySelector("fxa-service-row");
+    row.setService(account);
   }
 }
 
@@ -371,9 +384,12 @@ function buildExtraServiceRows() {
 
   Services.obs.addObserver(oauthObserver, "oauth-refresh-token-received");
   Services.obs.addObserver(oauthObserver, "oauth-access-token-error");
+  Services.obs.addObserver(fxaStatusObserver, TOPIC_SYNC_STATE_CHANGED);
+
   window.addEventListener("unload", () => {
     Services.obs.removeObserver(oauthObserver, "oauth-refresh-token-received");
     Services.obs.removeObserver(oauthObserver, "oauth-access-token-error");
+    Services.obs.removeObserver(fxaStatusObserver, TOPIC_SYNC_STATE_CHANGED);
   });
 }
 
