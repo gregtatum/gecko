@@ -202,6 +202,12 @@ const HistoryCarousel = {
   maxIndex: -1,
 
   /**
+   * True if the browser has been configured to use fewer motions / animations.
+   * This is only calculated once during setup().
+   */
+  prefersReducedMotion: false,
+
+  /**
    * A convenience getter for the main <ol> element that contains each
    * PreviewElement.
    *
@@ -372,6 +378,9 @@ const HistoryCarousel = {
     let currentIndex = CarouselUtils.getCurrentIndex();
 
     this.originalIndex = currentIndex;
+    this.prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion)"
+    ).matches;
 
     this.totalPreviews = previews.length;
     let root = document.documentElement;
@@ -583,13 +592,20 @@ const HistoryCarousel = {
    *   The index of the PreviewElement to scroll into view.
    * @param {Boolean} [instant]
    *   If set to true, the selected index does an instant scroll into the
-   *   viewport.
+   *   viewport. If the browser is configured to use reduced motion, then
+   *   instant scrolling is used automatically.
    */
   selectIndex(index, instant = false) {
     logConsole.trace("Selecting index ", index);
     let previewEl = document.querySelector(`li[index="${index}"]`);
     logConsole.debug("Found preview el: ", previewEl);
+
+    if (this.prefersReducedMotion) {
+      instant = true;
+    }
+
     let behavior = instant ? "instant" : "smooth";
+
     previewEl.scrollIntoView({ behavior, inline: "center" });
     this.selectedIndex = index;
   },
