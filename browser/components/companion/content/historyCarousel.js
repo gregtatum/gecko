@@ -676,9 +676,11 @@ const HistoryCarousel = {
   beginExit() {
     document.body.setAttribute("exiting", "true");
     if (this.prefersReducedMotion) {
-      document.dispatchEvent(
-        new CustomEvent("HistoryCarousel:ExitDone", { bubbles: true })
-      );
+      requestAnimationFrame(() => {
+        document.dispatchEvent(
+          new CustomEvent("HistoryCarousel:ExitDone", { bubbles: true })
+        );
+      });
     } else {
       document.body.addEventListener(
         "transitionend",
@@ -781,7 +783,7 @@ const HistoryCarousel = {
     if (!document.hidden) {
       document.body.removeAttribute("invisible");
       if (this.prefersReducedMotion) {
-        setTimeout(() => this.whenVisibleResolver(), 0);
+        requestAnimationFrame(() => this.whenVisibleResolver());
       } else {
         addEventListener(
           "transitionend",
