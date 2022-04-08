@@ -9,9 +9,11 @@ var EXPORTED_SYMBOLS = ["ViewActivationParent"];
 class ViewActivationParent extends JSWindowActorParent {
   async receiveMessage(message) {
     if (message.name == "RequestActivation") {
-      let {
-        gStageManager,
-      } = this.browsingContext.top.embedderElement?.ownerGlobal;
+      if (!this.browsingContext.embedderElement) {
+        return;
+      }
+
+      let { gStageManager } = this.browsingContext.embedderElement.ownerGlobal;
       if (gStageManager) {
         gStageManager.activateCurrentView();
       }
