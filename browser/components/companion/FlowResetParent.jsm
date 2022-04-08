@@ -35,7 +35,9 @@ class FlowResetParent extends JSWindowActorParent {
         SessionManager.restoreLastSession(window);
         break;
       case "FlowResetLoaded":
-        window.gURLBar.focus();
+        if (window && !window.closed) {
+          window.gURLBar.focus();
+        }
         break;
       case "HasSession":
         return SessionManager.query({ limit: 1 }).then(
