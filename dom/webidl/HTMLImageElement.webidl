@@ -15,6 +15,7 @@ interface imgINotificationObserver;
 interface imgIRequest;
 interface URI;
 interface nsIStreamListener;
+interface ImageResult;
 
 [LegacyFactoryFunction=Image(optional unsigned long width, optional unsigned long height),
  Exposed=Window]
@@ -49,7 +50,7 @@ interface HTMLImageElement : HTMLElement {
            [NewObject]
            Promise<void> decode();
            [NewObject, ChromeOnly]
-           Promise<void> recognizeCurrentImageText();
+           Promise<sequence<ImageResult>> recognizeCurrentImageText();
 };
 
 // http://www.whatwg.org/specs/web-apps/current-work/#other-elements,-attributes-and-apis
