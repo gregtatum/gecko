@@ -71,6 +71,7 @@ void TextRecognition::FillShadow(ShadowRoot& aShadow,
                                  const TextRecognitionResult& aResult) {
   auto& doc = *aShadow.OwnerDoc();
   RefPtr<Element> div = doc.CreateHTMLElement(nsGkAtoms::div);
+
   for (const auto& quad : aResult.quads()) {
     RefPtr<Element> span = doc.CreateHTMLElement(nsGkAtoms::span);
     // TODO: We probably want to position them here and so on. For now, expose
@@ -78,7 +79,7 @@ void TextRecognition::FillShadow(ShadowRoot& aShadow,
     // in JS.
     {
       nsAutoString points;
-      for (auto& point : quad.points()) {
+      for (const auto& point : quad.points()) {
         points.AppendFloat(point.x);
         points.Append(u',');
         points.AppendFloat(point.y);

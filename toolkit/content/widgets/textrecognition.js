@@ -1,23 +1,34 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
 "use strict";
 
 // This is a UA widget. It runs in per-origin UA widget scope,
 // to be loaded by UAWidgetsChild.jsm.
 
 this.TextRecognitionWidget = class {
-  constructor(shadowRoot, prefs) {
+  /**
+   * @param {ShadowRoot} shadowRoot
+   * @param {Record<string, string | boolean | number>} _prefs
+   */
+  constructor(shadowRoot, _prefs) {
+    /** @type {ShadowRoot} */
     this.shadowRoot = shadowRoot;
-    this.prefs = prefs;
+    /** @type {HTMLElement} */
     this.element = shadowRoot.host;
+    /** @type {Document} */
     this.document = this.element.ownerDocument;
+    /** @type {Window} */
     this.window = this.document.defaultView;
+    /** @type {ResizeObserver} */
     this.observer = null;
+    /** @type {Map<HTMLSpanElement, DOMRect} */
     this.spanRects = new Map();
     this.imageWidth = this.element.width;
     this.imageHeight = this.element.height;
+    this.isSetup = false;
+    /** @type {null | number} */
+    this.lastCanvasStyleWidth = null;
   }
 
   /*
@@ -25,9 +36,9 @@ this.TextRecognitionWidget = class {
    */
   onsetup() {
     this.observer = new this.window.ResizeObserver(() => {
-      this.window.requestAnimationFrame(() => {
-        this.positionSpans();
-      });
+      // this.window.requestAnimationFrame(() => {
+      this.positionSpans();
+      // });
     });
     this.observer.observe(this.element);
   }
@@ -36,30 +47,54 @@ this.TextRecognitionWidget = class {
     if (this.shadowRoot.children.length === 0) {
       return;
     }
-    const [div] = this.shadowRoot.children;
-    const spans = [...div.children];
-    // TODO - Add mutation observer.
+    this.ensureInitialized();
+
+    /** @type {HTMLDivElement} */
+    const div = this.shadowRoot.firstChild;
+    const [canvas] = div.getElementsByTagName("canvas");
+    const spans = div.getElementsByTagName("span");
+
     const imgRect = this.element.getBoundingClientRect();
-    Object.assign(div.style, {
-      width: imgRect.width + "px",
-      height: imgRect.height + "px",
-      position: "absolute",
-      outline: "red 1px solid",
-      overflow: "clip",
-      /* Prevent inheritance */
-      lineHeight: "1.3",
-      textAlign: "left",
-      font: "normal normal normal 100%/normal sans-serif !important",
-      textDecoration: "none !important",
-      whiteSpace: "normal !important",
-    });
+    div.style.width = imgRect.width + "px";
+    div.style.height = imgRect.height + "px";
+    canvas.style.width = imgRect.width + "px";
+    canvas.style.height = imgRect.height + "px";
+
+    /** @type {null | CanvasRenderingContext2D} */
+    let ctx = null;
+    if (
+      this.lastCanvasStyleWidth === null ||
+      imgRect.width * 0.8 > this.lastCanvasStyleWidth
+    ) {
+      // The canvas should be initially drawn, or re-drawn if it's been scaled up
+      // more than 20%.
+      const dpr = this.window.devicePixelRatio;
+      canvas.width = imgRect.width * dpr;
+      canvas.height = imgRect.height * dpr;
+      this.lastCanvasStyleWidth = imgRect.width;
+
+      ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = "#00000088";
+      ctx.fillRect(0, 0, imgRect.width, imgRect.height);
+
+      ctx.beginPath();
+    }
+
     for (const span of spans) {
+      let spanRect = this.spanRects.get(span);
+      if (!spanRect) {
+        // This only needs to happen once.
+        spanRect = span.getBoundingClientRect();
+        this.spanRects.set(span, spanRect);
+      }
+
       const points = span.dataset.points.split(",").map(p => Number(p));
       // Use the points in the string, e.g.
       // "0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273"
       //  0         1       2         3        4        5        6        7
       //  ^ bottomleft      ^ topleft          ^ topright        ^ bottomright
-      const [
+      let [
         bottomLeftX,
         bottomLeftY,
         topLeftX,
@@ -69,31 +104,57 @@ this.TextRecognitionWidget = class {
         bottomRightX,
         bottomRightY,
       ] = points;
-      // Don't account for skew yet, assume the text is orthogonal to the screen.
 
-      let spanRect = this.spanRects.get(span);
-      if (!spanRect) {
-        // This only needs to happen once.
-        spanRect = span.getBoundingClientRect();
-        this.spanRects.set(span, spanRect);
-      }
+      // Invert the Y.
+      topLeftY = 1 - topLeftY;
+      topRightY = 1 - topRightY;
+      bottomLeftY = 1 - bottomLeftY;
+      bottomRightY = 1 - bottomRightY;
 
       // prettier-ignore
       const mat4 = projectPoints(
         spanRect.width,               spanRect.height,
-        imgRect.width * topLeftX,     imgRect.height * (1 - topLeftY),
-        imgRect.width * topRightX,    imgRect.height * (1 - topRightY),
-        imgRect.width * bottomLeftX,  imgRect.height * (1 - bottomLeftY),
-        imgRect.width * bottomRightX, imgRect.height * (1 - bottomRightY)
+        imgRect.width * topLeftX,     imgRect.height * topLeftY,
+        imgRect.width * topRightX,    imgRect.height * topRightY,
+        imgRect.width * bottomLeftX,  imgRect.height * bottomLeftY,
+        imgRect.width * bottomRightX, imgRect.height * bottomRightY
       );
 
-      Object.assign(span.style, {
-        position: "absolute",
-        transformOrigin: "0 0",
-        transform: "matrix3d(" + mat4.join(", ") + ")",
-        color: "transparent",
-        borderRadius: "3px",
-      });
+      span.style.transform = "matrix3d(" + mat4.join(", ") + ")";
+
+      if (ctx) {
+        const inset = 3;
+        ctx.moveTo(
+          imgRect.width * bottomLeftX + inset,
+          imgRect.height * bottomLeftY - inset
+        );
+        ctx.lineTo(
+          imgRect.width * topLeftX + inset,
+          imgRect.height * topLeftY + inset
+        );
+        ctx.lineTo(
+          imgRect.width * topRightX - inset,
+          imgRect.height * topRightY + inset
+        );
+        ctx.lineTo(
+          imgRect.width * bottomRightX - inset,
+          imgRect.height * bottomRightY - inset
+        );
+        ctx.closePath();
+      }
+    }
+
+    if (ctx) {
+      // This composite operation will cut out the quads. The color is arbitrary.
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      // Creating a round line will grow the selection slightly, and round the corners.
+      ctx.lineWidth = 10;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
     }
   }
 
@@ -110,11 +171,83 @@ this.TextRecognitionWidget = class {
     this.spanRects.clear();
   }
 
-  onPrefChange(prefName, prefValue) {
-    this.prefs[prefName] = prefValue;
+  ensureInitialized() {
+    if (this.isSetup) {
+      return;
+    }
+    this.isSetup = true;
+
+    const parser = new this.window.DOMParser();
+    let parserDoc = parser.parseFromString(
+      `<div class="textrecognition" xmlns="http://www.w3.org/1999/xhtml" role="none">
+        <link rel="stylesheet" href="chrome://global/skin/media/textrecognition.css" />
+        <canvas />
+        <!-- The spans will be reattached here -->
+      </div>`,
+      "application/xml"
+    );
+    if (
+      this.shadowRoot.children.length !== 1 ||
+      this.shadowRoot.firstChild.tagName !== "DIV"
+    ) {
+      throw new Error(
+        "Expected the shadowRoot to have a single div as the root element."
+      );
+    }
+
+    const spansDiv = this.shadowRoot.firstChild;
+    // <div>
+    //   <span data-points="0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273">
+    //     Text that has been recognized
+    //   </span>
+    //   ...
+    // </div>
+    spansDiv.remove();
+
+    this.shadowRoot.importNodeAndAppendChildAt(
+      this.shadowRoot,
+      parserDoc.documentElement,
+      true /* deep */
+    );
+
+    this.shadowRoot.importNodeAndAppendChildAt(
+      this.shadowRoot.firstChild,
+      spansDiv,
+      true /* deep */
+    );
   }
 };
 
+/**
+ * A three dimensional vector.
+ *
+ * @typedef {[number, number, number]} Vec3
+ */
+
+/**
+ * A 3x3 matrix.
+ *
+ * @typedef {[number, number, number,
+ *            number, number, number,
+ *            number, number, number]} Matrix3
+ */
+
+/**
+ * A 4x4 matrix.
+ *
+ * @typedef {[number, number, number, number,
+ *            number, number, number, number,
+ *            number, number, number, number,
+ *            number, number, number, number]} Matrix4
+ */
+
+/**
+ * Compute the adjugate matrix.
+ * https://en.wikipedia.org/wiki/Adjugate_matrix
+ *
+ * @param {Matrix3} m
+ * @returns {Matrix3}
+ */
 function computeAdjugate(m) {
   // prettier-ignore
   return [
@@ -130,6 +263,11 @@ function computeAdjugate(m) {
   ];
 }
 
+/**
+ * @param {Matrix3} a
+ * @param {Matrix3} b
+ * @returns {Matrix3}
+ */
 function multiplyMat3(a, b) {
   let out = [];
   for (let i = 0; i < 3; i++) {
@@ -144,6 +282,11 @@ function multiplyMat3(a, b) {
   return out;
 }
 
+/**
+ * @param {Matrix3} m
+ * @param {Vec3} v
+ * @returns {Vec3}
+ */
 function multiplyMat3Vec3(m, v) {
   // prettier-ignore
   return [
@@ -153,17 +296,27 @@ function multiplyMat3Vec3(m, v) {
   ];
 }
 
+/**
+ * @returns {Matrix3}
+ */
 function basisToPoints(x1, y1, x2, y2, x3, y3, x4, y4) {
+  /** @type {Matrix3} */
   let mat3 = [x1, x2, x3, y1, y2, y3, 1, 1, 1];
   let vec3 = multiplyMat3Vec3(computeAdjugate(mat3), [x4, y4, 1]);
+  // prettier-ignore
   return multiplyMat3(
     mat3,
-    // prettier-ignore
-    [vec3[0], 0, 0, 0,
-    vec3[1], 0, 0, 0, vec3[2]]
+    [
+      vec3[0], 0,       0,
+      0,       vec3[1], 0,
+      0,       0,       vec3[2]
+    ]
   );
 }
 
+/**
+ * @type {(...Matrix4) => Matrix3}
+ */
 // prettier-ignore
 function general2DProjection(
   x1s, y1s, x1d, y1d,
@@ -186,6 +339,8 @@ function general2DProjection(
  *    h │     │       -->        │        /
  *      └─────┘                  │       /
  *                               3 ──── 4
+ *
+ * @returns {Matrix4}
  */
 function projectPoints(w, h, x1, y1, x2, y2, x3, y3, x4, y4) {
   // prettier-ignore

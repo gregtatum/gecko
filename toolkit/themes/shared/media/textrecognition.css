@@ -4,12 +4,27 @@
 
 @namespace url("http://www.w3.org/1999/xhtml");
 
-.textrecogition {
+.textrecognition {
+  position: absolute;
+  overflow: clip;
 
-  /* Prevent unwanted style inheritance. See bug 554717. */
+  /* Prevent unwanted style inheritance. */
+  line-height: 1;
   text-align: left;
   list-style-image: none !important;
   font: normal normal normal 100%/normal sans-serif !important;
   text-decoration: none !important;
   white-space: normal !important;
+}
+
+canvas {
+  position: absolute;
+  user-select: none;
+  inset: 0;
+}
+
+span {
+  position: absolute;
+  transform-origin: 0 0;
+  color: transparent;
 }

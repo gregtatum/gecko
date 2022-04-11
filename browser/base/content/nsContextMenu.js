@@ -597,6 +597,7 @@ class nsContextMenu {
     // Copy image location depends on whether we're on an image.
     this.showItem("context-copyimage", this.onImage || showBGImage);
 
+    // Performing text recognition only works on images.
     this.showItem("context-imagetext", this.onImage || showBGImage);
 
     // Send media URL (but not for canvas, since it's a big data: URL)
