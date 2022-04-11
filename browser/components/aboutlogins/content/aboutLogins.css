@@ -111,6 +111,10 @@ body > section {
   overflow-x: auto;
 }
 
+login-intro {
+  overflow-y: scroll;
+}
+
 :root:not(.in-companion) .panel-header {
   display: none;
 }

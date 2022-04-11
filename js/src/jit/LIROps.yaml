@@ -653,7 +653,6 @@
   operands:
     left: WordSized
     right: WordSized
-  num_temps: 1
   call_instruction: true
   mir_op: Compare
 
@@ -675,7 +674,7 @@
   result_type: WordSized
   operands:
     value: BoxedValue
-  num_temps: 2
+  num_temps: 1
   mir_op: Compare
 
 # Takes an object pointer and tests whether it is an object that emulates
@@ -686,10 +685,30 @@
     input: WordSized
   mir_op: Compare
 
+# Takes a value and tests whether it is null.
+- name: IsNull
+  result_type: WordSized
+  operands:
+    value: BoxedValue
+  mir_op: Compare
+
+# Takes a value and tests whether it is undefined.
+- name: IsUndefined
+  result_type: WordSized
+  operands:
+    value: BoxedValue
+  mir_op: Compare
+
 - name: IsNullOrLikeUndefinedAndBranchV
   gen_boilerplate: false
 
 - name: IsNullOrLikeUndefinedAndBranchT
+  gen_boilerplate: false
+
+- name: IsNullAndBranch
+  gen_boilerplate: false
+
+- name: IsUndefinedAndBranch
   gen_boilerplate: false
 
 - name: SameValueDouble
@@ -750,7 +769,7 @@
   result_type: WordSized
   operands:
     input: BoxedValue
-  num_temps: 3
+  num_temps: 2
   mir_op: Not
 
 - name: BitNotI
@@ -922,7 +941,6 @@
   operands:
     value: WordSized
     power: WordSized
-  num_temps: 1
   call_instruction: true
 
 # Integer raised to an integer power.
@@ -940,7 +958,6 @@
   operands:
     value: WordSized
     power: WordSized
-  num_temps: 1
   call_instruction: true
 
 # Constant of a power of two raised to an integer power.
@@ -2874,7 +2891,7 @@
   gen_boilerplate: false
 
 - name: Debugger
-  num_temps: 2
+  num_temps: 1
   call_instruction: true
 
 - name: NewTarget

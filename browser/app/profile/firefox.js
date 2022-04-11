@@ -430,6 +430,14 @@ pref("browser.urlbar.quicksuggest.remoteSettings.enabled", true);
 // suggestions.
 pref("browser.urlbar.quicksuggest.allowPositionInSuggestions", true);
 
+// Whether non-sponsored quick suggest results are subject to impression
+// frequency caps.
+pref("browser.urlbar.quicksuggest.impressionCaps.nonSponsoredEnabled", false);
+
+// Whether sponsored quick suggest results are subject to impression frequency
+// caps.
+pref("browser.urlbar.quicksuggest.impressionCaps.sponsoredEnabled", false);
+
 // Whether unit conversion is enabled.
 #ifdef NIGHTLY_BUILD
 pref("browser.urlbar.unitConversion.enabled", true);
@@ -1199,14 +1207,6 @@ pref("browser.bookmarks.editDialog.maxRecentFolders", 7);
 // By default the Edit Bookmark dialog is instant-apply. This feature pref will allow to
 // just save on Accept, once the project is complete.
 pref("browser.bookmarks.editDialog.delayedApply.enabled", false);
-
-pref("dom.ipc.plugins.flash.disable-protected-mode", false);
-
-// Feature-disable the protected-mode auto-flip
-pref("browser.flash-protected-mode-flip.enable", false);
-
-// Whether we've already flipped protected mode automatically
-pref("browser.flash-protected-mode-flip.done", false);
 
 pref("dom.ipc.shims.enabledWarnings", false);
 
@@ -2703,10 +2703,18 @@ pref("svg.context-properties.content.allowed-domains", "profile.accounts.firefox
 // SnapshotScorer.
 pref("browser.snapshots.score.Visit", 1);
 pref("browser.snapshots.score.CurrentSession", 1);
-pref("browser.snapshots.score.InNavigation", 3);
-pref("browser.snapshots.score.IsOverlappingVisit", 3);
 pref("browser.snapshots.score.IsUserPersisted", 1);
 pref("browser.snapshots.score.IsUsedRemoved", -10);
+
+// A set of weights for the snapshot recommendation sources. The suffixes after
+// the last decimal map to the keys of `Snapshots.recommendationSources`.
+pref("browser.snapshots.source.CommonReferrer", 3);
+pref("browser.snapshots.source.Overlapping", 3);
+
+// Expiration days for snapshots.
+pref("browser.places.snapshots.expiration.days", 210);
+// For user managed snapshots we use more than a year, to support yearly tasks.
+pref("browser.places.snapshots.expiration.userManaged.days", 420);
 
 #ifdef PINEBUILD
   pref("browser.contentblocking.category", "strict", locked);
