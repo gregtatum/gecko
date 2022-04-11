@@ -28,6 +28,10 @@
   <vbox id="appcontent" flex="1">
     <!-- gNotificationBox will be added here lazily. -->
 #ifdef PINEBUILD
+    <!-- We insert a hidden dummy sidebar-switcher-target toolbarbutton here to keep the
+         WebExtension Menus API mechanism happy, since it expects this node to exist somewhere
+         in the DOM. -->
+    <toolbarbutton id="sidebar-switcher-target" flex="1" class="tabbable" hidden="true"/>
     <box id="companionLinkTransitionOverlay"/>
 #endif
     <tabbox id="tabbrowser-tabbox"
