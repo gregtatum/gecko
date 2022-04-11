@@ -12,6 +12,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
   Services: "resource://gre/modules/Services.jsm",
@@ -685,6 +686,14 @@ class InternalView {
       this.cachedEntry = historyEntry;
 
       this.url = Services.io.newURI(historyEntry.url);
+      let originAttributes = E10SUtils.predictOriginAttributes({
+        window,
+        userContextId: workspaceId,
+      });
+      this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
+        this.url,
+        originAttributes
+      );
       this.#title = historyEntry.title;
       this.iconURL = browser?.mIconURL;
     }
@@ -774,7 +783,14 @@ class InternalView {
       .getTabForBrowser(browser)
       ?.hasAttribute("busy");
     this.securityState = browser.securityUI.state;
-    this.#contentPrincipal = browser.contentPrincipal;
+    let originAttributes = E10SUtils.predictOriginAttributes({
+      window: this.#window,
+      userContextId: this.#workspaceId,
+    });
+    this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
+      this.url,
+      originAttributes
+    );
 
     let docURI = browser.documentURI;
     if (docURI && docURI.scheme == "about") {

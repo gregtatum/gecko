@@ -21,15 +21,22 @@ add_task(async function test_session_change() {
           "browse")
     );
 
-    BrowserTestUtils.loadURI(
-      win.gBrowser.selectedBrowser,
-      "https://example.com/"
+    let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews(
+      [
+        "https://example.com/",
+        "https://example.com/browser/browser",
+        "https://example.org/browser",
+        "https://example.org/browser/browser/components",
+      ],
+      win
     );
-    await BrowserTestUtils.browserLoaded(
-      win.gBrowser.selectedBrowser,
-      false,
-      "https://example.com/"
-    );
+
+    // This should result in 2 ViewGroups being created - 1 for the
+    // example.com Views, and 1 for example.org Views.
+    let groups = await PinebuildTestUtils.getViewGroups(win);
+    Assert.equal(groups.length, 2, "There should be 2 ViewGroups.");
+    Assert.deepEqual([...groups[0].viewGroup], [view1, view2]);
+    Assert.deepEqual([...groups[1].viewGroup], [view3, view4]);
 
     let sessionReplaced = SessionManager.once("session-replaced");
     let sessionSetAside = SessionManager.once("session-set-aside");
@@ -65,6 +72,10 @@ add_task(async function test_session_change() {
 
     // Now switch back to the previous session.
     sessionReplaced = SessionManager.once("session-replaced");
+    let riverRebuilt = BrowserTestUtils.waitForEvent(
+      win.gStageManager,
+      "RiverRebuilt"
+    );
 
     let sessionReplaceCalls = 0;
     let countSessionReplaceCalls = () => sessionReplaceCalls++;
@@ -80,12 +91,28 @@ add_task(async function test_session_change() {
     );
 
     await sessionReplaced;
+    await riverRebuilt;
 
     await BrowserTestUtils.waitForCondition(
       () => !win.document.body.hasAttribute("flow-reset"),
       "Should clear the flow-reset attribute on the window"
     );
     Assert.equal(win.gURLBar.value, "", "URLBar should be empty");
+
+    // We should have the same number of Views as before.
+    let views = win.gStageManager.views;
+    Assert.equal(
+      views.length,
+      4,
+      "Expected 4 Views after restoring the session."
+    );
+    [view1, view2, view3, view4] = views;
+
+    // We should get back the same number of ViewGroups as before.
+    groups = await PinebuildTestUtils.getViewGroups(win);
+    Assert.equal(groups.length, 2, "There should be 2 ViewGroups.");
+    Assert.deepEqual([...groups[0].viewGroup], [view1, view2]);
+    Assert.deepEqual([...groups[1].viewGroup], [view3, view4]);
 
     // setTimeout is to allow the failing condition to complete, it
     // will not cause intermittent failures.
