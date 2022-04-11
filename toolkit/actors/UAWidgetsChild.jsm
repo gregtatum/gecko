@@ -130,6 +130,8 @@ class UAWidgetsChild extends JSWindowActorChild {
     let sandbox = isSystemPrincipal
       ? Object.create(null)
       : Cu.getUAWidgetScope(aElement.nodePrincipal);
+    // !!! DEBUG ONLY
+    sandbox.log = (...args) => console.log(...args);
 
     if (!sandbox[widgetName]) {
       Services.scriptloader.loadSubScript(uri, sandbox);

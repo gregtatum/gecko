@@ -174,7 +174,9 @@ class ContextMenuChild extends JSWindowActorChild {
 
       case "ContextMenu:GetImageText": {
         let img = ContentDOMReference.resolve(message.data.targetIdentifier);
-        img.recognizeCurrentImageText();
+        img.recognizeCurrentImageText().then(results => {
+          console.log(`!!! results`, results);
+        });
         break;
       }
 

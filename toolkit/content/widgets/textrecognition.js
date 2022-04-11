@@ -7,6 +7,7 @@
 // This is a UA widget. It runs in per-origin UA widget scope,
 // to be loaded by UAWidgetsChild.jsm.
 
+const console = { log };
 this.TextRecognitionWidget = class {
   constructor(shadowRoot, prefs) {
     this.shadowRoot = shadowRoot;
