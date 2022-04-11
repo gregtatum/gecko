@@ -71,20 +71,12 @@ this.TextRecognitionWidget = class {
       ] = points;
       // Don't account for skew yet, assume the text is orthogonal to the screen.
 
-      const left = (points[0] + points[2]) / 2;
-      const right = (points[4] + points[6]) / 2;
-      const top = 1 - (points[3] + points[5]) / 2;
-      const bottom = 1 - (points[1] + points[7]) / 2;
-      const width = right - left;
-      const height = bottom - top;
       let spanRect = this.spanRects.get(span);
       if (!spanRect) {
         // This only needs to happen once.
         spanRect = span.getBoundingClientRect();
         this.spanRects.set(span, spanRect);
       }
-      const scaleX = (width * this.imageWidth) / spanRect.width;
-      const scaleY = (height * this.imageHeight) / spanRect.height;
 
       // prettier-ignore
       const mat4 = projectPoints(
