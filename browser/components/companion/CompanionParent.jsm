@@ -937,14 +937,6 @@ class CompanionParent extends JSWindowActorParent {
     this.snapshotSelector = new SnapshotSelector({
       count: 5,
       filterAdult: true,
-      selectOverlappingVisits: Services.prefs.getBoolPref(
-        "browser.pinebuild.snapshots.relevancy.enabled",
-        false
-      ),
-      selectCommonReferrer: Services.prefs.getBoolPref(
-        "browser.pinebuild.snapshots.relevancy.enabled",
-        false
-      ),
       getCurrentSessionUrls: () =>
         new Set(gStageManager.views.map(view => view.url)),
     });
