@@ -50,6 +50,7 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/PContent.h"  // For TextRecognitionResult
 #include "mozilla/dom/HTMLImageElement.h"
+#include "mozilla/dom/ImageText.h"
 #include "mozilla/dom/ImageTracker.h"
 #include "mozilla/dom/ScriptSettings.h"
 #include "mozilla/net/UrlClassifierFeatureFactory.h"
@@ -1239,13 +1240,20 @@ already_AddRefed<Promise> nsImageLoadingContent::RecognizeCurrentImageText(
           domPromise->MaybeRejectWithInvalidStateError("Request not current");
           return;
         }
+        auto& textRecognitionResult = aValue.ResolveValue();
         Element* el = ilc->AsContent()->AsElement();
         el->AttachAndSetUAShadowRoot(Element::NotifyUAWidgetSetup::Yes);
         TextRecognition::FillShadow(*el->GetShadowRoot(),
-                                    aValue.ResolveValue());
+                                    textRecognitionResult);
         el->NotifyUAWidgetSetupOrChange();
-        // TODO: Maybe resolve with the recognition results?
-        domPromise->MaybeResolveWithUndefined();
+
+        nsTArray<RefPtr<ImageText>> imageTexts(
+            textRecognitionResult.quads().Length());
+        nsIGlobalObject* global = ilc->GetOurOwnerDoc()->GetOwnerGlobal();
+        for (const auto& quad : textRecognitionResult.quads()) {
+          imageTexts.AppendElement(MakeAndAddRef<ImageText>(global, quad));
+        }
+        domPromise->MaybeResolve(imageTexts);
       });
   return domPromise.forget();
 }
