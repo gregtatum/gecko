@@ -99,6 +99,9 @@ def build_dict(config, env=os.environ):
     d["non_native_theme"] = True
     d["pinebuild"] = substs.get("PINEBUILD") == "1"
     d["domstreams"] = substs.get("MOZ_DOM_STREAMS") == "1"
+    d["isolated_process"] = (
+        substs.get("MOZ_ANDROID_CONTENT_SERVICE_ISOLATED_PROCESS") == "1"
+    )
 
     def guess_platform():
         if d["buildapp"] == "browser":
