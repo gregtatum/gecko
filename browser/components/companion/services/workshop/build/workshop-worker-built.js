@@ -448,7 +448,7 @@ var WorkshopBackend = (() => {
     this.tid = tid;
   }
   function isPlainObject(obj) {
-    if (!obj || typeof obj !== "object") {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
       return false;
     }
     if (obj.toString && obj.toString() !== "[object Object]") {
@@ -467,6 +467,30 @@ var WorkshopBackend = (() => {
       for (var key in x) {
         ret[key] = x[key];
       }
+      return ret;
+    }
+    return x;
+  }
+  function deepClone(x, visited = new WeakSet()) {
+    if (visited.has(x)) {
+      return "<Cycle>";
+    }
+    if (isPlainObject(x)) {
+      visited.add(x);
+      const ret = Object.create(null);
+      for (const [key, value] of Object.entries(x)) {
+        ret[key] = deepClone(value, visited);
+      }
+      visited.delete(x);
+      return ret;
+    }
+    if (Array.isArray(x)) {
+      const ret = [];
+      visited.add(x);
+      for (const value of x) {
+        ret.push(deepClone(value, visited));
+      }
+      visited.delete(x);
       return ret;
     }
     return x;
@@ -528,12 +552,12 @@ var WorkshopBackend = (() => {
         }
         if (scope4.defaultDetails) {
           if (isPlainObject(details)) {
-            details = into(shallowClone(scope4.defaultDetails), shallowClone(details));
+            details = into(shallowClone(scope4.defaultDetails), deepClone(details));
           } else {
             details = shallowClone(scope4.defaultDetails);
           }
         } else {
-          details = shallowClone(details);
+          details = deepClone(details);
         }
         var event = new LogicEvent(scope4, type, details, logic.tid);
         logic.emit("censorEvent", event);
@@ -16986,7 +17010,7 @@ var WorkshopBackend = (() => {
         return obj;
       }
       for (const [key, value] of Object.entries(obj)) {
-        if (key.charAt(0) === "_") {
+        if (key.charAt(0) === "_" || key.toLowerCase().includes("token")) {
           obj[key] = "Censored";
         } else if (Array.isArray(value)) {
           obj[key] = value.map(this.#censorValue.bind(this)).filter((x) => !!x);

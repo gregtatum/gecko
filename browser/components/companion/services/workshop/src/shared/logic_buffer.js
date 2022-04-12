@@ -70,7 +70,7 @@ export class LogicBuffer {
     }
 
     for (const [key, value] of Object.entries(obj)) {
-      if (key.charAt(0) === "_") {
+      if (key.charAt(0) === "_" || key.toLowerCase().includes("token")) {
         obj[key] = "Censored";
       } else if (Array.isArray(value)) {
         obj[key] = value.map(this.#censorValue.bind(this)).filter(x => !!x);

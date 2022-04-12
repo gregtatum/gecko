@@ -301,12 +301,12 @@ logic.event = function(scope, type, details) {
 
   if (scope.defaultDetails) {
     if (isPlainObject(details)) {
-      details = into(shallowClone(scope.defaultDetails), shallowClone(details));
+      details = into(shallowClone(scope.defaultDetails), deepClone(details));
     } else {
       details = shallowClone(scope.defaultDetails);
     }
   } else {
-    details = shallowClone(details);
+    details = deepClone(details);
   }
 
   var event = new LogicEvent(scope, type, details, logic.tid);
@@ -827,7 +827,7 @@ LogicEvent.prototype = {
 };
 
 function isPlainObject(obj) {
-  if (!obj || typeof obj !== "object") {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
     return false;
   }
   // Object.create(null) has no .toString().
@@ -978,6 +978,33 @@ function shallowClone(x) {
     for (var key in x) {
       ret[key] = x[key];
     }
+    return ret;
+  }
+  return x;
+}
+
+function deepClone(x, visited = new WeakSet()) {
+  if (visited.has(x)) {
+    return "<Cycle>";
+  }
+
+  if (isPlainObject(x)) {
+    visited.add(x);
+    const ret = Object.create(null);
+    for (const [key, value] of Object.entries(x)) {
+      ret[key] = deepClone(value, visited);
+    }
+    visited.delete(x);
+    return ret;
+  }
+
+  if (Array.isArray(x)) {
+    const ret = [];
+    visited.add(x);
+    for (const value of x) {
+      ret.push(deepClone(value, visited));
+    }
+    visited.delete(x);
     return ret;
   }
   return x;
