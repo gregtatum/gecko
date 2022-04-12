@@ -235,10 +235,6 @@ class WorkshopHelper {
   }
 
   async createAccount() {
-    if (!this.workshopAPI) {
-      this.workshopAPI = await this.startBackend({});
-    }
-
     if (!this.account) {
       const { account } = await this.workshopAPI.tryToCreateAccount(
         {},
@@ -307,7 +303,8 @@ class WorkshopHelper {
    */
   async startBackend({ waitFor = "accountsLoaded" }) {
     if (sharedWorkshopAPI) {
-      return sharedWorkshopAPI;
+      this.workshopAPI = sharedWorkshopAPI;
+      return;
     }
 
     if (this.#apiContentPage) {
@@ -368,7 +365,7 @@ class WorkshopHelper {
     console.log("done waiting for", waitFor);
 
     sharedWorkshopAPI = workshopAPI;
-    return workshopAPI;
+    this.workshopAPI = sharedWorkshopAPI;
   }
 }
 
@@ -398,6 +395,7 @@ class CompanionHelper {
           "www.googleapis.com",
         ],
       });
+      await workshopHelper.startBackend({});
 
       helper = new CompanionHelper(
         browserWindow,
