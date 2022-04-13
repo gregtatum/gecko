@@ -3,6 +3,9 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :root {
+  --companion-sidebar-button-flow-reset-fill-color: ButtonText;
+  --companion-sidebar-button-selected-fill-color: ButtonText;
+  --companion-sidebar-button-selected-flow-reset-bg-color: ButtonFace;
   --avm-button-border-color: ButtonText;
   --avm-button-fill-color: ButtonText;
   --avm-button-bgcolor: ButtonFace;

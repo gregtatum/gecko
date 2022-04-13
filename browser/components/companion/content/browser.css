@@ -421,13 +421,15 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
 
 #companion-sidebar-button > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion.svg");
-  fill: var(--colors-icons);
 }
 
 /* When the companion is open, show the alternate icon */
 :root[companion] #companion-sidebar-button > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion-selected.svg");
-  fill: var(--colors-lavender-70);
+}
+
+:root[companion] body:not([flow-reset]) #companion-sidebar-button {
+  fill: var(--companion-sidebar-button-selected-fill-color);
 }
 
 @media (-moz-windows-compositor) {
@@ -874,13 +876,12 @@ body[flow-reset] #urlbar[open] #urlbar-background {
 /* Switch to white fill when in flow-reset state, since the background is darker. */
 :root:not([companion]) body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion.svg");
-  fill: #ffffff;
+  fill: var(--companion-sidebar-button-flow-reset-fill-color);
 }
 
 :root[companion] body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion-selected.svg");
-  fill: #ffffff;
-  background-color: var(--colors-lavender-60);
+  background-color: var(--companion-sidebar-button-selected-flow-reset-bg-color);
 }
 
 /* Specifically the hamburger menu is getting the lighter pressed color, so
@@ -888,7 +889,6 @@ body[flow-reset] #urlbar[open] #urlbar-background {
 body[flow-reset] #PanelUI-menu-button[open] .toolbarbutton-badge-stack {
   background-color: rgba(0, 0, 0, 0.3);
 }
-
 
 companion-manager {
   background: var(--colors-cafe-20);
