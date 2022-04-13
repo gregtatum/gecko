@@ -366,12 +366,27 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   margin-inline: 12px;
 }
 
+/**
+ * The theme of pinebuild currently uses a border-radius to make the background
+ * color when hovered/active circular.
+ * 
+ * Per https://drafts.csswg.org/css-backgrounds/#corner-clipping, border-radius clips
+ * at the content-edge, and not at the padding edge for replaced elements (which is
+ * what the toolbarbutton-icon image is). This means that the icons themselves become
+ * clipped at the corners. We work around this by not using a replaced element, and
+ * instead setting the background-image on our round toolbarbutton-icons directly.
+ */
+toolbar .toolbarbutton-1 > .toolbarbutton-icon {
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
 #pinebuild-back-button > .toolbarbutton-icon {
-  background: url("chrome://browser/skin/back.svg") no-repeat center;
+  background-image: url("chrome://browser/skin/back.svg");
 }
 
 #pinebuild-forward-button > .toolbarbutton-icon {
-  background: url("chrome://browser/skin/forward.svg") no-repeat center;
+  background-image: url("chrome://browser/skin/forward.svg");
   display: none;
 }
 
@@ -381,22 +396,12 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   }
 }
 
-#pinebuild-toolbar toolbarbutton:not(#companion-sidebar-button):not([disabled]):hover .toolbarbutton-icon,
-#session-setaside-button:hover .toolbarbutton-icon {
-  background-color: var(--colors-warm-hover-02);
-}
-
-#pinebuild-toolbar toolbarbutton:not(#companion-sidebar-button):not([disabled]):active .toolbarbutton-icon,
-#session-setaside-button:active .toolbarbutton-icon {
-  background-color: var(--colors-warm-pressed-02);
-}
-
 #pinebuild-reload-button > .toolbarbutton-icon {
-  background: url("chrome://global/skin/icons/reload.svg") no-repeat center;
+  background-image: url("chrome://global/skin/icons/reload.svg");
 }
 
 #pinebuild-stop-button > .toolbarbutton-icon {
-  background: url("chrome://global/skin/icons/close.svg") no-repeat center;
+  background-image: url("chrome://global/skin/icons/close.svg");
 }
 
 #pinebuild-reload-button[displaystop],
@@ -411,7 +416,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 }
 
 #pinebuild-snapshot-button {
-  background: url("chrome://global/skin/icons/highlights.svg") no-repeat center;
+  background-image: url("chrome://global/skin/icons/highlights.svg");
 }
 
 #companion-sidebar-button {
@@ -856,7 +861,7 @@ body[flow-reset] #urlbar[open] #urlbar-background {
 }
 
 #session-setaside-button > .toolbarbutton-icon {
-  background: url("chrome://browser/skin/session-setaside.svg") no-repeat center;
+  background-image: url("chrome://browser/skin/session-setaside.svg");
 }
 
 .confirmation {
