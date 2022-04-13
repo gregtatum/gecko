@@ -5,6 +5,7 @@
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import { css, html } from "chrome://browser/content/companion/lit.all.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
+import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 
 export default class River extends MozLitElement {
   #views;
@@ -37,6 +38,7 @@ export default class River extends MozLitElement {
     this.overflowedViews = [];
     this.addEventListener("dragover", this.#onDragOver);
     this.addEventListener("drop", this.#onDrop);
+    this.addEventListener("keyup", this.#onKeyUp);
   }
 
   isEmpty() {
@@ -48,6 +50,38 @@ export default class River extends MozLitElement {
       this.overflowedViews.includes(view) ||
       this.viewGroups.some(group => group.includes(view))
     );
+  }
+
+  #onKeyUp(event) {
+    if (
+      !(event.composedTarget instanceof ViewGroupElement) ||
+      !(
+        event.keyCode == KeyEvent.DOM_VK_LEFT ||
+        event.keyCode == KeyEvent.DOM_VK_RIGHT
+      )
+    ) {
+      return;
+    }
+
+    let viewGroup = event.composedTarget;
+    let sibling;
+    if (event.keyCode == KeyEvent.DOM_VK_LEFT) {
+      if (document.dir == "ltr") {
+        sibling = viewGroup.previousElementSibling;
+      } else {
+        sibling = viewGroup.nextElementSibling;
+      }
+    } else if (event.keyCode == KeyEvent.DOM_VK_RIGHT) {
+      if (document.dir == "ltr") {
+        sibling = viewGroup.nextElementSibling;
+      } else {
+        sibling = viewGroup.previousElementSibling;
+      }
+    }
+
+    if (sibling) {
+      sibling.focus();
+    }
   }
 
   #onOverflowClick(event) {
