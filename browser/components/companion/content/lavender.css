@@ -130,10 +130,12 @@
     --focus-outline-color: var(--colors-border-focus);
     --toolbarbutton-hover-background: var(--colors-warm-hover-02);
     --toolbarbutton-active-background: var(--colors-warm-pressed-02);
+    --pinebuild-toolbarbutton-border: none;
 
     --companion-sidebar-button-flow-reset-fill-color: var(--colors-white);
     --companion-sidebar-button-selected-fill-color: var(--colors-lavender-70);
     --companion-sidebar-button-selected-flow-reset-bg-color: var(--colors-lavender-60);
+    --companion-sidebar-button-border-radius: var(--toolbarbutton-border-radius);
 
     --quickactions-topsites-outset-shadow: -1px 1px 4px 0px rgba(69, 36, 135, 0.14);
 

@@ -421,6 +421,7 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
 
 #companion-sidebar-button > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion.svg");
+  border-radius: var(--companion-sidebar-button-border-radius);
 }
 
 /* When the companion is open, show the alternate icon */
@@ -937,6 +938,11 @@ body[flow-reset] companion-manager {
 toolbar .toolbarbutton-1 > .toolbarbutton-icon {
   width: 32px;
   height: 32px;
+}
+
+toolbar .toolbarbutton-1 > .toolbarbutton-icon,
+toolbar .toolbarbutton-1 > .toolbarbutton-badge-stack {
+  border: var(--pinebuild-toolbarbutton-border);
 }
 
 toolbar .toolbarbutton-1 {
