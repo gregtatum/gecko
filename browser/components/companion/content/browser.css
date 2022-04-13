@@ -419,31 +419,15 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
   background-image: url("chrome://global/skin/icons/highlights.svg");
 }
 
-#companion-sidebar-button {
-  background: url("chrome://browser/skin/companion.svg") no-repeat center;
-  -moz-context-properties: fill;
+#companion-sidebar-button > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/companion.svg");
   fill: var(--colors-icons);
-  margin-block: auto;
-  margin-inline: 20px 8px;
-  width: 32px;
-  height: 32px;
 }
 
 /* When the companion is open, show the alternate icon */
-:root[companion] #companion-sidebar-button {
-  background: url("chrome://browser/skin/companion-selected.svg") no-repeat center;
-  -moz-context-properties: fill;
+:root[companion] #companion-sidebar-button > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/companion-selected.svg");
   fill: var(--colors-lavender-70);
-}
-
-#companion-sidebar-button:hover,
-:root[companion] #companion-sidebar-button:hover {
-  background-color: var(--colors-warm-hover-02);
-}
-
-#companion-sidebar-button:active,
-:root[companion] #companion-sidebar-button:active {
-  background-color: var(--colors-warm-pressed-02);
 }
 
 @media (-moz-windows-compositor) {
@@ -887,32 +871,16 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   opacity: 0;
 }
 
-#companion-sidebar-button {
-  border-radius: 50%;
-  box-sizing: border-box;
-}
-
-#companion-sidebar-button:hover > .toolbarbutton-icon {
-  background-color: transparent;
-}
-
 /* Switch to white fill when in flow-reset state, since the background is darker. */
 :root:not([companion]) body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
-  background: url("chrome://browser/skin/companion.svg") no-repeat center;
-  -moz-context-properties: fill;
+  background-image: url("chrome://browser/skin/companion.svg");
   fill: #ffffff;
 }
 
 :root[companion] body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
-  background: url("chrome://browser/skin/companion-selected.svg") no-repeat center;
-  -moz-context-properties: fill;
+  background-image: url("chrome://browser/skin/companion-selected.svg");
   fill: #ffffff;
   background-color: var(--colors-lavender-60);
-}
-
-:root[companion] body[flow-reset] #companion-sidebar-button:hover,
-:root:not([companion]) body[flow-reset] #companion-sidebar-button:hover {
-  background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* Specifically the hamburger menu is getting the lighter pressed color, so
