@@ -369,7 +369,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 /**
  * The theme of pinebuild currently uses a border-radius to make the background
  * color when hovered/active circular.
- * 
+ *
  * Per https://drafts.csswg.org/css-backgrounds/#corner-clipping, border-radius clips
  * at the content-edge, and not at the padding edge for replaced elements (which is
  * what the toolbarbutton-icon image is). This means that the icons themselves become
