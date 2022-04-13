@@ -41,12 +41,23 @@ export default class ViewGroupElement extends MozLitElement {
     this.viewGroup = null;
     this.activeView = null;
     this.busyAnimationTimeout = null;
-    this.addEventListener("click", this.#onClick);
+    this.addEventListener("click", this.#onViewGroupSelected);
+    this.addEventListener("keyup", this.#onViewGroupSelected);
     this.addEventListener("auxclick", this.#onAuxClick);
     this.#slidingWindowIndex = -1;
   }
 
-  #onClick(event) {
+  #onViewGroupSelected(event) {
+    if (
+      event.type == "keyup" &&
+      !(
+        event.keyCode == KeyEvent.DOM_VK_RETURN ||
+        event.keyCode == KeyEvent.DOM_VK_SPACE
+      )
+    ) {
+      return;
+    }
+
     let e = new CustomEvent("UserAction:ViewGroupSelected", {
       bubbles: true,
       composed: true,
@@ -83,7 +94,7 @@ export default class ViewGroupElement extends MozLitElement {
       detail: { clickedView: view },
     });
     this.dispatchEvent(e);
-    // We don't want this to get handled by the #onClick handler, since
+    // We don't want this to get handled by the #onViewGroupSelected handler, since
     // that will then switch to the last View in this group.
     event.stopPropagation();
   }
@@ -95,7 +106,7 @@ export default class ViewGroupElement extends MozLitElement {
       detail: { view: this.activeView },
     });
     this.dispatchEvent(e);
-    // We don't want this to get handled by the #onClick handler, since
+    // We don't want this to get handled by the #onViewGroupSelected handler, since
     // that will then switch to the last View in this group.
     event.stopPropagation();
   }
