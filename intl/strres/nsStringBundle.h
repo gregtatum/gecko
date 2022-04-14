@@ -12,10 +12,13 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsCOMArray.h"
+#include "nsWeakReference.h"
 
 class nsIPersistentProperties;
 
-class nsStringBundleBase : public nsIStringBundle, public nsIMemoryReporter {
+class nsStringBundleBase : public nsIStringBundle,
+                           public nsIMemoryReporter,
+                           public nsSupportsWeakReference {
  public:
   MOZ_DEFINE_MALLOC_SIZE_OF(MallocSizeOf)
 

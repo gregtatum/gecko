@@ -83,8 +83,8 @@ add_task(async function test_stringBundleInvalidation() {
   );
   Assert.equal(
     testOnlyBundle.GetStringFromName("testOnly"),
-    "Mensaje solo para pruebas",
-    "Existing string bundles are retained."
+    "Message de test uniquement",
+    "The string bundle has been invalidated."
   );
 
   Assert.equal(
