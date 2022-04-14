@@ -5,6 +5,7 @@
 
 #include "nsStringBundle.h"
 #include "nsID.h"
+#include "nsIWeakReference.h"
 #include "nsString.h"
 #include "nsIStringBundle.h"
 #include "nsStringBundleService.h"
@@ -280,7 +281,8 @@ RefPtr<T> MakeBundleRefPtr(Args... args) {
 
 }  // anonymous namespace
 
-NS_IMPL_ISUPPORTS(nsStringBundleBase, nsIStringBundle, nsIMemoryReporter)
+NS_IMPL_ISUPPORTS(nsStringBundleBase, nsIStringBundle, nsIMemoryReporter,
+                  nsISupportsWeakReference)
 
 NS_IMPL_ISUPPORTS_INHERITED0(nsStringBundle, nsStringBundleBase)
 NS_IMPL_ISUPPORTS_INHERITED(SharedStringBundle, nsStringBundleBase,
@@ -721,9 +723,9 @@ nsStringBundleService::nsStringBundleService()
 NS_IMPL_ISUPPORTS(nsStringBundleService, nsIStringBundleService, nsIObserver,
                   nsISupportsWeakReference, nsIMemoryReporter)
 
-NS_INTERFACE_MAP_BEGIN(nsStringBundleBase)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-NS_INTERFACE_MAP_END
+// NS_INTERFACE_MAP_BEGIN(nsStringBundleBase)
+//   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+// NS_INTERFACE_MAP_END
 
 nsStringBundleService::~nsStringBundleService() {
   UnregisterWeakMemoryReporter(this);

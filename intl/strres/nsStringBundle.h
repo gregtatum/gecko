@@ -18,7 +18,7 @@ class nsIPersistentProperties;
 
 class nsStringBundleBase : public nsIStringBundle,
                            public nsIMemoryReporter,
-                           public nsISupportsWeakReference {
+                           public nsSupportsWeakReference {
  public:
   MOZ_DEFINE_MALLOC_SIZE_OF(MallocSizeOf)
 
