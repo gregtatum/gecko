@@ -5,6 +5,7 @@
 
 #include "nsStringBundle.h"
 #include "nsID.h"
+#include "nsIWeakReference.h"
 #include "nsString.h"
 #include "nsIStringBundle.h"
 #include "nsStringBundleService.h"
@@ -280,7 +281,8 @@ RefPtr<T> MakeBundleRefPtr(Args... args) {
 
 }  // anonymous namespace
 
-NS_IMPL_ISUPPORTS(nsStringBundleBase, nsIStringBundle, nsIMemoryReporter)
+NS_IMPL_ISUPPORTS(nsStringBundleBase, nsIStringBundle, nsIMemoryReporter,
+                  nsISupportsWeakReference)
 
 NS_IMPL_ISUPPORTS_INHERITED0(nsStringBundle, nsStringBundleBase)
 NS_IMPL_ISUPPORTS_INHERITED(SharedStringBundle, nsStringBundleBase,
@@ -319,6 +321,14 @@ nsStringBundleBase::AsyncPreload() {
       NewIdleRunnableMethod("nsStringBundleBase::LoadProperties", this,
                             &nsStringBundleBase::LoadProperties),
       EventQueuePriority::Idle);
+}
+
+NS_IMETHODIMP
+nsStringBundleBase::Reset() {
+  MutexAutoLock autolock(mMutex);
+  mAttemptedLoad = false;
+  mLoaded = false;
+  return NS_OK;
 }
 
 size_t nsStringBundle::SizeOfIncludingThis(
@@ -476,7 +486,7 @@ nsresult nsStringBundle::LoadProperties() {
     return NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
   }
 
-  if (mProps) {
+  if (mLoaded && mProps) {
     return NS_OK;
   }
   return ParseProperties(getter_AddRefs(mProps));
@@ -746,9 +756,11 @@ NS_IMETHODIMP
 nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
                                const char16_t* aSomeData) {
   if (strcmp("profile-do-change", aTopic) == 0 ||
-      strcmp("chrome-flush-caches", aTopic) == 0 ||
-      strcmp("intl:app-locales-changed", aTopic) == 0) {
+      strcmp("chrome-flush-caches", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ false);
+  } else if (strcmp("intl:app-locales-changed", aTopic) == 0) {
+    flushBundleCache(/* ignoreShared = */ false);
+    invalidateKnownBundles();
   } else if (strcmp("memory-pressure", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ true);
   }
@@ -771,6 +783,27 @@ void nsStringBundleService::flushBundleCache(bool ignoreShared) {
   }
 
   mBundleCache = std::move(newList);
+}
+
+void nsStringBundleService::invalidateKnownBundles() {
+  for (const nsWeakPtr& ptr : mKnownBundles) {
+    if (nsCOMPtr<nsIStringBundle> bundle = do_QueryReferent(ptr)) {
+      bundle->Reset();
+    }
+  }
+  compactKnownBundles();
+}
+
+void nsStringBundleService::compactKnownBundles() {
+  nsTArray<nsWeakPtr> compacted;
+  for (const nsWeakPtr& ptr : mKnownBundles) {
+    if (nsCOMPtr<nsIStringBundle> bundle = do_QueryReferent(ptr)) {
+      compacted.AppendElement(do_GetWeakReference(bundle));
+    }
+  }
+  mKnownBundles = std::move(compacted);
+  mNextKnownBundleCompaction =
+      std::max(FIRST_COMPACTION, mKnownBundles.Length() + COMPACTION_INTERVAL);
 }
 
 NS_IMETHODIMP
@@ -863,6 +896,11 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
         bundle = new StringBundleProxy(bundle.forget());
       }
     }
+
+    if (mKnownBundles.Length() > mNextKnownBundleCompaction) {
+      compactKnownBundles();
+    }
+    mKnownBundles.AppendElement(do_GetWeakReference(bundle));
 
     cacheEntry = insertIntoCache(bundle.forget(), key);
   }

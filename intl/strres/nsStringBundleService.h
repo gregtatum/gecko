@@ -70,13 +70,34 @@ class nsStringBundleService : public nsIStringBundleService,
   bundleCacheEntry_t* insertIntoCache(already_AddRefed<nsIStringBundle> aBundle,
                                       const nsACString& aHashKey);
 
+  /**
+   * When the app locale changes, invalidate any live bundles so that the new
+   * language will be loaded in.
+   */
+  void invalidateKnownBundles();
+
+  /**
+   * The bundles are stored as weak references, occasionally compact this list
+   * so that it doesn't grow infinitely.
+   */
+  void compactKnownBundles();
+
   nsTHashMap<nsCStringHashKey, bundleCacheEntry_t*> mBundleMap;
   // LRU list of cached entries, with the least-recently-used entry first.
   mozilla::LinkedList<bundleCacheEntry_t> mBundleCache;
   // List of cached shared-memory string bundles, in arbitrary order.
   mozilla::AutoCleanLinkedList<bundleCacheEntry_t> mSharedBundles;
+  // List of known bundles that can be invalidated when the app locale changes.
+  nsTArray<nsWeakPtr> mKnownBundles;
 
   nsCOMPtr<nsIErrorService> mErrorService;
+
+  // At the time of this writing, there were ~20 string bundles loaded when
+  // opening the Firefox and about:blank, and this number should only go down
+  // as .properties are migrated to .ftl files.
+  const static size_t FIRST_COMPACTION = 30;
+  const static size_t COMPACTION_INTERVAL = 10;
+  size_t mNextKnownBundleCompaction = FIRST_COMPACTION;
 };
 
 #endif
