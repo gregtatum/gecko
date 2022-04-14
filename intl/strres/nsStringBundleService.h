@@ -70,11 +70,15 @@ class nsStringBundleService : public nsIStringBundleService,
   bundleCacheEntry_t* insertIntoCache(already_AddRefed<nsIStringBundle> aBundle,
                                       const nsACString& aHashKey);
 
+  void invalidateKnownBundles();
+
   nsTHashMap<nsCStringHashKey, bundleCacheEntry_t*> mBundleMap;
   // LRU list of cached entries, with the least-recently-used entry first.
   mozilla::LinkedList<bundleCacheEntry_t> mBundleCache;
   // List of cached shared-memory string bundles, in arbitrary order.
   mozilla::AutoCleanLinkedList<bundleCacheEntry_t> mSharedBundles;
+  // List of known bundles that can be invalidated when the app locale changes.
+  nsTArray<nsWeakPtr> mKnownBundles;
 
   nsCOMPtr<nsIErrorService> mErrorService;
 };

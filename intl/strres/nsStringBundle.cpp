@@ -321,6 +321,14 @@ nsStringBundleBase::AsyncPreload() {
       EventQueuePriority::Idle);
 }
 
+NS_IMETHODIMP
+nsStringBundleBase::Reset() {
+  MutexAutoLock autolock(mMutex);
+  mAttemptedLoad = false;
+  mLoaded = false;
+  return NS_OK;
+}
+
 size_t nsStringBundle::SizeOfIncludingThis(
     mozilla::MallocSizeOf aMallocSizeOf) const {
   size_t n = 0;
@@ -713,6 +721,10 @@ nsStringBundleService::nsStringBundleService()
 NS_IMPL_ISUPPORTS(nsStringBundleService, nsIStringBundleService, nsIObserver,
                   nsISupportsWeakReference, nsIMemoryReporter)
 
+NS_INTERFACE_MAP_BEGIN(nsStringBundleBase)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+NS_INTERFACE_MAP_END
+
 nsStringBundleService::~nsStringBundleService() {
   UnregisterWeakMemoryReporter(this);
   flushBundleCache(/* ignoreShared = */ false);
@@ -746,9 +758,11 @@ NS_IMETHODIMP
 nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
                                const char16_t* aSomeData) {
   if (strcmp("profile-do-change", aTopic) == 0 ||
-      strcmp("chrome-flush-caches", aTopic) == 0 ||
-      strcmp("intl:app-locales-changed", aTopic) == 0) {
+      strcmp("chrome-flush-caches", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ false);
+  } else if (strcmp("intl:app-locales-changed", aTopic) == 0) {
+    flushBundleCache(/* ignoreShared = */ false);
+    invalidateKnownBundles();
   } else if (strcmp("memory-pressure", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ true);
   }
@@ -771,6 +785,17 @@ void nsStringBundleService::flushBundleCache(bool ignoreShared) {
   }
 
   mBundleCache = std::move(newList);
+}
+
+void nsStringBundleService::invalidateKnownBundles() {
+  nsTArray<nsWeakPtr> compacted;
+  for (const nsWeakPtr& ptr : mKnownBundles) {
+    if (nsCOMPtr<nsIStringBundle> bundle = do_QueryReferent(ptr)) {
+      bundle->Reset();
+      compacted.AppendElement(do_GetWeakReference(bundle));
+    }
+  }
+  mKnownBundles = std::move(compacted);
 }
 
 NS_IMETHODIMP
@@ -862,6 +887,17 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
       } else {
         bundle = new StringBundleProxy(bundle.forget());
       }
+    }
+
+    mKnownBundles.AppendElement(do_GetWeakReference(bundle));
+
+    nsresult error;
+    nsWeakPtr bundleRef = do_GetWeakReference(bundle, &error);
+    if (nsCOMPtr<nsIStringBundle> bundle =
+            do_QueryReferent(mKnownBundles.LastElement())) {
+      printf("!!! (%d) Able to get the bundle.\n", getpid());
+    } else {
+      printf("!!! (%d) Unable to get the bundle.\n", getpid());
     }
 
     cacheEntry = insertIntoCache(bundle.forget(), key);
