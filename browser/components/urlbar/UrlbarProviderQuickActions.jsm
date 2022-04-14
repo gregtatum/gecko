@@ -188,7 +188,7 @@ const COMMANDS = {
     callback: () => {
       Services.obs.notifyObservers(null, "menuitem-screenshot-extension");
     },
-    title: "Pro Client",
+    title: "Flowstate",
   },
   preferences: {
     commands: ["preferences"],
@@ -196,7 +196,7 @@ const COMMANDS = {
     label: "Open Preferences",
     hide: extraActionsEnabled,
     url: "about:preferences",
-    title: "Pro Client",
+    title: "Flowstate",
   },
   downloads: {
     commands: ["downloads"],
@@ -204,7 +204,7 @@ const COMMANDS = {
     label: "Open Downloads",
     hide: extraActionsEnabled,
     url: "about:downloads",
-    title: "Pro Client",
+    title: "Flowstate",
   },
   privacy: {
     commands: ["privacy", "private"],
@@ -212,7 +212,7 @@ const COMMANDS = {
     label: "Open Preferences (Privacy & Security)",
     hide: extraActionsEnabled,
     callback: "about:preferences#privacy",
-    title: "Pro Client",
+    title: "Flowstate",
   },
   viewsource: {
     commands: ["view-source"],
@@ -224,7 +224,7 @@ const COMMANDS = {
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
       UrlbarUtils.openUrl("view-source:" + spec);
     },
-    title: "Pro Client",
+    title: "Flowstate",
   },
   inspect: {
     commands: ["inspector"],
@@ -237,7 +237,7 @@ const COMMANDS = {
         BrowserWindowTracker.getTopWindow().gBrowser.selectedTab
       );
     },
-    title: "Pro Client",
+    title: "Flowstate",
   },
   // TODO: Included this to as I think it highlights some potential danger. It was the most
   // used command in the gcli however I expect a lot of users would be surprised if we restarted
@@ -248,7 +248,7 @@ const COMMANDS = {
     label: "Restart Firefox",
     hide: extraActionsEnabled,
     callback: restartBrowser,
-    title: "Pro Client",
+    title: "Flowstate",
   },
 };
 
@@ -290,7 +290,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
 
     let children = [...Array(MAX_RESULTS).keys()].map(i => {
-      // reorder child nodes for Pro Client
+      // reorder child nodes for Flowstate
       if (AppConstants.PINEBUILD) {
         return {
           name: `button-${i}`,

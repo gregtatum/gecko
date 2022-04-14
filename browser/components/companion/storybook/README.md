@@ -1,4 +1,4 @@
-= Storybook for Pro Client
+= Storybook for Flowstate
 
 Storybook is a component library to document our design system, reusable
 components and any specific components you might want to test with dummy data.

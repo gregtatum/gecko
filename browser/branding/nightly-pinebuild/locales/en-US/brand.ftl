@@ -16,11 +16,11 @@
 ## For further details, consult:
 ## https://mozilla-l10n.github.io/styleguides/mozilla_general/#brands-copyright-and-trademark
 
--brand-shorter-name = Pro Client
--brand-short-name = Pro Client
--brand-full-name = Pro Client
+-brand-shorter-name = Flowstate
+-brand-short-name = Flowstate
+-brand-full-name = Flowstate
 # This brand name can be used in messages where the product name needs to
 # remain unchanged across different versions (Nightly, Beta, etc.).
--brand-product-name = Pro Client
+-brand-product-name = Flowstate
 -vendor-short-name = Mozilla
 trademarkInfo = { " " }

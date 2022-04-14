@@ -4,7 +4,7 @@
 "use strict";
 
 /**
- * Tests that top level navigation the in the Pro Client creates a new view in the Active View Manager.
+ * Tests that top level navigation the in the Flowstate creates a new view in the Active View Manager.
  */
 
 add_task(async function test_add_view_navigation() {

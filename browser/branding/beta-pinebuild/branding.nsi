@@ -8,8 +8,8 @@
 
 # BrandFullNameInternal is used for some registry and file system values
 # instead of BrandFullName and typically should not be modified.
-!define BrandFullNameInternal "Pro Client"
-!define BrandFullName         "Pro Client"
+!define BrandFullNameInternal "Flowstate"
+!define BrandFullName         "Flowstate"
 !define CompanyName           "mozilla.org"
 !define URLInfoAbout          "https://www.mozilla.org"
 !define HelpLink              "https://support.mozilla.org"

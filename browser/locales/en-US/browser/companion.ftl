@@ -111,7 +111,7 @@ companion-event-break = { $duration } minute break
 # Shown on the companion onboarding card when visiting a site that we support
 # integrations for, but the user hasn't signed in. Ex: Google [Connect]
 companion-onboarding-service-connect = Connect
-# Shown on the companion onboarding card when a user has signed in to ProClient
+# Shown on the companion onboarding card when a user has signed in to Flowstate
 # with a service.
 companion-onboarding-service-connected = Connected
 # Shown on the companion onboarding card when a user has started to connect to a
@@ -140,7 +140,7 @@ session-pages-count = { $pages } sites
 session-cleared-title = Start fresh
 session-cleared = Your last session has been saved in <a data-l10n-name="session-cleared-link">Browse</a>
 
-# This is shown when you try to install an addon in the Pro Client that is not on the allowed list.
+# This is shown when you try to install an addon in Flowstate that is not on the allowed list.
 # It overrides the default message that is normally used by enterprise policy.
 addons-unsupported = { -brand-short-name } does not support this extension.
 

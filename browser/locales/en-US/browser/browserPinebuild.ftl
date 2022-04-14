@@ -37,7 +37,7 @@ page-action-more =
 
 last-session-saved = Last session saved in Companion
 
-# Pro Client connection security strings.
+# Flowstate connection security strings.
 page-action-menu-secure-page = This website is using a secure connection.
 page-action-menu-reader-view = This page is in Reader View.
 

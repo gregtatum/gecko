@@ -825,7 +825,7 @@ body[flow-reset] #urlbar:not([open])[breakout] > #urlbar-background,
 body[flow-reset] #urlbar[breakout] > #urlbar-input-container {
   height: calc(1.5 * var(--urlbar-height));
   font-size: 16px;
-  /* We use a margin variable in a padding rule because the Pro Client Urlbar
+  /* We use a margin variable in a padding rule because the Flowstate Urlbar
      shifts some of the Firefox Urlbar global margin rules to instead apply to
      individual elements. We must reflect that margin in the unopened flow-reset
      Urlbar so that the search icon doesn't jump when the Urlbar is opened. */
