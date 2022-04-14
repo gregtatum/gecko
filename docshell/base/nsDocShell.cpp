@@ -12918,15 +12918,6 @@ bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
     return false;
   }
 
-  nsAutoCString linkHost;
-  bool validHost = !NS_FAILED(aLinkURI->GetHost(linkHost));
-
-  if (mBrowsingContext->TargetTopLevelLinkClicksToBlank() &&
-      mBrowsingContext->IsTop() && UserActivation::IsHandlingUserInput() &&
-      validHost) {
-    return true;
-  }
-
   // Only check targets that are in extension panels or app tabs.
   // (isAppTab will be false for app tab subframes).
   nsString mmGroup = mBrowsingContext->Top()->GetMessageManagerGroup();
