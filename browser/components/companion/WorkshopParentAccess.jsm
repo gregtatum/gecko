@@ -34,6 +34,8 @@ const WorkshopParentAccess = {
   },
   async _initInternal() {
     if (this.workshopEnabled && !this.workshopAPI) {
+      // Keep a reference to `windowlessBrowser`. If it gets garbage collected
+      // prematurely we can no longer communicate with the shared worker.
       this.windowlessBrowser = Services.appShell.createWindowlessBrowser(
         true,
         0

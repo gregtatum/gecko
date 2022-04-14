@@ -63,6 +63,9 @@ registerCleanupFunction(async () => {
 
   // Cleanup the Workshop object used in the tests.
   sharedWorkshopAPI?.willDie();
+  sharedWorkshopAPI = null;
+  sharedRedirector = null;
+  sharedServer = null;
 
   // Move the cursor out of the companion area to avoid messing with other tests.
   EventUtils.synthesizeMouse(gNavToolbox, 0, 0, { type: "mousemove" });
@@ -312,7 +315,17 @@ class WorkshopHelper {
       this.#apiContentPage = null;
     }
 
-    this.windowlessBrowser = Services.appShell.createWindowlessBrowser(true, 0);
+    // Keep a reference to `windowlessBrowser`. If it gets garbage collected
+    // prematurely we can no longer communicate with the shared worker.
+    const browser = (this.windowlessBrowser = Services.appShell.createWindowlessBrowser(
+      true,
+      0
+    ));
+    // Ensure that we clean up every browser we create, which we can create more
+    // than one of.
+    registerCleanupFunction(() => {
+      browser.close();
+    });
 
     let system = Services.scriptSecurityManager.getSystemPrincipal();
 
