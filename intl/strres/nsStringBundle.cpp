@@ -757,10 +757,15 @@ size_t nsStringBundleService::SizeOfIncludingThis(
 NS_IMETHODIMP
 nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
                                const char16_t* aSomeData) {
+  printf("!!! (%d) nsStringBundleService::Observe: %s \n", getpid(), aTopic);
   if (strcmp("profile-do-change", aTopic) == 0 ||
       strcmp("chrome-flush-caches", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ false);
   } else if (strcmp("intl:app-locales-changed", aTopic) == 0) {
+    printf(
+        "!!! (%d) nsStringBundleService::Observe \"intl:app-locales-changed\": "
+        "%s \n",
+        getpid(), aTopic);
     flushBundleCache(/* ignoreShared = */ false);
     invalidateKnownBundles();
   } else if (strcmp("memory-pressure", aTopic) == 0) {
@@ -789,13 +794,18 @@ void nsStringBundleService::flushBundleCache(bool ignoreShared) {
 
 void nsStringBundleService::invalidateKnownBundles() {
   nsTArray<nsWeakPtr> compacted;
+  printf("!!! (%d) invalidateKnownBundles before: %zu \n", getpid(),
+         mKnownBundles.Length());
   for (const nsWeakPtr& ptr : mKnownBundles) {
     if (nsCOMPtr<nsIStringBundle> bundle = do_QueryReferent(ptr)) {
       bundle->Reset();
+      printf("!!! (%d) Resetting a bundle\n", getpid());
       compacted.AppendElement(do_GetWeakReference(bundle));
     }
   }
   mKnownBundles = std::move(compacted);
+  printf("!!! (%d) invalidateKnownBundles after: %zu \n", getpid(),
+         mKnownBundles.Length());
 }
 
 NS_IMETHODIMP
@@ -889,10 +899,19 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
       }
     }
 
+    printf("!!! (%d) mKnownBundles: %zu, Adding the bundle %s\n", getpid(),
+           mKnownBundles.Length(), aURLSpec);
+
     mKnownBundles.AppendElement(do_GetWeakReference(bundle));
 
     nsresult error;
+    printf("!!! (%d) Bundle: %s\n", getpid(), bundle ? "value" : "null");
     nsWeakPtr bundleRef = do_GetWeakReference(bundle, &error);
+    if (bundleRef) {
+      printf("!!! (%d) bundleRef exists.\n", getpid());
+    } else {
+      printf("!!! (%d) bundleRef does not exist. %u\n", getpid(), error);
+    }
     if (nsCOMPtr<nsIStringBundle> bundle =
             do_QueryReferent(mKnownBundles.LastElement())) {
       printf("!!! (%d) Able to get the bundle.\n", getpid());
