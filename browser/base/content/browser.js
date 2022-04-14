@@ -5484,6 +5484,10 @@ var XULBrowserWindow = {
       this.reloadCommand.removeAttribute("disabled");
     }
 
+    let isSessionRestore = !!(
+      aFlags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SESSION_STORE
+    );
+
     // We want to update the popup visibility if we received this notification
     // via simulated locationchange events such as switching between tabs, however
     // if this is a document navigation then PopupNotifications will be updated
@@ -5493,7 +5497,7 @@ var XULBrowserWindow = {
     // it was typed by the user. So, don't bother showing anything when the
     // location changes. MR2-1939
     if (!AppConstants.PINEBUILD) {
-      gURLBar.setURI(aLocationURI, aIsSimulated);
+      gURLBar.setURI(aLocationURI, aIsSimulated, isSessionRestore);
     }
 
     BookmarkingUI.onLocationChange();
