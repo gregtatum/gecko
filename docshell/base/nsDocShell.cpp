@@ -12860,7 +12860,8 @@ nsresult nsDocShell::OnLinkClick(
 
   bool noOpenerImplied = false;
   nsAutoString target(aTargetSpec);
-  if (ShouldOpenInBlankTarget(aTargetSpec, aURI, aContent)) {
+  if (aFileName.IsVoid() &&
+      ShouldOpenInBlankTarget(aTargetSpec, aURI, aContent, aIsUserTriggered)) {
     target = u"_blank";
     if (!aTargetSpec.Equals(target)) {
       noOpenerImplied = true;
@@ -12886,8 +12887,32 @@ nsresult nsDocShell::OnLinkClick(
 }
 
 bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
-                                         nsIURI* aLinkURI,
-                                         nsIContent* aContent) {
+                                         nsIURI* aLinkURI, nsIContent* aContent,
+                                         bool aIsUserTriggered) {
+  if (net::SchemeIsJavascript(aLinkURI)) {
+    return false;
+  }
+
+  // External links from within app tabs should always open in new tabs
+  // instead of replacing the app tab's page (Bug 575561)
+  // nsIURI.host can throw for non-nsStandardURL nsIURIs. If we fail to
+  // get either host, just return false to use the original target.
+  nsAutoCString linkHost;
+  if (NS_FAILED(aLinkURI->GetHost(linkHost))) {
+    return false;
+  }
+
+  // The targetTopLevelLinkClicksToBlank property on BrowsingContext allows
+  // privileged code to change the default targeting behaviour. In particular,
+  // if a user-initiated link click for the (or targetting the) top-level frame
+  // is detected, we default the target to "_blank" to give it a new
+  // top-level BrowsingContext.
+  if (mBrowsingContext->TargetTopLevelLinkClicksToBlank() && aIsUserTriggered &&
+      ((aOriginalTarget.IsEmpty() && mBrowsingContext->IsTop()) ||
+       aOriginalTarget == u"_top"_ns)) {
+    return true;
+  }
+
   // Don't modify non-default targets.
   if (!aOriginalTarget.IsEmpty()) {
     return false;
@@ -12906,14 +12931,6 @@ bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
   // (isAppTab will be false for app tab subframes).
   nsString mmGroup = mBrowsingContext->Top()->GetMessageManagerGroup();
   if (!mmGroup.EqualsLiteral("webext-browsers") && !mIsAppTab) {
-    return false;
-  }
-
-  // External links from within app tabs should always open in new tabs
-  // instead of replacing the app tab's page (Bug 575561)
-  // nsIURI.host can throw for non-nsStandardURL nsIURIs. If we fail to
-  // get either host, just return false to use the original target.
-  if (!validHost) {
     return false;
   }
 

@@ -112,13 +112,7 @@ var gHomePane = {
       if (newValue !== menulist.value) {
         menulist.value = newValue;
       }
-      if (
-        AppConstants.PINEBUILD &&
-        Services.prefs.prefIsLocked(this.NEWTAB_ENABLED_PREF)
-      ) {
-        menulist.disabled = true;
-      }
-
+      menulist.disabled = Preferences.get(this.NEWTAB_ENABLED_PREF).locked;
       // If change was triggered by installing an addon we need to update
       // the value of the menulist to be that addon.
     } else {

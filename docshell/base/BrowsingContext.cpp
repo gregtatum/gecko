@@ -3483,7 +3483,7 @@ bool BrowsingContext::CanSet(
     FieldIndex<IDX_TargetTopLevelLinkClicksToBlankInternal>,
     const bool& aTargetTopLevelLinkClicksToBlankInternal,
     ContentParent* aSource) {
-  return XRE_IsParentProcess() && IsTop();
+  return XRE_IsParentProcess() && !aSource && IsTop();
 }
 
 bool BrowsingContext::CanSet(FieldIndex<IDX_BrowserId>, const uint32_t& aValue,
