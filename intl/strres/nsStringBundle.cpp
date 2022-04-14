@@ -486,7 +486,7 @@ nsresult nsStringBundle::LoadProperties() {
     return NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
   }
 
-  if (mProps) {
+  if (mLoaded && mProps) {
     return NS_OK;
   }
   return ParseProperties(getter_AddRefs(mProps));
@@ -759,7 +759,6 @@ size_t nsStringBundleService::SizeOfIncludingThis(
 NS_IMETHODIMP
 nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
                                const char16_t* aSomeData) {
-  printf("!!! (%d) nsStringBundleService::Observe: %s \n", getpid(), aTopic);
   if (strcmp("profile-do-change", aTopic) == 0 ||
       strcmp("chrome-flush-caches", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ false);
@@ -795,18 +794,35 @@ void nsStringBundleService::flushBundleCache(bool ignoreShared) {
 }
 
 void nsStringBundleService::invalidateKnownBundles() {
-  nsTArray<nsWeakPtr> compacted;
-  printf("!!! (%d) invalidateKnownBundles before: %zu \n", getpid(),
-         mKnownBundles.Length());
+  printf("!!! (%d) invalidateKnownBundles\n", getpid());
   for (const nsWeakPtr& ptr : mKnownBundles) {
     if (nsCOMPtr<nsIStringBundle> bundle = do_QueryReferent(ptr)) {
       bundle->Reset();
-      printf("!!! (%d) Resetting a bundle\n", getpid());
+      printf("!!! (%d) invalidateKnownBundles - Resetting a bundle\n",
+             getpid());
+    } else {
+      printf("!!! (%d) invalidateKnownBundles - Weak ref empty\n", getpid());
+    }
+  }
+  compactKnownBundles();
+}
+
+void nsStringBundleService::compactKnownBundles() {
+  nsTArray<nsWeakPtr> compacted;
+  printf("!!! (%d) compactKnownBundles before: %zu \n", getpid(),
+         mKnownBundles.Length());
+  for (const nsWeakPtr& ptr : mKnownBundles) {
+    if (nsCOMPtr<nsIStringBundle> bundle = do_QueryReferent(ptr)) {
+      printf("!!! (%d) compactKnownBundles Weak ref full\n", getpid());
       compacted.AppendElement(do_GetWeakReference(bundle));
+    } else {
+      printf("!!! (%d) compactKnownBundles Weak ref empty\n", getpid());
     }
   }
   mKnownBundles = std::move(compacted);
-  printf("!!! (%d) invalidateKnownBundles after: %zu \n", getpid(),
+  mNextKnownBundleCompaction =
+      std::max(FIRST_COMPACTION, mKnownBundles.Length() + COMPACTION_INTERVAL);
+  printf("!!! (%d) compactKnownBundles after: %zu \n", getpid(),
          mKnownBundles.Length());
 }
 
@@ -901,25 +917,14 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
       }
     }
 
-    printf("!!! (%d) mKnownBundles: %zu, Adding the bundle %s\n", getpid(),
-           mKnownBundles.Length(), aURLSpec);
-
+    printf(
+        "!!! (%d) mKnownBundles: %zu, mNextKnownBundleCompaction: %zu Adding "
+        "the bundle %s\n",
+        getpid(), mKnownBundles.Length(), mNextKnownBundleCompaction, aURLSpec);
+    if (mKnownBundles.Length() > mNextKnownBundleCompaction) {
+      compactKnownBundles();
+    }
     mKnownBundles.AppendElement(do_GetWeakReference(bundle));
-
-    nsresult error;
-    printf("!!! (%d) Bundle: %s\n", getpid(), bundle ? "value" : "null");
-    nsWeakPtr bundleRef = do_GetWeakReference(bundle, &error);
-    if (bundleRef) {
-      printf("!!! (%d) bundleRef exists.\n", getpid());
-    } else {
-      printf("!!! (%d) bundleRef does not exist. %u\n", getpid(), error);
-    }
-    if (nsCOMPtr<nsIStringBundle> bundle =
-            do_QueryReferent(mKnownBundles.LastElement())) {
-      printf("!!! (%d) Able to get the bundle.\n", getpid());
-    } else {
-      printf("!!! (%d) Unable to get the bundle.\n", getpid());
-    }
 
     cacheEntry = insertIntoCache(bundle.forget(), key);
   }
