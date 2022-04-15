@@ -13,14 +13,8 @@ const PAGE_3 = "http://mochi.test:8888/";
  * pressure events).
  */
 add_task(async function test_unloaded_view_wireframes() {
-  // We want to test the case where there are multiple browser elements
-  // in the DOM, so we turn on delegation to make it easier to ensure
-  // that a new browser gets created when a navigation occurs.
   await SpecialPowers.pushPrefEnv({
-    set: [
-      ["browser.tabs.openNewTabForMostNavigations", true],
-      ["browser.pagethumbnails.capturing_disabled", false],
-    ],
+    set: [["browser.pagethumbnails.capturing_disabled", false]],
   });
 
   await PinebuildTestUtils.loadViews([PAGE_1]);
@@ -32,16 +26,7 @@ add_task(async function test_unloaded_view_wireframes() {
   );
 
   let originalTab = gBrowser.selectedTab;
-
-  // Now do a navigation that will cause a delegation and a new browser to be
-  // created. We have to workaround the code in TopLevelNagigationDelegateChild
-  // that intentionally doesn't delegate for navigations caused by the system
-  // principal.
-  let newTabPromise = BrowserTestUtils.waitForNewTab(gBrowser, PAGE_2, true);
-  gBrowser.selectedBrowser.loadURI(PAGE_2, {
-    triggeringPrincipal: Services.scriptSecurityManager.createNullPrincipal({}),
-  });
-  let newTab = await newTabPromise;
+  let newTab = await BrowserTestUtils.openNewForegroundTab(gBrowser, PAGE_2);
 
   Assert.equal(gBrowser.selectedTab, newTab, "PAGE_2 tab is selected.");
   let stateUpdate = TestUtils.topicObserved(

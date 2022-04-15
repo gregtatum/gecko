@@ -11,13 +11,6 @@ const PAGE_2 = "https://example.org/";
  * removes that browser from the window.
  */
 add_task(async function test_remove_browser_on_last_view() {
-  // We want to test the case where there are multiple browser elements
-  // in the DOM, so we turn on delegation to make it easier to ensure
-  // that a new browser gets created when a navigation occurs.
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.tabs.openNewTabForMostNavigations", true]],
-  });
-
   let [view] = await PinebuildTestUtils.loadViews([PAGE_1]);
 
   Assert.equal(
@@ -32,15 +25,8 @@ add_task(async function test_remove_browser_on_last_view() {
   // created. We have to workaround the code in TopLevelNagigationDelegateChild
   // that intentionally doesn't delegate for navigations caused by the system
   // principal.
-  let newBrowserPromise = BrowserTestUtils.waitForNewTab(
-    gBrowser,
-    PAGE_2,
-    true
-  );
-  gBrowser.selectedBrowser.loadURI(PAGE_2, {
-    triggeringPrincipal: Services.scriptSecurityManager.createNullPrincipal({}),
-  });
-  let { linkedBrowser: newBrowser } = await newBrowserPromise;
+  let newTab = await BrowserTestUtils.openNewForegroundTab(gBrowser, PAGE_2);
+  let newBrowser = newTab.linkedBrowser;
 
   Assert.equal(
     gBrowser.browsers.length,
@@ -78,13 +64,6 @@ add_task(async function test_remove_browser_on_last_view() {
  * has more than one nsISHEntry in its sessionHistory.
  */
 add_task(async function test_remove_browser_on_last_view() {
-  // We want to test the case where there are multiple browser elements
-  // in the DOM, so we turn on delegation to make it easier to ensure
-  // that a new browser gets created when a navigation occurs.
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.tabs.openNewTabForMostNavigations", true]],
-  });
-
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
@@ -99,20 +78,8 @@ add_task(async function test_remove_browser_on_last_view() {
   );
 
   let originalBrowser = gBrowser.selectedBrowser;
-
-  // Now do a navigation that will cause a delegation and a new browser to be
-  // created. We have to workaround the code in TopLevelNagigationDelegateChild
-  // that intentionally doesn't delegate for navigations caused by the system
-  // principal.
-  let newBrowserPromise = BrowserTestUtils.waitForNewTab(
-    gBrowser,
-    PAGE_2,
-    true
-  );
-  gBrowser.selectedBrowser.loadURI(PAGE_2, {
-    triggeringPrincipal: Services.scriptSecurityManager.createNullPrincipal({}),
-  });
-  let { linkedBrowser: newBrowser } = await newBrowserPromise;
+  let newTab = await BrowserTestUtils.openNewForegroundTab(gBrowser, PAGE_2);
+  let newBrowser = newTab.linkedBrowser;
 
   // So there should be 5 views total now, split across two browser elements:
   // 4 views in the staged browser, and 1 view in the unstaged browser.
