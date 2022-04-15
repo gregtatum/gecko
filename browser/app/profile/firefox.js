@@ -2756,7 +2756,6 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   pref("privacy.userContext.ui.enabled", false, locked);
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
-  pref("browser.tabs.openNewTabForMostNavigations", false);
   pref("browser.pinebuild.targetTopLevelLinkClicksToBlank", true);
   #ifdef MOZILLA_OFFICIAL
     pref("browser.startup.launchOnOSLogin", true);

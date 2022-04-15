@@ -1175,18 +1175,6 @@ BrowserGlue.prototype = {
         remoteTypes: ["privilegedabout"],
       };
 
-      JSWINDOWACTORS.TopLevelNavigationDelegate = {
-        parent: {
-          moduleURI: "resource:///actors/TopLevelNavigationDelegateParent.jsm",
-        },
-        child: {
-          moduleURI: "resource:///actors/TopLevelNavigationDelegateChild.jsm",
-        },
-
-        messageManagerGroups: ["browsers"],
-        enablePreference: "browser.tabs.openNewTabForMostNavigations",
-      };
-
       JSWINDOWACTORS.Companion = {
         parent: {
           moduleURI: "resource:///actors/CompanionParent.jsm",
