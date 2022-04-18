@@ -356,6 +356,10 @@ nsChromeRegistryChrome::nsProviderArray::GetProvider(
   ProviderEntry* found = nullptr;  // Only set if we find a partial-match locale
   ProviderEntry* entry = nullptr;
 
+  for (size_t i = 0; i < mArray.Length(); i++) {
+    printf("@@@ provider: %s\n", mArray[i].provider.get());
+  }
+
   while (i--) {
     entry = &mArray[i];
     if (aPreferred.Equals(entry->provider)) return entry;

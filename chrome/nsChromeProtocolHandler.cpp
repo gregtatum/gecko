@@ -133,6 +133,11 @@ nsChromeProtocolHandler::NewChannel(nsIURI* aURI, nsILoadInfo* aLoadInfo,
     return rv;
   }
 
+  nsCString string;
+  resolvedURI->GetFilePath(string);
+  printf("@@@ chrome/nsChromeProtocolHandler.cpp resolved URI %s\n",
+         string.get());
+
   // We don't want to allow the inner protocol handler modify the result
   // principal URI since we want either |aURI| or anything pre-set by upper
   // layers to prevail.

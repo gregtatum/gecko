@@ -236,6 +236,8 @@ class SharedStringBundle final : public nsStringBundleBase {
 
   ~SharedStringBundle() override = default;
 
+  nsresult ResetImpl() override;
+
   nsresult GetStringImpl(const nsACString& aName, nsAString& aResult) override;
 
   nsresult GetSimpleEnumerationImpl(nsISimpleEnumerator** elements) override;
@@ -328,6 +330,7 @@ nsStringBundleBase::Reset() {
   MutexAutoLock autolock(mMutex);
   mAttemptedLoad = false;
   mLoaded = false;
+  ResetImpl();
   return NS_OK;
 }
 
@@ -449,6 +452,11 @@ nsresult nsStringBundleBase::ParseProperties(nsIPersistentProperties** aProps) {
 
   nsCOMPtr<nsIInputStream> in;
 
+  nsCString path;
+  uri->GetFilePath(path);
+
+  printf("!!! ParseProperties - URI: %s\n", path.get());
+
   auto result = URLPreloader::ReadURI(uri);
   if (result.isOk()) {
     MOZ_TRY(NS_NewCStringInputStream(getter_AddRefs(in), result.unwrap()));
@@ -480,6 +488,7 @@ nsresult nsStringBundleBase::ParseProperties(nsIPersistentProperties** aProps) {
 }
 
 nsresult nsStringBundle::LoadProperties() {
+  printf("!!! nsStringBundle::LoadProperties\n");
   // Something such as Necko might use string bundle after ClearOnShutdown is
   // called. LocaleService etc is already down, so we cannot get bundle data.
   if (PastShutdownPhase(ShutdownPhase::XPCOMShutdown)) {
@@ -487,12 +496,15 @@ nsresult nsStringBundle::LoadProperties() {
   }
 
   if (mLoaded && mProps) {
+    printf("!!! nsStringBundle::LoadProperties - Already loaded.\n");
     return NS_OK;
   }
+  printf("!!! nsStringBundle::LoadProperties - Re-loading.\n");
   return ParseProperties(getter_AddRefs(mProps));
 }
 
 nsresult SharedStringBundle::LoadProperties() {
+  printf("!!! SharedStringBundle::LoadProperties\n");
   if (mStringMap) return NS_OK;
 
   if (mMapFile.isSome()) {
@@ -575,8 +587,15 @@ nsStringBundleBase::GetStringFromName(const char* aName, nsAString& aResult) {
   NS_ENSURE_ARG_POINTER(aName);
 
   MutexAutoLock autolock(mMutex);
+  printf("!!! nsStringBundleBase::GetStringFromName %s\n", aName);
 
   return GetStringImpl(nsDependentCString(aName), aResult);
+}
+
+nsresult nsStringBundle::ResetImpl() {
+  // nsStringBaseBundle::Reset handles all of the logic that is necessary, so
+  // this method is a noop.
+  return NS_OK;
 }
 
 nsresult nsStringBundle::GetStringImpl(const nsACString& aName,
@@ -584,6 +603,13 @@ nsresult nsStringBundle::GetStringImpl(const nsACString& aName,
   MOZ_TRY(LoadProperties());
 
   return mProps->GetStringProperty(aName, aResult);
+}
+
+nsresult SharedStringBundle::ResetImpl() {
+  // This is called while the mutex is already locked.
+  mStringMap = nullptr;
+  mMapFile = Nothing{};
+  return NS_OK;
 }
 
 nsresult SharedStringBundle::GetStringImpl(const nsACString& aName,
@@ -759,6 +785,9 @@ nsStringBundleService::Observe(nsISupports* aSubject, const char* aTopic,
       strcmp("chrome-flush-caches", aTopic) == 0) {
     flushBundleCache(/* ignoreShared = */ false);
   } else if (strcmp("intl:app-locales-changed", aTopic) == 0) {
+    printf("@@@ (%d) nsStringBundleService::Observe intl:app-locales-changed\n",
+           getpid());
+
     flushBundleCache(/* ignoreShared = */ false);
     invalidateKnownBundles();
   } else if (strcmp("memory-pressure", aTopic) == 0) {
@@ -900,6 +929,8 @@ void nsStringBundleService::getStringBundle(const char* aURLSpec,
     if (mKnownBundles.Length() > mNextKnownBundleCompaction) {
       compactKnownBundles();
     }
+    printf("@@@ (%d) mKnownBundles: %zu, Adding the bundle %s\n", getpid(),
+           mKnownBundles.Length(), aURLSpec);
     mKnownBundles.AppendElement(do_GetWeakReference(bundle));
 
     cacheEntry = insertIntoCache(bundle.forget(), key);

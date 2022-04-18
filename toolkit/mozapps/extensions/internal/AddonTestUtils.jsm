@@ -1096,6 +1096,7 @@ var AddonTestUtils = {
    */
   createTempXPIFile(files) {
     let file = this.allocTempXPIFile();
+    console.log("@@@ AddontTestUtils.createTempXPIFile()", file.path)
     this.writeFilesToZip(file.path, files);
     return file;
   },

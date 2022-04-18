@@ -51,6 +51,8 @@ class nsStringBundleBase : public nsIStringBundle,
   virtual nsresult GetStringImpl(const nsACString& aName,
                                  nsAString& aResult) = 0;
 
+  virtual nsresult ResetImpl() = 0;
+
   virtual nsresult GetSimpleEnumerationImpl(nsISimpleEnumerator** elements) = 0;
 
   void RegisterMemoryReporter();
@@ -88,6 +90,8 @@ class nsStringBundle : public nsStringBundleBase {
   virtual ~nsStringBundle();
 
   nsresult GetStringImpl(const nsACString& aName, nsAString& aResult) override;
+
+  nsresult ResetImpl() override;
 
   nsresult GetSimpleEnumerationImpl(nsISimpleEnumerator** elements) override;
 };
