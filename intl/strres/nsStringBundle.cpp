@@ -236,6 +236,8 @@ class SharedStringBundle final : public nsStringBundleBase {
 
   ~SharedStringBundle() override = default;
 
+  nsresult ResetImpl() override;
+
   nsresult GetStringImpl(const nsACString& aName, nsAString& aResult) override;
 
   nsresult GetSimpleEnumerationImpl(nsISimpleEnumerator** elements) override;
@@ -328,6 +330,7 @@ nsStringBundleBase::Reset() {
   MutexAutoLock autolock(mMutex);
   mAttemptedLoad = false;
   mLoaded = false;
+  ResetImpl();
   return NS_OK;
 }
 
@@ -579,11 +582,24 @@ nsStringBundleBase::GetStringFromName(const char* aName, nsAString& aResult) {
   return GetStringImpl(nsDependentCString(aName), aResult);
 }
 
+nsresult nsStringBundle::ResetImpl() {
+  // nsStringBaseBundle::Reset handles all of the logic that is necessary, so
+  // this method is a noop.
+  return NS_OK;
+}
+
 nsresult nsStringBundle::GetStringImpl(const nsACString& aName,
                                        nsAString& aResult) {
   MOZ_TRY(LoadProperties());
 
   return mProps->GetStringProperty(aName, aResult);
+}
+
+nsresult SharedStringBundle::ResetImpl() {
+  // This is called while the mutex is already locked.
+  mStringMap = nullptr;
+  mMapFile = Nothing{};
+  return NS_OK;
 }
 
 nsresult SharedStringBundle::GetStringImpl(const nsACString& aName,
