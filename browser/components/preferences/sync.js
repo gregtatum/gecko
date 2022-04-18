@@ -450,7 +450,22 @@ var gSyncPane = {
     const url = await FxAccounts.config.promiseConnectAccountURI(
       this._getEntryPoint()
     );
-    this.replaceTabWithUrl(url);
+    if (AppConstants.PINEBUILD) {
+      // The regular flow leaves a tab laying around that doesn't make sense in
+      // PINEBUILD. We'll use the oauth flow handler to register our listeners
+      // to clean up after the sign in.
+      const redirectionEndpoints = [
+        "https://accounts.firefox.com/pair",
+        "https://accounts.firefox.com/connect_another_device",
+      ];
+      await OAuthConnect.connect({
+        url,
+        redirectionEndpoints,
+        serviceType: "fxa",
+      });
+    } else {
+      this.replaceTabWithUrl(url);
+    }
   },
 
   async reSignIn() {
