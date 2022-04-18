@@ -68,8 +68,8 @@ add_task(async function test_stringBundleInvalidation() {
 
   Assert.equal(
     sharedStringBundle.GetStringFromName("brandFullName"),
-    brandFullName,
-    "Shared string bundles are not invalidated."
+    "Zorro de Fuego",
+    "Shared string bundles are invalidated when switching locales. This is an expected memory leak."
   );
 
   info("Changing the locale to fr.");
@@ -78,8 +78,8 @@ add_task(async function test_stringBundleInvalidation() {
 
   Assert.equal(
     sharedStringBundle.GetStringFromName("brandFullName"),
-    brandFullName,
-    "Shared string bundles are not invalidated."
+    "Renard de Feu",
+    "The shared string bundle is updated again."
   );
   Assert.equal(
     testOnlyBundle.GetStringFromName("testOnly"),
@@ -91,8 +91,8 @@ add_task(async function test_stringBundleInvalidation() {
     Services.strings
       .createBundle("chrome://branding/locale/brand.properties")
       .GetStringFromName("brandFullName"),
-    brandFullName,
-    "Shared string bundles are not invalidated."
+    "Renard de Feu",
+    "The shared string bundle can be recreated."
   );
   Assert.equal(
     Services.strings
