@@ -1443,6 +1443,12 @@ var Policies = {
     },
   },
 
+  PasswordManagerExceptions: {
+    onBeforeUIStartup(manager, param) {
+      addAllowDenyPermissions("login-saving", null, param);
+    },
+  },
+
   PDFjs: {
     onBeforeAddons(manager, param) {
       if ("Enabled" in param) {

@@ -6147,18 +6147,7 @@
       });
 
       let tabContextFTLInserter = () => {
-        MozXULElement.insertFTLIfNeeded("browser/tabContextMenu.ftl");
-        // Un-lazify the l10n-ids now that the FTL file has been inserted.
-        document
-          .getElementById("tabContextMenu")
-          .querySelectorAll("[data-lazy-l10n-id]")
-          .forEach(el => {
-            el.setAttribute(
-              "data-l10n-id",
-              el.getAttribute("data-lazy-l10n-id")
-            );
-            el.removeAttribute("data-lazy-l10n-id");
-          });
+        this.translateTabContextMenu();
         this.tabContainer.removeEventListener(
           "contextmenu",
           tabContextFTLInserter,
@@ -6308,6 +6297,22 @@
         const { url, description, previewImageURL } = event.detail;
         this.setPageInfo(url, description, previewImageURL);
       });
+    },
+
+    translateTabContextMenu() {
+      if (this._tabContextMenuTranslated) {
+        return;
+      }
+      MozXULElement.insertFTLIfNeeded("browser/tabContextMenu.ftl");
+      // Un-lazify the l10n-ids now that the FTL file has been inserted.
+      document
+        .getElementById("tabContextMenu")
+        .querySelectorAll("[data-lazy-l10n-id]")
+        .forEach(el => {
+          el.setAttribute("data-l10n-id", el.getAttribute("data-lazy-l10n-id"));
+          el.removeAttribute("data-lazy-l10n-id");
+        });
+      this._tabContextMenuTranslated = true;
     },
 
     setSuccessor(aTab, successorTab) {
