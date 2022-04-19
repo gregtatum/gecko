@@ -1,39 +1,47 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 const { AddonTestUtils } = ChromeUtils.import(
   "resource://testing-common/AddonTestUtils.jsm"
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   AddonManager: "resource://gre/modules/AddonManager.jsm",
-  setTimeout: "resource://gre/modules/Timer.jsm",
 });
 
-AddonTestUtils.initMochitest(this);
-
-function langpackId(locale) {
-  return `langpack-${locale}@firefox.mozilla.org`;
+function getChromeUrlSlug(url) {
+  const result = /^chrome:\/\/(\w+)\/locale\/?$/.exec(url);
+  if (!result) {
+    throw new Error("Expected the properties file's chrome URL to take the form: \"chrome://slug/locale\":" + JSON.stringify(url));
+  }
+  return result[1];
 }
 
-function getManifestData(locale, version = "2.0") {
+function getManifestData(locale, propertiesFiles) {
+  const chrome_resources = {};
+  for (const { rootURL } of propertiesFiles) {
+    const slug = getChromeUrlSlug(rootURL);
+    chrome_resources[slug] = getFakeXPIPath(slug) + "/";
+  }
   return {
     langpack_id: locale,
     name: `${locale} Language Pack`,
     description: `${locale} Language pack`,
     languages: {
       [locale]: {
-        chrome_resources: {
-          branding: `browser/chrome/${locale}/locale/branding/`,
-        },
+        chrome_resources,
         version: "1",
       },
     },
     applications: {
       gecko: {
         strict_min_version: AppConstants.MOZ_APP_VERSION,
-        id: langpackId(locale),
+        id: `langpack-${locale}@firefox.mozilla.org`,
         strict_max_version: AppConstants.MOZ_APP_VERSION,
       },
     },
-    version,
+    version: "2.0",
     manifest_version: 2,
     sources: {
       browser: {
@@ -45,101 +53,122 @@ function getManifestData(locale, version = "2.0") {
 }
 
 /**
- * @typedef {Object} LangpackOptions
- * @property {string} locale - BCP 47 Identifier
- * @property {string} version - The manifest version
- * @property {{ path: string, contents: string }} files - The files to write into the XPI file.
- *
- *  * Example paths (note these paths may not be up to date):
- *
- * To find specific paths download a langpack from:
- *   https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central-l10n/linux-x86_64/xpi/
- *
- * Here are some example paths that may or may not be up to date:
- *
- * `browser/chrome/es-ES/locale/branding/brand.properties`
- * `browser/chrome/es-ES/locale/branding/brand.dtd`
- * `browser/chrome/es-ES/locale/es-ES/devtools/client/webconsole.properties`
- * `browser/chrome/es-ES/locale/es-ES/devtools/client/webconsole.properties`
- * `browser/localization/es-ES/browser/aboutCertError.ftl`
- * `chrome/es-ES/locale/es-ES/alerts/alert.properties`
- * `chrome/es-ES/locale/pdfviewer/chrome.properties`
- * `chrome/localization/es-ES/crashreporter/aboutcrashes.ftl`
- * `chrome/localization/es-ES/toolkit/about/aboutAbout.ftl`
- *
- * Or as a quick bash script to see the contents, update the FX_VERSION and FX_LOCALE, and run:
-
-FX_VERSION=100
-FX_LOCALE=es-ES
-FILE=firefox-$FX_VERSION.0a1.$FX_LOCALE.langpack
-curl -0 https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central-l10n/linux-x86_64/xpi/$FILE.xpi --output $FILE.zip
-unzip $FILE.zip -d $FILE
-cd $FILE
-tree
-
+ * @typedef {object} FakeProperties
+ * @property {string} rootURL - The path that gets used for the chrome URL. It must take
+ *   the form "chrome://slug/locale".
+ * @property {{[string]: string}} files - The list of files that will be placed in the
+ *   XPI. The key is the file name, and the value is the contents of the file.
  */
 
 /**
- * Create a test-only langpack, with actual content.
+ * @typedef {object} FakeLangpackOptions
+ * @property {string} locale - The BCP 47 identifier
+ * @property {FakeProperties[]} propertiesFiles - This list of fake properties files
+ *   to be served from chrome URLs. These can either be invented files, or shadow
+ *   the underlying translation files.
  */
-function createLangpack(options) {
-  const { locale, version, files } = options;
+
+/**
+ * Create and install a test-only langpack, with actual content. This XPI file will
+ * be created in a temp directory, and actually installed in the app.
+ *
+ * @param {FakeLangpackOptions} options
+ * @returns {Promise<nsIFile>}
+ */
+function installFakeLangpack(options) {
+  info(`Installing the ${options.locale} langpack`);
+  return AddonTestUtils.promiseInstallFile(createFakeLangpack(options));
+}
+
+/**
+ * The real paths in XPI files are something like:
+ *
+ * - browser/chrome/es-ES/locale/branding/brand.properties
+ * - browser/chrome/es-ES/locale/browser/browser.properties
+ * - browser/chrome/es-ES/locale/es-ES/devtools/client/debugger.properties
+ * - browser/features/formautofill@mozilla.org/es-ES/locale/es-ES/formautofill.properties
+ *
+ * However, in the manifest.json, the chrome URLs can point to arbitrary files via
+ * the chrome_resources key. This function generates an arbitrary fake path to store
+ * the files in.
+ */
+function getFakeXPIPath(rootSlug) {
+  return `fake-${rootSlug}`;
+}
+
+/**
+ * Create a test-only langpack, with actual content.
+ *
+ * @param {FakeLangpackOptions} options
+ * @returns {Promise<nsIFile>}
+ */
+function createFakeLangpack(options) {
+  const { locale, propertiesFiles } = options;
   const xpiFiles = {
-    "manifest.json": getManifestData(locale, version),
+    "manifest.json": getManifestData(locale, propertiesFiles),
   };
-  for (const { path, contents } of files || []) {
-    xpiFiles[path] = contents;
+  for (const { rootURL, files } of propertiesFiles || []) {
+    const slug = getChromeUrlSlug(rootURL);
+    const fakePath = getFakeXPIPath(slug);
+    for (const [ name, contents ] of Object.entries(files)) {
+      xpiFiles[OS.Path.join(fakePath, name)] = contents;
+    }
   }
+  console.log(xpiFiles);
   return AddonTestUtils.createTempXPIFile(xpiFiles);
 }
 
-requestLongerTimeout(1000);
-add_task(async function toolbarButtons() {
+/**
+ * Allows the current app to install fake langpacks.
+ *
+ * @return {Promise<{
+ *  install: typeof installFakeLangpack,
+ *  create: typeof createFakeLangpack,
+ * }>}
+ */
+async function setupFakeLangpacks(testEnv = this) {
+  AddonTestUtils.initMochitest(testEnv);
   await SpecialPowers.pushPrefEnv({
     set: [["extensions.langpacks.signatures.required", false]],
   });
+  return {
+    install: installFakeLangpack,
+    create: createFakeLangpack,
+  }
+}
 
-  info(`Installing the es-ES langpacks`);
-  await AddonTestUtils.promiseInstallFile(
-    createLangpack({
-      locale: "es-ES",
-      files: [
-        {
-          alias: "branding",
-          path: "browser/chrome/es-ES/locale/branding/brand.properties",
+add_task(async function toolbarButtons() {
+  const fakeLangpacks = await setupFakeLangpacks();
+
+  await fakeLangpacks.install({
+    locale: "es-ES",
+    propertiesFiles: [
+      {
+        rootURL: "chrome://branding/locale",
+        files: {
           // Localizers don't really translate the brand name this way, but it
           // makes for a useful test.
-          contents: `brandFullName=Zorro de Fuego`,
+          "brand.properties": "brandFullName=Zorro de Fuego",
+          "test-only.properties": "testOnly=Mensaje solo para pruebas"
         },
-        {
-          alias: "branding",
-          path: "browser/chrome/es-ES/locale/branding/test-only.properties",
-          contents: `testOnly=Mensaje solo para pruebas`,
-        },
-      ],
-    })
-  );
+      },
+    ],
+  });
 
-  info(`Installing the fr langpacks`);
-  await AddonTestUtils.promiseInstallFile(
-    createLangpack({
-      locale: "fr",
-      files: [
-        {
-          alias: "branding",
-          path: "browser/chrome/fr/locale/branding/brand.properties",
+  await fakeLangpacks.install({
+    locale: "fr",
+    propertiesFiles: [
+      {
+        rootURL: "chrome://branding/locale",
+        files: {
           // Localizers don't really translate the brand name this way, but it
           // makes for a useful test.
-          contents: `brandFullName=Renard de Feu`,
+          "brand.properties": "brandFullName=Renard de Feu",
+          "test-only.properties": "testOnly=Message de test uniquement"
         },
-        {
-          alias: "branding",
-          path: "browser/chrome/fr/locale/branding/test-only.properties",
-          contents: `testOnly=Message de test uniquement`,
-        },
-      ],
-    })
-  );
+      },
+    ],
+  });
 
   info(`Creating the bundle "chrome://branding/locale/brand.properties"`);
   const sharedStringBundle = Services.strings.createBundle(
@@ -153,7 +182,7 @@ add_task(async function toolbarButtons() {
   Assert.equal(typeof brandFullName, "string");
   Assert.greater(brandFullName.length, 0);
 
-  info(`Changing the locale to es-ES.`);
+  info("Changing the locale to es-ES.");
   Services.locale.requestedLocales = ["es-ES"];
   await document.l10n.ready;
 
@@ -174,7 +203,7 @@ add_task(async function toolbarButtons() {
     "Shared string bundles are invalidated when switching locales. This is a memory leak."
   );
 
-  info(`Changing the locale to fr.`);
+  info("Changing the locale to fr.");
   Services.locale.requestedLocales = ["fr"];
   await document.l10n.ready;
 
