@@ -8489,7 +8489,7 @@
 
 # ClockDrift desired buffering in milliseconds
 - name: media.clockdrift.buffering
-  type: uint32_t
+  type: RelaxedAtomicUint32
   mirror: always
   value: 50
 
@@ -13200,6 +13200,16 @@
   type: int32_t
   value: 2
   mirror: always
+
+# Whether to use XDG portal for geolocation.
+# https://flatpak.github.io/xdg-desktop-portal/#gdbus-org.freedesktop.portal.Location
+#  - 0: never
+#  - 1: always
+#  - 2: auto
+- name: widget.use-xdg-desktop-portal.location
+  type: int32_t
+  value: 2
+  mirror: always
 #endif
 
 #ifdef XP_WIN
@@ -13239,7 +13249,7 @@
 
 - name: widget.windows.hide_cursor_when_typing
   type: bool
-  value: false
+  value: true
   mirror: always
 #endif
 
