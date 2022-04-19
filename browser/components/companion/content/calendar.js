@@ -367,6 +367,7 @@ export class CalendarEventList extends MozLitElement {
       }
       this.listenToListView();
     } else {
+      // TODO(MR2-2330): Remove the accounts listeners and just rely on seeked.
       // If there arent't any connected accounts, just clear the events list.
       this.events = [];
     }

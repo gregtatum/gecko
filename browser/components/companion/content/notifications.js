@@ -131,6 +131,7 @@ async function showNotification(event) {
 
 function processEvents(events, now) {
   logConsole.debug("processEvents, now:", now);
+  logConsole.debug("processEvents removing timers:", notificationTimers.size);
   for (let timer of notificationTimers) {
     clearTimeout(timer);
   }
@@ -177,6 +178,8 @@ class WorkshopNotificationDriver {
     // happening when we don't want them to.
     this.useFakeNow = wAPI.fakeNow;
     this.workshopAPI.on("time-warp", this, this.onTimeWarp);
+    this.workshopAPI.accounts.on("add", this, this.rebuildListView);
+    this.workshopAPI.accounts.on("remove", this, this.rebuildListView);
 
     this.listView = null;
 
@@ -184,9 +187,19 @@ class WorkshopNotificationDriver {
   }
 
   rebuildListView() {
+    logConsole.debug("rebuildListView");
+
     if (this.listView) {
       this.listView.release();
+      this.listView.removeListener("seeked", this, this.onSeeked);
       this.listView = null;
+    }
+
+    if (!this.workshopAPI.accounts?.items?.length) {
+      // TODO(MR2-2330): Remove the accounts listeners and just rely on seeked.
+      logConsole.debug("No accounts, skip listView creation");
+      this.onSeeked();
+      return;
     }
 
     // We currently use the same spec as the "now" view and which, thanks to
@@ -235,7 +248,10 @@ class WorkshopNotificationDriver {
       useNow = Date.now();
       logConsole.debug("processing seek for real now:", useNow);
     }
-    processEvents(this.listView.items, useNow);
+    // If we don't have any accounts we won't create a listView.
+    // TODO(MR2-2330): Ideally this can always use `this.listView.items`.
+    let events = this.listView ? this.listView.items : [];
+    processEvents(events, useNow);
   }
 
   onTimeWarp({ fakeNow }) {
