@@ -54,37 +54,38 @@ export default class River extends MozLitElement {
 
   #onKeyUp(event) {
     if (
-      !(event.composedTarget instanceof ViewGroupElement) ||
-      !(
-        event.keyCode == KeyEvent.DOM_VK_LEFT ||
-        event.keyCode == KeyEvent.DOM_VK_RIGHT
-      )
+      event.composedTarget == this.overflowButton &&
+      event.keyCode == KeyEvent.DOM_VK_SPACE
     ) {
-      return;
-    }
-
-    let viewGroup = event.composedTarget;
-    let sibling;
-    if (event.keyCode == KeyEvent.DOM_VK_LEFT) {
-      if (document.dir == "ltr") {
-        sibling = viewGroup.previousElementSibling;
-      } else {
-        sibling = viewGroup.nextElementSibling;
+      this.#openOverflowMenu();
+    } else if (
+      event.composedTarget instanceof ViewGroupElement &&
+      (event.keyCode == KeyEvent.DOM_VK_LEFT ||
+        event.keyCode == KeyEvent.DOM_VK_RIGHT)
+    ) {
+      let viewGroup = event.composedTarget;
+      let sibling;
+      if (event.keyCode == KeyEvent.DOM_VK_LEFT) {
+        if (document.dir == "ltr") {
+          sibling = viewGroup.previousElementSibling;
+        } else {
+          sibling = viewGroup.nextElementSibling;
+        }
+      } else if (event.keyCode == KeyEvent.DOM_VK_RIGHT) {
+        if (document.dir == "ltr") {
+          sibling = viewGroup.nextElementSibling;
+        } else {
+          sibling = viewGroup.previousElementSibling;
+        }
       }
-    } else if (event.keyCode == KeyEvent.DOM_VK_RIGHT) {
-      if (document.dir == "ltr") {
-        sibling = viewGroup.nextElementSibling;
-      } else {
-        sibling = viewGroup.previousElementSibling;
-      }
-    }
 
-    if (sibling) {
-      sibling.focus();
+      if (sibling) {
+        sibling.focus();
+      }
     }
   }
 
-  #onOverflowClick(event) {
+  #openOverflowMenu(event) {
     let e = new CustomEvent("UserAction:OpenOverflowPanel", {
       bubbles: true,
       composed: true,
@@ -131,7 +132,8 @@ export default class River extends MozLitElement {
         part="overflow"
         class="subviewbutton"
         id="river-overflow-button"
-        @click=${this.#onOverflowClick}
+        tabindex="0"
+        @click=${this.#openOverflowMenu}
         data-l10n-id="active-view-manager-overflow-button-text"
         data-l10n-args='{ "count": ${this.overflowedViews.length} }'
         ?hidden=${!this.overflowedViews.length}

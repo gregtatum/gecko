@@ -322,6 +322,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     for (let view of overflowedViews) {
       let item = document.createXULElement("toolbarbutton");
       item.classList.add("subviewbutton", "subviewbutton-iconic");
+      item.setAttribute("tabindex", "0");
       item.setAttribute("label", view.title);
       item.setAttribute("image", `page-icon:${view.url.spec}`);
       item.view = view;
