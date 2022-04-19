@@ -10,6 +10,7 @@ BROWSER_CHROME_MANIFESTS += ["tests/browser/browser.ini"]
 
 TESTING_JS_MODULES += [
     "tests/LangPackMatcherTestUtils.jsm",
+    "tests/LangPackTestUtils.jsm",
 ]
 
 toolkit = CONFIG["MOZ_WIDGET_TOOLKIT"]
