@@ -1750,7 +1750,11 @@ DownloadTarget.prototype = {
    */
   toSerializable() {
     // Simplify the representation if we don't have other details.
-    if (!this.partFilePath && !this._unknownProperties) {
+    if (
+      !this.partFilePath &&
+      !this._unknownProperties &&
+      !AppConstants.PINEBUILD
+    ) {
       return this.path;
     }
 
