@@ -2253,6 +2253,9 @@ class StageManager extends EventTarget {
         let internalView = event.detail.internalView;
         if (internalView === null || internalView instanceof InternalView) {
           this.#currentInternalView = internalView;
+          if (this.#historyCarouselMode) {
+            this.#currentHistoryCarouselInternalView = internalView;
+          }
         } else {
           logConsole.error(
             "Tried setting an invalid value into #currentInternalView"

@@ -21,17 +21,19 @@ function assertDefaultWorkspaceViewIsActive(view) {
   );
 }
 
+add_setup(async function() {
+  // Temporarily re-enable thumbnails so that we capture the page previews.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pagethumbnails.capturing_disabled", false]],
+  });
+});
+
 /**
  * Tests that the HistoryCarousel can change the current selection in the
  * ActiveViewManager, and changes to the selected View in the
  * ActiveViewManager can change the scroll position in the HistoryCarousel.
  */
 add_task(async function selection_change() {
-  // Temporarily re-enable thumbnails so that we capture the page previews.
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.pagethumbnails.capturing_disabled", false]],
-  });
-
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
@@ -132,6 +134,54 @@ add_task(async function selection_change() {
     1,
     "Should have only seen 1 HistoryCarouselIndexUpdated event"
   );
+
+  await PinebuildTestUtils.exitHistoryCarousel();
+  await gStageManager.reset();
+});
+
+/**
+ * Tests that if the selected <browser> in tabbrowser changes for some reason
+ * (for example, by clicking on an item in the Companion that causes a pre-exiting
+ * browser to be foregrounded) that the HistoryCarousel reflects that selection.
+ */
+add_task(async function selection_change_on_tabswitch() {
+  await PinebuildTestUtils.loadViews(["https://example.com/"]);
+
+  Assert.equal(
+    gBrowser.browsers.length,
+    1,
+    "Should have only 1 browser in the window"
+  );
+
+  let originalTab = gBrowser.selectedTab;
+  let newTab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    "https://example.org/"
+  );
+
+  let [view1, view2] = gStageManager.views;
+
+  let browser = await PinebuildTestUtils.enterHistoryCarousel();
+  Assert.equal(gBrowser.selectedTab, newTab, "Opened tab is still selected.");
+
+  let { currentIndex } = await PinebuildTestUtils.getHistoryCarouselPreviews(
+    browser
+  );
+  Assert.equal(currentIndex, 1, "Should have the last preview index selected.");
+  Assert.ok(gStageManager.canGoBack, "Should be able to go back");
+  assertDefaultWorkspaceViewIsActive(view2);
+
+  await BrowserTestUtils.switchTab(gBrowser, originalTab);
+  ({ currentIndex } = await PinebuildTestUtils.getHistoryCarouselPreviews(
+    browser
+  ));
+  Assert.equal(
+    currentIndex,
+    0,
+    "Should have the first preview index selected."
+  );
+  Assert.ok(!gStageManager.canGoBack, "Should not be able to go back");
+  assertDefaultWorkspaceViewIsActive(view1);
 
   await PinebuildTestUtils.exitHistoryCarousel();
 });
