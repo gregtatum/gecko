@@ -2735,7 +2735,11 @@ class StageManager extends EventTarget {
    * @type {View | null}
    */
   get currentView() {
-    return this.#currentInternalView?.view || null;
+    return (
+      this.#currentHistoryCarouselInternalView?.view ||
+      this.#currentInternalView?.view ||
+      null
+    );
   }
 
   /**
