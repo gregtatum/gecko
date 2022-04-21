@@ -1356,6 +1356,9 @@ UrlbarUtils.RESULT_PAYLOAD_SCHEMA = {
       sponsoredClickUrl: {
         type: "string",
       },
+      sponsoredIabCategory: {
+        type: "string",
+      },
       sponsoredImpressionUrl: {
         type: "string",
       },

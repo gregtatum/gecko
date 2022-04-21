@@ -1198,8 +1198,7 @@
         this.updateTitlebar();
 
         newTab.removeAttribute("titlechanged");
-        newTab.removeAttribute("attention");
-        this._tabAttrModified(newTab, ["attention"]);
+        newTab.attention = false;
 
         // The tab has been selected, it's not unselected anymore.
         // (1) Call the current tab's finishUnselectedTabHoverTimer()
@@ -5943,8 +5942,7 @@
 
             // For null principals, we bail immediately and don't show the checkbox:
             if (!promptPrincipal || promptPrincipal.isNullPrincipal) {
-              tabForEvent.setAttribute("attention", "true");
-              this._tabAttrModified(tabForEvent, ["attention"]);
+              tabForEvent.attention = true;
               return;
             }
 
@@ -5965,8 +5963,7 @@
                 tabPrompt.onNextPromptShowAllowFocusCheckboxFor(
                   promptPrincipal
                 );
-                tabForEvent.setAttribute("attention", "true");
-                this._tabAttrModified(tabForEvent, ["attention"]);
+                tabForEvent.attention = true;
                 return;
               }
             }

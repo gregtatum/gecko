@@ -7416,8 +7416,11 @@ mozilla::ipc::IPCResult ContentParent::RecvSynchronizeLayoutHistoryState(
     return IPC_OK();
   }
 
-  SessionHistoryEntry* entry =
-      aContext.GetMaybeDiscarded()->Canonical()->GetActiveSessionHistoryEntry();
+  BrowsingContext* bc = aContext.GetMaybeDiscarded();
+  if (!bc) {
+    return IPC_OK();
+  }
+  SessionHistoryEntry* entry = bc->Canonical()->GetActiveSessionHistoryEntry();
   if (entry) {
     entry->SetLayoutHistoryState(aState);
   }
@@ -7513,8 +7516,12 @@ mozilla::ipc::IPCResult ContentParent::RecvSessionHistoryEntryWireframe(
     return IPC_OK();
   }
 
-  SessionHistoryEntry* entry =
-      aContext.GetMaybeDiscarded()->Canonical()->GetActiveSessionHistoryEntry();
+  BrowsingContext* bc = aContext.GetMaybeDiscarded();
+  if (!bc) {
+    return IPC_OK();
+  }
+
+  SessionHistoryEntry* entry = bc->Canonical()->GetActiveSessionHistoryEntry();
   if (entry) {
     entry->SetWireframe(Some(aWireframe));
   }
