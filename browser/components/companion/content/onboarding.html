@@ -4,25 +4,26 @@
 
 <!DOCTYPE html>
 <html>
-<head>
-<link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
-<link rel="stylesheet" href="chrome://browser/content/companion/companion.css">
-<link rel="stylesheet" href="chrome://browser/content/companion/onboarding.css">
-<script src="chrome://browser/content/companion/onboarding.js"></script>
-</head>
-<body>
-<button id="dismiss"></button>
-<article id="release-notes">
-  <h2>What's new on</h2>
-  <h1>flowstate</h1>
-  <h3>April 18, 2022</h3>
-  <h4>Introducing Flowstate: More moments of flow throughout your day</h4>
-  <p>Flowstate is the application that helps you stay relaxed, calm and focused. You’ll begin seeing our new name infused throughout the product.</p>
-  <h4>Bring past views to front and center</h4>
-  <p>Simply interact with a prior view in the River to make it your active view. You no longer have to wait five seconds for views to change.</p>
-  <h4>Stay in the flow with every calendar event</h4>
-  <p>Get a quick read on what’s up next on your calendar so you can stay in the flow. Event cards are crisper and cleaner with updated styling.</p>
-</article>
-<footer><button class="primary" id="ok">Got it</button></footer>
-</body>
+  <head>
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/companion.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/onboarding.css">
+    <script src="chrome://browser/content/companion/onboarding.js"></script>
+  </head>
+  <body role="dialog" aria-labelledby="release-notes-title">
+    <button id="dismiss" aria-label="Dismiss"></button>
+    <article id="release-notes" role="document" tabindex="0">
+      <h1 id="release-notes-title">What's new on <span class="application-name">flowstate</span></h1>
+      <h2 class="release-notes-date">April 18, 2022</h2>
+      <dl>
+        <dt>Introducing Flowstate: More moments of flow throughout your day</dt>
+        <dd>Flowstate is the application that helps you stay relaxed, calm and focused. You’ll begin seeing our new name infused throughout the product.</dd>
+        <dt>Bring past views to front and center</dt>
+        <dd>Simply interact with a prior view in the River to make it your active view. You no longer have to wait five seconds for views to change.</dd>
+        <dt>Stay in the flow with every calendar event</dt>
+        <dd>Get a quick read on what’s up next on your calendar so you can stay in the flow. Event cards are crisper and cleaner with updated styling.</dd>
+      </dl>
+    </article>
+    <footer><button class="primary" id="ok" aria-label="Dismiss">Got it</button></footer>
+  </body>
 </html>

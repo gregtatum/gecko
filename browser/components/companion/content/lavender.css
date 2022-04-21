@@ -162,5 +162,10 @@
     --avm-view-group-element-breadcrumb-hover-fill-color: var(--colors-lavender-90);
     --avm-view-group-element-breadcrumb-active-stroke-color: var(--colors-lavender-90);
     --avm-view-group-element-breadcrumb-active-fill-color: var(--colors-lavender-90);
+
+    --pine-onboarding-application-name-gradient: linear-gradient(88.97deg, #AD96DC -8.12%, #8076AD 14.67%, #22A7B2 48.67%);
+    --pine-onboarding-header-text-color: #5b5b66;
+    --pine-onboarding-dates-text-color: #15141a;
+    --pine-onboarding-footer-border-color: #e0e0e6;
   }
 }
