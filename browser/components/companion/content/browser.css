@@ -484,17 +484,13 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
  display: none;
 }
 
-#active-view-manager-overflow-panel {
+#overflow-panel-mainview {
   width: 39ch;
+  padding-block: var(--arrowpanel-menuitem-padding-block);
+}
+
+#active-view-manager-overflow-panel {
   font: menu;
-}
-
-#active-view-manager-overflow-panel > .subview-subheader {
-  padding-block-start: var(--arrowpanel-menuitem-padding-block);
-}
-
-#active-view-manager-overflow-panel > .panel-subview-body {
-  padding-block-end: var(--arrowpanel-menuitem-padding-block);
 }
 
 /** Page Info Panel **/

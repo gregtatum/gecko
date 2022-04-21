@@ -177,11 +177,11 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       case "UserAction:OpenOverflowPanel":
         this.#openOverflowPanel(event);
         break;
-      case "click":
+      case "command":
         if (event.currentTarget == this.#overflowPanel) {
-          this.#overflowPanelClicked(event);
+          this.#overflowPanelItemSelected(event);
         } else if (event.currentTarget == this.#pageActionPanel) {
-          this.#pageActionPanelClicked(event);
+          this.#pageActionItemSelected(event);
         }
         break;
       case "contextmenu": {
@@ -270,10 +270,11 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       "workspace-id"
     );
     panel.setAttribute("workspace-id", workspaceId);
-    panel.openPopup(event.target.overflowButton, {
-      position: "bottomcenter topleft",
-      triggerEvent: event,
-    });
+    PanelMultiView.openPopup(
+      panel,
+      event.composedTarget,
+      "topleft bottomleft"
+    ).catch(Cu.reportError);
   }
 
   #getOverflowPanel() {
@@ -286,7 +287,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         template.replaceWith(template.content);
         panel = document.getElementById("active-view-manager-overflow-panel");
         panel.addEventListener("popupshowing", this);
-        panel.addEventListener("click", this);
+        panel.addEventListener("command", this);
       }
       this.#overflowPanel = panel;
     }
@@ -294,7 +295,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     return this.#overflowPanel;
   }
 
-  #overflowPanelClicked(event) {
+  #overflowPanelItemSelected(event) {
     if (event.target.tagName != "toolbarbutton") {
       return;
     }
@@ -351,7 +352,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         panel = document.getElementById("page-action-panel");
         panel.addEventListener("popupshowing", this);
         panel.addEventListener("popuphiding", this);
-        panel.addEventListener("click", this);
+        panel.addEventListener("command", this);
         panel.addEventListener("keydown", this);
       }
 
@@ -462,7 +463,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     }
   }
 
-  #pageActionPanelClicked(event) {
+  #pageActionItemSelected(event) {
     let urlEl = document.getElementById("site-info-url");
     if (event.target != urlEl) {
       document.getSelection().removeAllRanges();

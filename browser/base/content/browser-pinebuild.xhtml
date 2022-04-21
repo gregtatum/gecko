@@ -154,8 +154,12 @@
              class="panel-no-padding"
              consumeoutsideclicks="false"
              aria-labelledby="active-view-manager-overflow-panel-title">
-        <html:h1 id="active-view-manager-overflow-panel-title" data-l10n-id="active-view-manager-overflow-panel-title" class="subview-subheader"></html:h1>
-        <vbox id="active-view-manager-overflow-list" class="panel-subview-body"></vbox>
+        <panelmultiview mainViewId="overflow-panel-mainview">
+          <panelview id="overflow-panel-mainview">
+            <html:h1 id="active-view-manager-overflow-panel-title" data-l10n-id="active-view-manager-overflow-panel-title" class="subview-subheader"></html:h1>
+            <vbox id="active-view-manager-overflow-list" class="panel-subview-body"></vbox>
+          </panelview>
+        </panelmultiview>
       </panel>
     </html:template>
     <html:template id="template-page-action-menu">
