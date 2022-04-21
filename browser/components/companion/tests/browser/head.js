@@ -1173,9 +1173,25 @@ var PinebuildTestUtils = {
    *   and the current View is staged.
    */
   async exitHistoryCarousel(win = window) {
-    let exitEvent = BrowserTestUtils.waitForEvent(win, "HistoryCarousel:Exit");
+    let exitEvent = this.waitForHistoryCarouselExit(win);
     await win.gHistoryCarousel.showHistoryCarousel(false);
     await exitEvent;
+  },
+
+  /**
+   * Returns a Promise that resolves when the history carousel has finished
+   * exiting.
+   *
+   * @param {Window?} win
+   *   The window to open the history carousel in. Defaults to the current
+   *   window.
+   * @return {Promise}
+   * @resolves {undefined}
+   *   Resolves once the about:historycarousel document has been torn down
+   *   and the current View is staged.
+   */
+  waitForHistoryCarouselExit(win = window) {
+    return BrowserTestUtils.waitForEvent(win, "HistoryCarousel:Exit");
   },
 
   /**

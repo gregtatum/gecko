@@ -1333,6 +1333,10 @@ class WorkspaceHistory extends EventTarget {
           return;
         }
 
+        if (this.#window.gHistoryCarousel.enabled) {
+          this.#window.gHistoryCarousel.showHistoryCarousel(false);
+        }
+
         logConsole.debug(`Browser(${browser.browsingContext.id}) created.`);
         this.#watchBrowser(browser);
         this._onBrowserNavigate(browser);
