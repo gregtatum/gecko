@@ -8,30 +8,29 @@ export default {
   title: "Design System/Foundation/Typography",
 };
 
-const HEADLINE_CLASSES = [
-  "text-headline-l",
-  "text-headline",
-  "text-subheading",
+const HEADING_CLASSES = [
+  "text-heading-l-semibold",
+  "text-heading-m-semibold",
+  "text-heading-m-med",
+  "text-heading-s",
 ];
 
 const BODY_CLASSES = [
-  "text-body-s--semi-bold",
-  "text-body-s--med",
-  "text-body-xs--med",
-  "text-body-xxs--med",
+  "text-body-l-med",
+  "text-body-m-bold",
+  "text-body-m-med",
   "text-body-m",
+  "text-body-s-med",
   "text-body-s",
   "text-body-xs",
-  "text-body-xxs",
-  "text-body-xxxs",
 ];
 
 export const Default = () => html`
   <link rel="stylesheet" href="chrome://browser/content/companion/fonts.css" />
   <div>
     <type-styles-table
-      .classNames=${HEADLINE_CLASSES}
-      .title=${"Headline"}
+      .classNames=${HEADING_CLASSES}
+      .title=${"Heading"}
     ></type-styles-table>
     <type-styles-table
       .classNames=${BODY_CLASSES}
@@ -54,11 +53,11 @@ class TypeStylesTable extends LitElement {
       @import url("chrome://browser/content/companion/fonts.css");
       .container {
         max-width: 700px;
-        min-width: 500px;
+        min-width: 600px;
       }
 
       table {
-        table-layout: fixed;
+        table-layout: auto;
         border-collapse: collapse;
         border: 1px solid lightgray;
         text-align: center;
@@ -72,6 +71,7 @@ class TypeStylesTable extends LitElement {
       th,
       td {
         padding: 0 16px;
+        width: 25%;
       }
 
       td {
@@ -89,11 +89,13 @@ class TypeStylesTable extends LitElement {
       th:first-of-type,
       td:first-of-type {
         text-align: start;
-        width: 30%;
+        max-width: fit-content;
+        white-space: nowrap;
       }
 
       p {
         margin: 0;
+        width: fit-content;
       }
     `;
   }

@@ -130,7 +130,7 @@ export class RelativeTime extends MozLitElement {
     return html`
       <span
         class=${classMap({
-          "event-relative-time text-body-xs--med": true,
+          "event-relative-time text-body-m-med": true,
           "event-is-happening-now": this.isHappeningNow,
         })}
         ?hidden=${this.isHidden}

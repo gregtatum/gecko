@@ -93,28 +93,9 @@
     --colors-blue-10: #637cff;
 
     /* Background Colors */
-    --pine-background-cool-1: var(--colors-white);
-    --pine-background-cool-2: var(--colors-lightgrey-20);
-    --pine-background-cool-3: var(--colors-lightgrey-30);
-    --pine-background-cool-4: var(--colors-lightgrey-50);
-    --pine-background-cool-1-hover: var(--colors-lightgrey-30);
-    --pine-background-cool-2-hover: var(--colors-lightgrey-40);
-    --pine-background-cool-3-hover: var(--colors-lightgrey-50);
-    --pine-background-cool-4-hover: var(--colors-lightgrey-70);
-    --pine-background-cool-1-pressed: var(--colors-lightgrey-40);
-    --pine-background-cool-2-pressed: var(--colors-lightgrey-50);
-    --pine-background-cool-3-pressed: var(--colors-lightgrey-60);
-    --pine-background-cool-4-pressed: var(--colors-lightgrey-80);
-    --pine-background-lavender: var(--colors-lavender-20);
-    --pine-background-warm-1: var(--colors-cafe-10);
-    --pine-background-warm-2: var(--colors-cafe-20);
-    --pine-background-warm-3: var(--colors-cafe-40);
-    --pine-background-warm-1-hover: var(--colors-cafe-30);
-    --pine-background-warm-2-hover: var(--colors-cafe-40);
-    --pine-background-warm-3-hover: var(--colors-cafe-60);
-    --pine-background-warm-1-pressed: var(--colors-cafe-40);
-    --pine-background-warm-2-pressed: var(--colors-cafe-50);
-    --pine-background-warm-3-pressed: var(--colors-cafe-70);
+    --calendar-button-link-background: var(--colors-lightgrey-20);
+    --calendar-button-link-background-hover: var(--colors-lightgrey-40);
+    --calendar-host-image-background: var(--colors-lightgrey-30);
 
     --colors-primarygrey: #4e4a55;
     --colors-secondarygrey: #5f5b66;
