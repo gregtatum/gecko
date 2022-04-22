@@ -427,7 +427,6 @@ add_task(async function testRelativeTimeTransition() {
 
     info("Test time stamp fifteen minutes before event.");
     await helper.overrideRelativeTime(start, -15 * ONE_MINUTE);
-    await helper.setCalendarEvents(events);
 
     await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(

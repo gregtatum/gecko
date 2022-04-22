@@ -51,25 +51,20 @@ window.gCalendarEventListener = {
       this._resolveHasInitialized = resolve;
     });
 
+    // TODO(MR2-2224): _calendarEvents isn't needed for Workshop.
     this._calendarEvents = [];
 
     window.addEventListener("Companion:RegisterCalendarEvents", this);
     window.addEventListener("Companion:SignIn", this);
 
-    if (workshopEnabled) {
-      setInterval(
-        () => document.dispatchEvent(new CustomEvent("refresh-view", {})),
-        CALENDAR_UPDATE_TIME
-      );
-    } else {
-      setInterval(this.dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
-    }
+    setInterval(this.dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
   },
 
   dispatchRefreshEventsEvent() {
     // Just fire an event to tell the list to check the cached events again.
     document.dispatchEvent(
       new CustomEvent("refresh-events", {
+        // TODO(MR2-2224): We shouldn't need the config for Workshop.
         detail: { events: this._calendarEvents },
       })
     );
@@ -99,6 +94,28 @@ function debugEnabled() {
   return window.CompanionUtils.getBoolPref("browser.companion.debugUI", false);
 }
 
+/**
+ * Event Management Lifecycle (Workshop)
+ *
+ * The list of events is manged by the `listView` property, which will have its
+ * spec set based on if this element's `listType` is "now" or "browse".
+ *
+ * When we get updates to the list of events, the `onListViewUpdated` method
+ * will be called. The `serial` on `listView` is checked and the events will
+ * get updated.
+ *
+ * Creation:
+ *   - connectedCallback() -> The `listView` is created.
+ * Updates:
+ *   - onListViewUpdated() -> The `listView` has "seeked" (updated)
+ * Refresh:
+ *   - "refresh-events" triggers every minute, this will tell workshop to check
+ *     the server for updated event data.
+ *   - Companion:RegisterCalendarEvents will also trigger a "refresh-events" to
+ *     update the listView from the server.
+ *
+ *
+ */
 export class CalendarEventList extends MozLitElement {
   static get properties() {
     return {
@@ -198,7 +215,6 @@ export class CalendarEventList extends MozLitElement {
 
   connectedCallback() {
     document.addEventListener("refresh-events", this);
-    document.addEventListener("refresh-view", this);
 
     if (workshopEnabled) {
       this.updateCalendarListView();
@@ -214,8 +230,10 @@ export class CalendarEventList extends MozLitElement {
   }
 
   disconnectedCallback() {
+    document.removeEventListener("refresh-events", this);
+
     if (workshopEnabled) {
-      this.maybeStopListening();
+      this.cleanup();
       workshopAPI.accounts.removeListener(
         "add",
         this,
@@ -229,8 +247,6 @@ export class CalendarEventList extends MozLitElement {
       workshopAPI.removeListener("time-warp", this, this.onTimeWarp);
     }
 
-    document.removeEventListener("refresh-events", this);
-    document.removeEventListener("refresh-view", this);
     super.disconnectedCallback();
   }
 
@@ -305,7 +321,7 @@ export class CalendarEventList extends MozLitElement {
   handleEvent(e) {
     if (e.type == "refresh-events") {
       if (workshopEnabled) {
-        this.updateCalendarListView();
+        this.refreshView();
       } else {
         let plainEvents = this.getRelevantEvents(e.detail.events);
         let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
@@ -314,8 +330,6 @@ export class CalendarEventList extends MozLitElement {
           numberOfEvents: this.events.length,
         });
       }
-    } else if (e.type === "refresh-view") {
-      this.refreshView();
     }
   }
 

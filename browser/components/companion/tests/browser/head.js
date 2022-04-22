@@ -519,6 +519,9 @@ class CompanionHelper {
         content.RelativeTime.getNow = () => {
           return new Date(new Date(startTime).getTime() + timeDiff);
         };
+        content.document.dispatchEvent(
+          new content.CustomEvent("update-relative-time", {})
+        );
       },
       [start, diff]
     );
