@@ -419,7 +419,6 @@ class CompanionHelper {
       helper = new CompanionHelper(browserWindow);
     }
 
-    helper.openCompanion();
     await helper.companionReady;
 
     await taskFn(helper);
@@ -429,8 +428,6 @@ class CompanionHelper {
     if (workshopEnabled) {
       await helper.clearWorkshopData();
     }
-
-    helper.closeCompanion();
   }
 
   constructor(
