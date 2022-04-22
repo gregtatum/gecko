@@ -211,12 +211,12 @@ export class CalendarEventList extends MozLitElement {
     document.addEventListener("refresh-events", this);
 
     if (workshopEnabled) {
-      this.updateCalendarListView();
+      this.createCalendarListView();
       window.addEventListener("unload", () => {
         this.cleanup();
       });
-      workshopAPI.accounts.on("add", this, this.updateCalendarListView);
-      workshopAPI.accounts.on("remove", this, this.updateCalendarListView);
+      workshopAPI.accounts.on("add", this, this.createCalendarListView);
+      workshopAPI.accounts.on("remove", this, this.createCalendarListView);
       workshopAPI.on("time-warp", this, this.onTimeWarp);
     }
 
@@ -231,12 +231,12 @@ export class CalendarEventList extends MozLitElement {
       workshopAPI.accounts.removeListener(
         "add",
         this,
-        this.updateCalendarListView
+        this.createCalendarListView
       );
       workshopAPI.accounts.removeListener(
         "remove",
         this,
-        this.updateCalendarListView
+        this.createCalendarListView
       );
       workshopAPI.removeListener("time-warp", this, this.onTimeWarp);
     }
@@ -247,7 +247,7 @@ export class CalendarEventList extends MozLitElement {
   async onTimeWarp() {
     this.isFakeTime = true;
     await Workshop.refreshServices();
-    this.updateCalendarListView();
+    this.refreshView();
   }
 
   onListViewUpdated() {
@@ -363,7 +363,7 @@ export class CalendarEventList extends MozLitElement {
     this.listView?.refresh();
   }
 
-  async updateCalendarListView() {
+  async createCalendarListView() {
     this.cleanup();
 
     let accounts = await Workshop.getConnectedAccounts();
