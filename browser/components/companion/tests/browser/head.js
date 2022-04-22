@@ -268,6 +268,7 @@ class WorkshopHelper {
     });
 
     await this.account.syncFolderList();
+    await this.workshopAPI.TEST_queueEmptied();
   }
 
   async clearAccountAndCalendars() {

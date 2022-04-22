@@ -11248,7 +11248,7 @@ var WorkshopBackend = (() => {
           const { accountId } = rawTask;
           plannedTask.resources = [`happy!${accountId}`];
           plannedTask.priorityTags = [`view:account:${accountId}`];
-          plannedTask.relPriority = -99999;
+          plannedTask.relPriority = -99998;
           return ctx.finishTask({
             taskState: plannedTask
           });
@@ -16535,6 +16535,10 @@ var WorkshopBackend = (() => {
     async _promised_TEST_getDBCounts(msg, replyFunc) {
       const data = await this.universe.getDBCounts(msg?.id);
       replyFunc(data);
+    },
+    async _promised_TEST_queueEmptied(msg, replyFunc) {
+      await this.universe.TEST_queueEmptied();
+      replyFunc();
     },
     _promised_getLogicBuffer(msg, replyFunc) {
       replyFunc(this.universe.getLogicBuffer(), false);
@@ -23208,6 +23212,25 @@ var WorkshopBackend = (() => {
     }
   ]);
 
+  // src/backend/tasks/test_queue_emptied.js
+  init_task_definer();
+  init_util();
+  var test_queue_emptied_default = task_definer_default.defineSimpleTask([
+    {
+      name: "TEST_queueEmptied",
+      helped_plan(ctx, rawTask) {
+        const plannedTask = shallowClone2(rawTask);
+        plannedTask.relPriority = -99999;
+        return {
+          taskState: plannedTask
+        };
+      },
+      async execute(ctx, planned) {
+        await ctx.finishTask({});
+      }
+    }
+  ]);
+
   // src/backend/global_tasks.js
   var global_tasks_default = [
     config_modify_default,
@@ -23215,7 +23238,8 @@ var WorkshopBackend = (() => {
     account_delete_default,
     account_migrate_default,
     new_flush_default,
-    metadata_refresh_default
+    metadata_refresh_default,
+    test_queue_emptied_default
   ];
 
   // src/backend/mailuniverse.js
@@ -24101,6 +24125,9 @@ var WorkshopBackend = (() => {
       });
     },
     createFolder() {
+    },
+    async TEST_queueEmptied(why) {
+      await this.taskManager.scheduleTaskAndWaitForExecutedResult({ type: "TEST_queueEmptied" }, why);
     }
   };
 

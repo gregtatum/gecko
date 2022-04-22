@@ -251,6 +251,11 @@ MailBridge.prototype = {
     replyFunc(data);
   },
 
+  async _promised_TEST_queueEmptied(msg, replyFunc) {
+    await this.universe.TEST_queueEmptied();
+    replyFunc();
+  },
+
   _promised_getLogicBuffer(msg, replyFunc) {
     // log is set to false in order to not log that stuff which will pollute
     // the logs!

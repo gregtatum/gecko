@@ -1406,5 +1406,15 @@ MailUniverse.prototype = {
     // XXX implement!
   },
 
+  /**
+   * An empty task with a low priority to wait for the task queue to empty.
+   */
+  async TEST_queueEmptied(why) {
+    await this.taskManager.scheduleTaskAndWaitForExecutedResult(
+      { type: "TEST_queueEmptied" },
+      why
+    );
+  },
+
   //////////////////////////////////////////////////////////////////////////////
 };

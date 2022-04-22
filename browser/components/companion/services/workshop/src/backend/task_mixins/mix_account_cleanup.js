@@ -35,7 +35,7 @@ const MixinAccountCleanup = {
     plannedTask.priorityTags = [`view:account:${accountId}`];
 
     // No rush... it's just clean-up stuff.
-    plannedTask.relPriority = -99999;
+    plannedTask.relPriority = -99998;
 
     return ctx.finishTask({
       taskState: plannedTask,

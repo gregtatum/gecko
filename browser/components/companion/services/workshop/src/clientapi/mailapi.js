@@ -1916,6 +1916,12 @@ export class MailAPI extends Emitter {
     });
   }
 
+  TEST_queueEmptied() {
+    return this._sendPromisedRequest({
+      type: "TEST_queueEmptied",
+    });
+  }
+
   getLogicBuffer() {
     return this._sendPromisedRequest({
       type: "getLogicBuffer",

@@ -20,6 +20,7 @@ import AccountMigrate from "./tasks/account_migrate";
 import ConfigModify from "./tasks/config_modify";
 import MetadataRefresh from "./tasks/metadata_refresh";
 import NewFlush from "./tasks/new_flush";
+import TestQueueEmptied from "./tasks/test_queue_emptied";
 
 /**
  * Global tasks which aren't associated with a specific account type.
@@ -37,4 +38,7 @@ export default [
   NewFlush,
 
   MetadataRefresh,
+
+  // - Testing tasks
+  TestQueueEmptied,
 ];
