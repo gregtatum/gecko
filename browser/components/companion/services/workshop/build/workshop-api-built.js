@@ -4735,101 +4735,104 @@ function MailAPIFactory({
 }) {
   logic.isDisabled = !isLoggingEnabled;
   const MailAPI2 = new MailAPI();
-  const worker = makeWorker();
-  logic.defineScope(worker, "Worker");
-  const workerPort2 = worker.port;
-  let logicEventListener = null;
-  if (!isLoggingEnabled) {
-    MailAPI2.__bridgeSend({
-      type: "disableLogic"
-    });
-  }
-  const bridge = {
-    name: "bridge",
-    sendMessage: null,
-    process(uid, cmd, args) {
-      var msg = args;
-      if (msg.type === "hello") {
-        delete MailAPI2._fake;
-        logic.tid = `api${uid}`;
-        logic(SCOPE, "gotHello", { uid, storedSends: MailAPI2._storedSends });
-        MailAPI2.__bridgeSend = function(sendMsg) {
-          if (sendMsg?.log !== false) {
-            logic(this, "send", { msg: sendMsg });
+  const buildWorker = () => {
+    const worker = makeWorker();
+    logic.defineScope(worker, "Worker");
+    const workerPort2 = worker.port;
+    let logicEventListener = null;
+    if (!isLoggingEnabled) {
+      MailAPI2.__bridgeSend({
+        type: "disableLogic"
+      });
+    }
+    const bridge = {
+      name: "bridge",
+      sendMessage: null,
+      process(uid, cmd, args) {
+        var msg = args;
+        if (msg.type === "hello") {
+          delete MailAPI2._fake;
+          logic.tid = `api${uid}`;
+          logic(SCOPE, "gotHello", { uid, storedSends: MailAPI2._storedSends });
+          MailAPI2.__bridgeSend = function(sendMsg) {
+            if (sendMsg?.log !== false) {
+              logic(this, "send", { msg: sendMsg });
+            }
+            try {
+              workerPort2.postMessage({
+                uid,
+                type: "bridge",
+                msg: sendMsg
+              });
+            } catch (ex) {
+              console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
+            }
+          };
+          if (!logicEventListener) {
+            logicEventListener = (event) => {
+              MailAPI2.__bridgeSend({
+                type: "addToLogicBuffer",
+                log: false,
+                data: event.jsonRepresentation
+              });
+            };
+            logic.on("event", logicEventListener);
           }
-          try {
+          if (isHiddenWindow) {
             workerPort2.postMessage({
-              uid,
-              type: "bridge",
-              msg: sendMsg
+              type: "hiddenWindow"
             });
-          } catch (ex) {
-            console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
           }
-        };
-        if (!logicEventListener) {
-          logicEventListener = (event) => {
-            MailAPI2.__bridgeSend({
-              type: "addToLogicBuffer",
-              log: false,
-              data: event.jsonRepresentation
+          MailAPI2.willDie = () => {
+            workerPort2.postMessage({
+              type: "willDie"
             });
           };
-          logic.on("event", logicEventListener);
-        }
-        if (isHiddenWindow) {
-          workerPort2.postMessage({
-            type: "hiddenWindow"
+          MailAPI2.config = msg.config;
+          MailAPI2._storedSends.forEach(function(storedMsg) {
+            MailAPI2.__bridgeSend(storedMsg);
           });
+          MailAPI2.__universeAvailable(msg.initExtra);
+        } else {
+          MailAPI2.__bridgeReceive(msg);
         }
-        MailAPI2.willDie = () => {
-          workerPort2.postMessage({
-            type: "willDie"
-          });
-        };
-        MailAPI2.config = msg.config;
-        MailAPI2._storedSends.forEach(function(storedMsg) {
-          MailAPI2.__bridgeSend(storedMsg);
-        });
-        MailAPI2.__universeAvailable(msg.initExtra);
-      } else {
-        MailAPI2.__bridgeReceive(msg);
       }
-    }
-  };
-  const mainThreadServiceModule = {
-    name: "mainThreadServices",
-    process(uid, cmd, args) {
-      if (!mainThreadServices?.hasOwnProperty(cmd)) {
-        this.sendMessage(uid, cmd, args, `No service ${cmd} in the main thread.`);
+    };
+    const mainThreadServiceModule = {
+      name: "mainThreadServices",
+      process(uid, cmd, args) {
+        if (!mainThreadServices?.hasOwnProperty(cmd)) {
+          this.sendMessage(uid, cmd, args, `No service ${cmd} in the main thread.`);
+        }
+        try {
+          Promise.resolve(mainThreadServices[cmd](...args)).then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
+        } catch (ex) {
+          this.sendMessage(uid, cmd, args, `Main thread service threw: ${ex.message}`);
+        }
       }
-      try {
-        Promise.resolve(mainThreadServices[cmd](...args)).then((res) => this.sendMessage(uid, cmd, res, null)).catch((err) => this.sendMessage(uid, cmd, args, `Main thread service threw: ${err.message}`));
-      } catch (ex) {
-        this.sendMessage(uid, cmd, args, `Main thread service threw: ${ex.message}`);
+    };
+    worker.onerror = (event) => {
+      if (logicEventListener) {
+        logic.removeListener("event", logicEventListener);
+        logicEventListener = null;
       }
-    }
+      logic(worker, "workerError", {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno
+      });
+    };
+    register(mainThreadServiceModule);
+    register(control);
+    register(bridge);
+    register(configparser_main_default);
+    register(cronsync_main_default);
+    register(devicestorage_main_default);
+    register(net_main_default);
+    register(wakelocks_main_default);
+    useWorker(worker);
   };
-  worker.onerror = (event) => {
-    if (logicEventListener) {
-      logic.removeListener("event", logicEventListener);
-      logicEventListener = null;
-    }
-    logic(worker, "workerError", {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno
-    });
-  };
-  register(mainThreadServiceModule);
-  register(control);
-  register(bridge);
-  register(configparser_main_default);
-  register(cronsync_main_default);
-  register(devicestorage_main_default);
-  register(net_main_default);
-  register(wakelocks_main_default);
-  useWorker(worker);
+  setTimeout(buildWorker, 500);
   return MailAPI2;
 }
 export {

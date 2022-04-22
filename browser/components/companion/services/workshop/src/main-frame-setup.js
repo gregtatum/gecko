@@ -82,154 +82,160 @@ const control = {
   },
 };
 
-// Wire up the worker to the router
-/* If using require.js this module should look something like:
-
- */
-
 export function MailAPIFactory({
   mainThreadServices,
   isHiddenWindow,
   isLoggingEnabled,
 }) {
   logic.isDisabled = !isLoggingEnabled;
+  // We now support deferred creation of the worker.  We create the MailAPI
+  // eagerly so calls can be issued against it, but the inherently async nature
+  // of the worker initialization means that we can easily handle some delay,
+  // we just need worker/workerPort to be non-const.
   const MailAPI = new $mailapi.MailAPI();
-  const worker = makeWorker();
-  logic.defineScope(worker, "Worker");
-  const workerPort = worker.port;
-  let logicEventListener = null;
 
-  if (!isLoggingEnabled) {
-    MailAPI.__bridgeSend({
-      type: "disableLogic",
-    });
-  }
+  const buildWorker = () => {
+    const worker = makeWorker();
+    logic.defineScope(worker, "Worker");
+    const workerPort = worker.port;
+    let logicEventListener = null;
 
-  const bridge = {
-    name: "bridge",
-    sendMessage: null,
-    process(uid, cmd, args) {
-      var msg = args;
-
-      if (msg.type === "hello") {
-        delete MailAPI._fake;
-        logic.tid = `api${uid}`;
-        logic(SCOPE, "gotHello", { uid, storedSends: MailAPI._storedSends });
-        MailAPI.__bridgeSend = function(sendMsg) {
-          if (sendMsg?.log !== false) {
-            logic(this, "send", { msg: sendMsg });
-          }
-          try {
-            workerPort.postMessage({
-              uid,
-              type: "bridge",
-              msg: sendMsg,
-            });
-          } catch (ex) {
-            console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
-          }
-        };
-
-        if (!logicEventListener) {
-          logicEventListener = event => {
-            MailAPI.__bridgeSend({
-              type: "addToLogicBuffer",
-              // Avoid to log that we are logging!
-              log: false,
-              data: event.jsonRepresentation,
-            });
-          };
-          logic.on("event", logicEventListener);
-        }
-
-        if (isHiddenWindow) {
-          workerPort.postMessage({
-            type: "hiddenWindow",
-          });
-        }
-
-        MailAPI.willDie = () => {
-          workerPort.postMessage({
-            type: "willDie",
-          });
-        };
-
-        MailAPI.config = msg.config;
-
-        // Send up all the queued messages to real backend now.
-        MailAPI._storedSends.forEach(function(storedMsg) {
-          MailAPI.__bridgeSend(storedMsg);
-        });
-        // XXX
-        //MailAPI._storedSends = [];
-
-        MailAPI.__universeAvailable(msg.initExtra);
-      } else {
-        MailAPI.__bridgeReceive(msg);
-      }
-    },
-  };
-
-  const mainThreadServiceModule = {
-    name: "mainThreadServices",
-    process(uid, cmd, args) {
-      if (!mainThreadServices?.hasOwnProperty(cmd)) {
-        this.sendMessage(
-          uid,
-          cmd,
-          args,
-          `No service ${cmd} in the main thread.`
-        );
-      }
-      try {
-        Promise.resolve(mainThreadServices[cmd](...args))
-          .then(res => this.sendMessage(uid, cmd, res, null))
-          .catch(err =>
-            this.sendMessage(
-              uid,
-              cmd,
-              args,
-              `Main thread service threw: ${err.message}`
-            )
-          );
-      } catch (ex) {
-        this.sendMessage(
-          uid,
-          cmd,
-          args,
-          `Main thread service threw: ${ex.message}`
-        );
-      }
-    },
-  };
-
-  worker.onerror = event => {
-    if (logicEventListener) {
-      logic.removeListener("event", logicEventListener);
-      logicEventListener = null;
+    if (!isLoggingEnabled) {
+      MailAPI.__bridgeSend({
+        type: "disableLogic",
+      });
     }
 
-    logic(worker, "workerError", {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-    });
-    // we do not preventDefault the event, we want as many other helpful error
-    // reporting mechanisms to fire, etc.
+    const bridge = {
+      name: "bridge",
+      sendMessage: null,
+      process(uid, cmd, args) {
+        var msg = args;
+
+        if (msg.type === "hello") {
+          delete MailAPI._fake;
+          logic.tid = `api${uid}`;
+          logic(SCOPE, "gotHello", { uid, storedSends: MailAPI._storedSends });
+          MailAPI.__bridgeSend = function(sendMsg) {
+            if (sendMsg?.log !== false) {
+              logic(this, "send", { msg: sendMsg });
+            }
+            try {
+              workerPort.postMessage({
+                uid,
+                type: "bridge",
+                msg: sendMsg,
+              });
+            } catch (ex) {
+              console.error("Presumed DataCloneError on:", sendMsg, "ex:", ex);
+            }
+          };
+
+          if (!logicEventListener) {
+            logicEventListener = event => {
+              MailAPI.__bridgeSend({
+                type: "addToLogicBuffer",
+                // Avoid to log that we are logging!
+                log: false,
+                data: event.jsonRepresentation,
+              });
+            };
+            logic.on("event", logicEventListener);
+          }
+
+          if (isHiddenWindow) {
+            workerPort.postMessage({
+              type: "hiddenWindow",
+            });
+          }
+
+          MailAPI.willDie = () => {
+            workerPort.postMessage({
+              type: "willDie",
+            });
+          };
+
+          MailAPI.config = msg.config;
+
+          // Send up all the queued messages to real backend now.
+          MailAPI._storedSends.forEach(function(storedMsg) {
+            MailAPI.__bridgeSend(storedMsg);
+          });
+          // XXX
+          //MailAPI._storedSends = [];
+
+          MailAPI.__universeAvailable(msg.initExtra);
+        } else {
+          MailAPI.__bridgeReceive(msg);
+        }
+      },
+    };
+
+    const mainThreadServiceModule = {
+      name: "mainThreadServices",
+      process(uid, cmd, args) {
+        if (!mainThreadServices?.hasOwnProperty(cmd)) {
+          this.sendMessage(
+            uid,
+            cmd,
+            args,
+            `No service ${cmd} in the main thread.`
+          );
+        }
+        try {
+          Promise.resolve(mainThreadServices[cmd](...args))
+            .then(res => this.sendMessage(uid, cmd, res, null))
+            .catch(err =>
+              this.sendMessage(
+                uid,
+                cmd,
+                args,
+                `Main thread service threw: ${err.message}`
+              )
+            );
+        } catch (ex) {
+          this.sendMessage(
+            uid,
+            cmd,
+            args,
+            `Main thread service threw: ${ex.message}`
+          );
+        }
+      },
+    };
+
+    worker.onerror = event => {
+      if (logicEventListener) {
+        logic.removeListener("event", logicEventListener);
+        logicEventListener = null;
+      }
+
+      logic(worker, "workerError", {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+      });
+      // we do not preventDefault the event, we want as many other helpful error
+      // reporting mechanisms to fire, etc.
+    };
+
+    // Attach the listeners...
+    $router.register(mainThreadServiceModule);
+    $router.register(control);
+    $router.register(bridge);
+    $router.register($configparser);
+    $router.register($cronsync);
+    $router.register($devicestorage);
+    $router.register($net);
+    $router.register($wakelocks);
+
+    // ... and then add the onmessage.
+    $router.useWorker(worker);
   };
 
-  // Attach the listeners...
-  $router.register(mainThreadServiceModule);
-  $router.register(control);
-  $router.register(bridge);
-  $router.register($configparser);
-  $router.register($cronsync);
-  $router.register($devicestorage);
-  $router.register($net);
-  $router.register($wakelocks);
-
-  // ... and then add the onmessage.
-  $router.useWorker(worker);
+  // We currently defer the worker's startup to avoid race conditions.  This
+  // should be reduced or eliminated.
+  setTimeout(buildWorker, 500);
 
   return MailAPI;
 }
