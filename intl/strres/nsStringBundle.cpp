@@ -418,6 +418,7 @@ nsStringBundleBase::CollectReports(nsIHandleReportCallback* aHandleReport,
 }
 
 nsresult nsStringBundleBase::ParseProperties(nsIPersistentProperties** aProps) {
+  mMutex.AssertCurrentThreadOwns();
   // this is different than mLoaded, because we only want to attempt
   // to load once
   // we only want to load once, but if we've tried once and failed,
@@ -483,6 +484,7 @@ nsresult nsStringBundleBase::ParseProperties(nsIPersistentProperties** aProps) {
 }
 
 nsresult nsStringBundle::LoadProperties() {
+  mMutex.AssertCurrentThreadOwns();
   // Something such as Necko might use string bundle after ClearOnShutdown is
   // called. LocaleService etc is already down, so we cannot get bundle data.
   if (PastShutdownPhase(ShutdownPhase::XPCOMShutdown)) {
@@ -496,6 +498,7 @@ nsresult nsStringBundle::LoadProperties() {
 }
 
 nsresult SharedStringBundle::LoadProperties() {
+  mMutex.AssertCurrentThreadOwns();
   if (mStringMap) return NS_OK;
 
   if (mMapFile.isSome()) {
@@ -649,12 +652,13 @@ nsStringBundleBase::FormatStringFromName(const char* aName,
 NS_IMETHODIMP
 nsStringBundleBase::GetSimpleEnumeration(nsISimpleEnumerator** aElements) {
   NS_ENSURE_ARG_POINTER(aElements);
-
+  MutexAutoLock autolock(mMutex);
   return GetSimpleEnumerationImpl(aElements);
 }
 
 nsresult nsStringBundle::GetSimpleEnumerationImpl(
     nsISimpleEnumerator** elements) {
+  mMutex.AssertCurrentThreadOwns();
   MOZ_TRY(LoadProperties());
 
   return mProps->Enumerate(elements);
@@ -662,6 +666,7 @@ nsresult nsStringBundle::GetSimpleEnumerationImpl(
 
 nsresult SharedStringBundle::GetSimpleEnumerationImpl(
     nsISimpleEnumerator** aEnumerator) {
+  mMutex.AssertCurrentThreadOwns();
   MOZ_TRY(LoadProperties());
 
   auto iter = MakeRefPtr<StringMapEnumerator>(mStringMap);
