@@ -86,7 +86,36 @@ export default class ViewGroupElement extends MozLitElement {
     this.dispatchEvent(closeEvent);
   }
 
-  #onHistoryClick(event) {
+  #onViewHistoryNavigation(event) {
+    if (
+      event.keyCode == KeyEvent.DOM_VK_LEFT ||
+      event.keyCode == KeyEvent.DOM_VK_RIGHT
+    ) {
+      let view = event.target;
+      let sibling;
+      if (event.keyCode == KeyEvent.DOM_VK_LEFT) {
+        if (document.dir == "ltr") {
+          sibling = view.previousElementSibling;
+        } else {
+          sibling = view.nextElementSibling;
+        }
+      } else if (event.keyCode == KeyEvent.DOM_VK_RIGHT) {
+        if (document.dir == "ltr") {
+          sibling = view.nextElementSibling;
+        } else {
+          sibling = view.previousElementSibling;
+        }
+      }
+
+      if (sibling) {
+        sibling.focus();
+      }
+    }
+
+    event.stopPropagation();
+  }
+
+  #onHistoryItemSelected(event) {
     let view = event.target.view;
     let e = new CustomEvent("UserAction:ViewSelected", {
       bubbles: true,
@@ -159,7 +188,8 @@ export default class ViewGroupElement extends MozLitElement {
           <button
             class=${classMap(classes)}
             .view=${historyView}
-            @click=${this.#onHistoryClick}
+            @click=${this.#onHistoryItemSelected}
+            @keyup=${this.#onViewHistoryNavigation}
             title=${historyView.title}
             size=${size}
           ></button>
