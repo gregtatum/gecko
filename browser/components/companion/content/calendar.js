@@ -47,10 +47,6 @@ window.gCalendarEventListener = {
       this
     );
 
-    this.initialized = new Promise(resolve => {
-      this._resolveHasInitialized = resolve;
-    });
-
     // TODO(MR2-2224): _calendarEvents isn't needed for Workshop.
     this._calendarEvents = [];
 
@@ -68,17 +64,15 @@ window.gCalendarEventListener = {
         detail: { events: this._calendarEvents },
       })
     );
-    if (this._resolveHasInitialized) {
-      this._resolveHasInitialized();
-      this._resolveHasInitialized = null;
-    }
   },
 
   handleEvent({ type, detail }) {
     switch (type) {
       case "Companion:RegisterCalendarEvents": {
         this._calendarEvents = detail.events;
-        this.dispatchRefreshEventsEvent();
+        if (!workshopEnabled) {
+          this.dispatchRefreshEventsEvent();
+        }
         break;
       }
       case "Companion:SignIn": {

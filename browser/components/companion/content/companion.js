@@ -26,11 +26,7 @@ window.openUrl = url => {
   window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
 };
 
-let resolveInitialized;
-
-window.gInitialized = new Promise(resolve => {
-  resolveInitialized = resolve;
-});
+window.gInitialized = false;
 
 let loadObserved = false;
 let companionSetupObserved = false;
@@ -44,8 +40,6 @@ function maybeInitializeUI() {
     return;
   }
 
-  let initPromises = [window.gCalendarEventListener.initialized];
-
   let eventsPlaceholder = document.getElementById("events-placeholder");
   if (
     Services.prefs.getBoolPref(
@@ -54,7 +48,6 @@ function maybeInitializeUI() {
     )
   ) {
     let servicesOnboarding = new ServicesOnboarding();
-    initPromises.push(servicesOnboarding.updateComplete);
     eventsPlaceholder.parentElement.insertBefore(
       servicesOnboarding,
       eventsPlaceholder
@@ -160,13 +153,11 @@ function maybeInitializeUI() {
     initNotifications();
   }
 
+  window.gInitialized = true;
   // This is used for tests to ensure that the various components have initialized.
   // If your component has delayed initialization, then you will want to add something
   // to wait for it here.
-  Promise.all(initPromises).then(() => {
-    resolveInitialized();
-    window.dispatchEvent(new Event("CompanionInitialized", { bubbles: true }));
-  });
+  window.dispatchEvent(new Event("CompanionInitialized", { bubbles: true }));
 }
 
 function showPanel(name) {

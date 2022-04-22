@@ -533,9 +533,7 @@ class CompanionHelper {
 
   get companionReady() {
     return this.runCompanionTask(async () => {
-      if (content.gInitialized) {
-        await content.gInitialized;
-      } else {
+      if (!content.gInitialized) {
         await ContentTaskUtils.waitForEvent(content, "CompanionInitialized");
       }
     });
