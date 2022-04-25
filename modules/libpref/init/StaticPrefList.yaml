@@ -2146,6 +2146,12 @@
   value: true
   mirror: always
 
+# Whether the scheduler interface will be exposed
+- name: dom.enable_web_task_scheduling
+  type: RelaxedAtomicBool
+  value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
 # If this is true, it's allowed to fire "cut", "copy" and "paste" events.
 # Additionally, "input" events may expose clipboard content when inputType
 # is "insertFromPaste" or something.
@@ -2660,6 +2666,12 @@
 
 # Is support for HTMLElement.inputMode enabled?
 - name: dom.forms.inputmode
+  type: bool
+  value: true
+  mirror: always
+
+# Is support for HTMLInputElement.showPicker enabled?
+- name: dom.input.showPicker
   type: bool
   value: true
   mirror: always
@@ -4159,7 +4171,11 @@
 # Whether the WebMIDI API is enabled
 - name: dom.webmidi.enabled
   type: bool
-  value: @IS_NOT_ANDROID@
+#if !defined(MOZ_WIDGET_ANDROID) && defined(EARLY_BETA_OR_EARLIER)
+  value: true
+#else
+  value: false
+#endif
   mirror: always
 
 # midi permission is addon-gated
@@ -6832,7 +6848,7 @@
   # Changing these prefs requires a restart.
 -   name: javascript.options.wasm_simd_avx
     type: bool
-    value: @IS_NIGHTLY_BUILD@
+    value: true
     mirror: always
 #endif
 #endif
@@ -11911,7 +11927,7 @@
   # true means win32k system calls are not permitted.
 -   name: security.sandbox.content.win32k-disable
     type: RelaxedAtomicBool
-    value: true
+    value: @IS_EARLY_BETA_OR_EARLIER@
     mirror: always
 
   # Note: win32k is currently _not_ disabled for GMP due to intermittent test

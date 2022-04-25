@@ -53,6 +53,7 @@
 #include "mozilla/ipc/URIUtils.h"
 #include "gfxPlatform.h"
 #include "gfxPlatformFontList.h"
+#include "mozilla/AppShutdown.h"
 #include "mozilla/AutoRestore.h"
 #include "mozilla/ContentBlocking.h"
 #include "mozilla/BasePrincipal.h"
@@ -606,10 +607,6 @@ UniquePtr<SandboxBrokerPolicyFactory>
 UniquePtr<std::vector<std::string>> ContentParent::sMacSandboxParams;
 #endif
 
-// This is true when subprocess launching is enabled.  This is the
-// case between StartUp() and ShutDown().
-static bool sCanLaunchSubprocesses;
-
 // Set to true when the first content process gets created.
 static bool sCreatedFirstContentProcess = false;
 
@@ -657,11 +654,8 @@ ContentParent::MakePreallocProcess() {
 
 /*static*/
 void ContentParent::StartUp() {
-  // We could launch sub processes from content process
   // FIXME Bug 1023701 - Stop using ContentParent static methods in
   // child process
-  sCanLaunchSubprocesses = true;
-
   if (!XRE_IsParentProcess()) {
     return;
   }
@@ -687,9 +681,8 @@ void ContentParent::StartUp() {
 
 /*static*/
 void ContentParent::ShutDown() {
-  // No-op for now.  We rely on normal process shutdown and
+  // For the most, we rely on normal process shutdown and
   // ClearOnShutdown() to clean up our state.
-  sCanLaunchSubprocesses = false;
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   sSandboxBrokerPolicyFactory = nullptr;
@@ -1450,7 +1443,9 @@ already_AddRefed<RemoteBrowser> ContentParent::CreateBrowser(
       "BrowsingContext must not have BrowserParent, or have previous "
       "BrowserParent cleared");
 
-  if (!sCanLaunchSubprocesses) {
+  // Take a shortcut (BeginSubprpocessLaunch would fail later, too).
+  if (AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdown)) {
+    MOZ_ASSERT(false, "Late attempt to CreateBrowser!");
     return nullptr;
   }
 
@@ -1645,7 +1640,12 @@ void ContentParent::BroadcastMediaCodecsSupportedUpdate(
 
 const nsACString& ContentParent::GetRemoteType() const { return mRemoteType; }
 
+static StaticRefPtr<nsIAsyncShutdownClient> sXPCOMShutdownClient;
+static StaticRefPtr<nsIAsyncShutdownClient> sProfileBeforeChangeClient;
+
 void ContentParent::Init() {
+  MOZ_ASSERT(sXPCOMShutdownClient);
+
   nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
   if (obs) {
     size_t length = ArrayLength(sObserverTopics);
@@ -1653,8 +1653,6 @@ void ContentParent::Init() {
       obs->AddObserver(this, sObserverTopics[i], false);
     }
   }
-
-  AddShutdownBlockers();
 
   if (obs) {
     nsAutoString cpId;
@@ -1850,8 +1848,7 @@ void ContentParent::AssertNotInPool() {
     MOZ_RELEASE_ASSERT(
         !sBrowserContentParents ||
         !sBrowserContentParents->Contains(mRemoteType) ||
-        !sBrowserContentParents->Get(mRemoteType)->Contains(this) ||
-        !sCanLaunchSubprocesses);  // aka in shutdown - avoid timing issues
+        !sBrowserContentParents->Get(mRemoteType)->Contains(this));
 
     for (const auto& group : mGroups) {
       MOZ_RELEASE_ASSERT(group->GetHostProcess(mRemoteType) != this,
@@ -2495,11 +2492,17 @@ void ContentParent::AppendSandboxParams(std::vector<std::string>& aArgs) {
 bool ContentParent::BeginSubprocessLaunch(ProcessPriority aPriority) {
   AUTO_PROFILER_LABEL("ContentParent::LaunchSubprocess", OTHER);
 
-  // XXX: This check works only late, as GetSingleton will return nullptr
-  // only after ClearOnShutdown happened. See bug 1632740.
+  // Ensure we will not rush through our shutdown phases while launching.
+  // LaunchSubprocessReject will remove them in case of failure,
+  // otherwise ActorDestroy will take care.
+  AddShutdownBlockers();
+
+  if (AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdown)) {
+    MOZ_ASSERT(false, "Late attempt to launch a process!");
+    return false;
+  }
   if (!ContentProcessManager::GetSingleton()) {
-    NS_WARNING(
-        "Shutdown has begun, we shouldn't spawn any more child processes");
+    MOZ_ASSERT(false, "Unable to acquire ContentProcessManager singleton!");
     return false;
   }
 
@@ -2589,6 +2592,7 @@ void ContentParent::LaunchSubprocessReject() {
     mIsAPreallocBlocker = false;
   }
   MarkAsDead();
+  RemoveShutdownBlockers();
 }
 
 bool ContentParent::LaunchSubprocessResolve(bool aIsSync,
@@ -2701,13 +2705,12 @@ bool ContentParent::LaunchSubprocessSync(
   // We've started a sync content process launch.
   Telemetry::Accumulate(Telemetry::CONTENT_PROCESS_LAUNCH_IS_SYNC, 1);
 
-  if (!BeginSubprocessLaunch(aInitialPriority)) {
-    return false;
-  }
-  const bool ok = mSubprocess->WaitForProcessHandle();
-  if (ok && LaunchSubprocessResolve(/* aIsSync = */ true, aInitialPriority)) {
-    ContentParent::DidLaunchSubprocess();
-    return true;
+  if (BeginSubprocessLaunch(aInitialPriority)) {
+    const bool ok = mSubprocess->WaitForProcessHandle();
+    if (ok && LaunchSubprocessResolve(/* aIsSync = */ true, aInitialPriority)) {
+      ContentParent::DidLaunchSubprocess();
+      return true;
+    }
   }
   LaunchSubprocessReject();
   return false;
@@ -3541,11 +3544,19 @@ ContentParent::BlockShutdown(nsIAsyncShutdownClient* aClient) {
     // The normal shutdown sequence is to send a shutdown message
     // to the child and then just wait for ActorDestroy which will
     // cleanup everything and remove our blockers.
+    // XXX: Check for successful dispatch, see bug 1765732
     ShutDownProcess(SEND_SHUTDOWN_MESSAGE);
+  } else if (IsLaunching()) {
+    // If we get here while we are launching, we must wait for the child to
+    // be able to react on our commands. Mark this process as dead. This
+    // will make bail out LaunchSubprocessResolve and kick off the normal
+    // shutdown sequence.
+    MarkAsDead();
   } else {
-    // If we get here with whatever non-active state on the channel,
-    // we just close it and ActorDestroy will remove our blockers.
-    ShutDownProcess(CLOSE_CHANNEL);
+    MOZ_ASSERT(IsDead());
+    // Nothing left we can do. We must assume that we race with an ongoing
+    // process shutdown, such that we can expect our shutdown blockers to be
+    // removed normally.
   }
 
   return NS_OK;
@@ -3566,9 +3577,6 @@ ContentParent::GetState(nsIPropertyBag** aResult) {
   *aResult = props.forget().downcast<nsIWritablePropertyBag>().take();
   return NS_OK;
 }
-
-static StaticRefPtr<nsIAsyncShutdownClient> sXPCOMShutdownClient;
-static StaticRefPtr<nsIAsyncShutdownClient> sProfileBeforeChangeClient;
 
 static void InitShutdownClients() {
   if (!sXPCOMShutdownClient) {
@@ -4137,7 +4145,7 @@ void ContentParent::GeneratePairedMinidump(const char* aReason) {
                                   reason);
 
     // Generate the report and insert into the queue for submittal.
-    if (mCrashReporter->GenerateMinidumpAndPair(this, nullptr, "browser"_ns)) {
+    if (mCrashReporter->GenerateMinidumpAndPair(this, "browser"_ns)) {
       mCreatedPairedMinidumps = mCrashReporter->FinalizeCrashReport();
     }
   }

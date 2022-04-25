@@ -14,7 +14,9 @@
 #include "MediaInfo.h"
 #include "PDMFactory.h"
 #include "VPXDecoder.h"
-#include "AOMDecoder.h"
+#ifdef MOZ_AV1
+#  include "AOMDecoder.h"
+#endif
 #include "gfxUtils.h"
 #include "mozilla/ProfilerMarkers.h"
 #include "mozilla/StaticPrefs_media.h"
@@ -140,6 +142,11 @@ class H264ChangeMonitor : public MediaChangeMonitor::CodecChangeMonitor {
       mCurrentConfig.mDisplay.height = spsdata.display_height;
       mCurrentConfig.mColorDepth = spsdata.ColorDepth();
       mCurrentConfig.mColorSpace = Some(spsdata.ColorSpace());
+      // spsdata.transfer_characteristics has the same values as
+      // gfx::CICP::TransferCharacteristics.
+      mCurrentConfig.mTransferFunction = gfxUtils::CicpToTransferFunction(
+          static_cast<gfx::CICP::TransferCharacteristics>(
+              spsdata.transfer_characteristics));
       mCurrentConfig.mColorRange = spsdata.video_full_range_flag
                                        ? gfx::ColorRange::FULL
                                        : gfx::ColorRange::LIMITED;
@@ -265,6 +272,14 @@ class VPXChangeMonitor : public MediaChangeMonitor::CodecChangeMonitor {
 
     mCurrentConfig.mColorDepth = gfx::ColorDepthForBitDepth(info.mBitDepth);
     mCurrentConfig.mColorSpace = Some(info.ColorSpace());
+
+    // We don't update the transfer function here, because VPX bitstream
+    // doesn't specify the transfer function. Instead, we keep the transfer
+    // function (if any) that was set in mCurrentConfig when we were created.
+    // If a video changes colorspaces away from BT2020, we won't clear
+    // mTransferFunction, in case the video changes back to BT2020 and we
+    // need the value again.
+
     mCurrentConfig.mColorRange = info.ColorRange();
     if (mCodec == VPXDecoder::Codec::VP9) {
       mCurrentConfig.mExtraData->ClearAndRetainStorage();
@@ -294,6 +309,7 @@ class VPXChangeMonitor : public MediaChangeMonitor::CodecChangeMonitor {
   double mPixelAspectRatio;
 };
 
+#ifdef MOZ_AV1
 class AV1ChangeMonitor : public MediaChangeMonitor::CodecChangeMonitor {
  public:
   explicit AV1ChangeMonitor(const VideoInfo& aInfo)
@@ -330,6 +346,8 @@ class AV1ChangeMonitor : public MediaChangeMonitor::CodecChangeMonitor {
     mCurrentConfig.mColorSpace = gfxUtils::CicpToColorSpace(
         aInfo.mColorSpace.mMatrix, aInfo.mColorSpace.mPrimaries,
         gMediaDecoderLog);
+    mCurrentConfig.mTransferFunction =
+        gfxUtils::CicpToTransferFunction(aInfo.mColorSpace.mTransfer);
     mCurrentConfig.mColorRange = aInfo.mColorSpace.mRange;
 
     if (mCurrentConfig.mImage != mInfo->mImage) {
@@ -410,6 +428,7 @@ class AV1ChangeMonitor : public MediaChangeMonitor::CodecChangeMonitor {
   RefPtr<TrackInfoSharedPtr> mTrackInfo;
   double mPixelAspectRatio;
 };
+#endif
 
 MediaChangeMonitor::MediaChangeMonitor(
     PDMFactory* aPDMFactory,
@@ -428,8 +447,10 @@ RefPtr<PlatformDecoderModule::CreateDecoderPromise> MediaChangeMonitor::Create(
   const VideoInfo& currentConfig = aParams.VideoConfig();
   if (VPXDecoder::IsVPX(currentConfig.mMimeType)) {
     changeMonitor = MakeUnique<VPXChangeMonitor>(currentConfig);
+#ifdef MOZ_AV1
   } else if (AOMDecoder::IsAV1(currentConfig.mMimeType)) {
     changeMonitor = MakeUnique<AV1ChangeMonitor>(currentConfig);
+#endif
   } else {
     MOZ_ASSERT(MP4Decoder::IsH264(currentConfig.mMimeType));
     changeMonitor = MakeUnique<H264ChangeMonitor>(

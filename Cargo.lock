@@ -844,7 +844,7 @@ dependencies = [
 [[package]]
 name = "coreaudio-sys-utils"
 version = "0.1.0"
-source = "git+https://github.com/mozilla/cubeb-coreaudio-rs?rev=a5a21ccbcc1fb46877b231e6a815cf8a824b1c5c#a5a21ccbcc1fb46877b231e6a815cf8a824b1c5c"
+source = "git+https://github.com/mozilla/cubeb-coreaudio-rs?rev=44eca95823bb57e964cf7b6d9791ed2ccb4b2108#44eca95823bb57e964cf7b6d9791ed2ccb4b2108"
 dependencies = [
  "core-foundation-sys",
  "coreaudio-sys",
@@ -1145,7 +1145,7 @@ dependencies = [
 [[package]]
 name = "cubeb-coreaudio"
 version = "0.1.0"
-source = "git+https://github.com/mozilla/cubeb-coreaudio-rs?rev=a5a21ccbcc1fb46877b231e6a815cf8a824b1c5c#a5a21ccbcc1fb46877b231e6a815cf8a824b1c5c"
+source = "git+https://github.com/mozilla/cubeb-coreaudio-rs?rev=44eca95823bb57e964cf7b6d9791ed2ccb4b2108#44eca95823bb57e964cf7b6d9791ed2ccb4b2108"
 dependencies = [
  "atomic",
  "audio-mixer",
@@ -5393,6 +5393,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "topological-sort"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa7c7f42dea4b1b99439786f5633aeb9c14c1b53f75e282803c2ec2ad545873c"
+
+[[package]]
 name = "tower-service"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5793,9 +5799,11 @@ dependencies = [
  "dwrote",
  "etagere",
  "euclid",
+ "fog",
  "freetype",
  "fxhash",
  "gleam",
+ "glean",
  "glslopt",
  "lazy_static",
  "libc",
@@ -5811,6 +5819,7 @@ dependencies = [
  "svg_fmt",
  "swgl",
  "time",
+ "topological-sort",
  "tracy-rs",
  "webrender_api",
  "webrender_build",
