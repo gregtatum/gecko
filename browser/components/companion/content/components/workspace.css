@@ -2,19 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#workspace {
+.workspace {
   display: flex;
 }
 
-#workspace[empty=true] {
+.workspace[empty=true] {
   border-radius: 100%;
 }
 
-#workspace[empty=true] > #workspace-indicator-button {
+.workspace[empty=true] > .workspace-indicator-button {
   margin: 8px;
 }
 
-#workspace-indicator-button {
+.workspace-indicator-button {
   width: 24px;
   height: 24px;
   margin: auto 12px;
@@ -24,6 +24,6 @@
   color: #FFFFFF;
 }
 
-#workspace-indicator-button[hidden] {
+.workspace-indicator-button[hidden] {
   display: none;
 }

@@ -35,7 +35,7 @@ export default class Workspace extends window.MozHTMLElement {
     this.#id = this.getAttribute("workspace-id");
     this.#updateSearchWorkspace();
 
-    this.#workspace = this.querySelector("#workspace");
+    this.#workspace = this.querySelector(".workspace");
     this.#workspace.setAttribute("empty", true);
   }
 
@@ -151,7 +151,7 @@ export default class Workspace extends window.MozHTMLElement {
   handleEvent(event) {
     switch (event.type) {
       case "click": {
-        if (event.target.id == "workspace-indicator-button") {
+        if (event.target.classList.contains("workspace-indicator-button")) {
           if (this.#isEmpty()) {
             this.#updateSearchWorkspace();
             window.gStageManager.loadEmptyWorkspace(this.#id);

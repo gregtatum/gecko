@@ -241,7 +241,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     let workspaces = this.querySelectorAll("workspace-el");
     workspaces.forEach(workspace => {
       let id = workspace.getAttribute("workspace-id");
-      let button = workspace.querySelector("#workspace-indicator-button");
+      let button = workspace.querySelector(".workspace-indicator-button");
       button.textContent = parseInt(id) + WORKSPACE_COUNTER_OFFSET;
       button.hidden = false;
       workspace.classList.add("multiple");

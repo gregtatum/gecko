@@ -17,41 +17,41 @@ workspace-el {
   border: 0.5px solid var(--avm-workspace-border-color);
 }
 
-workspace-el:not(.selected) > #workspace > river-el::part(overflow),
-workspace-el:not(.selected) > #workspace > pinned-views {
+workspace-el:not(.selected) > .workspace > river-el::part(overflow),
+workspace-el:not(.selected) > .workspace > pinned-views {
   display: none;
 }
 
-.selected.multiple > #workspace > river-el {
+.selected.multiple > .workspace > river-el {
   background: #FFFFFF;
   border-radius: 100px;
 }
 
-workspace-el[workspace-id="0"] > #workspace > #workspace-indicator-button {
+workspace-el[workspace-id="0"] > .workspace > .workspace-indicator-button {
   background: var(--colors-lavender-80);
 }
 
-workspace-el[workspace-id="0"]:not(.selected) > #workspace > #workspace-indicator-button {
+workspace-el[workspace-id="0"]:not(.selected) > .workspace > .workspace-indicator-button {
   background: var(--colors-lavender-30);
   border: 0.5px solid var(--colors-lavender-90);
   color: var(--colors-lavender-90);
 }
 
-workspace-el[workspace-id="1"] > #workspace > #workspace-indicator-button {
+workspace-el[workspace-id="1"] > .workspace > .workspace-indicator-button {
   background: #3F6BC0;
 }
 
-workspace-el[workspace-id="1"]:not(.selected) > #workspace > #workspace-indicator-button {
+workspace-el[workspace-id="1"]:not(.selected) > .workspace > .workspace-indicator-button {
   background: #cbd9f7;
   border: 0.5px solid #2b57ad;
   color: #2b57ad;
 }
 
-workspace-el[workspace-id="2"] > #workspace > #workspace-indicator-button {
+workspace-el[workspace-id="2"] > .workspace > .workspace-indicator-button {
   background: var(--colors-teal-90);
 }
 
-workspace-el[workspace-id="2"]:not(.selected) > #workspace > #workspace-indicator-button {
+workspace-el[workspace-id="2"]:not(.selected) > .workspace > .workspace-indicator-button {
   background: #cae8eb;
   border: 0.5px solid #196c70;
   color: #196c70;
