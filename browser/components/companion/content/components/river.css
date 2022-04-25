@@ -76,7 +76,7 @@ view-group[top] {
   margin-inline-end: 4px;
 }
 
-view-group[active]:last-of-type {
+view-group[active]:last-of-type:not(:first-of-type) {
   margin-inline-start: 12px;
 }
 
