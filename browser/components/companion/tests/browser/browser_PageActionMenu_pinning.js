@@ -35,14 +35,8 @@ add_task(async function test_PageActionMenu_active_view() {
 
   Assert.equal(
     pinningToggle.dataset.l10nId,
-    "page-action-toggle-pinning-view",
+    "page-action-toggle-pinning-view-unpinned",
     "Correct L10n ID set on pinning toggle."
-  );
-
-  Assert.equal(
-    document.l10n.getAttributes(pinningToggle).args.isPinned,
-    "false",
-    "Should not be showing the toggle in the isPinned state."
   );
 
   let pamClosed = BrowserTestUtils.waitForEvent(pam, "popuphidden");
@@ -58,14 +52,8 @@ add_task(async function test_PageActionMenu_active_view() {
 
   Assert.equal(
     pinningToggle.dataset.l10nId,
-    "page-action-toggle-pinning-view",
+    "page-action-toggle-pinning-view-pinned",
     "Correct L10n ID set on pinning toggle."
-  );
-
-  Assert.equal(
-    document.l10n.getAttributes(pinningToggle).args.isPinned,
-    "true",
-    "Should be showing the toggle in the isPinned state."
   );
 
   pamClosed = BrowserTestUtils.waitForEvent(pam, "popuphidden");
