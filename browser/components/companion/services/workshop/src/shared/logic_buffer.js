@@ -92,7 +92,7 @@ export class LogicBuffer {
 
   add(entry) {
     const event = LogicEvent.fromJSON(entry);
-    this.#censorValue(event);
+    this.#onCensorEvent(event);
     this.#onEvent(event);
   }
 

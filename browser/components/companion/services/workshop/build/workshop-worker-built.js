@@ -17036,7 +17036,7 @@ var WorkshopBackend = (() => {
     }
     add(entry) {
       const event = LogicEvent.fromJSON(entry);
-      this.#censorValue(event);
+      this.#onCensorEvent(event);
       this.#onEvent(event);
     }
     getBuffer() {
