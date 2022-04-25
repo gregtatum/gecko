@@ -15,6 +15,7 @@ class ViewActivationParent extends JSWindowActorParent {
 
       let { gStageManager } = this.browsingContext.embedderElement.ownerGlobal;
       if (gStageManager) {
+        gStageManager.clearActivationTimer();
         gStageManager.activateCurrentView();
       }
     }
