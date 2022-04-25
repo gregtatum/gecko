@@ -102,11 +102,11 @@
   visibility: hidden;
 }
 
-:host(:not(:is([top],[active]))) .view-label-container {
+:host(:not([active])) .view-label-container {
   display: none;
 }
 
-:host(:is([top],[active])) .view-label-container {
+:host([active]) .view-label-container {
   white-space: nowrap;
   width: 200px;
 }

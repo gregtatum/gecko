@@ -143,7 +143,10 @@ export default class River extends MozLitElement {
         ?hidden=${!river.length}
         ?containsActive=${containsActive}
       >
-        <div class="view-groups-wrapper">
+        <div
+          class="view-groups-wrapper"
+          ?topisactive=${topViewGroup?.includes(this.activeView)}
+        >
           ${river.map(
             viewGroup =>
               html`
@@ -156,17 +159,17 @@ export default class River extends MozLitElement {
                 ></view-group>
               `
           )}
+          <view-group
+            ?hidden=${!topViewGroup}
+            top="true"
+            tabindex="0"
+            exportparts="domain, history"
+            ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
+            .viewGroup=${topViewGroup || null}
+            .activeView=${this.activeView}
+          ></view-group>
         </div>
       </div>
-      <view-group
-        ?hidden=${!topViewGroup}
-        top="true"
-        tabindex="0"
-        exportparts="domain, history"
-        ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
-        .viewGroup=${topViewGroup || null}
-        .activeView=${this.activeView}
-      ></view-group>
     `;
   }
 }

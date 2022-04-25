@@ -14,10 +14,9 @@
   padding: 4px;
   margin-inline-end: 0;
   padding-inline-end: 0;
-  border-start-start-radius: 25px;
-  border-end-start-radius: 25px;
   --river-collapse-amount: 16px;
   overflow: hidden;
+  border-radius: 25px;
 }
 
 #river-overflow-button {
@@ -47,16 +46,6 @@
 
 #river:not([containsActive]) {
   padding-inline-end: 5px;
-  border-start-end-radius: 25px;
-  border-end-end-radius: 25px;
-}
-
-#river[containsActive]::after {
-  margin-inline-start: 12px;
-  content: "";
-  /* When hovering the river, view-group icons will expand. Put the border on
-     top of the icons so it looks like they move behind the available space. */
-  z-index: 1;
 }
 
 #river[hidden],
@@ -68,25 +57,6 @@ view-group[top][hidden] {
 
 .view-groups-wrapper {
   display: flex;
-}
-
-@media (hover: hover) and (prefers-reduced-motion: no-preference) and (not (prefers-contrast)) {
-  .view-groups-wrapper > view-group:not(:first-of-type) {
-    margin-inline-start: calc(var(--river-collapse-amount) * -1);
-  }
-
-  .view-groups-wrapper > view-group:hover::part(icon-container) {
-    scale: 1.25;
-  }
-
-  .view-groups-wrapper:hover > view-group:not(:hover) {
-    translate: calc(-1 * var(--river-collapse-amount));
-  }
-
-  .view-groups-wrapper:not(:hover) > view-group[active] ~ view-group,
-  .view-groups-wrapper:hover > view-group:hover ~ view-group {
-    translate: calc(1 * var(--river-collapse-amount));
-  }
 }
 
 .view-groups-wrapper > view-group {
@@ -102,7 +72,48 @@ view-group[top][hidden] {
 }
 
 view-group[top] {
-  padding: 4px;
+  z-index: 1;
+  margin-inline-end: 4px;
+}
+
+view-group[active]:last-of-type {
+  margin-inline-start: 12px;
+}
+
+view-group[active]:not(:last-of-type) {
+  margin-inline-end: 12px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) and (not (prefers-contrast)) {
+  .view-groups-wrapper > view-group {
+    margin-inline-start: calc(-1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper > view-group:first-of-type {
+    padding-inline-start: var(--river-collapse-amount);
+  }
+
+  .view-groups-wrapper > view-group[active] + view-group {
+    margin-inline-start: 0;
+  }
+
+  .view-groups-wrapper > view-group:not([active]):hover::part(icon-container) {
+    scale: 1.25;
+  }
+
+  .view-groups-wrapper:not([topisactive]):hover > view-group:not(:hover),
+  .view-groups-wrapper:hover > view-group[active] ~ view-group {
+    translate: calc(-1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper:hover > view-group:not([active]):hover ~ view-group {
+    translate: calc(1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper:hover > view-group:is([active]):hover ~ view-group,
+  .view-groups-wrapper:hover > view-group:is([active]) ~ view-group:hover ~ view-group {
+    translate: 0;
+  }
 }
 
 #river-overflow-button:focus-visible,
