@@ -11424,7 +11424,7 @@ var WorkshopBackend = (() => {
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
             for (const calInfo of results.items) {
-              let wantFolder = calInfo.selected;
+              let wantFolder = calInfo.accessRole === "owner" && calInfo.selected;
               let calFolder = foldersTOC.items.find((f) => f.serverId === calInfo.id);
               if (!wantFolder) {
                 if (calFolder) {
@@ -12633,6 +12633,9 @@ var WorkshopBackend = (() => {
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
             for (const calInfo of results.value) {
+              if (calInfo.owner.address !== account.accountDef.name) {
+                continue;
+              }
               observedFolderServerIds.add(calInfo.id);
               const desiredCalendarInfo = {
                 color: calInfo.hexColor || null

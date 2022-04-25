@@ -55,6 +55,7 @@ export default async function validateMapi({
   // 2. If we need it, we probably want to figure out the gmail identity
   //    setup and use that even though it seems like the core OAuth ident
   //    stuff might provide it based on the implications of the oauth flows.
+
   userDetails.displayName = results.displayName;
   userDetails.emailAddress = results.userPrincipalName;
 

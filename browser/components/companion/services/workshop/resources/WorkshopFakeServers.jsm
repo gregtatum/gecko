@@ -41,7 +41,11 @@ const DURATIONS = new Map([
 ]);
 
 class FakeCalendar {
-  constructor(serverOwner, isMapi, { id, name, events, calendarOwner }) {
+  constructor(
+    serverOwner,
+    isMapi,
+    { id, name, events, calendarOwner, accessRole, owner }
+  ) {
     this.serverOwner = serverOwner;
     this.id = id;
     this.name = name;
@@ -50,6 +54,8 @@ class FakeCalendar {
     this.serial = 0;
     this.isMapi = isMapi;
     this.selected = true;
+    this.accessRole = accessRole;
+    this.owner = owner;
   }
 
   /**
@@ -689,6 +695,7 @@ class GapiFakeServer extends BaseFakeServer {
         // TODO: add the timeZone here for fidelity purposes, etc.
         // Currently all known calendars will be of interest for sync purposes.
         selected: cal.selected,
+        accessRole: cal.accessRole || "owner",
       };
     });
   }
@@ -959,8 +966,9 @@ class MapiFakeServer extends BaseFakeServer {
 
   unpaged_me() {
     return {
-      emailAddress: this.testUserEmail,
-      userPrincipalName: this.testDisplayName,
+      userPrincipalName: this.testUserEmail,
+      displayName: this.testDisplayName,
+      value: null,
     };
   }
 
@@ -969,6 +977,10 @@ class MapiFakeServer extends BaseFakeServer {
       return {
         id: cal.id,
         name: cal.name,
+        owner: {
+          name: cal.owner?.name || this.testDisplayName,
+          address: cal.owner?.address || this.testUserEmail,
+        },
       };
     });
   }
