@@ -9,14 +9,7 @@ export default {
   title: "Specifics/Companion/Connect Service",
 };
 
-const Template = ({
-  authenticating,
-  connected,
-  icon,
-  name,
-  services,
-  getString,
-}) =>
+const Template = ({ authenticating, connected, icon, name, services }) =>
   html`
     <connect-service-notification
       .authenticating=${authenticating}
@@ -25,7 +18,6 @@ const Template = ({
       .name=${name}
       .services=${services}
       .connectServiceCallback=${() => alert("Open connect page")}
-      .getString=${getString}
     ></connect-service-notification>
   `;
 
@@ -36,10 +28,4 @@ Default.args = {
   icon: "chrome://browser/content/companion/googleAccount.png",
   name: "Google Services",
   services: "Gmail, Calendar, Meet",
-  getString: id =>
-    ({
-      "companion-onboarding-service-connect": "Connect",
-      "companion-onboarding-service-connected": "Connected",
-      "companion-onboarding-service-connecting": "Connecting",
-    }[id]),
 };

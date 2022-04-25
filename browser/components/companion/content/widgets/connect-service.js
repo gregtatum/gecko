@@ -81,9 +81,8 @@ class ConnectServiceNotification extends MozLitElement {
           })}
           ?disabled=${this.authenticating}
           @click=${this.connectService}
-        >
-          ${this.getString(this.connectButtonLabelId)}
-        </button>
+          data-l10n-id=${this.connectButtonLabelId}
+        ></button>
       </simple-notification>
     `;
   }

@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { query, queryAll, until, LitElement } from "./lit.all.js";
+import { query, queryAll, LitElement } from "./lit.all.js";
 
 export function openMeeting(e) {
   e.preventDefault();
@@ -105,9 +105,5 @@ export class MozLitElement extends LitElement {
   async dispatchOnUpdateComplete(event) {
     await this.updateComplete;
     this.dispatchEvent(event);
-  }
-
-  getString(id) {
-    return until(document.l10n.formatValue(id));
   }
 }
