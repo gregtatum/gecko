@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "storybook": "concurrently 'start-storybook -p 6006 --no-open' '../../../../mach run http://localhost:6006'",
+    "storybook": "concurrently 'start-storybook -p 6006 --no-open' '../../../../mach run http://localhost:6006 --temp-profile'",
     "build-storybook": "build-storybook"
   },
   "author": "",
   "license": "MPL-2.0",
   "devDependencies": {
     "@babel/core": "^7.16.0",
+    "@fluent/bundle": "^0.17.1",
+    "@fluent/dom": "^0.8.1",
     "@storybook/addon-actions": "^6.4.8",
     "@storybook/addon-essentials": "^6.4.8",
     "@storybook/addon-links": "^6.4.8",

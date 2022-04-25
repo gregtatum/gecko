@@ -362,6 +362,7 @@ a.button-link {
   margin: 4px 8px;
   /* Ensure font-size isn't overridden by widget styling (e.g. in forms.css) */
   font-size: 1em;
+  text-align: center;
 }
 
 button {

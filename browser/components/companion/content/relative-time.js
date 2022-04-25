@@ -4,7 +4,6 @@
 
 import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
-import { workshopAPI } from "./workshopAPI.js";
 
 function dispatchUpdateRelativeTime() {
   document.dispatchEvent(new CustomEvent("update-relative-time", {}));
@@ -16,6 +15,8 @@ function dispatchUpdateRelativeTime() {
 dispatchUpdateRelativeTime();
 
 export class RelativeTime extends MozLitElement {
+  dateCreator = { now: () => new Date() };
+
   static get properties() {
     return {
       eventStart: { type: Object },
@@ -49,14 +50,16 @@ export class RelativeTime extends MozLitElement {
     super.disconnectedCallback();
   }
 
-  static getNow() {
-    return workshopAPI.now();
+  get getNow() {
+    // Tests mock this with RelativeTime.getNow. Prefer that over `dateCreator`
+    // which is Date in storybook or workshopAPI for TimeWarp in production.
+    return this.constructor.getNow ?? this.dateCreator.now;
   }
 
   updateTimeStamp() {
     let eventStartTime = new Date(this.eventStart).getTime();
     let eventEndTime = new Date(this.eventEnd).getTime();
-    let now = this.constructor.getNow().getTime();
+    let now = this.getNow().getTime();
     let isHappeningNow = now >= eventStartTime;
 
     // This only happens on debug mode, but it would probably be good to handle this

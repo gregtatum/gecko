@@ -77,6 +77,7 @@ browser.jar:
     content/browser/companion/workshopAPIHiddenWindow.js (content/workshopAPIHiddenWindow.js)
     content/browser/companion/workshopAPIParentAccess.js (content/workshopAPIParentAccess.js)
     content/browser/companion/zoom.svg (content/zoom.svg)
+    content/browser/companion/widgets/calendar-event.js (content/widgets/calendar-event.js)
     content/browser/companion/widgets/connect-service.js (content/widgets/connect-service.js)
     content/browser/companion/widgets/simple-notification.js (content/widgets/simple-notification.js)
     content/browser/companion/components/companion-manager.js (content/components/companion-manager.js)
