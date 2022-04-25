@@ -169,13 +169,11 @@
           <div id="page-action-panel-sections">
             <div id="page-actions-section">
               <toolbarbutton id="page-action-pin-view"
-                             data-l10n-id="page-action-toggle-pinning-view"
-                             data-l10n-args='{"isPinned": false}'
+                             data-l10n-id="page-action-toggle-pinning-view-unpinned"
                              wrap="true"
                              oncommand="gActiveViewManager.pageActionPinView(event);"/>
               <toolbarbutton id="page-action-pin-app"
-                             data-l10n-id="page-action-toggle-pinning-app"
-                             data-l10n-args='{"isPinned": false}'
+                             data-l10n-id="page-action-toggle-pinning-app-unpinned"
                              wrap="true"
                              oncommand="gActiveViewManager.pageActionPinApp(event);"/>
               <toolbarbutton id="page-action-copy-url"
@@ -184,6 +182,7 @@
                              oncommand="gActiveViewManager.pageActionCopyURL(event);"/>
               <toolbarbutton id="page-action-mute"
                              wrap="true"
+                             data-l10n-id="page-action-toggle-muting-unmuted"
                              command="cmd_toggleMute"/>
               <toolbarbutton id="page-action-reader-mode"
                              hidden="true"
@@ -203,7 +202,7 @@
             <div id="site-info-section">
               <div id="site-info-title-section">
                 <html:input type="text" id="site-info-title" oninput="gActiveViewManager.pageActionEditViewTitle(event);"></html:input>
-                <div id="site-info-edit-icon"></div>
+                <div id="site-info-edit-icon" data-l10n-id="page-action-menu-site-info-edit-icon"></div>
               </div>
               <div id="site-info-url-section">
                 <html:input type="text" id="site-info-url"></html:input>

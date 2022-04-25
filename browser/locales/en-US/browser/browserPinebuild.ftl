@@ -9,31 +9,44 @@ active-view-manager-overflow-button-text = +{$count}
 
 # Page action menu strings.
 page-action-menu-button =
-  .title = Open Page Action Menu
+  .title = Open page action menu
 
-page-action-toggle-pinning-view =
-  .label = { $isPinned ->
-     [true] Unpin view
-    *[other] Pin view
-  }
-page-action-toggle-pinning-app =
-  .label = { $isPinned ->
-     [true] Unpin app
-    *[other] Pin app
-  }
+page-action-toggle-pinning-view-unpinned =
+  .label = Pin view
+  .tooltiptext = Pin to save this view
+
+page-action-toggle-pinning-view-pinned =
+  .label = Unpin view
+  .tooltiptext = Unpin this view
+
+page-action-toggle-pinning-app-unpinned =
+  .label = Pin app
+  .tooltiptext = Pin to save this app
+
+page-action-toggle-pinning-app-pinned =
+  .label = Unpin app
+  .tooltiptext = Unpin this app
+
 page-action-copy-url =
   .label = Copy
+  .tooltiptext = Copy link to clipboard
 page-action-close-view =
   .label = Close
-page-action-toggle-muting =
-  .label = { $isMuted ->
-     [true] Unmute
-    *[other] Mute
-  }
+  .tooltiptext = Close view
+page-action-toggle-muting-unmuted =
+  .label = Mute
+  .tooltiptext = Mute media with audio
+page-action-toggle-muting-muted =
+  .label = Unmute
+  .tooltiptext = Unmute media with audio
+
 page-action-reader-view =
   .label = Reader View
+  .tooltiptext = View in Reader Mode
 page-action-more =
   .label = More
+page-action-menu-site-info-edit-icon =
+  .tooltiptext = Edit page title
 
 last-session-saved = Last session saved in Companion
 

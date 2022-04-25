@@ -386,21 +386,22 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
     let view = this.#pageActionView;
     let pinView = document.getElementById("page-action-pin-view");
-    let pinViewL10nId = "page-action-toggle-pinning-view";
-    document.l10n.setAttributes(pinView, pinViewL10nId, {
-      isPinned: view.pinned,
-    });
+    let pinViewL10nId = view.pinned
+      ? "page-action-toggle-pinning-view-pinned"
+      : "page-action-toggle-pinning-view-unpinned";
+    document.l10n.setAttributes(pinView, pinViewL10nId);
 
     let pinApp = document.getElementById("page-action-pin-app");
-    let pinAppL10nId = "page-action-toggle-pinning-app";
-    document.l10n.setAttributes(pinApp, pinAppL10nId, {
-      isPinned: view.pinned,
-    });
+    let pinAppL10nId = view.pinned
+      ? "page-action-toggle-pinning-app-pinned"
+      : "page-action-toggle-pinning-app-unpinned";
+    document.l10n.setAttributes(pinApp, pinAppL10nId);
 
     let muteView = document.getElementById("page-action-mute");
-    document.l10n.setAttributes(muteView, "page-action-toggle-muting", {
-      isMuted: view.muted,
-    });
+    let muteViewL10nId = view.muted
+      ? "page-action-toggle-muting-muted"
+      : "page-action-toggle-muting-unmuted";
+    document.l10n.setAttributes(muteView, muteViewL10nId);
     muteView.toggleAttribute("unmute", view.muted);
 
     if (view.isArticle) {
@@ -408,6 +409,10 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       readerMode.hidden = false;
     }
 
+    let pageActionTitleSection = document.getElementById(
+      "site-info-title-section"
+    );
+    pageActionTitleSection.setAttribute("tooltiptext", view.title);
     let pageActionTitleEl = document.getElementById("site-info-title");
     pageActionTitleEl.value = view.title;
     pageActionTitleEl.scrollLeft = 0;
@@ -491,6 +496,11 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
   pageActionEditViewTitle(event) {
     window.gStageManager.setUserTitle(this.#pageActionView, event.target.value);
+
+    let pageActionTitleSection = document.getElementById(
+      "site-info-title-section"
+    );
+    pageActionTitleSection.setAttribute("tooltiptext", event.target.value);
   }
 
   pageActionPinView(event) {
