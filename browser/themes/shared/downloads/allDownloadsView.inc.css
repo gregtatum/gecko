@@ -4,6 +4,7 @@
 
 @import "chrome://browser/skin/downloads/progressmeter.css";
 @import "chrome://browser/skin/downloads/download-blockedStates.css";
+@import "chrome://browser/content/companion/lavender.css";
 
 /*** View and outer controls ***/
 
@@ -68,8 +69,12 @@
     visibility: visible;
   }
 
+  #downloadsListBox > richlistitem:hover .downloadButton > .button-box {
+    background: var(--toolbarbutton-active-background);
+  }
+
   #downloadsListBox .downloadButton > .button-box > .button-icon {
-    color: black;
+    color: var(--colors-darkgrey-30);
   }
 }
 
