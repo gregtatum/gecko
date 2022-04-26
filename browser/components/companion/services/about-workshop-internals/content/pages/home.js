@@ -112,7 +112,7 @@ export default class HomePage extends Page {
       <section class="card">
         <h2>Accounts</h2>
         <awi-list-view
-          .listView=${null /* this.workshopAPI.accounts */}
+          .listView=${this.workshopAPI.accounts}
           .factory=${account =>
             html`
               <awi-account-list-item
@@ -127,7 +127,6 @@ export default class HomePage extends Page {
         <button
           id="home-show-add-account"
           type="button"
-          disabled
           @click=${() => {
             this.router.navigateTo(["add"]);
           }}
