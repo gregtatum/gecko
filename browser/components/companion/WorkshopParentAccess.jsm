@@ -41,6 +41,14 @@ const WorkshopParentAccess = {
         0
       );
 
+      AsyncShutdown.profileBeforeChange.addBlocker(
+        "WorkshopParentAccess: close windowless browser and drop reference",
+        () => {
+          this.windowlessBrowser.close();
+          this.windowlessBrowser = null;
+        }
+      );
+
       const system = Services.scriptSecurityManager.getSystemPrincipal();
       const chromeShell = this.windowlessBrowser.docShell.QueryInterface(
         Ci.nsIWebNavigation
@@ -62,14 +70,6 @@ const WorkshopParentAccess = {
       });
 
       this.workshopAPI = Cu.waiveXrays(win.WORKSHOP_API);
-
-      AsyncShutdown.profileBeforeChange.addBlocker(
-        "WorkshopParentAccess: close windowless browser and drop reference",
-        () => {
-          this.windowlessBrowser.close();
-          this.windowlessBrowser = null;
-        }
-      );
     }
   },
   /**
