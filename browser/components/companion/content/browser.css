@@ -425,11 +425,20 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
 }
 
 /* When the companion is open, show the alternate icon */
-:root[companion] #companion-sidebar-button > .toolbarbutton-icon {
+#companion-sidebar-button[checked] > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion-selected.svg");
 }
 
-:root[companion] body:not([flow-reset]) #companion-sidebar-button {
+/**
+ * Normally, checked toolbarbuttons have a background colour applied to
+ * them. The Companion button is special, so we override it here unless
+ * hovered.
+ */
+#companion-sidebar-button[checked]:not(:hover) > .toolbarbutton-icon {
+  background-color: unset;
+}
+
+body:not([flow-reset]) #companion-sidebar-button[checked] {
   fill: var(--companion-sidebar-button-selected-fill-color);
 }
 
@@ -871,12 +880,12 @@ body[flow-reset] #urlbar[open] #urlbar-background {
 }
 
 /* Switch to white fill when in flow-reset state, since the background is darker. */
-:root:not([companion]) body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
+body[flow-reset] #companion-sidebar-button:not([checked]) > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion.svg");
   fill: var(--companion-sidebar-button-flow-reset-fill-color);
 }
 
-:root[companion] body[flow-reset] #companion-sidebar-button > .toolbarbutton-icon {
+body[flow-reset] #companion-sidebar-button[checked] > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/companion-selected.svg");
   background-color: var(--companion-sidebar-button-selected-flow-reset-bg-color);
 }

@@ -5,7 +5,21 @@
 pinebuild-back-button =
   .tooltiptext = Long press to scroll back through history
 
-active-view-manager-overflow-button-text = +{$count}
+pinebuild-reload-button =
+  .tooltiptext = Reload current view
+
+pinebuild-companion-button-is-open =
+  .tooltiptext = Close Companion
+
+pinebuild-companion-button-is-closed =
+  .tooltiptext = Open Companion
+
+toolbar-button-setaside-session =
+  .label = Set Aside Session
+  .tooltiptext = Set aside this session
+
+active-view-manager-overflow-button = +{$count}
+  .title = Recent views
 
 # Page action menu strings.
 page-action-menu-button =

@@ -79,6 +79,15 @@ class CompanionManager extends MozXULElement {
   }
 
   #updateVisibility() {
+    let command = document.getElementById("Browser:ToggleCompanion");
+    command.toggleAttribute("checked", this.#isOpen);
+    document.l10n.setAttributes(
+      command,
+      this.#isOpen
+        ? "pinebuild-companion-button-is-open"
+        : "pinebuild-companion-button-is-closed"
+    );
+
     if (this.#isOpen) {
       document.documentElement.setAttribute("companion", "true");
       document.documentElement.style.setProperty(

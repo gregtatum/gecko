@@ -25,6 +25,7 @@
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
 #ifdef PINEBUILD
     <command id="Browser:SaveSnapshot" oncommand="Snapshots.add({ url: gBrowser.currentURI.spec, userPersisted: Snapshots.USER_PERSISTED.MANUAL });" disabled="true"/>
+    <command id="Browser:ToggleCompanion" oncommand="document.getElementById('companion-box').toggleVisible();"/>
 #endif
 
     <command id="Browser:SendLink"

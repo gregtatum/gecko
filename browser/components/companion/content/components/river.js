@@ -134,7 +134,7 @@ export default class River extends MozLitElement {
         id="river-overflow-button"
         tabindex="0"
         @click=${this.#openOverflowMenu}
-        data-l10n-id="active-view-manager-overflow-button-text"
+        data-l10n-id="active-view-manager-overflow-button"
         data-l10n-args='{ "count": ${this.overflowedViews.length} }'
         ?hidden=${!this.overflowedViews.length}
       ></toolbarbutton>

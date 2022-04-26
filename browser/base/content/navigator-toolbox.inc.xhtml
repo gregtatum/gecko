@@ -142,15 +142,18 @@
 #ifdef PINEBUILD
       <hbox id="pinebuild-toolbar" flex="1">
         <toolbarbutton id="companion-sidebar-button" class="toolbarbutton-1"
-                        oncommand="document.getElementById('companion-box').toggleVisible();"
-                        onclick="checkForMiddleClick(this, event);"/>
+                        type="checkbox"
+                        command="Browser:ToggleCompanion"
+                        onclick="checkForMiddleClick(this, event);">
+          <observes element="Browser:ToggleCompanion" attribute="checked"/>
+        </toolbarbutton>
         <toolbarbutton id="pinebuild-forward-button" class="toolbarbutton-1"
                         data-l10n-id="toolbar-button-back-2"
                         command="Browser:ForwardOrForwardDuplicate"
                         onclick="checkForMiddleClick(this, event);"
                         tooltip="forward-button-tooltip"/>
         <toolbarbutton id="pinebuild-reload-button" class="toolbarbutton-1"
-                        data-l10n-id="toolbar-button-reload"
+                        data-l10n-id="pinebuild-reload-button"
                         command="Browser:ReloadOrDuplicate"
                         onclick="checkForMiddleClick(this, event);"
                         tooltip="dynamic-shortcut-tooltip"/>

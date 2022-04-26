@@ -87,11 +87,6 @@ toolbar-button-fxaccount =
     .label = { -fxaccount-brand-name(capitalization: "sentence") }
     .tooltiptext = { -fxaccount-brand-name(capitalization: "sentence") }
 
-## Set Aside Session
-
-toolbar-button-setaside-session =
-    .label = Set Aside Session
-
 ## Save Page
 
 main-context-menu-page-save =

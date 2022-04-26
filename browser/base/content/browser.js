@@ -7066,7 +7066,6 @@ const nodeToTooltipMap = {
 if (AppConstants.PINEBUILD) {
   nodeToTooltipMap["pinebuild-reload-button"] = "reloadButton.tooltip";
   nodeToTooltipMap["pinebuild-stop-button"] = "stopButton.tooltip";
-  nodeToTooltipMap["session-setaside-button"] = "sessionSetAsideButton.tooltip";
 }
 
 const nodeToShortcutMap = {
