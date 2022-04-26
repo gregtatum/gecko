@@ -14,7 +14,6 @@ browser.jar:
     content/browser/about-workshop-internals/elements/folders_tag.js (elements/folders_tag.js)
     content/browser/about-workshop-internals/elements/list_view.js (elements/list_view.js)
     content/browser/about-workshop-internals/elements/log_container.js (elements/log_container.js)
-    content/browser/about-workshop-internals/elements/log_event.js (elements/log_event.js)
     content/browser/about-workshop-internals/elements/message_list_item.js (elements/message_list_item.js)
     content/browser/about-workshop-internals/elements/pretty_table.js (elements/pretty_table.js)
     content/browser/about-workshop-internals/log-model/collector.js (log-model/collector.js)

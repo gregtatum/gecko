@@ -12147,8 +12147,10 @@ var WorkshopBackend = (() => {
             }
             for (const event of recurringEvents) {
               if (!event || event.error) {
-                handleError({ error: event?.error | "No data" });
-                return changes;
+                logic(ctx, "syncWarning", {
+                  warning: event?.error | "Non existing recurrent event"
+                });
+                continue;
               }
               syncState.ingestEvent(event);
             }

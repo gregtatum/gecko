@@ -116,8 +116,8 @@ export class MailAccount extends Emitter {
 
     let hasNewProblems = false;
     if (prevProblems && this.problems) {
-      const prevValues = prevProblems.values().flat();
-      const newValues = this.problems.values().flat();
+      const prevValues = Object.values(prevProblems).flat();
+      const newValues = Object.values(this.problems).flat();
       if (prevValues.length !== newValues.length) {
         hasNewProblems = true;
       } else {

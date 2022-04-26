@@ -386,8 +386,14 @@ export default TaskDefiner.defineAtMostOnceTask([
 
       for (const event of recurringEvents) {
         if (!event || event.error) {
-          handleError({ error: event?.error | "No data" });
-          return changes;
+          // The main event doesn't exist anymore or something is buggy on the
+          // Google side.
+          // Anyway we don't return on error to avoid to break all the refresh.
+          // XXX: trust me it happens in real life!
+          logic(ctx, "syncWarning", {
+            warning: event?.error | "Non existing recurrent event",
+          });
+          continue;
         }
 
         syncState.ingestEvent(event);

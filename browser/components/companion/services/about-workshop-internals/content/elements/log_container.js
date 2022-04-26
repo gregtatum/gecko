@@ -18,6 +18,10 @@ function getEventColor({ namespace, type }) {
     return "#c00"; // red
   }
 
+  if (/warning/i.test(type)) {
+    return "#ff7f00"; // orange
+  }
+
   if (type === "expect") {
     return "rgba(0, 75, 20, 0.7)"; // greenish
   } else if (type === "match") {
