@@ -6,21 +6,22 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'; img-src blob: data:">
+    <link rel="localization" href="browser/historyCarousel.ftl"/>
     <link rel="stylesheet" type="text/css" href="chrome://global/skin/in-content/common.css">
     <link rel="stylesheet" href="chrome://browser/content/companion/historyCarousel.css">
     <script type="module" src="chrome://browser/content/companion/historyCarousel.js"></script>
   </head>
-  <body invisible="true">
-    <main>
-      <ol id="preview-list"></ol>
-      <nav>
-        <button id="previous"></button>
-        <input id="scrubber" type="range" step="1" min="0"/>
-        <button id="next"></button>
+  <body role="dialog" invisible="true">
+    <main role="presentation">
+      <ol id="preview-list" role="tablist" data-l10n-id="history-carousel-preview-list"></ol>
+      <nav role="presentation">
+        <button id="previous" data-l10n-id="history-carousel-previous-button"></button>
+        <input id="scrubber" type="range" step="1" min="0" data-l10n-id="history-carousel-scrubber"/>
+        <button id="next" data-l10n-id="history-carousel-next-button"></button>
       </nav>
     </main>
     <template id="preview-element-template">
-      <figure>
+      <figure role="presentation" aria-hidden="true">
         <figcaption><img class="favicon"/><span class="caption"/></figcaption>
         <img class="preview-image"/>
       </figure>

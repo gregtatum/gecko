@@ -287,7 +287,6 @@ const HistoryCarousel = {
     for (let domEventType of this.DOM_EVENTS) {
       addEventListener(domEventType, this);
     }
-    this.scrubber.focus({ preventFocusRing: true });
 
     this.whenVisible = new Promise(resolve => {
       this.whenVisibleResolver = resolve;
@@ -411,13 +410,16 @@ const HistoryCarousel = {
       previewEl.setAttribute("index", index);
       this.previewTaskQueue.push(index);
 
-      // setAttribute ignores case, so setAttribute("viewID", preview.viewID)
-      // would result in an attribute "viewid" being set. To avoid confusion,
-      // we'll use dash delimeters.
-      previewEl.setAttribute("view-id", preview.viewID);
+      previewEl.setAttribute("id", preview.viewID);
       previewEl.setAttribute("title", preview.title);
       previewEl.setAttribute("url", preview.url);
       previewEl.setAttribute("icon-url", preview.iconURL);
+      previewEl.setAttribute("aria-selected", "false");
+      previewEl.setAttribute("role", "tab");
+
+      if (preview.tabpanelID) {
+        previewEl.setAttribute("aria-controls", preview.tabpanelID);
+      }
 
       frag.appendChild(previewEl);
       this.intersectionObserver.observe(previewEl);
@@ -440,11 +442,16 @@ const HistoryCarousel = {
     // so do so and snap it into the viewport if it's not already there.
     currentPreviewEl.setBlob(currentPreview.image);
     currentPreviewEl.scrollIntoView({ behavior: "instant", inline: "center" });
+    currentPreviewEl.setAttribute("aria-selected", "true");
+
     this.minIndex = previews[0].index;
     this.maxIndex = previews[previews.length - 1].index;
 
     this.scrubber.setAttribute("min", this.minIndex);
+    this.scrubber.setAttribute("aria-valuemin", this.minIndex);
     this.scrubber.setAttribute("max", this.maxIndex);
+    this.scrubber.setAttribute("aria-valuemax", this.maxIndex);
+    this.scrubber.setAttribute("aria-valuenow", currentIndex);
     this.scrubber.value = currentIndex;
 
     await new Promise(resolve => {
@@ -509,6 +516,7 @@ const HistoryCarousel = {
 
     if (oldCurrentPreviewEl) {
       oldCurrentPreviewEl.removeAttribute("current");
+      oldCurrentPreviewEl.setAttribute("aria-selected", "false");
     }
 
     if (oldBeforePreviewEl) {
@@ -518,6 +526,9 @@ const HistoryCarousel = {
     let previewEl = document.querySelector(`li[index="${index}"]`);
     let beforePreviewEl = previewEl.previousElementSibling;
     previewEl.setAttribute("current", "true");
+    previewEl.setAttribute("aria-selected", "true");
+    this.list.setAttribute("aria-activedescendant", previewEl.id);
+
     if (beforePreviewEl) {
       beforePreviewEl.setAttribute("beforecurrent", "true");
     }
@@ -542,6 +553,12 @@ const HistoryCarousel = {
     );
 
     this.scrubber.value = index;
+    this.scrubber.setAttribute("aria-valuenow", index);
+    this.scrubber.setAttribute(
+      "aria-valuetext",
+      previewEl.getAttribute("title")
+    );
+
     this.previousBtn.toggleAttribute("disabled", index == this.minIndex);
     this.nextBtn.toggleAttribute("disabled", index == this.maxIndex);
     document.dispatchEvent(
@@ -562,7 +579,7 @@ const HistoryCarousel = {
     if (index !== undefined) {
       CarouselUtils.requestPreview(index).then(result => {
         if (result) {
-          let preview = document.querySelector(`li[view-id="${result.viewID}"`);
+          let preview = document.querySelector(`li[id="${result.viewID}"`);
           preview.setAttribute("title", result.title);
           preview.setAttribute("url", result.url);
           preview.setAttribute("icon-url", result.iconURL);
@@ -580,6 +597,8 @@ const HistoryCarousel = {
       });
     } else {
       this.whenVisible.then(() => {
+        this.list.focus({ preventFocusRing: true });
+
         document.dispatchEvent(
           new CustomEvent("HistoryCarouselReady", { bubbles: true })
         );
@@ -636,7 +655,7 @@ const HistoryCarousel = {
     );
 
     // First find the preview we're removing.
-    let previewEl = document.querySelector(`li[view-id="${viewID}"]`);
+    let previewEl = document.querySelector(`li[id="${viewID}"]`);
     // Then, for each preview after the one being removed, decrement their
     // index attribute.
     let sibling = previewEl.nextElementSibling;
@@ -650,6 +669,7 @@ const HistoryCarousel = {
     this.maxIndex--;
     this.totalPreviews--;
     this.scrubber.setAttribute("max", this.maxIndex);
+    this.scrubber.setAttribute("aria-valuemax", this.maxIndex);
     // It's possible that the originally selected preview has had its
     // index updated, so we get it now.
     let newSelectedIndex = selectedEl.index;
@@ -694,6 +714,26 @@ const HistoryCarousel = {
     }
   },
 
+  /**
+   * Transitions to the previous preview, if one exists.
+   */
+  goToPreviousPreview() {
+    let index = CarouselUtils.getCurrentIndex();
+    if (index > 0) {
+      this.selectIndex(index - 1, false /* instant */);
+    }
+  },
+
+  /**
+   * Transitions to the next preview, if one exists.
+   */
+  goToNextPreview() {
+    let index = CarouselUtils.getCurrentIndex();
+    if (index < this.maxIndex) {
+      this.selectIndex(index + 1, false /* instant */);
+    }
+  },
+
   // DOM event handlers
 
   /**
@@ -718,17 +758,11 @@ const HistoryCarousel = {
   onClick(event) {
     switch (event.target) {
       case this.previousBtn: {
-        let index = CarouselUtils.getCurrentIndex();
-        if (index > 0) {
-          this.selectIndex(index - 1, false /* instant */);
-        }
+        this.goToPreviousPreview();
         break;
       }
       case this.nextBtn: {
-        let index = CarouselUtils.getCurrentIndex();
-        if (index < this.maxIndex) {
-          this.selectIndex(index + 1, false /* instant */);
-        }
+        this.goToNextPreview();
         break;
       }
       default: {
@@ -764,8 +798,32 @@ const HistoryCarousel = {
         );
         break;
       }
+      case KeyEvent.DOM_VK_UP: {
+        if (event.target != this.scrubber) {
+          this.goToPreviousPreview();
+        }
+        break;
+      }
+      case KeyEvent.DOM_VK_DOWN: {
+        if (event.target != this.scrubber) {
+          this.goToNextPreview();
+        }
+        break;
+      }
+      case KeyEvent.DOM_VK_END: {
+        this.selectIndex(this.maxIndex, false /* instant */);
+        break;
+      }
+      case KeyEvent.DOM_VK_HOME: {
+        this.selectIndex(0, false /* instant */);
+        break;
+      }
+      case KeyEvent.DOM_VK_SPACE:
+      // Intentional fall-through
       case KeyEvent.DOM_VK_RETURN: {
-        CarouselUtils.requestExit();
+        if (event.target != this.previousBtn && event.target != this.nextBtn) {
+          CarouselUtils.requestExit();
+        }
         break;
       }
     }

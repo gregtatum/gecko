@@ -3411,6 +3411,7 @@ class StageManager extends EventTarget {
         url: internalView.url.spec,
         iconURL: internalView.iconURL,
         image: null,
+        tabpanelID: null,
       };
 
       if (index == this.currentIndex) {
@@ -3420,6 +3421,8 @@ class StageManager extends EventTarget {
           fullScale: true,
           fullViewport: true,
         });
+        let gBrowser = currentBrowser.getTabBrowser();
+        preview.tabpanelID = gBrowser.getPanel(currentBrowser).id;
       }
 
       data.previews.push(preview);
@@ -3447,6 +3450,7 @@ class StageManager extends EventTarget {
       url: internalView.url.spec,
       iconURL: internalView.iconURL,
       image: null,
+      tabpanelID: null,
     };
 
     let browser = internalView.getBrowser();
@@ -3467,6 +3471,9 @@ class StageManager extends EventTarget {
           historyIndex
         );
         wireframe = historyEntry.wireframe;
+
+        let gBrowser = browser.getTabBrowser();
+        result.tabpanelID = gBrowser.getPanel(browser).id;
       } else if (internalView.cachedEntry) {
         wireframe = internalView.cachedEntry.wireframe;
       }
