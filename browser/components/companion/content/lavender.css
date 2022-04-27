@@ -112,6 +112,9 @@
     --toolbarbutton-hover-background: var(--colors-warm-hover-02);
     --toolbarbutton-active-background: var(--colors-warm-pressed-02);
     --pinebuild-toolbarbutton-border: none;
+    --pinebuild-toolbarbutton-bgcolor: unset;
+    --pinebuild-toolbarbutton-hover-fill: currentColor;
+    --pinebuild-panel-item-hover-color: inherit;
 
     --companion-sidebar-button-flow-reset-fill-color: var(--colors-white);
     --companion-sidebar-button-selected-fill-color: var(--colors-lavender-70);

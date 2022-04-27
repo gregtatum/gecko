@@ -379,6 +379,25 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 toolbar .toolbarbutton-1 > .toolbarbutton-icon {
   background-repeat: no-repeat;
   background-position: center center;
+  background-color: var(--pinebuild-toolbarbutton-bgcolor);
+}
+
+@media (prefers-contrast) {
+  toolbar .toolbarbutton-1:not(:is([disabled],[open],:active)):hover .toolbarbutton-icon {
+    fill: var(--pinebuild-toolbarbutton-hover-fill);
+  }
+}
+
+:is(
+  panelview .toolbarbutton-1,
+  toolbarbutton.subviewbutton,
+  .widget-overflow-list .toolbarbutton-1,
+  .toolbaritem-combined-buttons:is(
+    :not([cui-areatype="toolbar"]),
+    [overflowedItem=true]
+  ) > toolbarbutton
+):not([disabled]):hover {
+  color: var(--pinebuild-panel-item-hover-color);
 }
 
 #pinebuild-back-button > .toolbarbutton-icon {
@@ -806,10 +825,15 @@ body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-input-contai
 }
 
 body[flow-reset] {
-  --toolbarbutton-icon-fill: white;
-  --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
   /* Shrink the --urlbar-height just a bit on the flow-reset page. */
   --urlbar-height: 42px;
+}
+
+@media not (prefers-contrast) {
+  body[flow-reset] {
+    --toolbarbutton-icon-fill: white;
+    --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
+  }
 }
 
 body[flow-reset] #urlbar[breakout],
@@ -879,21 +903,23 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   opacity: 0;
 }
 
-/* Switch to white fill when in flow-reset state, since the background is darker. */
-body[flow-reset] #companion-sidebar-button:not([checked]) > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/companion.svg");
-  fill: var(--companion-sidebar-button-flow-reset-fill-color);
-}
+@media not (prefers-contrast) {
+  /* Switch to white fill when in flow-reset state, since the background is darker. */
+  body[flow-reset] #companion-sidebar-button:not([checked]) > .toolbarbutton-icon {
+    background-image: url("chrome://browser/skin/companion.svg");
+    fill: var(--companion-sidebar-button-flow-reset-fill-color);
+  }
 
-body[flow-reset] #companion-sidebar-button[checked] > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/companion-selected.svg");
-  background-color: var(--companion-sidebar-button-selected-flow-reset-bg-color);
-}
+  body[flow-reset] #companion-sidebar-button[checked] > .toolbarbutton-icon {
+    background-image: url("chrome://browser/skin/companion-selected.svg");
+    background-color: var(--companion-sidebar-button-selected-flow-reset-bg-color);
+  }
 
-/* Specifically the hamburger menu is getting the lighter pressed color, so
- * overriding that to look better on the darker flow-reset background */
-body[flow-reset] #PanelUI-menu-button[open] .toolbarbutton-badge-stack {
-  background-color: rgba(0, 0, 0, 0.3);
+  /* Specifically the hamburger menu is getting the lighter pressed color, so
+   * overriding that to look better on the darker flow-reset background */
+  body[flow-reset] #PanelUI-menu-button[open] .toolbarbutton-badge-stack {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
 }
 
 companion-manager {
