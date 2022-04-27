@@ -1279,8 +1279,6 @@ DWORD WINAPI AnimateSkeletonUI(void* aUnused) {
       return 0;
     }
   }
-
-  return 0;
 }
 
 LRESULT WINAPI PreXULSkeletonUIProc(HWND hWnd, UINT msg, WPARAM wParam,

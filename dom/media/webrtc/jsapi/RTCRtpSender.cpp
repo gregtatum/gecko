@@ -369,6 +369,9 @@ nsTArray<RefPtr<dom::RTCStatsPromise>> RTCRtpSender::GetStatsInternal() {
                 streamStats->rtp_stats.retransmitted.packets);
             local.mRetransmittedBytesSent.Construct(
                 streamStats->rtp_stats.retransmitted.payload_bytes);
+            local.mFramesSent.Construct(streamStats->frames_encoded);
+            local.mFrameWidth.Construct(streamStats->width);
+            local.mFrameHeight.Construct(streamStats->height);
             /*
              * Potential new stats that are now available upstream.
             local.mTargetBitrate.Construct(videoStats->target_media_bitrate_bps);
@@ -430,6 +433,13 @@ already_AddRefed<Promise> RTCRtpSender::SetParameters(
       }
       uniqueRids.insert(encoding.mRid.Value());
     }
+
+    if (encoding.mMaxFramerate.WasPassed()) {
+      if (encoding.mMaxFramerate.Value() < 0.0f) {
+        p->MaybeRejectWithRangeError("maxFramerate must be non-negative");
+        return p.forget();
+      }
+    }
   }
 
   // TODO(bug 1401592): transaction ids, timing changes
@@ -465,6 +475,9 @@ void RTCRtpSender::ApplyParameters(const RTCRtpParameters& aParameters) {
       }
       if (encoding.mMaxBitrate.WasPassed()) {
         constraint.constraints.maxBr = encoding.mMaxBitrate.Value();
+      }
+      if (encoding.mMaxFramerate.WasPassed()) {
+        constraint.constraints.maxFps = Some(encoding.mMaxFramerate.Value());
       }
       constraint.constraints.scaleDownBy = encoding.mScaleResolutionDownBy;
       constraints.push_back(constraint);
