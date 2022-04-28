@@ -48,7 +48,7 @@ function getManifestData(locale, version = "2.0") {
   };
 }
 
-let testLocales = ["fr", "pl", "he"];
+let testLocales = ["fr", "pl", "he", "es-ES", "es-AR"];
 let testLangpacks;
 
 function createLangpack(locale, version) {
@@ -292,8 +292,8 @@ add_task(async function testDisabledBrowserLanguages() {
     "Children list populated"
   );
 
-  // Only fr is enabled and not selected, so it's the only locale available.
-  assertAvailableLocales(available, ["fr"]);
+  // pl is not available since it is disabled.
+  assertAvailableLocales(available, ["fr", "es-ES", "es-AR"]);
 
   // Search for more languages.
   available.menupopup.lastElementChild.doCommand();
@@ -305,7 +305,7 @@ add_task(async function testDisabledBrowserLanguages() {
   );
 
   // pl is now available since it is available remotely.
-  assertAvailableLocales(available, ["fr", "pl"]);
+  assertAvailableLocales(available, ["fr", "pl", "es-ES", "es-AR"]);
 
   let installId = null;
   AddonTestUtils.promiseInstallEvent("onInstallEnded").then(([install]) => {
@@ -482,30 +482,30 @@ add_task(async function testAddAndRemoveSelectedLanguages() {
       let listLocales = Array.from(available.menupopup.children).filter(
         item => item.value && item.value != "search"
       );
-      return listLocales.length == 3;
+      return listLocales.length == testLocales.length;
     }
   );
   // The initial order is set by the pref.
   assertLocaleOrder(selected, "en-US");
-  assertAvailableLocales(available, ["fr", "pl", "he"]);
+  assertAvailableLocales(available, ["fr", "pl", "he", "es-ES", "es-AR"]);
 
   // Add pl and fr to selected.
   await selectLocale("pl", available, selected, dialogDoc);
   await selectLocale("fr", available, selected, dialogDoc);
 
   assertLocaleOrder(selected, "fr,pl,en-US");
-  assertAvailableLocales(available, ["he"]);
+  assertAvailableLocales(available, ["he", "es-ES", "es-AR"]);
 
   // Remove pl and fr from selected.
   dialogDoc.getElementById("remove").doCommand();
   dialogDoc.getElementById("remove").doCommand();
   assertLocaleOrder(selected, "en-US");
-  assertAvailableLocales(available, ["fr", "pl", "he"]);
+  assertAvailableLocales(available, ["fr", "pl", "he", "es-ES", "es-AR"]);
 
   // Add he to selected.
   await selectLocale("he", available, selected, dialogDoc);
   assertLocaleOrder(selected, "he,en-US");
-  assertAvailableLocales(available, ["pl", "fr"]);
+  assertAvailableLocales(available, ["pl", "fr", "es-ES", "es-AR"]);
 
   // Accepting the change shows the confirm message bar.
   let dialogClosed = BrowserTestUtils.waitForEvent(dialog, "dialogclosing");
@@ -605,7 +605,7 @@ add_task(async function testInstallFromAMO() {
 
   // The initial order is set by the pref.
   assertLocaleOrder(selected, "en-US");
-  assertAvailableLocales(available, ["fr", "he", "pl"]);
+  assertAvailableLocales(available, ["fr", "he", "pl", "es-ES", "es-AR"]);
   is(
     Services.locale.availableLocales.join(","),
     "en-US",
@@ -635,7 +635,7 @@ add_task(async function testInstallFromAMO() {
 
   // Verify the list is correct.
   assertLocaleOrder(selected, "pl,en-US");
-  assertAvailableLocales(available, ["fr", "he"]);
+  assertAvailableLocales(available, ["fr", "he", "es-ES", "es-AR"]);
   is(
     Services.locale.availableLocales.sort().join(","),
     "en-US,pl",
@@ -685,7 +685,7 @@ add_task(async function testInstallFromAMO() {
     );
   }
   assertLocaleOrder(selected, "en-US");
-  assertAvailableLocales(available, ["fr", "he", "pl"]);
+  assertAvailableLocales(available, ["fr", "he", "pl", "es-ES", "es-AR"]);
 
   // Uninstall the langpack and dictionary.
   let installs = await AddonManager.getAddonsByTypes(["locale", "dictionary"]);
@@ -811,7 +811,7 @@ add_task(async function testReorderMainPane() {
     .join(",");
   is(
     availableCodes,
-    "en-US,fr,he,pl",
+    "en-US,es-AR,es-ES,fr,he,pl",
     "All of the available locales are listed"
   );
 
