@@ -823,7 +823,8 @@ let BrowserUsageTelemetry = {
       // We are interested in links on about:preferences as well.
       !(
         isAboutPreferences &&
-        (node.getAttribute("is") === "text-link" || node.localName === "a")
+        ((node.getAttribute && node.getAttribute("is") === "text-link") ||
+          node.localName === "a")
       )
     ) {
       node = node.parentNode;
