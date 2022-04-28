@@ -460,9 +460,9 @@ var gBrowserLanguagesDialog = {
     // This is a list of available locales that the user selected. It's more
     // restricted than the Intl notion of `requested` as it only contains
     // locale codes for which we have matching locales available.
-    // The first time this dialog is opened, populate with appLocalesAsBCP47.
+    // The first time this dialog is opened, populate with requestedLocales.
     let selectedLocales =
-      selectedLocalesForRestart || Services.locale.appLocalesAsBCP47;
+      selectedLocalesForRestart || Services.locale.requestedLocales;
     let selectedLocaleSet = new Set(selectedLocales);
     let available = await getAvailableLocales();
     let availableSet = new Set(available);

@@ -1191,7 +1191,10 @@ var gMainPane = {
         );
         gMainPane.hideConfirmLanguageChangeMessageBar();
         break;
-      case "locales-match":
+      case "app-locales-match":
+        // Still update the requested locales, as the requested locales can change,
+        // but the negotiated app locales may be the same.
+        Services.locale.requestedLocales = newLocales;
         // They matched, so we can reset the UI.
         gMainPane.updatePrimaryBrowserLanguageUI(
           Services.locale.appLocaleAsBCP47
@@ -1401,13 +1404,13 @@ var gMainPane = {
    * and the switched locales.
    *
    * @param {Array<string>} newLocales - List of BCP 47 locale identifiers.
-   * @returns {"locales-match" | "requires-restart" | "live-reload"}
+   * @returns {"app-locales-match" | "requires-restart" | "live-reload"}
    */
   getLanguageSwitchTransitionType(newLocales) {
     const { appLocalesAsBCP47 } = Services.locale;
     if (appLocalesAsBCP47.join(",") === newLocales.join(",")) {
       // The selected locales match, the order matters.
-      return "locales-match";
+      return "app-locales-match";
     }
 
     if (Services.prefs.getBoolPref("intl.multilingual.liveReload")) {
@@ -1455,7 +1458,10 @@ var gMainPane = {
         );
         gMainPane.hideConfirmLanguageChangeMessageBar();
         break;
-      case "locales-match":
+      case "app-locales-match":
+        // Still update the requested locales, as the requested locales can change,
+        // but the negotiated app locales may be the same.
+        Services.locale.requestedLocales = selected;
         // They matched, so we can reset the UI.
         gMainPane.updatePrimaryBrowserLanguageUI(
           Services.locale.appLocaleAsBCP47
