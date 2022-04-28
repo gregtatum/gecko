@@ -2862,8 +2862,8 @@ var OauthBindings = {
   google: {
     endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenEndpoint: "https://oauth2.googleapis.com/token",
-    clientId: "913967847322-m8ij544g2i23pssvchhru1hceg08irud.apps.googleusercontent.com",
-    clientSecret: "G7bg5a1bahnVWxd6GKQcO4Ro",
+    clientId: "290111995646-hrdpn27kp4jl0r6gej8540cg3cc4i0g6.apps.googleusercontent.com",
+    clientSecret: "mjlcpD5iiSNABCq_3PRtUglS",
     scopes: [
       "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/calendar.events.readonly",
