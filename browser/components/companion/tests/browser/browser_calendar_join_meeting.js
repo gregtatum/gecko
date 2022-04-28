@@ -1,6 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
+/* globals DEFAULT_FAKE_NOW_TS */
+
 "use strict";
 
 const { ContentTaskUtils } = ChromeUtils.import(
@@ -37,7 +39,7 @@ const checkJoinBtnVisibility = async ({ helper, expectedVisibility }) => {
 
 add_task(async function test_joinMeetingButtonShown() {
   await CompanionHelper.whenReady(async helper => {
-    let now = new Date();
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
 
     // generate start and end times for event starting in one minute.
     let { start, end } = PinebuildTestUtils.generateEventTimes(
@@ -64,7 +66,7 @@ add_task(async function test_joinMeetingButtonShown() {
 
 add_task(async function test_joinMeetingButtonHidden() {
   await CompanionHelper.whenReady(async helper => {
-    let now = new Date();
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
 
     // generate start and end times for event starting in 30 mins.
     let { start, end } = PinebuildTestUtils.generateEventTimes(

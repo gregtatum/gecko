@@ -124,11 +124,17 @@ class Redirector {
 }
 
 /**
+ * The default fixed date/time to use if not explicitly specified, currently
+ * April 26th at 9:00am in the local timezone for workshop backed tests.
+ */
+let DEFAULT_FAKE_NOW_TS = new Date(2022, 3, 26, 9).valueOf();
+
+/**
  * The time the first event should start at, set to the current time in ms.
  * The UI only shows events starting within the next hour, so we want to ensure
  * any events we create start within that range.
  */
-const DEFAULT_FIRST_EVENT_TS = new Date().valueOf();
+const DEFAULT_FIRST_EVENT_TS = new Date(2022, 3, 26, 9).valueOf();
 
 /**
  * We want to share our server and Workshop object between tests in a suite.
@@ -305,7 +311,10 @@ class WorkshopHelper {
    * sandbox and backstagepass globals lack the necessary window global, we
    * create a chrome-privileged about:blank that we use.
    */
-  async startBackend({ waitFor = "accountsLoaded" }) {
+  async startBackend({
+    fakeNow = DEFAULT_FAKE_NOW_TS,
+    waitFor = "accountsLoaded",
+  }) {
     if (sharedWorkshopAPI) {
       this.workshopAPI = sharedWorkshopAPI;
       return;
@@ -374,6 +383,8 @@ class WorkshopHelper {
     });
     this.#gotLogicInstance(workshopAPI.logic);
 
+    workshopAPI.TEST_timeWarp({ fakeNow });
+
     console.log("waiting for", waitFor);
     await workshopAPI.promisedLatestOnce(waitFor);
     console.log("done waiting for", waitFor);
@@ -416,6 +427,7 @@ class CompanionHelper {
         workshopEnabled,
         workshopHelper
       );
+      helper.overrideRelativeTime(DEFAULT_FAKE_NOW_TS, 0);
     } else {
       helper = new CompanionHelper(browserWindow);
     }
@@ -934,7 +946,7 @@ var PinebuildTestUtils = {
     if (eventStartHourOrDate instanceof Date) {
       startTime = eventStartHourOrDate;
     } else {
-      startTime = new Date();
+      startTime = new Date(DEFAULT_FAKE_NOW_TS);
       startTime.setHours(eventStartHourOrDate);
       startTime.setMinutes(eventStartMinutes);
     }

@@ -1,6 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
+/* globals DEFAULT_FAKE_NOW_TS */
+
 "use strict";
 
 add_setup(async function() {
@@ -15,7 +17,7 @@ add_setup(async function() {
 add_task(async function testBreakIndicatorsBetweenMeetings() {
   await CompanionHelper.whenReady(async helper => {
     // generate start and end times for a 10 min meeting starting now.
-    let now = new Date();
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
     let { start, end } = PinebuildTestUtils.generateEventTimes(0, 10, now);
 
     // generate times for a meeting starting 10 minutes after the first meeting.

@@ -1,6 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
+/* globals DEFAULT_FAKE_NOW_TS */
+
 "use strict";
 
 add_task(async function testPrefControlled() {
@@ -61,7 +63,7 @@ add_task(async function testEventInBrowseView() {
   });
 
   await CompanionHelper.whenReady(async helper => {
-    let now = new Date().valueOf();
+    let now = new Date(DEFAULT_FAKE_NOW_TS).valueOf();
     let today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
@@ -190,7 +192,7 @@ add_task(async function testMultiDayEventInBrowseView() {
   });
 
   await CompanionHelper.whenReady(async helper => {
-    let now = new Date();
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
     let { start, end } = PinebuildTestUtils.generateEventTimes(
       48,
       30,
@@ -215,7 +217,7 @@ add_task(async function testAllDayEventInBrowseView() {
   });
 
   await CompanionHelper.whenReady(async helper => {
-    let now = new Date();
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
     let { start, end } = PinebuildTestUtils.generateEventTimes(
       12,
       30,

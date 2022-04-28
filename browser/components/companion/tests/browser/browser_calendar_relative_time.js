@@ -1,6 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
+/* globals DEFAULT_FAKE_NOW_TS */
+
 "use strict";
 
 const ONE_MINUTE = 60 * 1000;
@@ -15,7 +17,11 @@ add_setup(async function() {
 
 add_task(async function testRelativeTimeThirtyMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -54,7 +60,11 @@ add_task(async function testRelativeTimeThirtyMinutesBeforeEvent() {
 
 add_task(async function testRelativeTimeFifteenMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -95,7 +105,11 @@ add_task(async function testRelativeTimeFifteenMinutesBeforeEvent() {
 
 add_task(async function testRelativeTimeTenMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -136,7 +150,11 @@ add_task(async function testRelativeTimeTenMinutesBeforeEvent() {
 
 add_task(async function testRelativeTimeFiveMinutesBeforeEvent() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -177,7 +195,11 @@ add_task(async function testRelativeTimeFiveMinutesBeforeEvent() {
 
 add_task(async function testRelativeTimeEventStarted() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -216,7 +238,11 @@ add_task(async function testRelativeTimeEventStarted() {
 
 add_task(async function testRelativeTimeFifteenMinutesBeforeEventEnds() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -261,7 +287,11 @@ add_task(async function testRelativeTimeFifteenMinutesBeforeEventEnds() {
 
 add_task(async function testRelativeTimeTenMinutesBeforeEventEnds() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -306,7 +336,11 @@ add_task(async function testRelativeTimeTenMinutesBeforeEventEnds() {
 
 add_task(async function testRelativeTimeFiveMinutesBeforeEventEnds() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -351,7 +385,11 @@ add_task(async function testRelativeTimeFiveMinutesBeforeEventEnds() {
 
 add_task(async function testRelativeTimeAfterEventEnds() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
@@ -390,7 +428,11 @@ add_task(async function testRelativeTimeAfterEventEnds() {
 
 add_task(async function testRelativeTimeTransition() {
   await CompanionHelper.whenReady(async helper => {
-    let { start, end } = generateEventTimes(0, 30, new Date());
+    let { start, end } = generateEventTimes(
+      0,
+      30,
+      new Date(DEFAULT_FAKE_NOW_TS)
+    );
 
     let events = [
       {
