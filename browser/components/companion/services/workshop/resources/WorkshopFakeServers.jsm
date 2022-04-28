@@ -44,7 +44,7 @@ class FakeCalendar {
   constructor(
     serverOwner,
     isMapi,
-    { id, name, events, calendarOwner, accessRole, owner }
+    { id, name, events, calendarOwner, accessRole, owner, primary = true }
   ) {
     this.serverOwner = serverOwner;
     this.id = id;
@@ -56,6 +56,7 @@ class FakeCalendar {
     this.selected = true;
     this.accessRole = accessRole;
     this.owner = owner;
+    this.primary = primary;
   }
 
   /**
@@ -696,6 +697,7 @@ class GapiFakeServer extends BaseFakeServer {
         // Currently all known calendars will be of interest for sync purposes.
         selected: cal.selected,
         accessRole: cal.accessRole || "owner",
+        primary: cal.primary,
       };
     });
   }

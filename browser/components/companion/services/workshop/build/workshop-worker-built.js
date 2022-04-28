@@ -11424,7 +11424,8 @@ var WorkshopBackend = (() => {
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
             for (const calInfo of results.items) {
-              let wantFolder = calInfo.accessRole === "owner" && calInfo.selected;
+              const primary = !!calInfo.primary;
+              let wantFolder = primary && calInfo.selected;
               let calFolder = foldersTOC.items.find((f) => f.serverId === calInfo.id);
               if (!wantFolder) {
                 if (calFolder) {
@@ -11437,7 +11438,6 @@ var WorkshopBackend = (() => {
                 timeZone: calInfo.timeZone,
                 color: calInfo.backgroundColor || null
               };
-              const primary = !!calInfo.primary;
               if (!calFolder) {
                 calFolder = makeFolderMeta({
                   id: foldersTOC.issueFolderId(primary),
@@ -11452,7 +11452,7 @@ var WorkshopBackend = (() => {
                   depth: 0,
                   syncGranularity: "folder",
                   calendarInfo: desiredCalendarInfo,
-                  primary: !!calInfo.primary
+                  primary
                 });
                 newFolders.push(calFolder);
               } else {

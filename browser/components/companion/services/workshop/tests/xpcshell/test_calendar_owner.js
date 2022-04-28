@@ -90,7 +90,7 @@ add_task(async function test_gapi_calendar_owner() {
     },
     secondCalConfig: {
       eventSketches: SECOND_CAL_EVENTS,
-      accessRole: "reader",
+      primary: false,
     },
   });
 });
