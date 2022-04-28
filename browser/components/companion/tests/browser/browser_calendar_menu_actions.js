@@ -19,13 +19,7 @@ const checkOpenedUrl = async (helper, expected, btnSelector, index_ = 0) => {
       );
       let panelMenu = event.shadowRoot.querySelector("panel-list");
       const EventUtils = ContentTaskUtils.getEventUtils(content);
-      info("Simulate a hover over the openMenuButton for it to appear.");
-      EventUtils.synthesizeMouseAtCenter(
-        openMenuButton,
-        { type: "mousemove" },
-        content
-      );
-      info("Now click to open the menu.");
+      info("Click the openMenuButton.");
       EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
       await ContentTaskUtils.waitForEvent(panelMenu, "shown");
       let panelButton = event.shadowRoot.querySelector(selector);
