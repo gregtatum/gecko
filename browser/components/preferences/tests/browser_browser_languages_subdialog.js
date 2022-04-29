@@ -1057,3 +1057,81 @@ add_task(async function testLiveLanguageReloadingBidiOn() {
 
   assertTelemetryRecorded([["reorder", "main"]]);
 });
+
+add_task(async function testVerticalFallbacking() {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["intl.multilingual.enabled", true],
+      ["intl.multilingual.downloadEnabled", true],
+      ["intl.multilingual.liveReload", true],
+      ["intl.multilingual.liveReloadBidirectional", false],
+      ["intl.locale.requested", "en-US"],
+      ["extensions.langpacks.signatures.required", false],
+    ],
+  });
+
+  let langpacks = await createTestLangpacks();
+  let addons = await Promise.all(
+    langpacks.map(async ([locale, file]) => {
+      let install = await AddonTestUtils.promiseInstallFile(file);
+      return install.addon;
+    })
+  );
+
+  info("!!! Open preferences");
+  await openPreferencesViaOpenPreferencesAPI("paneGeneral", {
+    leaveOpen: true,
+  });
+
+  // Open the dialog.
+  let doc = gBrowser.contentDocument;
+  let { dialog, dialogDoc, available, selected } = await openDialog(doc);
+  let dialogId = getDialogId(dialogDoc);
+
+  info("!!! Await for mutation");
+  // loadLocalesFromAMO is async but `initAvailableLocales` doesn't wait
+  // for it to be resolved, so we have to wait for the list to be populated
+  // before we test for its values.
+  await BrowserTestUtils.waitForMutationCondition(
+    available.menupopup,
+    { attributes: true, childList: true },
+    () => {
+      let listLocales = Array.from(available.menupopup.children).filter(
+        item => item.value && item.value != "search"
+      );
+      return listLocales.length == testLocales.length;
+    }
+  );
+  
+
+  info("!!! Check the initial locales");
+  assertLocaleOrder(selected, "en-US");
+  assertAvailableLocales(available, ["fr", "pl", "he", "es-ES", "es-AR"]);
+
+  info('!!! Just add "es-ES"');
+  await selectLocale("es-ES", available, selected, dialogDoc);
+
+  info('!!! "es-ES" is now in the list.');
+  assertLocaleOrder(selected, "es-ES,en-US");
+  assertAvailableLocales(available, ["fr", "pl", "he", "es-AR"]);
+
+  // Accepting the change shows the confirm message bar.
+  info('!!! Close the dialog');
+  let dialogClosed = BrowserTestUtils.waitForEvent(dialog, "dialogclosing");
+  dialog.acceptDialog();
+  await dialogClosed;
+
+  info('!!! Open preferences again.');
+  await openPreferencesViaOpenPreferencesAPI("paneGeneral", {
+    leaveOpen: true,
+  });
+
+  info("!!! Assert that the locales are still the same.");
+  assertLocaleOrder(selected, "es-ES,en-US");
+  assertAvailableLocales(available, ["fr", "pl", "he", "es-AR"]);
+
+  await Promise.all(addons.map(addon => addon.uninstall()));
+  info("!!! Remove tab");
+  BrowserTestUtils.removeTab(gBrowser.selectedTab);
+  info("!!! Done with test.");
+});
