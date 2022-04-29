@@ -162,6 +162,7 @@ _OPT\.OBJ/
 ^browser/components/companion/vendor/lit/node_modules/
 ^browser/components/companion/vendor/lit/package-lock.json
 ^browser/components/companion/vendor/lit/lit.all.js
+^browser/components/storybook/node_modules/
 
 # Ignore talos virtualenv and tp5n files.
 # The tp5n set is supposed to be decompressed at

@@ -7,6 +7,7 @@ browser/components/companion/vendor/pyodide/
 browser/components/companion/storybook/node_modules/
 browser/components/newtab/vendor/
 browser/components/pocket/content/panels/js/vendor/
+browser/components/storybook/node_modules/
 browser/components/translation/cld2/
 browser/extensions/formautofill/content/third-party/
 browser/extensions/formautofill/test/fixtures/third_party/
