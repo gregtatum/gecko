@@ -18,19 +18,14 @@ const checkJoinBtnVisibility = async ({ helper, expectedVisibility }) => {
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
       await calendarEventList.updateComplete;
       let joinBtn = event.shadowRoot.querySelector(
-        ".event-actions .button-link"
+        ".event-conference-container .button-link"
       );
-
-      let styles = content.getComputedStyle(joinBtn);
-      let hiddenStylesApplied =
-        styles["clip-path"] == "inset(50%)" &&
-        styles.overflow == "hidden" &&
-        styles.width == "1px";
+      let joinBtnRendered = !!joinBtn;
 
       is(
-        !hiddenStylesApplied,
+        joinBtnRendered,
         isVisible,
-        `Join button is ${isVisible ? "visible" : "hidden"}`
+        `Join button is ${isVisible ? "rendered" : "hidden"}`
       );
     },
     [expectedVisibility]
@@ -90,5 +85,27 @@ add_task(async function test_joinMeetingButtonHidden() {
     );
     await helper.setCalendarEvents(events);
     await checkJoinBtnVisibility({ helper, expectedVisibility: false });
+
+    info("Test button is shown when event card is expanded.");
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-details");
+      });
+
+      EventUtils.sendMouseEvent(
+        {
+          type: "mousedown",
+        },
+        eventDetailsSection,
+        content
+      );
+      await event.updateComplete;
+    });
+
+    await checkJoinBtnVisibility({ helper, expectedVisibility: true });
   });
 });

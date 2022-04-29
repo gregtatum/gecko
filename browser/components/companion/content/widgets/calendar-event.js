@@ -89,27 +89,21 @@ export class CalendarEvent extends MozLitElement {
         gap: 12px;
       }
 
-      .event-actions {
+      .event-conference-container {
         display: flex;
         gap: 4px;
         font-size: 0.8125em;
+        width: 100%;
       }
 
-      .event-actions > a {
+      .event-conference-container > a {
         margin-inline: 0;
+        flex-grow: 1;
       }
 
-      .event:where(:not(:hover, :focus-within, .upcoming))
-        .event-actions
-        .button-link {
-        /* This is essentially visually-hidden styles you'd use for screen
-         * reader content. And we're using it so the screen reader will notice
-         * the content that's hidden when not hovered/focused. */
-        clip-path: inset(50%);
-        overflow: hidden;
-        width: 1px;
-        /* height is left the same, so the parent's height doesn't change when
-         * the hover/focus content is shown. */
+      .event:where(:not(.detailsCollapsed), :is(.upcoming))
+        .event-conference-container {
+        margin-block-start: 12px;
       }
 
       .event-sub-details {
@@ -200,8 +194,11 @@ export class CalendarEvent extends MozLitElement {
       .event-top {
         display: flex;
         justify-content: space-between;
+        height: fit-content;
+      }
+
+      .event:where(:is(.upcoming, .finished)) .event-top {
         margin-block-end: 12px;
-        height: 16px;
       }
 
       .event-details {
@@ -592,27 +589,30 @@ export class CalendarEvent extends MozLitElement {
     );
   }
 
-  // If an event is less than 10 minutes away or has already started,
+  // If an event is less than 15 minutes away or has already started,
   // we show the join button.
-  setUpcomingStatus(start, end) {
+  setStatus(start, end) {
     clearTimeout(this._eventUpcomingTimer?.id);
     let endDate = new Date(end);
-    let eventStartTimeMinus10 = new Date(start) - 60 * 10 * 1000;
+    let startDate = new Date(start);
+    let eventStartTimeMinus15 = startDate - 60 * 15 * 1000;
     let now = this.dateCreator.now();
-    if (eventStartTimeMinus10 > now) {
-      this.upcoming = false;
+    if (eventStartTimeMinus15 > now) {
+      this.status = "in-progress";
       this._eventUpcomingTimer = this.setExtendedTimeout(
-        () => (this.upcoming = true),
-        eventStartTimeMinus10 - now
+        () => this.requestUpdate(),
+        eventStartTimeMinus15 - now
       );
-    } else if (now >= eventStartTimeMinus10 && now <= endDate) {
-      this.upcoming = true;
+    } else if (now >= eventStartTimeMinus15 && now <= endDate) {
+      this.status = "upcoming";
       // The endDate can be in more than 24 days... so we must use setExtendedTimeout
       // in order to avoid to have a delay considered as a 0!
       this._eventUpcomingTimer = this.setExtendedTimeout(
-        () => (this.upcoming = false),
+        () => this.requestUpdate(),
         endDate - now
       );
+    } else if (now >= endDate) {
+      this.status = "finished";
     }
   }
 
@@ -628,7 +628,7 @@ export class CalendarEvent extends MozLitElement {
   willUpdate() {
     let { startDate, endDate } = this.event;
 
-    this.setUpcomingStatus(startDate, endDate);
+    this.setStatus(startDate, endDate);
   }
 
   render() {
@@ -646,7 +646,9 @@ export class CalendarEvent extends MozLitElement {
       <div
         class=${classMap({
           event: true,
-          upcoming: this.upcoming,
+          upcoming: this.status === "upcoming",
+          finished: this.status === "finished",
+          detailsCollapsed: this.detailsCollapsed,
         })}
         @mousedown=${this.toggleDetails}
       >
@@ -656,14 +658,6 @@ export class CalendarEvent extends MozLitElement {
             .eventEnd=${endDate}
             .dateCreator=${this.dateCreator}
           ></relative-time>
-          <button
-            class="ghost-button event-options-button"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            @mousedown=${this.openMenu}
-            @click=${this.openMenu}
-            title="More options"
-          ></button>
         </div>
         <div class="event-info">
           <div class="event-content">
@@ -674,9 +668,21 @@ export class CalendarEvent extends MozLitElement {
               ${this.conferenceInfoTemplate()} ${this.eventTimeTemplate()}
             </div>
           </div>
-          <div class="event-actions">
-            ${this.joinConferenceTemplate()}
+          <div class="event-card-actions">
+            <button
+              class="ghost-button event-options-button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              @mousedown=${this.openMenu}
+              @click=${this.openMenu}
+              title="More options"
+            ></button>
           </div>
+        </div>
+        <div class="event-conference-container">
+          ${!this.detailsCollapsed || this.status === "upcoming"
+            ? this.joinConferenceTemplate()
+            : ""}
         </div>
         ${this.eventDetailsTemplate()}
         <panel-list action="more-options">
