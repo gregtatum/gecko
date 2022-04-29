@@ -50,6 +50,7 @@ export class CalendarEvent extends MozLitElement {
       detailsCollapsed: { type: Boolean },
       isFakeTime: { type: Boolean },
       serial: { type: Number },
+      listType: { type: String }, // "now" | "browse"
     };
   }
 
@@ -632,7 +633,9 @@ export class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { summary, startDate, endDate } = this.event;
+    let { summary, startDate, endDate, isAllDay } = this.event;
+    let hideShowRunningLateOption =
+      this.listType === "browse" && (isAllDay || this.status === "finished");
 
     return html`
       <link
@@ -690,7 +693,8 @@ export class CalendarEvent extends MozLitElement {
             class="event-item-running-late-action"
             data-l10n-id="companion-email-late"
             @click=${this.openRunningLate}
-            ?hidden=${!this._getRunningLateTargets().length}
+            ?hidden=${hideShowRunningLateOption ||
+              !this._getRunningLateTargets().length}
           ></panel-item>
           <panel-item
             class="event-item-open-calendar-action"

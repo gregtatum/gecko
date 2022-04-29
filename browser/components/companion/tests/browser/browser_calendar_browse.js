@@ -233,6 +233,7 @@ add_task(async function testAllDayEventInBrowseView() {
     ];
 
     await checkEventInBrowseView(helper, events);
+    await checkRunningLateForBrowseEvent(helper, true);
   });
 });
 
@@ -265,4 +266,24 @@ async function setBrowseCalendarEvents(helper, events, expectedEventCount) {
     listType: "browse",
     expectedEventCount: expectedEventCount || events.length,
   });
+}
+
+async function checkRunningLateForBrowseEvent(helper, isHidden) {
+  await helper.runCompanionTask(
+    async shouldBeHidden => {
+      let browseEventList = content.document.getElementById(
+        "browse-event-list"
+      );
+      let event = browseEventList.shadowRoot.querySelector("calendar-event");
+      let runningLateButton = event.shadowRoot.querySelector(
+        ".event-item-running-late-action"
+      );
+      is(
+        runningLateButton.hidden,
+        shouldBeHidden,
+        `Running late button is ${shouldBeHidden ? "hidden" : "showing"}`
+      );
+    },
+    [isHidden]
+  );
 }

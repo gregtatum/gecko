@@ -410,6 +410,7 @@ export class CalendarEventList extends MozLitElement {
                   .isFakeTime=${this.isFakeTime}
                   .event=${event}
                   .serial=${event.serial}
+                  .listType=${this.listType}
                 ></calendar-event>
               </div>
             `
