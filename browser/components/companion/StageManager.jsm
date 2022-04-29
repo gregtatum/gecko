@@ -2477,10 +2477,6 @@ class StageManager extends EventTarget {
     let previousIdMap = new Map();
     for (let { id, cachedEntry, workspaceId } of state) {
       if (cachedEntry) {
-        // For older sessions, we might not have a workspace ID, so fallback
-        // to the default.
-        workspaceId = workspaceId ?? DEFAULT_WORKSPACE_ID;
-
         let internalView = new InternalView(
           this.#window,
           null,
@@ -2557,9 +2553,6 @@ class StageManager extends EventTarget {
 
     // Push those views onto the stack and to the river.
     for (let { id, workspaceId } of state) {
-      // For older sessions, we might not have a workspace ID, so fallback
-      // to the default.
-      workspaceId = workspaceId ?? DEFAULT_WORKSPACE_ID;
       let internalView = previousIdMap.get(id);
       if (!internalView) {
         logConsole.warn("Missing history entry for river entry.");
