@@ -106,4 +106,9 @@ export class MozLitElement extends LitElement {
     await this.updateComplete;
     this.dispatchEvent(event);
   }
+
+  update() {
+    super.update();
+    document.l10n.translateFragment(this.renderRoot);
+  }
 }
