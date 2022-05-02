@@ -8,6 +8,8 @@ import { css, html } from "./lit.all.js";
 class SectionPanel extends MozLitElement {
   static get styles() {
     return css`
+      @import url("chrome://global/skin/in-content/common.css");
+
       :host() {
         display: flex;
         flex-direction: column;
@@ -65,11 +67,6 @@ class SectionPanel extends MozLitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://global/skin/in-content/common.css"
-      />
-
       <div class="section-panel-header">
         <button
           class="section-panel-header-button back-button ghost-button"

@@ -25,6 +25,8 @@ class ConnectServiceNotification extends MozLitElement {
 
   static get styles() {
     return css`
+      @import url("chrome://global/skin/in-content/common.css");
+
       button {
         /* flex for the green connected dot. */
         display: flex;
@@ -66,11 +68,6 @@ class ConnectServiceNotification extends MozLitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://global/skin/in-content/common.css"
-      />
-
       <simple-notification
         .heading=${this.name}
         .icon=${this.icon}

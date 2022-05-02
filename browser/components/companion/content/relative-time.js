@@ -30,6 +30,9 @@ export class RelativeTime extends MozLitElement {
 
   static get styles() {
     return css`
+      @import url("chrome://global/skin/in-content/common.css");
+      @import url("chrome://browser/content/companion/fonts.css");
+
       .event-is-happening-now {
         color: var(--in-content-accent-color);
       }
@@ -128,15 +131,6 @@ export class RelativeTime extends MozLitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://global/skin/in-content/common.css"
-      />
-      <link
-        rel="stylesheet"
-        href="chrome://browser/content/companion/fonts.css"
-      />
-
       <span
         class=${classMap({
           "event-relative-time text-body-m-med": true,

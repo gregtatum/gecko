@@ -8,6 +8,8 @@ import { css, html } from "../lit.all.js";
 class SimpleNotification extends MozLitElement {
   static get styles() {
     return css`
+      @import url("chrome://global/skin/in-content/common.css");
+
       .card {
         box-shadow: 0 2px 6px 0 rgba(58, 57, 68, 0.2);
         padding: 16px;
@@ -51,11 +53,6 @@ class SimpleNotification extends MozLitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://global/skin/in-content/common.css"
-      />
-
       <div class="card card-no-hover">
         <img class="notification-icon" src=${this.icon} />
         <div class="notification-content">

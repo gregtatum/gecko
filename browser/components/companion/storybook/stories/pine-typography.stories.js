@@ -50,6 +50,7 @@ class TypeStylesTable extends LitElement {
 
   static get styles() {
     return css`
+      @import url("chrome://browser/content/companion/fonts.css");
       .container {
         max-width: 700px;
         min-width: 600px;
@@ -132,11 +133,6 @@ class TypeStylesTable extends LitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://browser/content/companion/fonts.css"
-      />
-
       <div class="container">
         <h3>${this.title}</h3>
         <table>

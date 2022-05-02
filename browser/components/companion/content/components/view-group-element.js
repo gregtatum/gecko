@@ -4,6 +4,7 @@
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
 import {
+  css,
   html,
   classMap,
   ifDefined,
@@ -27,6 +28,12 @@ export default class ViewGroupElement extends MozLitElement {
       active: { type: Boolean },
       busyAnimating: { type: Boolean },
     };
+  }
+
+  static get styles() {
+    return css`
+      @import url("chrome://browser/content/companion/components/view-group-element.css");
+    `;
   }
 
   constructor() {
@@ -217,11 +224,6 @@ export default class ViewGroupElement extends MozLitElement {
     let shouldExposeParts = this.viewGroup.length > 1;
 
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://browser/content/companion/components/view-group-element.css"
-      />
-
       <div class="view-el" title=${ifDefined(rootTitle)} ?busy=${
       view.busy
     } ?pause-animation=${!this.busyAnimating}>

@@ -2770,6 +2770,9 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   // Disable restoring from a crash, so that we don't have stale pages shown
   // on the flow-reset screen after a restart. MR2-1858
   pref("browser.sessionstore.resume_from_crash", false);
+  // Temporarily disable constructable stylesheets by default, since it
+  // seems to break LitElement styling. MR2-2393
+  pref("layout.css.constructable-stylesheets.enabled", false);
 
   // Pinebuild specific configurations
   pref("browser.pinebuild.enabled", true, locked);

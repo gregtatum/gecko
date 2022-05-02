@@ -133,6 +133,9 @@ class WorkshopService extends MozLitElement {
 
   static get styles() {
     return css`
+      @import url("chrome://global/skin/in-content/common.css");
+      @import url("chrome://browser/skin/preferences/services.css");
+
       .service-name {
         text-transform: capitalize;
       }
@@ -171,15 +174,6 @@ class WorkshopService extends MozLitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://global/skin/in-content/common.css"
-      />
-      <link
-        rel="stylesheet"
-        href="chrome://browser/skin/preferences/services.css"
-      />
-
       <div class="service-wrapper">
         <div class="service-info-container">
           <img class="service-icon" src=${this.icon}></img>

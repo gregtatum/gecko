@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
-import { html } from "chrome://browser/content/companion/lit.all.js";
+import { css, html } from "chrome://browser/content/companion/lit.all.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 
@@ -22,6 +22,12 @@ export default class River extends MozLitElement {
     return {
       overflowButton: "#river-overflow-button",
     };
+  }
+
+  static get styles() {
+    return css`
+      @import url("chrome://browser/content/companion/components/river.css");
+    `;
   }
 
   constructor() {
@@ -122,11 +128,6 @@ export default class River extends MozLitElement {
     let topViewGroup =
       containsActive && this.viewGroups.length ? river.pop() : null;
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://browser/content/companion/components/river.css"
-      />
-
       <toolbarbutton
         part="overflow"
         class="subviewbutton"

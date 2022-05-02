@@ -26,6 +26,8 @@ export class RefreshServicesButton extends MozLitElement {
 
   static get styles() {
     return css`
+      @import url("chrome://global/skin/in-content/common.css");
+
       .refresh-services-button::after {
         content: "";
         display: block;
@@ -137,11 +139,6 @@ export class RefreshServicesButton extends MozLitElement {
 
   render() {
     return html`
-      <link
-        rel="stylesheet"
-        href="chrome://global/skin/in-content/common.css"
-      />
-
       <button
         ?hidden=${!this.servicesConnected}
         @click=${this.onClick}
