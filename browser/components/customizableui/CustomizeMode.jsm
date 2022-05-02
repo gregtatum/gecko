@@ -131,7 +131,7 @@ function CustomizeMode(aWindow) {
   this.areas = new Set();
 
   this._translationObserver = new aWindow.MutationObserver(mutations =>
-    this._onTranslations(mutations)
+    this._onTranslations(mutations.map(({ target }) => target), false)
   );
   this._ensureCustomizationPanels();
 
@@ -186,6 +186,7 @@ CustomizeMode.prototype = {
   _customizing: false,
   _skipSourceNodeCheck: null,
   _mainViewContext: null,
+  _hasEnteredBefore: false,
 
   // These are the commands we continue to leave enabled while in customize mode.
   // All other commands are disabled, and we remove the disabled attribute when
@@ -381,6 +382,16 @@ CustomizeMode.prototype = {
       let browser = document.getElementById("browser");
       browser.collapsed = true;
       customizer.hidden = false;
+
+      if (this._hasEnteredBefore) {
+        // The locale may have switched while the panel was closed.
+        this._onTranslations(
+          this.document.querySelectorAll(
+            "#customization-container toolbarbutton"
+          )
+        );
+      }
+      this._hasEnteredBefore = true;
 
       this._wrapToolbarItemSync(CustomizableUI.AREA_TABSTRIP);
 
@@ -946,7 +957,8 @@ CustomizeMode.prototype = {
    * Helper to set the label, either directly or to set up the translation
    * observer so we can set the label once it's available.
    */
-  _updateWrapperLabel(aNode, aIsUpdate, aWrapper = aNode.parentElement) {
+   async _updateWrapperLabel(aNode, aIsUpdate, aWrapper = aNode.parentElement) {
+    await this.document.l10n.translateElements([aNode]);
     if (aNode.hasAttribute("label")) {
       aWrapper.setAttribute("title", aNode.getAttribute("label"));
       aWrapper.setAttribute("tooltiptext", aNode.getAttribute("label"));
@@ -964,14 +976,13 @@ CustomizeMode.prototype = {
   /**
    * Called when a node without a label or title is updated.
    */
-  _onTranslations(aMutations) {
-    for (let mut of aMutations) {
-      let { target } = mut;
+  _onTranslations(aNodes) {
+    for (let node of aNodes) {
       if (
-        target.parentElement?.localName == "toolbarpaletteitem" &&
-        (target.hasAttribute("label") || mut.target.hasAttribute("title"))
+        node.parentElement?.localName == "toolbarpaletteitem" &&
+        (node.hasAttribute("label") || node.hasAttribute("title"))
       ) {
-        this._updateWrapperLabel(target, true);
+        this._updateWrapperLabel(node, true);
       }
     }
   },
