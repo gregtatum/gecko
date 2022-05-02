@@ -177,3 +177,7 @@ companion-header-back-button =
 # Variables:
 #   $snapshotCount (Number) - Number of snapshots.
 snapshot-count = { $snapshotCount } Snapshots
+
+# Labeling for the Picture-in-Picture button in the media card
+companion-picture-in-picture-label =
+    .aria-label = Picture-in-Picture

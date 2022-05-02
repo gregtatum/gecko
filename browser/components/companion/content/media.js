@@ -284,6 +284,12 @@ export class Media extends HTMLElement {
       this.playPause.dataset.state = this.tab.media.isPlaying
         ? "playing"
         : "paused";
+      document.l10n.setAttributes(
+        this.playPause,
+        this.tab.media.isPlaying
+          ? "videocontrols-pause-button"
+          : "videocontrols-play-button"
+      );
     }
 
     this.mute.hidden = !allowMute || this.tab.audioMuted;
