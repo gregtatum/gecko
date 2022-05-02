@@ -17,7 +17,7 @@ add_task(async function testChangingLocaleOpen() {
   const accentedTitle = "[Ƥřiƞŧ]";
   startCustomizing();
 
-  function getPrintButton() {
+  async function getPrintButton() {
     return TestUtils.waitForCondition(
       () => document.getElementById("wrapper-print-button"),
       "Get the print button"
@@ -45,9 +45,16 @@ add_task(async function testChangingLocaleOpen() {
     "The tooltip says Print."
   );
 
+  info("Close the panel.");
+  await endCustomizing();
+
   info("Switch to the accented pseudo locale.");
   await SpecialPowers.pushPrefEnv({ set: [["intl.l10n.pseudo", "accented"]] });
 
+  info("Start customizing again.");
+  startCustomizing();
+
+  printButton = await getPrintButton();
   await TestUtils.waitForCondition(
     () => printButton.getAttribute("title") == accentedTitle,
     "Wait for the accented translation to happen."
@@ -56,37 +63,11 @@ add_task(async function testChangingLocaleOpen() {
   Assert.equal(
     printButton.getAttribute("title"),
     accentedTitle,
-    "The button says Print."
+    "The button says [Ƥřiƞŧ]."
   );
   Assert.equal(
     printButton.getAttribute("tooltiptext"),
     accentedTitle,
-    "The tooltip says Print."
+    "The tooltip says [Ƥřiƞŧ]."
   );
-
-  info("Switch the pseudo locale while the customization panel is closed.");
-  await endCustomizing();
-  await SpecialPowers.pushPrefEnv({ set: [["intl.l10n.pseudo", ""]] });
-  await document.l10n.ready;
-  startCustomizing();
-
-  printButton = await getPrintButton();
-
-  await TestUtils.waitForCondition(
-    () => printButton.getAttribute("title") == enUsTitle,
-    "Wait for the final en-US translation to happen."
-  );
-
-  Assert.equal(
-    printButton.getAttribute("title"),
-    enUsTitle,
-    "The button says Print."
-  );
-  Assert.equal(
-    printButton.getAttribute("tooltiptext"),
-    enUsTitle,
-    "The tooltip says Print."
-  );
-
-  await endCustomizing();
 });

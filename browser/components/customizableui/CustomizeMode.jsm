@@ -131,7 +131,7 @@ function CustomizeMode(aWindow) {
   this.areas = new Set();
 
   this._translationObserver = new aWindow.MutationObserver(mutations =>
-    this._onTranslations(mutations)
+    this._onTranslations(mutations.map(({ target }) => target))
   );
   this._ensureCustomizationPanels();
 
@@ -223,6 +223,8 @@ CustomizeMode.prototype = {
         "intl.l10n.pseudo",
         this._languageSwitchObserver
       );
+      delete this._languageSwitchObserver;
+      delete this._awaitTranslations;
     }
     Services.prefs.removeObserver(kBookmarksToolbarPref, this);
   },
@@ -281,19 +283,16 @@ CustomizeMode.prototype = {
   },
 
   enter() {
-    if (!this._languageSwitchObserver && !this._awaitTranslations) {
+    if (!this._languageSwitchObserver) {
       // We need to observe any time the app locale changes, because otherwise moving
       // translated strings between elements will not be translated properly.
       this._languageSwitchObserver = () => {
-        Services.obs.removeObserver(
-          this._languageSwitchObserver,
-          "intl:app-locales-changed"
-        );
-        Services.prefs.removeObserver(
-          "intl.l10n.pseudo",
-          this._languageSwitchObserver
-        );
         this._awaitTranslations = true;
+        this._onTranslations(
+          this.document.querySelectorAll(
+            "#customization-container toolbarbutton"
+          )
+        );
       };
       Services.obs.addObserver(
         this._languageSwitchObserver,
@@ -1004,14 +1003,13 @@ CustomizeMode.prototype = {
   /**
    * Called when a node without a label or title is updated.
    */
-  _onTranslations(aMutations) {
-    for (let mut of aMutations) {
-      let { target } = mut;
+  _onTranslations(aNodes) {
+    for (let node of aNodes) {
       if (
-        target.parentElement?.localName == "toolbarpaletteitem" &&
-        (target.hasAttribute("label") || mut.target.hasAttribute("title"))
+        node.parentElement?.localName == "toolbarpaletteitem" &&
+        (node.hasAttribute("label") || node.hasAttribute("title"))
       ) {
-        this._updateWrapperLabel(target, true);
+        this._updateWrapperLabel(node, true);
       }
     }
   },
