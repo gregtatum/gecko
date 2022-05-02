@@ -402,8 +402,7 @@ files-and-applications-title = Files and Applications
 
 download-header = Downloads
 
-download-save-to =
-    .label = Save files to
+download-save-where = Save files to
     .accesskey = v
 
 download-choose-folder =

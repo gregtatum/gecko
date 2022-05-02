@@ -65,6 +65,7 @@ class MediaFoundationInitializer final {
     }
     return Get()->mHasInitialized;
   }
+
  private:
   static MediaFoundationInitializer* Get() {
     {
@@ -74,18 +75,19 @@ class MediaFoundationInitializer final {
         GetMainThreadSerialEventTarget()->Dispatch(
             NS_NewRunnableFunction("MediaFoundationInitializer::Get", [&] {
               // Need to run this before MTA thread gets destroyed.
-              RunOnShutdown([&] {
-                sInitializer.reset();
-                sIsShutdown = true;
-              }, ShutdownPhase::XPCOMShutdown);
+              RunOnShutdown(
+                  [&] {
+                    sInitializer.reset();
+                    sIsShutdown = true;
+                  },
+                  ShutdownPhase::XPCOMShutdown);
             }));
       }
     }
     return sInitializer.get();
   }
 
-  MediaFoundationInitializer()
-    : mHasInitialized(SUCCEEDED(MFStartup())) {
+  MediaFoundationInitializer() : mHasInitialized(SUCCEEDED(MFStartup())) {
     if (!mHasInitialized) {
       NS_WARNING("MFStartup failed");
     }
@@ -147,6 +149,24 @@ HRESULT MFTGetInfo(CLSID clsidMFT, LPWSTR* pszName,
                    MFT_REGISTER_TYPE_INFO** ppInputTypes, UINT32* pcInputTypes,
                    MFT_REGISTER_TYPE_INFO** ppOutputTypes,
                    UINT32* pcOutputTypes, IMFAttributes** ppAttributes);
+
+HRESULT MFCreateAttributes(IMFAttributes** ppMFAttributes, UINT32 cInitialSize);
+
+HRESULT MFCreateEventQueue(IMFMediaEventQueue** ppMediaEventQueue);
+
+HRESULT MFCreateStreamDescriptor(DWORD dwStreamIdentifier, DWORD cMediaTypes,
+                                 IMFMediaType** apMediaTypes,
+                                 IMFStreamDescriptor** ppDescriptor);
+
+HRESULT MFCreateAsyncResult(IUnknown* punkObject, IMFAsyncCallback* pCallback,
+                            IUnknown* punkState,
+                            IMFAsyncResult** ppAsyncResult);
+
+HRESULT MFCreatePresentationDescriptor(
+    DWORD cStreamDescriptors, IMFStreamDescriptor** apStreamDescriptors,
+    IMFPresentationDescriptor** ppPresentationDescriptor);
+
+HRESULT MFCreateMemoryBuffer(DWORD cbMaxLength, IMFMediaBuffer** ppBuffer);
 
 }  // end namespace wmf
 }  // end namespace mozilla

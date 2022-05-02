@@ -304,7 +304,7 @@ if (AppConstants.ENABLE_WEBDRIVER) {
   );
 } else {
   this.Marionette = { running: false };
-  this.RemoteAgent = { listening: false };
+  this.RemoteAgent = { running: false };
 }
 
 XPCOMUtils.defineLazyGetter(this, "RTL_UI", () => {
@@ -8571,7 +8571,7 @@ const gRemoteControl = {
       return "Marionette";
     }
 
-    if (RemoteAgent.listening) {
+    if (RemoteAgent.running) {
       return "RemoteAgent";
     }
 
