@@ -90,6 +90,9 @@ XPCOMUtils.defineLazyPreferenceGetter(
 const DEFAULT_WORKSPACE_ID = 0;
 const MAX_WORKSPACES_LIMIT = 3;
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
+const SESSIONSTORE_STATE_VERSION_KEY = "GlobalHistoryStateVersion";
+const SESSIONSTORE_STATE_CURRENT_VERSION = 1;
+
 /**
  * @typedef {object} PINNED_STATE
  *   An object holding enums representing pinned states that a View can be
@@ -2481,6 +2484,15 @@ class StageManager extends EventTarget {
       SESSIONSTORE_STATE_KEY
     );
 
+    let version =
+      parseInt(
+        SessionStore.getCustomWindowValue(
+          this.#window,
+          SESSIONSTORE_STATE_VERSION_KEY
+        ),
+        10
+      ) || 0;
+
     for (let workspace of this.#workspaces.values()) {
       workspace.historyViews.clear();
       workspace.viewStack = [];
@@ -2498,6 +2510,14 @@ class StageManager extends EventTarget {
 
     if (!state.length) {
       logConsole.error("No state to rebuild from.");
+    }
+
+    if (version < SESSIONSTORE_STATE_CURRENT_VERSION) {
+      logConsole.debug(
+        `Migrating state from ${version} to ` +
+          SESSIONSTORE_STATE_CURRENT_VERSION
+      );
+      this.migrateSessionState(state, version);
     }
 
     logConsole.debug(
@@ -2587,14 +2607,24 @@ class StageManager extends EventTarget {
     }
 
     // Push those views onto the stack and to the river.
-    for (let { id, workspaceId } of state) {
+    for (let { id, workspaceId, pinnedState } of state) {
       let internalView = previousIdMap.get(id);
       if (!internalView) {
         logConsole.warn("Missing history entry for river entry.");
         continue;
       }
+      let workspace = this.#workspaces.get(workspaceId);
 
-      this.#workspaces.get(workspaceId).viewStack.push(internalView);
+      if (pinnedState == PINNED_STATE.PINNED_APP) {
+        let browser = internalView.getBrowser();
+        if (browser) {
+          workspace.pinnedAppBrowsers.add(browser);
+        }
+      }
+
+      internalView.pinnedState = pinnedState;
+
+      workspace.viewStack.push(internalView);
     }
 
     let selectedBrowser = this.#window.gBrowser.selectedBrowser;
@@ -2629,6 +2659,25 @@ class StageManager extends EventTarget {
     this.updateSessionStore();
   }
 
+  /**
+   * Iterates a restored session state and writes any updates that need
+   * to be applied to accommodate the SESSIONSTORE_STATE_CURRENT_VERSION.
+   *
+   * This writes into the serialization in-place.
+   *
+   * @param {Object[]} state
+   *   The serialized representation of the AVM created by updateSessionStore.
+   * @param {Number} originalVersion
+   *   The version of the serialized representation.
+   */
+  migrateSessionState(state, originalVersion) {
+    for (let entry of state) {
+      if (originalVersion < 1) {
+        entry.pinnedState = PINNED_STATE.NOT_PINNED;
+      }
+    }
+  }
+
   updateSessionStore() {
     // Stash the view order into session store.
     let state = [];
@@ -2638,6 +2687,7 @@ class StageManager extends EventTarget {
           id: internalView.historyId,
           cachedEntry: internalView.cachedEntry,
           workspaceId: internalView.workspaceId,
+          pinnedState: internalView.pinnedState,
         });
       }
     }
@@ -2646,6 +2696,11 @@ class StageManager extends EventTarget {
       this.#window,
       SESSIONSTORE_STATE_KEY,
       JSON.stringify(state)
+    );
+    SessionStore.setCustomWindowValue(
+      this.#window,
+      SESSIONSTORE_STATE_VERSION_KEY,
+      SESSIONSTORE_STATE_CURRENT_VERSION.toString()
     );
   }
 
@@ -2861,9 +2916,28 @@ class StageManager extends EventTarget {
 
     let internalView = InternalView.viewMap.get(view);
     let browser = internalView.getBrowser();
-    let SHEntry = getCurrentEntry(browser);
+    let SHEntryID;
+
+    if (!browser) {
+      SHEntryID = internalView.cachedEntry;
+    } else if (!browser.isConnected) {
+      // This is probably a lazy browser that hasn't yet been inserted
+      // into the DOM. This means that its sessionHistory isn't directly
+      // available to us. We work around this by asking SessionStore for the
+      // serialized sessionHistory in order to get at the ID of the entry that
+      // will _eventually_ be loaded.
+      let gBrowser = browser.getTabBrowser();
+      let tab = gBrowser.getTabForBrowser(browser);
+      let state = JSON.parse(SessionStore.getTabState(tab));
+      // The SessionHistory index is 1-index'd, so we have to subtract 1 to
+      // get at the right index.
+      SHEntryID = state.entries[state.index - 1].ID;
+    } else {
+      SHEntryID = getCurrentEntry(browser).ID;
+    }
+
     let workspace = this.#workspaces.get(internalView.workspaceId);
-    let currentInternalViewForBrowser = workspace.historyViews.get(SHEntry.ID);
+    let currentInternalViewForBrowser = workspace.historyViews.get(SHEntryID);
     return currentInternalViewForBrowser.view;
   }
 
@@ -3036,6 +3110,10 @@ class StageManager extends EventTarget {
 
       let newBrowser = tab.linkedBrowser;
 
+      if (internalView.pinnedState == PINNED_STATE.PINNED_APP) {
+        workspace.pinnedAppBrowsers.add(newBrowser);
+      }
+
       SessionHistory.restoreFromParent(
         newBrowser.browsingContext.sessionHistory,
         {
@@ -3085,6 +3163,8 @@ class StageManager extends EventTarget {
       appMode,
       index
     );
+
+    this.updateSessionStore();
   }
 
   /**
