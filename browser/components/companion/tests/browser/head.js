@@ -1051,19 +1051,21 @@ var PinebuildTestUtils = {
    *   window.
    */
   async getPinnedViewGroups(win = window) {
-    let pinnedViews = window.document.querySelector("pinned-views");
+    let pinnedViews = win.document.querySelector("pinned-views");
     // Make sure LitElement has finished any in-flight DOM update jobs.
     await pinnedViews.updateComplete;
-    let viewGroups = pinnedViews.shadowRoot.querySelectorAll("view-group");
-    for (let viewGroup of viewGroups) {
-      Assert.equal(
-        viewGroup.viewGroup.length,
-        1,
-        "There should be 1 View for each pinned ViewGroup."
-      );
+    let viewGroupEls = pinnedViews.shadowRoot.querySelectorAll("view-group");
+    for (let viewGroupEl of viewGroupEls) {
+      if (!viewGroupEl.viewGroup.isApp) {
+        Assert.equal(
+          viewGroupEl.viewGroup.length,
+          1,
+          "There should be 1 View for each pinned ViewGroup."
+        );
+      }
     }
 
-    return Array.from(viewGroups);
+    return Array.from(viewGroupEls);
   },
 
   /**

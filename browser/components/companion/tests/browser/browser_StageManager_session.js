@@ -372,3 +372,110 @@ add_task(async function testSessionRestoreLazyNoExtraBrowsers() {
 
   await BrowserTestUtils.closeWindow(win);
 });
+
+/**
+ * Tests that we can set aside and restore Pinned Views and Pinned
+ * Apps.
+ */
+add_task(async function testSessionRestorePinnedViewsAndApps() {
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+  let { gStageManager } = win;
+
+  // We'll first load some TEST_URLs that belong to the same origin in
+  // the same <browser>. These are the ones we'll pin as an app.
+  //
+  // It gets a little confusing here because the view numbers don't match
+  // up with the TEST_URL numbers, but that's okay - the numbers don't need
+  // to match up here.
+  let [view1, view2] = await PinebuildTestUtils.loadViews(
+    [TEST_URL1, TEST_URL3],
+    win
+  );
+
+  await BrowserTestUtils.openNewForegroundTab(win.gBrowser, TEST_URL2);
+  let view3 = gStageManager.currentView;
+  let [view4] = await PinebuildTestUtils.loadViews([TEST_URL5], win);
+
+  PinebuildTestUtils.assertViewsAre([view1, view2, view3, view4], win);
+  // Pinning view1 should also pin view2 since they belong to the same <browser>
+  // and ViewGroup.
+  gStageManager.setViewPinnedState(view1, true, true /* appMode */);
+  gStageManager.setViewPinnedState(view3, true, false /* appMode */);
+
+  let viewGroupEls = await PinebuildTestUtils.getPinnedViewGroups(win);
+  Assert.equal(viewGroupEls.length, 2, "There should be two pinned ViewGroups");
+  Assert.ok(!viewGroupEls[0].viewGroup.isApp, "Pinned View should be first.");
+  Assert.equal(
+    viewGroupEls[0].viewGroup.length,
+    1,
+    "Only one View should exist in the Pinned View ViewGroup"
+  );
+  Assert.equal(viewGroupEls[0].viewGroup.lastView, view3);
+
+  Assert.ok(viewGroupEls[1].viewGroup.isApp, "Pinned App should be second.");
+  Assert.equal(
+    viewGroupEls[1].viewGroup.length,
+    2,
+    "Two Views should exist in the Pinned App ViewGroup"
+  );
+  Assert.equal(viewGroupEls[1].viewGroup.at(0), view1);
+  Assert.equal(viewGroupEls[1].viewGroup.at(1), view2);
+
+  let guid = await PinebuildTestUtils.setAsideSession(win);
+  await PinebuildTestUtils.restoreSession(guid, win);
+
+  // Setting aside and restoring the views has made our original view
+  // variables obsolete, so we get at the restored Views now.
+  let views = gStageManager.views;
+  viewGroupEls = await PinebuildTestUtils.getPinnedViewGroups(win);
+  Assert.equal(
+    viewGroupEls.length,
+    2,
+    "There should still be two pinned ViewGroups"
+  );
+  Assert.ok(
+    !viewGroupEls[0].viewGroup.isApp,
+    "Pinned View should still be first."
+  );
+  Assert.equal(
+    viewGroupEls[0].viewGroup.length,
+    1,
+    "Only one View should still exist in the Pinned View ViewGroup"
+  );
+  Assert.equal(viewGroupEls[0].viewGroup.lastView, views[0]);
+
+  Assert.ok(
+    viewGroupEls[1].viewGroup.isApp,
+    "Pinned App should still be second."
+  );
+  Assert.equal(
+    viewGroupEls[1].viewGroup.length,
+    2,
+    "Two Views should still exist in the Pinned App ViewGroup"
+  );
+  Assert.equal(viewGroupEls[1].viewGroup.at(0), views[1]);
+  Assert.equal(viewGroupEls[1].viewGroup.at(1), views[2]);
+
+  // Finally, make sure that the Pinned Apps and Pinned Views can be selected
+  // after restoration.
+  //
+  // We'll start by trying to load the Pinned App. Note that we need
+  // to wait for the SSTabRestored event to fire for the underlying
+  // browser after the first load in order to stage the other View
+  // in that ViewGroup.
+  let browserRestored = BrowserTestUtils.waitForEvent(
+    win.gBrowser.tabContainer,
+    "SSTabRestored"
+  );
+  await PinebuildTestUtils.setCurrentView(views[1], win);
+  await browserRestored;
+  await PinebuildTestUtils.setCurrentView(views[2], win);
+
+  // The underlying <browser> for the Pinned View is shared with the
+  // one in the River, which was staged at the time of restoration,
+  // so we don't need to wait for its SSTabRestored event.
+  await PinebuildTestUtils.setCurrentView(views[0], win);
+  await PinebuildTestUtils.setCurrentView(views[3], win);
+
+  await BrowserTestUtils.closeWindow(win);
+});
