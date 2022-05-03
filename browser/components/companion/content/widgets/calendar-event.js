@@ -116,6 +116,8 @@ export class CalendarEvent extends MozLitElement {
         display: flex;
         flex-direction: column;
         gap: 4px;
+        max-width: 100%;
+        word-break: break-all;
       }
 
       .event img {
