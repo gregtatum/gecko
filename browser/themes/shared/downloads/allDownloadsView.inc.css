@@ -52,13 +52,13 @@
 
   #downloadsListBox .downloadTypeIcon {
     margin: 8px;
-    background: #F7F7F8;
+    background: var(--colors-lightgrey-20);
     border-radius: 32px;
     padding: 8px;
   }
 
   #downloadsListBox > richlistitem:hover {
-    background: #F0E8DA;
+    background: var(--colors-cafe-40);
   }
 
   .downloadButton {
@@ -70,7 +70,11 @@
   }
 
   #downloadsListBox > richlistitem:hover .downloadButton > .button-box {
-    background: var(--toolbarbutton-active-background);
+    background: var(--colors-cafe-60);
+  }
+
+  #downloadsListBox>richlistitem:active .downloadButton>.button-box {
+    background: var(--colors-cafe-70);
   }
 
   #downloadsListBox .downloadButton > .button-box > .button-icon {
