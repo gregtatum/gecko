@@ -259,23 +259,14 @@ add_task(async function testSessionRestoreNoChange() {
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
   Assert.equal(gStageManager.currentView, view1);
 
-  let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
-  Assert.ok(guid, "A session has been started.");
-
-  await PinebuildTestUtils.setAsideSession(win);
+  let guid = await PinebuildTestUtils.setAsideSession(win);
+  Assert.ok(guid, "A session was successfully started and stored.");
 
   let result = await SessionManager.query({ guid, includePages: true });
   Assert.equal(result.length, 1);
   Assert.equal(result[0].pages.length, 1);
 
-  let sessionReplaced = SessionManager.once("session-replaced");
-  let pageLoaded = BrowserTestUtils.waitForEvent(
-    win.gBrowser.tabContainer,
-    "SSTabRestored"
-  );
-  await SessionManager.replaceSession(win, guid);
-  await sessionReplaced;
-  await pageLoaded;
+  await PinebuildTestUtils.restoreSession(guid, win);
 
   result = await SessionManager.query({ guid, includePages: true });
   Assert.equal(result.length, 1);
@@ -300,10 +291,9 @@ add_task(async function testSessionSetAsideNoFlowReset() {
 
   await PinebuildTestUtils.loadViews([TEST_URL1], win);
 
-  let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
-  Assert.ok(guid, "A session has been started.");
+  let guid = await PinebuildTestUtils.setAsideSession(win);
+  Assert.ok(guid, "A session was started and stored.");
 
-  await PinebuildTestUtils.setAsideSession(win);
   let [view2] = await PinebuildTestUtils.loadViews([TEST_URL2], win);
 
   Assert.equal(gStageManager.views.length, 1, "Should only be 1 View");
@@ -321,6 +311,63 @@ add_task(async function testSessionSetAsideNoFlowReset() {
     viewGroups[0].lastView,
     view2,
     "The view in the ViewGroup should be view2"
+  );
+
+  await BrowserTestUtils.closeWindow(win);
+});
+
+/**
+ * Tests that we map Views to the correct <browser> elements after
+ * restoration if the Views have cachedEntry's belong to a lazy-loaded
+ * <browser>. This is so that new <browser>'s don't get created upon
+ * selection.
+ */
+add_task(async function testSessionRestoreLazyNoExtraBrowsers() {
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+  let { gStageManager } = win;
+
+  let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews(
+    [TEST_URL1, TEST_URL2, TEST_URL3, TEST_URL4],
+    win
+  );
+
+  Assert.equal(win.gBrowser.browsers.length, 1);
+
+  // Now we have to load a second <browser> so that upon restoration,
+  // the first one will lazy-load.
+  await BrowserTestUtils.openNewForegroundTab(win.gBrowser, TEST_URL5);
+  let view5 = gStageManager.currentView;
+  Assert.equal(win.gBrowser.browsers.length, 2);
+
+  PinebuildTestUtils.assertViewsAre([view1, view2, view3, view4, view5], win);
+
+  // Okay, now set aside and restore this session twice in a row, to make sure
+  // that all Views associated with the first <browser> are in the cached state.
+  let guid = await PinebuildTestUtils.setAsideSession(win);
+  await PinebuildTestUtils.restoreSession(guid, win);
+  await PinebuildTestUtils.setAsideSession(win);
+  await PinebuildTestUtils.restoreSession(guid, win);
+
+  let views = win.gStageManager.views;
+  // Loading the very first View should cause the SessionHistory to
+  // be restored, which we need to wait for in order for the subsequent
+  // navigations to work properly.
+  let firstView = views.shift();
+  let browserRestored = BrowserTestUtils.waitForEvent(
+    win.gBrowser.tabContainer,
+    "SSTabRestored"
+  );
+  await PinebuildTestUtils.setCurrentView(firstView, win);
+  await browserRestored;
+
+  for (let view of views) {
+    await PinebuildTestUtils.setCurrentView(view, win);
+  }
+
+  Assert.equal(
+    win.gBrowser.browsers.length,
+    2,
+    "Should still only have 2 <browser> elements."
   );
 
   await BrowserTestUtils.closeWindow(win);

@@ -1133,10 +1133,12 @@ var PinebuildTestUtils = {
    *   The window to set aside a session for. It is assumed that a session
    *   has begun for this window.
    * @return {Promise}
-   * @resolves {undefined}
-   *   Resolves once the about:flow-reset page has been loaded.
+   * @resolves {String}
+   *   Resolves with the GUID for the set aside session once the
+   *   about:flow-reset page has been loaded.
    */
   async setAsideSession(win = window) {
+    let guid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
     let sessionSetAside = SessionManager.once("session-set-aside");
     let sessionReplaced = SessionManager.once("session-replaced");
     let flowResetLoaded = BrowserTestUtils.waitForNewTab(
@@ -1148,6 +1150,28 @@ var PinebuildTestUtils = {
     await sessionSetAside;
     await sessionReplaced;
     await flowResetLoaded;
+    return guid;
+  },
+
+  /**
+   * Restores a session for a given GUID in a particular window.
+   *
+   * @param {String} guid
+   *   The GUID for the session to be restored.
+   * @param {Window?} win
+   *   The window to restore the session into.
+   * @return {Promise}
+   * @resolves {undefined}
+   */
+  async restoreSession(guid, win = window) {
+    let sessionReplaced = SessionManager.once("session-replaced");
+    let pageLoaded = BrowserTestUtils.waitForEvent(
+      win.gBrowser.tabContainer,
+      "SSTabRestored"
+    );
+    await SessionManager.replaceSession(win, guid);
+    await sessionReplaced;
+    await pageLoaded;
   },
 
   /**

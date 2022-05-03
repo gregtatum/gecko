@@ -1350,7 +1350,7 @@ class WorkspaceHistory extends EventTarget {
         }
 
         logConsole.debug(`Browser(${browser.browsingContext.id}) staged.`);
-        this._onBrowserNavigate(browser);
+        this._onBrowserNavigate(browser, getCurrentEntry(browser), true);
         break;
       case "TabOpen":
         if (this.#stageManager.windowRestoring) {
@@ -2554,21 +2554,24 @@ class StageManager extends EventTarget {
           }
         }
       } else {
+        // This is a lazy browser. We'll make sure we have the InternalView
+        // mapping to the lazy browser set up, even if there was an existing
+        // cachedEntry - this avoids needing to create new <browser> elements
+        // for each cached-state InternalView that originally belonged to a
+        // lazy browser.
         let tabState = JSON.parse(SessionStore.getTabState(tab));
         for (let entry of tabState.entries) {
-          if (missingIds.has(entry.ID)) {
-            let internalView = new InternalView(
-              this.#window,
-              tab.linkedBrowser,
-              entry
-            );
-            this.#workspaces
-              .get(userContextId)
-              .historyViews.set(entry.ID, internalView);
-            previousIdMap.set(entry.ID, internalView);
-            pendingIds.push(entry.ID);
-            missingIds.delete(entry.ID);
-          }
+          let internalView = new InternalView(
+            this.#window,
+            tab.linkedBrowser,
+            entry
+          );
+          this.#workspaces
+            .get(userContextId)
+            .historyViews.set(entry.ID, internalView);
+          previousIdMap.set(entry.ID, internalView);
+          pendingIds.push(entry.ID);
+          missingIds.delete(entry.ID);
         }
       }
     }
