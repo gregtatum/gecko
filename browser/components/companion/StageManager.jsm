@@ -91,6 +91,25 @@ const DEFAULT_WORKSPACE_ID = 0;
 const MAX_WORKSPACES_LIMIT = 3;
 const SESSIONSTORE_STATE_KEY = "GlobalHistoryState";
 /**
+ * @typedef {object} PINNED_STATE
+ *   An object holding enums representing pinned states that a View can be
+ *   in.
+ * @property {Number} NOT_PINNED
+ *   The View is not pinned.
+ * @property {Number} PINNED_VIEW
+ *   The View is pinned on its own.
+ * @property {Number} PINNED_APP
+ *   The View is pinned and grouped with Views using the same underlying
+ *   <browser> element. A Pinned App can navigate within the same <browser>
+ *   element.
+ */
+const PINNED_STATE = {
+  NOT_PINNED: 0,
+  PINNED_VIEW: 1,
+  PINNED_APP: 2,
+};
+
+/**
  * @typedef {object} ViewHistoryData
  *   An object containing info about a given view's history entry.
  * @property {Browser|null} browser
@@ -592,8 +611,8 @@ class InternalView {
 
   #window;
 
-  /** @type {boolean} **/
-  #pinned;
+  /** @type {PINNED_STATE} **/
+  #pinnedState;
 
   /** @type {boolean} **/
   #muted;
@@ -658,7 +677,7 @@ class InternalView {
       ? this.#window.gBrowser.getTabForBrowser(browser).userContextId
       : workspaceId;
     this.#view = new View(this);
-    this.#pinned = false;
+    this.#pinnedState = PINNED_STATE.NOT_PINNED;
     this.#contentPrincipal = Services.scriptSecurityManager.createNullPrincipal(
       {}
     );
@@ -806,7 +825,7 @@ class InternalView {
     if (DEBUG) {
       this.historyState = {
         id: this.#id,
-        pinned: this.#pinned,
+        pinnedState: this.#pinnedState,
         loadType: historyEntry.loadType,
         creationTime: this.#creationTime,
         historyId: historyEntry.ID,
@@ -904,15 +923,20 @@ class InternalView {
 
   /** @type {boolean} */
   get pinned() {
-    return this.#pinned;
+    return this.#pinnedState != PINNED_STATE.NOT_PINNED;
   }
 
-  set pinned(isPinned) {
-    if (this.#pinned == isPinned) {
+  /** @type {PINNED_STATE} */
+  get pinnedState() {
+    return this.#pinnedState;
+  }
+
+  set pinnedState(pinnedState) {
+    if (this.#pinnedState == pinnedState) {
       return;
     }
 
-    this.#pinned = isPinned;
+    this.#pinnedState = pinnedState;
 
     // If StageManager debugging is enabled, then we want to also update
     // the historyState object that gets shown in the sidebar.
@@ -1922,7 +1946,7 @@ class WorkspaceHistory extends EventTarget {
         siblingViewIndex >= 0,
         "pinnedAppBrowsers and viewStack are still in sync"
       );
-      newInternalView.pinned = true;
+      newInternalView.pinnedState = PINNED_STATE.PINNED_VIEW;
       // We don't need to do a bounds check here with siblingViewIndex, because
       // splice will just insert at the end of the Array if siblingViewIndex + 1
       // goes past the end.
@@ -1979,6 +2003,14 @@ class WorkspaceHistory extends EventTarget {
 
     let browser = internalView.getBrowser();
     let isBulkJob = appMode || this.pinnedAppBrowsers.has(browser);
+    let pinnedState = PINNED_STATE.NOT_PINNED;
+    if (shouldPin) {
+      if (appMode) {
+        pinnedState = PINNED_STATE.PINNED_APP;
+      } else {
+        pinnedState = PINNED_STATE.PINNED_VIEW;
+      }
+    }
 
     if (isBulkJob) {
       // Find every other InternalView associated with the pinned view's
@@ -2011,7 +2043,7 @@ class WorkspaceHistory extends EventTarget {
       }
 
       for (let view of views) {
-        view.pinned = shouldPin;
+        view.pinnedState = pinnedState;
         if (shouldPin) {
           Snapshots.add({
             url: view.url.spec,
@@ -2051,7 +2083,7 @@ class WorkspaceHistory extends EventTarget {
       }
     }
 
-    internalView.pinned = shouldPin;
+    internalView.pinnedState = pinnedState;
     this.#stageManager.notifyEvent("ViewUpdated", internalView);
     this.#stageManager.notifyEvent("ViewChanged", internalView);
   }
