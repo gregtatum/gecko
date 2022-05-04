@@ -607,10 +607,12 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
 
 #page-actions-section > toolbarbutton:hover > .toolbarbutton-icon {
   background-color: var(--button-hover-bgcolor);
+  fill: var(--page-action-menu-button-hover-fill);
 }
 
 #page-actions-section > toolbarbutton:active > .toolbarbutton-icon {
   background-color: var(--button-active-bgcolor);
+  fill: var(--page-action-menu-button-active-fill);
 }
 
 #page-actions-section > toolbarbutton:focus-visible {
@@ -704,6 +706,27 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
 #site-info-url {
   border-radius: 4px;
   text-overflow: ellipsis;
+}
+
+@media (prefers-contrast) {
+  #site-info-title,
+  #site-info-url {
+    background-color: ButtonFace;
+    color: ButtonText;
+    outline: 1px solid WindowText;
+  }
+  #site-info-title:focus-within,
+  #site-info-url:focus-within {
+    background-color: ButtonText;
+    color: ButtonFace;
+  }
+  /**
+   * In high-contrast mode, we have outlines around the text inputs, so we
+   * don't need the icon here to indicate that the field is editable.
+   */
+  #site-info-edit-icon {
+    display: none;
+  }
 }
 
 #site-info-url {

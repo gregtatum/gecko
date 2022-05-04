@@ -133,7 +133,9 @@
     --avm-button-fill-color: var(--colors-icons);
     --avm-button-bgcolor: transparent;
     --avm-button-hover-bgcolor: var(--colors-warm-hover-02);
+    --avm-button-hover-fill: var(--avm-button-fill-color);
     --avm-button-active-bgcolor: var(--colors-warm-pressed-02);
+    --avm-button-active-fill: var(--avm-button-fill-color);
     --page-action-menu-button-border-color: var(--colors-lightgrey-30);
     --page-action-menu-button-fill-color: var(--colors-icons);
     --page-action-menu-button-bgcolor: var(--colors-lightgrey-20);

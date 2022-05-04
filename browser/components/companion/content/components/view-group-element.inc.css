@@ -275,8 +275,10 @@
 :host([open="true"]) .page-action-button,
 .page-action-button:hover {
   background-color: var(--avm-button-hover-bgcolor);
+  fill: var(--avm-button-hover-fill);
 }
 
 .page-action-button:active {
   background-color: var(--avm-button-active-bgcolor);
+  fill: var(--avm-button-active-fill);
 }

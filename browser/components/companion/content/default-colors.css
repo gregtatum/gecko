@@ -4,8 +4,10 @@
 
 :root {
   --toolbarbutton-icon-fill: ButtonText;
+  --button-hover-bgcolor: var(--toolbarbutton-icon-fill);
   --toolbarbutton-hover-background: var(--toolbarbutton-icon-fill);
   --toolbarbutton-active-background: SelectedItem;
+  --button-active-bgcolor: var(--toolbarbutton-active-background);
   --pinebuild-toolbarbutton-border: 1px solid var(--toolbarbutton-icon-fill);
   --pinebuild-toolbarbutton-bgcolor: ButtonFace;
   --pinebuild-toolbarbutton-hover-bgcolor: var(--toolbarbutton-icon-fill);
@@ -18,14 +20,18 @@
   --avm-button-border-color: var(--toolbarbutton-icon-fill);
   --avm-button-fill-color: var(--toolbarbutton-icon-fill);
   --avm-button-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
-  --avm-button-hover-bgcolor: var(--button-hover-bgcolor);
-  --avm-button-active-bgcolor: var(--button-active-bgcolor);
+  --avm-button-hover-bgcolor: var(--toolbarbutton-icon-fill);
+  --avm-button-hover-fill: var(--pinebuild-toolbarbutton-bgcolor);
+  --avm-button-active-fill: var(--toolbarbutton-icon-fill);
+  --avm-button-active-bgcolor: var(--toolbarbutton-active-background);
   --page-action-menu-button-border-color: var(--toolbarbutton-icon-fill);
   --page-action-menu-button-fill-color: var(--toolbarbutton-icon-fill);
   --page-action-menu-button-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
   --page-action-menu-button-color: var(--toolbarbutton-icon-fill);
   --page-action-menu-textfield-focused-border-color: var(--toolbarbutton-icon-fill);
   --page-action-menu-textfield-focused-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
+  --page-action-menu-button-hover-fill: var(--pinebuild-toolbarbutton-bgcolor);
+  --page-action-menu-button-active-fill: var(--toolbarbutton-icon-fill);
 
   --avm-workspace-bg-color: transparent;
   --avm-workspace-contains-pins-bg-color: transparent;
