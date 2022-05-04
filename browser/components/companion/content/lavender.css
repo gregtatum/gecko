@@ -142,6 +142,8 @@
     --page-action-menu-button-color: var(--colors-darkgrey-10);
     --page-action-menu-textfield-focused-border-color: var(--colors-lavender-90);
     --page-action-menu-textfield-focused-bgcolor: var(--colors-lavender-10);
+    --page-action-menu-url-textfield-bgcolor: var(--colors-lavender-10);
+    --page-action-menu-url-textfield-color: var(--colors-lavender-90);
 
     --pinebuild-global-background: var(--colors-cafe-10);
     --pinebuild-highlight-color: var(--colors-lavender-50);

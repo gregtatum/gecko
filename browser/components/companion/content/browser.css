@@ -568,7 +568,6 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
   margin-block-start: 10px;
   min-width: 285px;
   --panel-border-radius: 16px;
-  box-shadow: -1px 2px 12px 0px rgba(122, 94, 63, 0.2);
 }
 
 #page-action-panel-sections {
@@ -734,10 +733,15 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
   margin: 0;
   border: 0;
   padding-block: 4px;
-  background-color: var(--colors-lavender-10);
-  color: var(--colors-lavender-90);
   font-size: 11px;
   line-height: 14px;
+}
+
+@media not (prefers-contrast) {
+  #site-info-url {
+    background-color: var(--page-action-menu-url-textfield-bgcolor);
+    color: var(--page-action-menu-url-textfield-color);
+  }
 }
 
 #site-security-info-section,
