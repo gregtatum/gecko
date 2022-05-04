@@ -4,6 +4,23 @@
 
 @import url("chrome://browser/content/companion/lavender.css");
 
+@media not (prefers-contrast) {
+  :root {
+    --light-bg-color: #F0F0F4;
+    --in-content-primary-button-background: #0060DF;
+  }
+
+  :root:-moz-lwtheme-brighttext {
+    --light-bg-color: #42414D;
+  }
+}
+
+@media (-moz-toolbar-prefers-color-scheme: dark) {
+  :root {
+    --light-bg-color: #F0F0F4;
+  }
+}
+
 html,
 body {
   padding: 0;
@@ -57,21 +74,6 @@ a {
 #companion-deck {
   overflow-y: auto;
   scrollbar-width: thin;
-}
-
-:root {
-  --light-bg-color: #F0F0F4;
-  --in-content-primary-button-background: #0060DF;
-}
-
-:root:-moz-lwtheme-brighttext {
-  --light-bg-color: #42414D;
-}
-
-@media (-moz-toolbar-prefers-color-scheme: dark) {
-  :root {
-    --light-bg-color: #F0F0F4;
-  }
 }
 
 .debug {
@@ -187,7 +189,6 @@ a {
 }
 
 #email {
-  background-color: var(--light-bg-color);
   border-radius: 4px;
   margin-right: 5px;
   margin-left: 5px;
@@ -236,7 +237,6 @@ a {
 
 /* We could delete all this when we support filter-backdrop */
 .media .artwork-background {
-  background-color: var(--light-bg-color);
   background-size: cover;
   background-position: center;
   filter: blur(10px);
@@ -249,7 +249,6 @@ a {
 }
 
 .media .metadata {
-  color: rgba(249, 249, 250, 1);
   font-size: smaller;
   text-align: center;
   flex-grow: 1;
@@ -286,11 +285,6 @@ a {
   height: 32px;
   border-radius: 16px;
   opacity: 1;
-  background-color:rgba(255, 255, 255, .4);
-}
-
-.play-pause button:hover {
-  background-color:rgba(255, 255, 255, .6);
 }
 
 .play-pause button[data-state=playing] {
@@ -406,14 +400,6 @@ e-global-nav-debugging h2 {
   white-space: nowrap;
 }
 
-.history-entry.pruned {
-  color: rgba(100, 100, 100);
-}
-
-.history-entry.open {
-  color: rgb(131, 30, 30);
-}
-
 .history-entry.visible {
   font-weight: bold;
 }
@@ -430,16 +416,12 @@ e-global-nav-debugging h2 {
   grid-template-columns: 1fr 1fr;
   margin: 16px;
   border-radius: 42px;
-  background: var(--colors-cafe-30);
 }
 
 .tab-button {
   /* Overwrite the generic button styles */
-  background-color: transparent;
-  border: none;
   border-radius: 0;
   -moz-outline-radius: 0;
-  color: var(--colors-darkgrey-30);
   margin-inline: 4px;
   display: flex;
   justify-content: center;
@@ -448,57 +430,16 @@ e-global-nav-debugging h2 {
   padding-block: 6px;
 }
 
-.tab-button:hover {
-  color: var(--colors-darkgrey-30) !important;
-}
-
 .tab-button span {
   padding-inline-start: 4px;
   font-weight: normal;
   font-size: 14px;
 }
 
-.tab-button[selected] {
-  background-color: var(--colors-cafe-10);
-  color: var(--colors-darkgrey-30);
-  box-shadow: -1px 2px 4px 0px rgba(122, 94, 63, 0.08);
-}
-
 .tab-button img {
   width: 16px;
   height: 16px;
   display: inline-block;
-  -moz-context-properties: fill;
-  fill: var(--colors-darkgrey-30);
-}
-
-body::not([flow-reset]):not([flow-reset-startup]) .tab-button-group {
-  background-color: var(--colors-cafe-30);
-}
-
-body:not([flow-reset]):not([flow-reset-startup]) .companion-main .tab-button:hover {
-  background-color: var(--colors-warm-pressed-02);
-}
-
-body:not([flow-reset]):not([flow-reset-startup]) .companion-main .tab-button:hover:active {
-  background-color: var(--colors-cafe-70);
-}
-
-body[flow-reset] .companion-main .tab-button-group,
-body[flow-reset-startup] .companion-main .tab-button-group {
-  /* --colors-lavender-120 */
-  background-color: rgba(55, 30, 105, 0.07);
-}
-
-body[flow-reset] .tab-button:hover,
-body[flow-reset-startup] .tab-button:hover {
-  /* --colors-cafe-10 */
-  background: rgba(255, 254, 252, 0.39);
-}
-
-body[flow-reset] .tab-button:hover:active,
-body[flow-reset-startup] .tab-button:hover:active {
-  background-color: var(--colors-lightgrey-60);
 }
 
 #companion-deck-button-browse img {
@@ -522,16 +463,6 @@ body[flow-reset-startup] .tab-button:hover:active {
   background: center left 8px / 16px no-repeat url("chrome://global/skin/icons/defaultFavicon.svg");
   margin-inline: 0;
   font-weight: normal;
-}
-
-toolbarbutton.subviewbutton-back:hover,
-.browse button:hover {
-  background-color: var(--in-content-button-background-hover);
-}
-
-toolbarbutton.subviewbutton-back:hover:active,
-.browse button:hover:active {
-  background-color: var(--in-content-button-background-active);
 }
 
 .browse button::after {
@@ -565,6 +496,16 @@ toolbarbutton.subviewbutton-back:hover:active,
 
 .browse button.sessions {
   background-image: url("sessions.svg");
+}
+
+toolbarbutton.subviewbutton-back:hover,
+.browse button:hover {
+  background-color: var(--in-content-button-background-hover);
+}
+
+toolbarbutton.subviewbutton-back:hover:active,
+.browse button:hover:active {
+  background-color: var(--in-content-button-background-active);
 }
 
 .browse button.downloads {
@@ -655,21 +596,12 @@ toolbarbutton.subviewbutton-back {
   background-size: 12px;
 }
 
-#flow-reset-close:hover {
-  background-color: var(--light-bg-color);
-}
-
 [flow-reset] #flow-reset-placeholder {
   display: block;
 }
 
 [flow-reset] #now-content {
   display: none;
-}
-
-body[flow-reset] .tab-button-group {
-  /* --colors-lavender-120 */
-  background-color: rgba(55, 30, 105, 0.07);
 }
 
 header {
@@ -715,7 +647,6 @@ header h2 {
 }
 
 #snapshot-groups-detail .details h3 {
-  border-bottom: 1px solid #CFCFD8;
   font-weight: normal;
   padding-block-end: 1em;
   margin: 1em;
@@ -724,10 +655,111 @@ header h2 {
 
 #snapshot-groups-detail .details img {
   background: center center no-repeat url(chrome://global/skin/icons/defaultFavicon.svg);
-  background-color: #F9F9FB;
-  border: 0.5px solid #AFAFBA;
+  border: 0.5px solid;
   border-radius: 12px;
   width: 124px;
   height: 124px;
   object-fit: cover;
+}
+
+@media not (prefers-contrast) {
+  #email {
+    background-color: var(--light-bg-color);
+  }
+
+  .media .artwork-background {
+    background-color: var(--light-bg-color);
+  }
+
+  .media .metadata {
+    color: rgba(249, 249, 250, 1);
+  }
+
+  .play-pause button {
+    background-color:rgba(255, 255, 255, .4);
+  }
+
+  .play-pause button:hover {
+    background-color:rgba(255, 255, 255, .6);
+  }
+
+  .tab-button-group {
+    background: var(--colors-cafe-30);
+  }
+
+  .tab-button {
+    background-color: transparent;
+    border: none;
+    color: var(--colors-darkgrey-30);
+  }
+
+  .tab-button:hover {
+    color: var(--colors-darkgrey-30) !important;
+  }
+
+  .tab-button[selected] {
+    background-color: var(--colors-cafe-10);
+    color: var(--colors-darkgrey-30);
+    box-shadow: -1px 2px 4px 0px rgba(122, 94, 63, 0.08);
+  }
+
+  .tab-button img {
+    -moz-context-properties: fill;
+    fill: var(--colors-darkgrey-30);
+  }
+
+  .history-entry.pruned {
+    color: rgba(100, 100, 100);
+  }
+
+  .history-entry.open {
+    color: rgb(131, 30, 30);
+  }
+
+  body::not([flow-reset]):not([flow-reset-startup]) .tab-button-group {
+    background-color: var(--colors-cafe-30);
+  }
+
+  body:not([flow-reset]):not([flow-reset-startup]) .companion-main .tab-button:hover {
+    background-color: var(--colors-warm-pressed-02);
+  }
+
+  body:not([flow-reset]):not([flow-reset-startup]) .companion-main .tab-button:hover:active {
+    background-color: var(--colors-cafe-70);
+  }
+
+  body[flow-reset] .companion-main .tab-button-group,
+  body[flow-reset-startup] .companion-main .tab-button-group {
+    /* --colors-lavender-120 */
+    background-color: rgba(55, 30, 105, 0.07);
+  }
+
+  body[flow-reset] .tab-button:hover,
+  body[flow-reset-startup] .tab-button:hover {
+    /* --colors-cafe-10 */
+    background: rgba(255, 254, 252, 0.39);
+  }
+
+  body[flow-reset] .tab-button:hover:active,
+  body[flow-reset-startup] .tab-button:hover:active {
+    background-color: var(--colors-lightgrey-60);
+  }
+
+  #flow-reset-close:hover {
+    background-color: var(--light-bg-color);
+  }
+
+  body[flow-reset] .tab-button-group {
+    /* --colors-lavender-120 */
+    background-color: rgba(55, 30, 105, 0.07);
+  }
+
+  #snapshot-groups-detail .details h3 {
+    border-bottom: 1px solid #CFCFD8;
+  }
+
+  #snapshot-groups-detail .details img {
+    background-color: #F9F9FB;
+    border-color: #AFAFBA;
+  }
 }
