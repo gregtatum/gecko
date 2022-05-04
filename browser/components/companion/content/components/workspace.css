@@ -21,7 +21,7 @@
   display: flex;
   padding: 4px 8px;
   border-radius: 8px;
-  color: #FFFFFF;
+  color: var(--avm-workspace-indicator-button-color);
 }
 
 .workspace-indicator-button[hidden] {

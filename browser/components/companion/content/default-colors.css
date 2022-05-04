@@ -33,17 +33,43 @@
   --page-action-menu-button-hover-fill: var(--pinebuild-toolbarbutton-bgcolor);
   --page-action-menu-button-active-fill: var(--toolbarbutton-icon-fill);
 
-  --avm-workspace-bg-color: transparent;
-  --avm-workspace-contains-pins-bg-color: transparent;
+  --avm-workspace-bgcolor: transparent;
+  --avm-workspace-contains-pins-bgcolor: transparent;
   --avm-workspace-box-shadow-color: transparent;
   --avm-workspace-border-color: WindowText;
   --avm-workspace-contains-pins-border-color: WindowText;
+  --avm-workspace-selected-river-bgcolor: transparent;
+  --avm-workspace-indicator-button-color: WindowText;
+
+  --avm-workspace-default-indicator-button-bgcolor: ButtonFace;
+  --avm-workspace-default-indicator-button-unselected-bgcolor: ButtonFace;
+  --avm-workspace-default-indicator-button-unselected-border-color: ButtonText;
+  --avm-workspace-default-indicator-button-unselected-color: ButtonText;
+  --avm-workspace-default-selected-bgcolor: transparent;
+  --avm-workspace-default-selected-border-color: WindowText;
+  --avm-workspace-default-selected-box-shadow-color: transparent;
+  --avm-workspace-1-indicator-button-bgcolor: ButtonFace;
+  --avm-workspace-1-indicator-button-unselected-bgcolor: ButtonFace;
+  --avm-workspace-1-indicator-button-unselected-border-color: ButtonText;
+  --avm-workspace-1-indicator-button-unselected-color: ButtonText;
+  --avm-workspace-1-selected-bgcolor: transparent;
+  --avm-workspace-1-selected-border-color: WindowText;
+  --avm-workspace-1-selected-box-shadow-color: transparent;
+  --avm-workspace-2-indicator-button-bgcolor: ButtonFace;
+  --avm-workspace-2-indicator-button-unselected-bgcolor: ButtonFace;
+  --avm-workspace-2-indicator-button-unselected-border-color: ButtonText;
+  --avm-workspace-2-indicator-button-unselected-color: ButtonText;
+  --avm-workspace-2-selected-bgcolor: transparent;
+  --avm-workspace-2-selected-border-color: WindowText;
+  --avm-workspace-2-selected-box-shadow-color: transparent;
+
+  --avm-pinned-views-separator-color: WindowText;
   --avm-river-outline-color: WindowText;
-  --avm-view-group-element-bg-color: transparent;
+  --avm-view-group-element-bgcolor: transparent;
   --avm-view-group-element-icon-border-color: var(--toolbarbutton-icon-fill);;
-  --avm-view-group-element-icon-bg-color: var(--pinebuild-toolbarbutton-bgcolor);
+  --avm-view-group-element-icon-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
   --avm-view-group-element-active-icon-shadow-color: transparent;
-  --avm-view-group-element-active-icon-bg-color: SelectedItem;
+  --avm-view-group-element-active-icon-bgcolor: SelectedItem;
   --avm-view-group-element-breadcrumb-stroke-color: var(--toolbarbutton-icon-fill);;
   --avm-view-group-element-breadcrumb-fill-color: var(--pinebuild-toolbarbutton-bgcolor);
   --avm-view-group-element-breadcrumb-hover-stroke-color: var(--pinebuild-toolbarbutton-bgcolor);

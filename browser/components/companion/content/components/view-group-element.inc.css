@@ -84,7 +84,7 @@
   height: 32px;
   padding: 4px;
   box-sizing: border-box;
-  background-color: var(--avm-view-group-element-icon-bg-color);
+  background-color: var(--avm-view-group-element-icon-bgcolor);
 }
 
 .view-icon-overlay,
@@ -95,7 +95,7 @@
 
 :host([top][active])) .view-icon-container {
   margin-inline-end: 5px;
-  background-color: var(--avm-view-group-element-active-icon-bg-color);
+  background-color: var(--avm-view-group-element-active-icon-bgcolor);
 }
 
 .view-icon:not([src]) {

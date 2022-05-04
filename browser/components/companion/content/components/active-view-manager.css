@@ -12,7 +12,7 @@ active-view-manager {
 workspace-el {
   margin-inline: 20px;
   border-radius: 100px;
-  background-color: var(--avm-workspace-bg-color);
+  background-color: var(--avm-workspace-bgcolor);
   box-shadow: inset 0px 2px 4px var(--avm-workspace-box-shadow-color);
   border: 0.5px solid var(--avm-workspace-border-color);
 }
@@ -23,46 +23,46 @@ workspace-el:not(.selected) > .workspace > pinned-views {
 }
 
 .selected.multiple > .workspace > river-el {
-  background: #FFFFFF;
+  background: var(--avm-workspace-selected-river-bgcolor);
   border-radius: 100px;
 }
 
 workspace-el[workspace-id="0"] > .workspace > .workspace-indicator-button {
-  background: var(--colors-lavender-80);
+  background: var(--avm-workspace-default-indicator-button-bgcolor);
 }
 
 workspace-el[workspace-id="0"]:not(.selected) > .workspace > .workspace-indicator-button {
-  background: var(--colors-lavender-30);
-  border: 0.5px solid var(--colors-lavender-90);
-  color: var(--colors-lavender-90);
+  background: var(--avm-workspace-default-indicator-button-unselected-bgcolor);
+  border: 0.5px solid var(--avm-workspace-default-indicator-button-unselected-border-color);
+  color: var(--avm-workspace-default-indicator-button-unselected-color);
 }
 
 workspace-el[workspace-id="1"] > .workspace > .workspace-indicator-button {
-  background: #3F6BC0;
+  background: var(--avm-workspace-1-indicator-button-bgcolor);
 }
 
 workspace-el[workspace-id="1"]:not(.selected) > .workspace > .workspace-indicator-button {
-  background: #cbd9f7;
-  border: 0.5px solid #2b57ad;
-  color: #2b57ad;
+  background: var(--avm-workspace-1-indicator-button-unselected-bgcolor);
+  border: 0.5px solid var(--avm-workspace-1-indicator-button-unselected-border-color);
+  color: var(--avm-workspace-1-indicator-button-unselected-color);
 }
 
 workspace-el[workspace-id="2"] > .workspace > .workspace-indicator-button {
-  background: var(--colors-teal-90);
+  background: var(--avm-workspace-2-indicator-button-bgcolor);
 }
 
 workspace-el[workspace-id="2"]:not(.selected) > .workspace > .workspace-indicator-button {
-  background: #cae8eb;
-  border: 0.5px solid #196c70;
-  color: #196c70;
+  background: var(--avm-workspace-2-indicator-button-unselected-bgcolor);
+  border: 0.5px solid var(--avm-workspace-2-indicator-button-unselected-border-color);
+  color: var(--avm-workspace-2-indicator-button-unselected-color);
 }
 
 workspace-el:not(.selected) {
-  background-color: var(--avm-workspace-bg-color);
+  background-color: var(--avm-workspace-bgcolor);
 }
 
 workspace-el.contains-pins:not(.multiple) {
-  background-color: var(--avm-workspace-contains-pins-bg-color);
+  background-color: var(--avm-workspace-contains-pins-bgcolor);
   border: 0.5px solid var(--avm-workspace-contains-pins-border-color);
 }
 
@@ -72,19 +72,19 @@ workspace-el.multiple.selected {
 }
 
 workspace-el.multiple.selected[workspace-id="0"] {
-  background-color: var(--colors-lavender-20);
-  border: 0.5px solid var(--colors-lavender-30);
-  box-shadow: inset 0px 2px 4px var(--colors-lavender-30);
+  background-color: var(--avm-workspace-default-selected-bgcolor);
+  border: 0.5px solid var(--avm-workspace-default-selected-border-color);
+  box-shadow: inset 0px 2px 4px var(--avm-workspace-default-selected-box-shadow-color);
 }
 
 workspace-el.multiple.selected[workspace-id="1"] {
-  background-color: #E1E9FA;
-  border: 0.5px solid #CBD9F7;
-  box-shadow: inset 0px 2px 4px rgba(217, 225, 250, 0.5);
+  background-color: var(--avm-workspace-1-selected-bgcolor);
+  border: 0.5px solid var(--avm-workspace-1-selected-border-color);
+  box-shadow: inset 0px 2px 4px var(--avm-workspace-1-selected-box-shadow-color);
 }
 
 workspace-el.multiple.selected[workspace-id="2"] {
-  background-color: #E1F3F5;
-  border: 0.5px solid #CAE9EB;
-  box-shadow: inset 0px 2px 4px rgba(202, 233, 235, 0.5);
+  background-color: var(--avm-workspace-2-selected-bgcolor);
+  border: 0.5px solid var(--avm-workspace-2-selected-border-color);
+  box-shadow: inset 0px 2px 4px var(--avm-workspace-2-selected-box-shadow-color);
 }

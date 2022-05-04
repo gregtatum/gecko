@@ -152,17 +152,43 @@
     --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
     --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
 
-    --avm-workspace-bg-color: var(--colors-cafe-20);
-    --avm-workspace-contains-pins-bg-color: var(--colors-cafe-40);
+    --avm-workspace-bgcolor: var(--colors-cafe-20);
+    --avm-workspace-contains-pins-bgcolor: var(--colors-cafe-40);
     --avm-workspace-box-shadow-color: var(--colors-cafe-40);
     --avm-workspace-border-color: #F3EEE2;
     --avm-workspace-contains-pins-border-color: var(--colors-cafe-60);
+    --avm-workspace-selected-river-bgcolor: var(--colors-white);
+    --avm-workspace-indicator-button-color: var(--colors-white);
+
+    --avm-workspace-default-indicator-button-bgcolor: var(--colors-lavender-80);
+    --avm-workspace-default-indicator-button-unselected-bgcolor: var(--colors-lavender-80);
+    --avm-workspace-default-indicator-button-unselected-border-color: var(--colors-lavender-90);
+    --avm-workspace-default-indicator-button-unselected-color: var(--colors-lavender-90);
+    --avm-workspace-default-selected-bgcolor: var(--colors-lavender-20);
+    --avm-workspace-default-selected-border-color: var(--colors-lavender-30);
+    --avm-workspace-default-selected-box-shadow-color: var(--colors-lavender-30);
+    --avm-workspace-1-indicator-button-bgcolor: #3F6BC0;
+    --avm-workspace-1-indicator-button-unselected-bgcolor: #cbd9f7;
+    --avm-workspace-1-indicator-button-unselected-border-color: #2b57ad;
+    --avm-workspace-1-indicator-button-unselected-color: #2b57ad;
+    --avm-workspace-1-selected-bgcolor: #E1E9FA;
+    --avm-workspace-1-selected-border-color: #CBD9F7;
+    --avm-workspace-1-selected-box-shadow-color: rgba(217, 225, 250, 0.5);
+    --avm-workspace-2-indicator-button-bgcolor: var(--colors-teal-90);
+    --avm-workspace-2-indicator-button-unselected-bgcolor: #cae8eb;
+    --avm-workspace-2-indicator-button-unselected-border-color: #196c70;
+    --avm-workspace-2-indicator-button-unselected-color: #196c70;
+    --avm-workspace-2-selected-bgcolor: #E1F3F5;
+    --avm-workspace-2-selected-border-color: #CAE9EB;
+    --avm-workspace-2-selected-box-shadow-color: rgba(202, 233, 235, 0.5);
+
+    --avm-pinned-views-separator-color: rgba(0,0,0,0.2);
     --avm-river-outline-color: transparent;
-    --avm-view-group-element-bg-color: var(--colors-white);
+    --avm-view-group-element-bgcolor: var(--colors-white);
     --avm-view-group-element-icon-border-color: var(--colors-cafe-50);
-    --avm-view-group-element-icon-bg-color: var(--colors-white);
+    --avm-view-group-element-icon-bgcolor: var(--colors-white);
     --avm-view-group-element-active-icon-shadow-color: rgba(166,145,121,0.32);
-    --avm-view-group-element-active-icon-bg-color: var(--colors-white);
+    --avm-view-group-element-active-icon-bgcolor: var(--colors-white);
     --avm-view-group-element-breadcrumb-stroke-color: var(--colors-lightgrey-80);
     --avm-view-group-element-breadcrumb-fill-color: var(--colors-lightgrey-80);
     --avm-view-group-element-breadcrumb-hover-stroke-color: var(--colors-lavender-90);

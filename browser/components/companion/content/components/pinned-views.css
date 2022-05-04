@@ -26,7 +26,7 @@
 }
 
 view-group {
-  background-color: var(--avm-view-group-element-bg-color);
+  background-color: var(--avm-view-group-element-bgcolor);
   margin-inline: 4px;
   border-radius: 100px;
   height: 32px;
@@ -54,7 +54,7 @@ view-group:not([app]) + view-group[app]::before {
   content: "";
   position: relative;
   width: 1px;
-  border-inline-start: 1px solid rgba(0,0,0,0.2);
+  border-inline-start: 1px solid var(--avm-pinned-views-separator-color);
   height: 100%;
   inset-inline-start: -8px;
 }

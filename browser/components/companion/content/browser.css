@@ -688,7 +688,7 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
 #site-info-title:focus-visible {
   outline: 0.5px solid var(--page-action-menu-textfield-focused-border-color);
   border-radius: 4px;
-  background-color: var(--page-action-menu-textfield-focused-bg-color);
+  background-color: var(--page-action-menu-textfield-focused-bgcolor);
   text-overflow: unset;
 }
 
