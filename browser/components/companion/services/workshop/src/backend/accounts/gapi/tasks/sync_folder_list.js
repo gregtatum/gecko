@@ -99,13 +99,12 @@ export default TaskDefiner.defineSimpleTask([
       const observedFolderServerIds = new Set();
 
       for (const calInfo of results.items) {
-        const primary = !!calInfo.primary;
-        // Currently we only want to show events from the user's primary calendar.
-        // The selection logic is currently less relevant, since there is very
-        // little chance that the user will de-select their main calendar. This
-        // selection logic has been left in place since there's a good chance we will
-        // want to add support secondary calendars.
-        let wantFolder = primary && calInfo.selected;
+        // Currently we only want folders that user owns (i.e. no shared calendars)
+        // an that are selected in the UI. The selection logic is currently less
+        // relevant, since there is very little chance that the user will de-select
+        // their main calendar. This selection logic has been left in place since
+        // there's a good chance we will want to add support secondary calendars.
+        let wantFolder = calInfo.accessRole === "owner" && calInfo.selected;
 
         let calFolder = foldersTOC.items.find(f => f.serverId === calInfo.id);
         // We don't want to synchronize unselected folders, so we can skip them,
@@ -128,6 +127,8 @@ export default TaskDefiner.defineSimpleTask([
           color: calInfo.backgroundColor || null,
         };
 
+        const primary = !!calInfo.primary;
+
         if (!calFolder) {
           calFolder = makeFolderMeta({
             id: foldersTOC.issueFolderId(primary),
@@ -144,7 +145,7 @@ export default TaskDefiner.defineSimpleTask([
             depth: 0,
             syncGranularity: "folder",
             calendarInfo: desiredCalendarInfo,
-            primary,
+            primary: !!calInfo.primary,
           });
           newFolders.push(calFolder);
         } else {
