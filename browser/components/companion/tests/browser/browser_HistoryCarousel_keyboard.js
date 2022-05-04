@@ -3,15 +3,17 @@
 
 "use strict";
 
-/**
- * Tests keyboard navigation and control from within the HistoryCarousel.
- */
-add_task(async function test_keyboard_controls() {
+add_setup(async function() {
   // Temporarily re-enable thumbnails so that we capture the page previews.
   await SpecialPowers.pushPrefEnv({
     set: [["browser.pagethumbnails.capturing_disabled", false]],
   });
+});
 
+/**
+ * Tests keyboard navigation and control from within the HistoryCarousel.
+ */
+add_task(async function test_keyboard_controls() {
   let [view0, view1, view2, view3] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
@@ -86,4 +88,50 @@ add_task(async function test_keyboard_controls() {
   await viewChangedPromise;
 
   Assert.equal(gStageManager.currentView, view2);
+});
+
+/**
+ * Tests that keyboard focus can be brought into and out of the HistoryCarousel.
+ */
+add_task(async function test_keyboard_focus() {
+  await PinebuildTestUtils.loadViews([
+    "https://example.com/",
+    "https://example.com/browser/browser",
+    "https://example.org/browser",
+    "https://example.org/browser/browser/components",
+  ]);
+
+  let carouselBrowser = await PinebuildTestUtils.enterHistoryCarousel();
+
+  // Reverse-focus until we hit the toolbartabstop at the start of the toolbar.
+  do {
+    Services.focus.moveFocus(
+      window,
+      null,
+      Ci.nsIFocusManager.MOVEFOCUS_BACKWARD,
+      Ci.nsIFocusManager.FLAG_BYKEY
+    );
+    // We need to wait a tick of the event loop to make sure the focusedElement
+    // gets properly updated.
+    await new Promise(resolve => SimpleTest.executeSoon(resolve));
+  } while (Services.focus.focusedElement.tagName != "toolbartabstop");
+
+  Assert.ok("Able to focus to the start of the toolbar.");
+
+  // Now forward-focus until we hit the HistoryCarousel browser again.
+  do {
+    Services.focus.moveFocus(
+      window,
+      null,
+      Ci.nsIFocusManager.MOVEFOCUS_FORWARD,
+      Ci.nsIFocusManager.FLAG_BYKEY
+    );
+    // We need to wait a tick of the event loop to make sure the focusedElement
+    // gets properly updated.
+    await new Promise(resolve => SimpleTest.executeSoon(resolve));
+  } while (Services.focus.focusedElement != carouselBrowser);
+
+  Assert.ok("Able to re-focus the HistoryCarousel browser");
+
+  await PinebuildTestUtils.exitHistoryCarousel();
 });
