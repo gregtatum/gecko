@@ -12,6 +12,7 @@
 #include "mozilla/dom/ScriptSettings.h"
 #include "mozilla/EventDispatcher.h"
 #include "mozilla/MouseEvents.h"
+#include "mozilla/intl/LocaleService.h"
 
 #include "MOZMenuOpeningCoordinator.h"
 #include "nsMenuItemX.h"
@@ -707,23 +708,6 @@ void nsMenuX::OnWillActivateItem(NSMenuItem* aItem) {
   }
 }
 
-// Flushes style.
-static NSUserInterfaceLayoutDirection DirectionForElement(dom::Element* aElement) {
-  // Get the direction from the computed style so that inheritance into submenus is respected.
-  // aElement may not have a frame.
-  RefPtr<ComputedStyle> sc = nsComputedDOMStyle::GetComputedStyle(aElement);
-  if (!sc) {
-    return NSApp.userInterfaceLayoutDirection;
-  }
-
-  switch (sc->StyleVisibility()->mDirection) {
-    case StyleDirection::Ltr:
-      return NSUserInterfaceLayoutDirectionLeftToRight;
-    case StyleDirection::Rtl:
-      return NSUserInterfaceLayoutDirectionRightToLeft;
-  }
-}
-
 void nsMenuX::RebuildMenu() {
   MOZ_RELEASE_ASSERT(mNeedsRebuild);
   gConstructingMenu = true;
@@ -736,7 +720,12 @@ void nsMenuX::RebuildMenu() {
   }
 
   if (menuPopup->IsElement()) {
-    mNativeMenu.userInterfaceLayoutDirection = DirectionForElement(menuPopup->AsElement());
+    // Each element could be queried individually for its style direction, but it's not
+    // guaranteed to be up to date if the app locale just changed, so prefer the overall
+    // app direction.
+    mNativeMenu.userInterfaceLayoutDirection = intl::LocaleService::GetInstance()->IsAppLocaleRTL()
+                                                   ? NSUserInterfaceLayoutDirectionRightToLeft
+                                                   : NSUserInterfaceLayoutDirectionLeftToRight;
   }
 
   // Iterate over the kids

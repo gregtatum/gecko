@@ -156,8 +156,9 @@ void nsMenuGroupOwnerX::UnregisterForLocaleChanges() {
 NS_IMETHODIMP
 nsMenuGroupOwnerX::Observe(nsISupports* aSubject, const char* aTopic, const char16_t* aData) {
   if (mMenuBar && !strcmp(aTopic, "intl:app-locales-changed")) {
-    // Rebuild the menu with the new locale strings.
-    mMenuBar->SetNeedsRebuild();
+    // Rebuild the menu with the new locale strings. The menus must be completely rebuilt
+    // in case the text direction changed.
+    mMenuBar->ForceNativeMenuReload();
   }
   return NS_OK;
 }
