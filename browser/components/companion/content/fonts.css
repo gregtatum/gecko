@@ -11,7 +11,7 @@
   /* Text Colors */
   --pine-text-color-primary: var(--colors-darkgrey-30);
   --pine-text-color-primary-dark: var(--colors-darkgrey-60);
-  --pine-text-color-secondary-grey: var(--colors-darkgrey-10);
+  --pine-text-color-secondary: var(--colors-darkgrey-10);
   --pine-text-color-deemphasized: var(--colors-lightgrey-120);
   --pine-text-color-link: var(--colors-lavender-90);
   --pine-text-color-error: var(--colors-red-10);

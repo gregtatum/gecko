@@ -9,14 +9,16 @@ class SimpleNotification extends MozLitElement {
   static get styles() {
     return css`
       .card {
-        box-shadow: 0 2px 6px 0 rgba(58, 57, 68, 0.2);
-        padding: 16px;
+        box-shadow: -1px 2px 4px rgba(122, 94, 63, 0.08);
+        padding-inline: 16px;
+        padding-block: 12px;
         margin: 16px;
-        border: none;
         border-radius: 12px;
         display: flex;
         align-items: center;
         gap: 8px;
+        border: 0.5px solid var(--notification-card-border-color);
+        box-sizing: border-box;
       }
 
       ::slotted(button) {
@@ -24,9 +26,20 @@ class SimpleNotification extends MozLitElement {
         flex-shrink: 0;
       }
 
+      .notification-icon-container {
+        height: 32px;
+        width: 32px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 0.5px solid var(--notification-icon-border-color);
+        border-radius: 50%;
+        box-sizing: border-box;
+      }
+
       .notification-icon {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
       }
 
       .notification-content {
@@ -34,16 +47,13 @@ class SimpleNotification extends MozLitElement {
       }
 
       .notification-heading {
-        font-size: 1em;
-        line-height: 1;
         margin: 0;
-        margin-block-end: 8px;
+        margin-block-end: 4px;
         word-break: break-word;
       }
 
       .notification-description {
-        font-size: 0.75em;
-        color: var(--in-content-deemphasized-text);
+        color: var(--pine-text-color-secondary);
         margin: 0;
       }
     `;
@@ -55,14 +65,22 @@ class SimpleNotification extends MozLitElement {
         rel="stylesheet"
         href="chrome://global/skin/in-content/common.css"
       />
+      <link
+        rel="stylesheet"
+        href="chrome://browser/content/companion/fonts.css"
+      />
 
       <div class="card card-no-hover">
-        <img class="notification-icon" src=${this.icon} />
-        <div class="notification-content">
-          <h2 class="notification-heading">${this.heading}</h2>
-          <p class="notification-description">${this.description}</p>
+        <div class="notification-icon-container">
+          <img class="notification-icon" src=${this.icon} />
         </div>
-        <slot name="primary-button"></slot>
+        <div class="notification-content">
+          <h2 class="notification-heading text-body-l-med">${this.heading}</h2>
+          <p class="notification-description text-body-s">
+            ${this.description}
+          </p>
+        </div>
+        <slot name="primary-action"></slot>
       </div>
     `;
   }

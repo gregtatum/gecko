@@ -218,7 +218,7 @@ export class CalendarEvent extends MozLitElement {
       .event-detail-header {
         margin-block-end: 8px;
         margin-block-start: 0;
-        color: var(--pine-text-color-secondary-grey);
+        color: var(--pine-text-color-secondary);
       }
 
       /* Event host templates styles */

@@ -11,6 +11,10 @@ export default {
 
 const Template = ({ authenticating, connected, icon, name, services }) =>
   html`
+    <link
+      rel="stylesheet"
+      href="chrome://browser/content/companion/fonts.css"
+    />
     <connect-service-notification
       .authenticating=${authenticating}
       .connected=${connected}

@@ -116,7 +116,7 @@ companion-onboarding-service-connect = Connect
 companion-onboarding-service-connected = Connected
 # Shown on the companion onboarding card when a user has started to connect to a
 # service and they are currently logging in.
-companion-onboarding-service-connecting = Connecting
+companion-onboarding-service-connecting = Connecting…
 
 # This string is used in the page action menu to indicate the
 # security status of a view.

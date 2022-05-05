@@ -84,7 +84,6 @@
     --colors-white: #ffffff;
 
     /* Red */
-
     --colors-red-10: #e85474;
     --colors-red-20: #e53e62;
     --colors-red-30: #e11e48;
@@ -96,6 +95,13 @@
     --calendar-button-link-background: var(--colors-lightgrey-20);
     --calendar-button-link-background-hover: var(--colors-lightgrey-40);
     --calendar-host-image-background: var(--colors-lightgrey-30);
+
+    /* Border Colors */
+    --notification-icon-border-color: var(--colors-lightgrey-30);
+    --notification-card-border-color: var(--colors-cafe-40);
+
+    /* Icon Colors */
+    --icon-color-success: #50a369;
 
     --colors-primarygrey: #4e4a55;
     --colors-secondarygrey: #5f5b66;
@@ -202,5 +208,16 @@
     --pine-onboarding-footer-border-color: #e0e0e6;
 
     --toolbar-field-focus-background-color: var(--colors-lightgrey-20);
+  }
+}
+
+@media (prefers-contrast) {
+  :root {
+    /* Border Colors */
+    --notification-icon-border-color: WindowText;
+    --notification-card-border-color: WindowText;
+
+    /* Icon Colors */
+    --icon-color-success: WindowText;
   }
 }

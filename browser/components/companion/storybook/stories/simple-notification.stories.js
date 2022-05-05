@@ -11,6 +11,10 @@ export default {
 
 const Template = ({ icon, heading, description, buttonLabel, buttonClass }) =>
   html`
+    <link
+      rel="stylesheet"
+      href="chrome://browser/content/companion/fonts.css"
+    />
     <simple-notification
       .icon=${icon}
       .heading=${heading}
@@ -18,7 +22,7 @@ const Template = ({ icon, heading, description, buttonLabel, buttonClass }) =>
     >
       ${buttonClass && buttonLabel
         ? html`
-            <button slot="primary-button" class=${buttonClass}>
+            <button slot="primary-action" class=${buttonClass}>
               ${buttonLabel}
             </button>
           `
