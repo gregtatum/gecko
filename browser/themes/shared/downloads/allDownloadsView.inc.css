@@ -69,11 +69,11 @@
     visibility: visible;
   }
 
-  #downloadsListBox > richlistitem:hover .downloadButton > .button-box {
+  #downloadsListBox > richlistitem .downloadButton:hover > .button-box {
     background: var(--colors-cafe-60);
   }
 
-  #downloadsListBox>richlistitem:active .downloadButton>.button-box {
+  #downloadsListBox > richlistitem .downloadButton:active > .button-box {
     background: var(--colors-cafe-70);
   }
 
