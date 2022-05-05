@@ -255,6 +255,7 @@ function init_all() {
 
     if (Services.prefs.getBoolPref("xpinstall.enabled", true)) {
       document.getElementById("addonsButton").addEventListener("click", e => {
+        e.preventDefault();
         if (e.button >= 2) {
           // Ignore right clicks.
           return;

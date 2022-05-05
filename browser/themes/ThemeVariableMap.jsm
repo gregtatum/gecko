@@ -47,7 +47,7 @@ const ThemeVariableMap = [
     "--lwt-tab-line-color",
     {
       lwtProperty: "tab_line",
-      optionalElementID: "tabbrowser-tabs",
+      optionalElementID: "TabsToolbar",
     },
   ],
   [
