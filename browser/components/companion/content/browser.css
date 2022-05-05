@@ -843,10 +843,6 @@ body:not([flow-reset]) #urlbar[open] > .urlbarView > .urlbarView-body-outer > .u
   margin: 8px;
 }
 
-body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-background {
-  background-color: var(--colors-lightgrey-20);
-}
-
 body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-input-container {
   width: calc(100% - 16px);
   border: 1px solid var(--colors-lavender-70);

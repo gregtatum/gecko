@@ -76,4 +76,6 @@
   --avm-view-group-element-breadcrumb-hover-fill-color: var(--toolbarbutton-icon-fill);;
   --avm-view-group-element-breadcrumb-active-stroke-color: SelectedItem;
   --avm-view-group-element-breadcrumb-active-fill-color: SelectedItem;
+
+  --urlbar-default-border: 1px solid var(--toolbarbutton-icon-fill);
 }

@@ -200,5 +200,7 @@
     --pine-onboarding-header-text-color: #5b5b66;
     --pine-onboarding-dates-text-color: #15141a;
     --pine-onboarding-footer-border-color: #e0e0e6;
+
+    --toolbar-field-focus-background-color: var(--colors-lightgrey-20);
   }
 }
