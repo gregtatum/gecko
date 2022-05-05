@@ -28,6 +28,7 @@
 
 #include "mozilla/Components.h"
 #include "mozilla/dom/Element.h"
+#include "mozilla/intl/LocaleService.h"
 
 using namespace mozilla;
 using mozilla::dom::Element;
@@ -664,6 +665,11 @@ void nsMenuBarX::CreateApplicationMenu(nsMenuX* aMenu) {
       mApplicationMenuDelegate = [[ApplicationMenuDelegate alloc] initWithApplicationMenu:this];
     }
     sApplicationMenu.delegate = mApplicationMenuDelegate;
+
+    sApplicationMenu.userInterfaceLayoutDirection =
+        intl::LocaleService::GetInstance()->IsAppLocaleRTL()
+            ? NSUserInterfaceLayoutDirectionRightToLeft
+            : NSUserInterfaceLayoutDirectionLeftToRight;
 
     // This code reads attributes we are going to care about from the DOM elements
 

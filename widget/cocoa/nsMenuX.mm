@@ -12,6 +12,7 @@
 #include "mozilla/dom/ScriptSettings.h"
 #include "mozilla/EventDispatcher.h"
 #include "mozilla/MouseEvents.h"
+#include "mozilla/intl/LocaleService.h"
 
 #include "MOZMenuOpeningCoordinator.h"
 #include "nsMenuItemX.h"
@@ -384,6 +385,25 @@ void nsMenuX::WillRemoveChild(const MenuChild& aChild) {
       });
 }
 
+// Flushes style.
+static NSUserInterfaceLayoutDirection DirectionForElement(dom::Element* aElement) {
+  // Get the direction from the computed style so that inheritance into submenus is respected.
+  // aElement may not have a frame.
+  RefPtr<ComputedStyle> sc = nsComputedDOMStyle::GetComputedStyle(aElement);
+  if (!sc) {
+    return intl::LocaleService::GetInstance()->IsAppLocaleRTL()
+               ? NSUserInterfaceLayoutDirectionRightToLeft
+               : NSUserInterfaceLayoutDirectionLeftToRight;
+  }
+
+  switch (sc->StyleVisibility()->mDirection) {
+    case StyleDirection::Ltr:
+      return NSUserInterfaceLayoutDirectionLeftToRight;
+    case StyleDirection::Rtl:
+      return NSUserInterfaceLayoutDirectionRightToLeft;
+  }
+}
+
 void nsMenuX::MenuOpened() {
   if (mIsOpen) {
     return;
@@ -409,6 +429,15 @@ void nsMenuX::MenuOpened() {
 
   // Reset mDidFirePopupshowingAndIsApprovedToOpen for the next menu opening.
   mDidFirePopupshowingAndIsApprovedToOpen = false;
+
+  RefPtr<nsIContent> popupContent = GetMenuPopupContent();
+  // Ensure the layout direction is up to date before opening the menu.
+  if (popupContent->IsElement()) {
+    if (DirectionForElement(popupContent->AsElement()) !=
+        mNativeMenu.userInterfaceLayoutDirection) {
+      mNeedsRebuild = true;
+    }
+  }
 
   if (mNeedsRebuild) {
     OnHighlightedItemChanged(Nothing());
@@ -707,23 +736,6 @@ void nsMenuX::OnWillActivateItem(NSMenuItem* aItem) {
   }
 }
 
-// Flushes style.
-static NSUserInterfaceLayoutDirection DirectionForElement(dom::Element* aElement) {
-  // Get the direction from the computed style so that inheritance into submenus is respected.
-  // aElement may not have a frame.
-  RefPtr<ComputedStyle> sc = nsComputedDOMStyle::GetComputedStyle(aElement);
-  if (!sc) {
-    return NSApp.userInterfaceLayoutDirection;
-  }
-
-  switch (sc->StyleVisibility()->mDirection) {
-    case StyleDirection::Ltr:
-      return NSUserInterfaceLayoutDirectionLeftToRight;
-    case StyleDirection::Rtl:
-      return NSUserInterfaceLayoutDirectionRightToLeft;
-  }
-}
-
 void nsMenuX::RebuildMenu() {
   MOZ_RELEASE_ASSERT(mNeedsRebuild);
   gConstructingMenu = true;
@@ -736,7 +748,24 @@ void nsMenuX::RebuildMenu() {
   }
 
   if (menuPopup->IsElement()) {
-    mNativeMenu.userInterfaceLayoutDirection = DirectionForElement(menuPopup->AsElement());
+    auto direction = DirectionForElement(menuPopup->AsElement());
+
+    if (direction != mNativeMenu.userInterfaceLayoutDirection) {
+      // The Help menu has the Spotlight search input installed into it, and does not
+      // respect the text direction of the app, so it should not be recreated like the
+      // other menu items.
+      if (!nsMenuX::IsXULHelpMenu(Content())) {
+        // macOS menus do not appear to switch text direction after opening. Create a
+        // completely new menu to force it to use the correct text direction.
+        mNativeMenu.delegate = nil;
+        mNativeMenuItem.submenu = nil;
+        [mNativeMenu release];
+
+        mNativeMenu = CreateMenuWithGeckoString(mLabel);
+        mNativeMenuItem.submenu = mNativeMenu;
+      }
+      mNativeMenu.userInterfaceLayoutDirection = direction;
+    }
   }
 
   // Iterate over the kids
@@ -816,6 +845,12 @@ GeckoNSMenu* nsMenuX::CreateMenuWithGeckoString(nsString& aMenuTitle) {
 
   // Disable the Services item for now. Bug 660452 tracks turning this on for the appropriate menus.
   myMenu.allowsContextMenuPlugIns = NO;
+
+  // Respect the initial direction of the app, this value can be overriden by the XUL
+  // element.
+  myMenu.userInterfaceLayoutDirection = intl::LocaleService::GetInstance()->IsAppLocaleRTL()
+                                            ? NSUserInterfaceLayoutDirectionRightToLeft
+                                            : NSUserInterfaceLayoutDirectionLeftToRight;
 
   // we used to install Carbon event handlers here, but since NSMenu* doesn't
   // create its underlying MenuRef until just before display, we delay until
