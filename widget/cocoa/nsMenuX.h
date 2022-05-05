@@ -229,6 +229,13 @@ class nsMenuX final : public nsMenuParentX,
   // Remove the placeholder before adding an item to mNativeNSMenu.
   void RemovePlaceholderIfPresent();
 
+  // Computes the text direction of the Element based on the app's locale and element's
+  // style. This flushes the style when called.
+  static NSUserInterfaceLayoutDirection ComputedDirection(mozilla::dom::Element* aElement);
+
+  // Returns the text direction for app's locale.
+  static NSUserInterfaceLayoutDirection GetAppDirection();
+
   nsCOMPtr<nsIContent> mContent;  // XUL <menu> or <menupopup>
 
   // Contains nsMenuX and nsMenuItemX objects
