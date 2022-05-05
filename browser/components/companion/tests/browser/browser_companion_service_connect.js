@@ -77,11 +77,13 @@ async function assertConnectCard(helper, _opts) {
           !!opts.authenticating,
           "The connect card has the correct authenticating state"
         );
-        is(
-          connectService.connectButton.hasAttribute("disabled"),
-          !!opts.authenticating,
-          "The connect button has the correct disable state"
-        );
+
+        if (opts.authenticating) {
+          ok(
+            connectService.connectButton.hasAttribute("disabled"),
+            "The connect button has the correct disable state"
+          );
+        }
 
         if (opts.clickConnect) {
           connectService.connectButton.click();
