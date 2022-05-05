@@ -129,3 +129,41 @@ add_task(async function test_ViewActivation() {
     await PinebuildTestUtils.setCurrentView(view3);
   });
 });
+
+/**
+ * Tests that we don't fire a ViewMoved event or cause the AVM to re-render
+ * when activating a View that's already active.
+ */
+add_task(async function test_activate_activated_View() {
+  let [, view2] = await PinebuildTestUtils.loadViews([
+    "https://example.com/",
+    "https://example.org/",
+  ]);
+
+  await assertActiveView(view2);
+
+  let river = document.querySelector("river-el");
+  // Let's make sure there aren't any queued updates before proceeding.
+  let lastUpdatedPromise = river.updateComplete;
+  await lastUpdatedPromise;
+
+  // Now try activating the current InternalView. Since that's already
+  // view2, we shouldn't see a ViewMoved event, and the River should not
+  // get any updates applied.
+  let sawViewMoved = false;
+  let listener = e => {
+    sawViewMoved = true;
+  };
+  gStageManager.addEventListener("ViewMoved", listener);
+  gStageManager.activateCurrentView();
+  gStageManager.removeEventListener("ViewMoved", listener);
+  Assert.ok(!sawViewMoved, "Should not have seen ViewMoved event.");
+
+  // If no updates were queued, then we should have the same updateComplete
+  // Promise hanging off of the River.
+  Assert.equal(
+    river.updateComplete,
+    lastUpdatedPromise,
+    "River should have the same updateComplete Promise."
+  );
+});

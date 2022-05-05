@@ -1462,22 +1462,35 @@ class WorkspaceHistory extends EventTarget {
     }
   }
 
+  /**
+   * Makes the passed InternalView the "active" view for this Workspace.
+   * In practice, this means moving it to the end of the viewStack.
+   *
+   * If the InternalView doesn't belong to this workspace, or it's already
+   * at the end of the viewStack, this just returns false.
+   *
+   * @param {InternalView} internalVIew
+   *   The InternalView to activate.
+   * @returns {boolean}
+   *   True if the InternalView was successfully activated.
+   */
   activateView(internalView) {
     if (!this.viewStack.includes(internalView)) {
       logConsole.error(
         `View cannot be activated. It does not exist in this workspace.`
       );
-      return;
+      return false;
     }
 
     let lastIndex = this.viewStack.length - 1;
     if (internalView == this.viewStack[lastIndex]) {
       logConsole.debug(`View is already active`);
-      return;
+      return false;
     }
 
     this.viewStack.splice(this.#stageManager.currentIndex, 1);
     this.viewStack.push(internalView);
+    return true;
   }
 
   /**
@@ -2773,12 +2786,13 @@ class StageManager extends EventTarget {
       return;
     }
 
-    this.currentWorkspace.activateView(this.#currentInternalView);
-    this.notifyEvent("ViewMoved", this.#currentInternalView);
-    this.updateSessionStore();
-    logConsole.debug(
-      `Activated InternalView ${this.#currentInternalView.toString()}`
-    );
+    if (this.currentWorkspace.activateView(this.#currentInternalView)) {
+      this.notifyEvent("ViewMoved", this.#currentInternalView);
+      this.updateSessionStore();
+      logConsole.debug(
+        `Activated InternalView ${this.#currentInternalView.toString()}`
+      );
+    }
   }
 
   /**
