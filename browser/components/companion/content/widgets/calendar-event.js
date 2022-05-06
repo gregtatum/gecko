@@ -100,10 +100,6 @@ export class CalendarEvent extends MozLitElement {
       .event-conference-container > a {
         margin-inline: 0;
         flex-grow: 1;
-      }
-
-      .event:where(:not(.detailsCollapsed), :is(.upcoming))
-        .event-conference-container {
         margin-block-start: 12px;
       }
 
@@ -200,7 +196,7 @@ export class CalendarEvent extends MozLitElement {
         height: fit-content;
       }
 
-      .event:where(:is(.upcoming, .finished)) .event-top {
+      .event:where(.up-next, .upcoming, .in-progress, .finished) .event-top {
         margin-block-end: 12px;
       }
 
@@ -592,24 +588,38 @@ export class CalendarEvent extends MozLitElement {
     );
   }
 
-  // If an event is less than 15 minutes away or has already started,
+  // If an event is less than 10 minutes away or has already started,
   // we show the join button.
   setStatus(start, end) {
     clearTimeout(this._eventUpcomingTimer?.id);
     let endDate = new Date(end);
     let startDate = new Date(start);
+    let eventStartTimeMinus10 = startDate - 60 * 10 * 1000;
     let eventStartTimeMinus15 = startDate - 60 * 15 * 1000;
     let now = this.dateCreator.now();
+
     if (eventStartTimeMinus15 > now) {
-      this.status = "in-progress";
+      this.status = "";
       this._eventUpcomingTimer = this.setExtendedTimeout(
         () => this.requestUpdate(),
         eventStartTimeMinus15 - now
       );
-    } else if (now >= eventStartTimeMinus15 && now <= endDate) {
+    } else if (now >= eventStartTimeMinus15 && now <= eventStartTimeMinus10) {
+      this.status = "up-next";
+      this._eventUpcomingTimer = this.setExtendedTimeout(
+        () => this.requestUpdate(),
+        endDate - now
+      );
+    } else if (now >= eventStartTimeMinus10 && now <= startDate) {
       this.status = "upcoming";
       // The endDate can be in more than 24 days... so we must use setExtendedTimeout
       // in order to avoid to have a delay considered as a 0!
+      this._eventUpcomingTimer = this.setExtendedTimeout(
+        () => this.requestUpdate(),
+        endDate - now
+      );
+    } else if (now >= startDate && now <= endDate) {
+      this.status = "in-progress";
       this._eventUpcomingTimer = this.setExtendedTimeout(
         () => this.requestUpdate(),
         endDate - now
@@ -651,8 +661,7 @@ export class CalendarEvent extends MozLitElement {
       <div
         class=${classMap({
           event: true,
-          upcoming: this.status === "upcoming",
-          finished: this.status === "finished",
+          [this.status]: true,
           detailsCollapsed: this.detailsCollapsed,
         })}
         @mousedown=${this.toggleDetails}
@@ -685,7 +694,9 @@ export class CalendarEvent extends MozLitElement {
           </div>
         </div>
         <div class="event-conference-container">
-          ${!this.detailsCollapsed || this.status === "upcoming"
+          ${!this.detailsCollapsed ||
+          this.status === "upcoming" ||
+          this.status === "in-progress"
             ? this.joinConferenceTemplate()
             : ""}
         </div>
