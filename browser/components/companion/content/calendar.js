@@ -116,6 +116,7 @@ export class CalendarEventList extends MozLitElement {
     return {
       events: { type: Array },
       listType: { type: String },
+      connected: { type: Boolean },
     };
   }
 
@@ -127,6 +128,7 @@ export class CalendarEventList extends MozLitElement {
         margin: 0;
         border: none;
         border-radius: 12px;
+        margin: 16px;
       }
 
       @media (prefers-contrast) {
@@ -135,12 +137,12 @@ export class CalendarEventList extends MozLitElement {
         }
       }
 
-      .calendar {
-        margin: 16px;
-      }
-
       #calendar-panel:empty {
         display: none;
+      }
+
+      .calendar-empty-message {
+        text-align: center;
       }
 
       .calendar-event {
@@ -194,6 +196,7 @@ export class CalendarEventList extends MozLitElement {
     this.listView = null;
     this.listType = "";
     this.isFakeTime = false;
+    this.connected = false;
   }
 
   maybeStopListening() {
@@ -372,10 +375,12 @@ export class CalendarEventList extends MozLitElement {
         this.listView = Workshop.createCalendarListView();
       }
       this.listenToListView();
+      this.connected = true;
     } else {
       // TODO(MR2-2330): Remove the accounts listeners and just rely on seeked.
       // If there arent't any connected accounts, just clear the events list.
       this.events = [];
+      this.connected = false;
     }
   }
 
@@ -417,6 +422,33 @@ export class CalendarEventList extends MozLitElement {
     );
   }
 
+  get emptyCalendarMessage() {
+    if (this.listType === "browse" && !this.connected) {
+      return "companion-calendar-not-connected";
+    } else if (
+      this.listType === "browse" &&
+      this.connected &&
+      !this.events.length
+    ) {
+      return "companion-calendar-no-items";
+    }
+    return "";
+  }
+
+  emptyCalendarTemplate() {
+    if (!this.emptyCalendarMessage) {
+      return null;
+    }
+    return html`
+      <div class="calendar-empty">
+        <p
+          class="calendar-empty-message text-body-m"
+          data-l10n-id=${this.emptyCalendarMessage}
+        ></p>
+      </div>
+    `;
+  }
+
   render() {
     let eventItems = this.calendarEventItemsTemplate();
     return html`
@@ -428,8 +460,15 @@ export class CalendarEventList extends MozLitElement {
         rel="stylesheet"
         href="chrome://browser/content/companion/fonts.css"
       />
-      <div class="calendar" ?hidden=${!eventItems}>
-        <div id="calendar-panel" class="card card-no-hover">${eventItems}</div>
+      <div class="calendar">
+        ${this.emptyCalendarTemplate()}
+        <div
+          id="calendar-panel"
+          class="card card-no-hover"
+          ?hidden=${!eventItems}
+        >
+          ${eventItems}
+        </div>
       </div>
     `;
   }

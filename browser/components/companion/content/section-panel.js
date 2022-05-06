@@ -39,8 +39,6 @@ class SectionPanel extends MozLitElement {
       }
 
       ::slotted(h1) {
-        font-size: 1.25rem !important;
-        font-weight: 600 !important;
         margin: 0 !important;
         display: block;
       }

@@ -237,6 +237,59 @@ add_task(async function testAllDayEventInBrowseView() {
   });
 });
 
+add_task(async function testEmptyStateWithConnectedAccount() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+
+    let events = [];
+    await setBrowseCalendarEvents(helper, events);
+
+    // Ensure accounts are loaded before checking the empty state message.
+    await helper.loadWorkshopAccounts();
+    info("Empty message should indicate there are no events.");
+    await checkEmptyCalendarMessage(helper, "companion-calendar-no-items");
+  });
+});
+
+add_task(async function testEmptyStateWithoutConnectedAccount() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+
+    // Clear workshop data to delete any accounts.
+    await helper.clearWorkshopData();
+    info("Empty message should indicate there are no connected accounts.");
+    await checkEmptyCalendarMessage(helper, "companion-calendar-not-connected");
+  });
+});
+
+async function checkEmptyCalendarMessage(helper, messageId) {
+  await helper.runCompanionTask(
+    async message => {
+      let browseEventList = content.document.getElementById(
+        "browse-event-list"
+      );
+      let emptyCalendarMessage = browseEventList.shadowRoot.querySelector(
+        ".calendar-empty-message"
+      );
+      ok(emptyCalendarMessage, "Empty calendar placeholder is shown.");
+      is(
+        emptyCalendarMessage.getAttribute("data-l10n-id"),
+        message,
+        "The correct empty state message is displayed."
+      );
+    },
+    [messageId]
+  );
+}
+
 async function checkEventInBrowseView(helper, events) {
   await helper.reload();
   await setBrowseCalendarEvents(helper, events);

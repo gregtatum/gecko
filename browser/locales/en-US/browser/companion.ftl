@@ -181,3 +181,12 @@ snapshot-count = { $snapshotCount } Snapshots
 # Labeling for the Picture-in-Picture button in the media card
 companion-picture-in-picture-label =
     .aria-label = Picture-in-Picture
+
+# Title of the calendar section in the browse companion view.
+companion-browse-calendar-header = Calendar
+
+# Message displayed in the calendar browse view when no accounts are connected.
+companion-calendar-not-connected = You have no connected accounts.
+
+# Message displayed in the calendar browse view when there are no events.
+companion-calendar-no-items = You have no calendar items.

@@ -277,6 +277,10 @@ class WorkshopHelper {
     await this.workshopAPI.TEST_queueEmptied();
   }
 
+  async getConnectedAccounts() {
+    await this.workshopAPI.promisedLatestOnce("accountsLoaded");
+  }
+
   async clearAccountAndCalendars() {
     if (this.account) {
       await this.account.deleteAccount();
@@ -541,6 +545,10 @@ class CompanionHelper {
 
   async clearWorkshopData() {
     await this.workshopHelper.clearAccountAndCalendars();
+  }
+
+  async loadWorkshopAccounts() {
+    await this.workshopHelper.getConnectedAccounts();
   }
 
   get companionReady() {
