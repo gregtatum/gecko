@@ -42,6 +42,8 @@
 #include "nsIServiceManager.h"
 #include "nsXULPopupManager.h"
 
+#include "/Users/greg/scripts/PrettyPrint.h"
+
 using namespace mozilla;
 using namespace mozilla::dom;
 
@@ -385,6 +387,36 @@ void nsMenuX::WillRemoveChild(const MenuChild& aChild) {
       });
 }
 
+// Flushes style.
+static NSUserInterfaceLayoutDirection DirectionForElement(dom::Element* aElement) {
+  printf("!!! DirectionForElement\n");
+  nsAutoString str;
+  aElement->GetTagName(str);
+  PrettyPrint(str, "tagname");
+  aElement->GetClassName(str);
+  PrettyPrint(str, "className");
+
+  // Get the direction from the computed style so that inheritance into submenus is respected.
+  // aElement may not have a frame.
+  RefPtr<ComputedStyle> sc = nsComputedDOMStyle::GetComputedStyle(aElement);
+  if (!sc) {
+    printf("!!! DirectionForElement No compured style\n");
+    return intl::LocaleService::GetInstance()->IsAppLocaleRTL()
+               ? NSUserInterfaceLayoutDirectionRightToLeft
+               : NSUserInterfaceLayoutDirectionLeftToRight;
+  }
+
+  switch (sc->StyleVisibility()->mDirection) {
+    case StyleDirection::Ltr:
+
+      printf("!!! DirectionForElement StyleDirection::Ltr\n");
+      return NSUserInterfaceLayoutDirectionLeftToRight;
+    case StyleDirection::Rtl:
+      printf("!!! DirectionForElement StyleDirection::Rtl\n");
+      return NSUserInterfaceLayoutDirectionRightToLeft;
+  }
+}
+
 void nsMenuX::MenuOpened() {
   if (mIsOpen) {
     return;
@@ -393,6 +425,19 @@ void nsMenuX::MenuOpened() {
   // Make sure we fire any pending popupshown / popuphiding / popuphidden events first.
   FlushMenuOpenedRunnable();
   FlushMenuClosedRunnable();
+
+  RefPtr<nsIContent> popupContent = GetMenuPopupContent();
+
+  // Ensure the layout direction is up to date before opening the menu.
+  if (popupContent->IsElement()) {
+    printf("!!! nsMenuX::OnOpened\n");
+    auto dir = DirectionForElement(popupContent->AsElement());
+    if (dir != mNativeMenu.userInterfaceLayoutDirection) {
+      printf("!!! nsMenuX::OnOpened - Needs rebuild\n");
+      mNativeMenu.userInterfaceLayoutDirection = dir;
+      mNeedsRebuild = true;
+    }
+  }
 
   if (!mDidFirePopupshowingAndIsApprovedToOpen) {
     // Fire popupshowing now.
@@ -720,12 +765,7 @@ void nsMenuX::RebuildMenu() {
   }
 
   if (menuPopup->IsElement()) {
-    // Each element could be queried individually for its style direction, but it's not
-    // guaranteed to be up to date if the app locale just changed, so prefer the overall
-    // app direction.
-    mNativeMenu.userInterfaceLayoutDirection = intl::LocaleService::GetInstance()->IsAppLocaleRTL()
-                                                   ? NSUserInterfaceLayoutDirectionRightToLeft
-                                                   : NSUserInterfaceLayoutDirectionLeftToRight;
+    mNativeMenu.userInterfaceLayoutDirection = DirectionForElement(menuPopup->AsElement());
   }
 
   // Iterate over the kids
@@ -865,6 +905,17 @@ bool nsMenuX::OnOpen() {
   }
 
   RefPtr<nsIContent> popupContent = GetMenuPopupContent();
+
+  // Ensure the layout direction is up to date before opening the menu.
+  if (popupContent->IsElement()) {
+    printf("!!! nsMenuX::OnOpen\n");
+    auto dir = DirectionForElement(popupContent->AsElement());
+    if (dir != mNativeMenu.userInterfaceLayoutDirection) {
+      printf("!!! nsMenuX::OnOpen - Needs rebuild\n");
+      mNativeMenu.userInterfaceLayoutDirection = dir;
+      mNeedsRebuild = true;
+    }
+  }
 
   if (mObserver && popupContent) {
     mObserver->OnMenuWillOpen(popupContent->AsElement());
