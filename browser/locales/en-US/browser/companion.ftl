@@ -21,6 +21,8 @@ companion-fake-time = Fake time to 10m:10 before
 #   $linkCount (Number) - number of links hidden for an event
 companion-expand-event-links-button = +{ $linkCount }
     .title = Show all links
+companion-collapse-event-links-button = +{ $linkCount }
+    .title = Hide extra links
 
 # This is a short label to show when the start of an event is happening in less
 # than an hour (eg: In 10 minutes).

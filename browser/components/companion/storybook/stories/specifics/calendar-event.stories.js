@@ -115,3 +115,27 @@ Finished.args = {
     endDate: makeDate({ addMinutes: -10 }),
   },
 };
+
+export const TwoLinks = Template.bind({});
+TwoLinks.args = {
+  event: {
+    ...Default.args.event,
+    links: Default.args.event.links.slice(0, 2),
+  },
+};
+
+export const OneLink = Template.bind({});
+OneLink.args = {
+  event: {
+    ...Default.args.event,
+    links: Default.args.event.links.slice(0, 1),
+  },
+};
+
+export const NoLinks = Template.bind({});
+NoLinks.args = {
+  event: {
+    ...Default.args.event,
+    links: [],
+  },
+};

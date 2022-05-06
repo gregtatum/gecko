@@ -134,18 +134,16 @@ export class CalendarEvent extends MozLitElement {
         overflow: hidden;
       }
 
-      .event-links > .event-link,
-      .event-links > .event-link:visited {
+      .event-links-wrapper .event-link,
+      .event-links-wrapper .event-link:visited {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: start;
         white-space: normal;
         overflow: hidden;
         padding: 4px 8px;
         margin-inline: 0;
         margin: 4px 0;
-        max-width: -moz-fit-content;
-        min-width: 50%;
         text-decoration: none;
         cursor: default;
         min-height: auto;
@@ -153,7 +151,7 @@ export class CalendarEvent extends MozLitElement {
         border-radius: 16px;
       }
 
-      .event-links > .event-link:hover {
+      .event-links-wrapper .event-link:hover {
         background: var(--calendar-button-link-background-hover);
       }
 
@@ -170,24 +168,45 @@ export class CalendarEvent extends MozLitElement {
 
       .event-links {
         display: grid;
-        grid-template-columns: repeat(2, minmax(auto, max-content));
+        grid-template-columns: 1fr 1fr;
         column-gap: 8px;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        flex-grow: 1;
       }
 
-      .event-links-collapsed {
-        grid-template-columns: repeat(2, minmax(auto, max-content)) auto;
+      .event-links-wrapper {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
       }
 
-      .event-links > button.event-link {
+      .event-links-toggle-collapsed {
         margin: 0;
         min-width: 24px;
-        align-self: center;
+        align-self: start;
         justify-self: start;
         min-height: 0;
         max-width: initial;
         padding: 4px;
-        border-radius: 50%;
+        border-radius: 5000px;
         border: none;
+        flex-shrink: 0;
+      }
+
+      .event-links-toggle-collapsed::after {
+        width: 12px;
+        height: 12px;
+        margin-inline-start: 4px;
+        content: "";
+        background-image: url("chrome://global/skin/icons/arrow-down-12.svg");
+        -moz-context-properties: fill;
+        fill: currentColor;
+      }
+
+      .event-links-toggle-collapsed[expanded]::after {
+        transform: rotate(-180deg);
       }
 
       .event-top {
@@ -245,7 +264,7 @@ export class CalendarEvent extends MozLitElement {
 
       .event-host-email,
       .event-host-name-email-container,
-      .event-links > .event-link span {
+      .event-links-wrapper .event-link span {
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
@@ -268,7 +287,7 @@ export class CalendarEvent extends MozLitElement {
   constructor() {
     super();
     this.detailsCollapsed = true;
-    this.linksCollapsed = true;
+    this._linksCollapsed = this.linksCollapsed = true;
   }
 
   openMenu(e) {
@@ -298,6 +317,11 @@ export class CalendarEvent extends MozLitElement {
     }
 
     this.detailsCollapsed = !this.detailsCollapsed;
+    if (!this.detailsCollapsed) {
+      this.linksCollapsed = false;
+    } else {
+      this.linksCollapsed = this._linksCollapsed;
+    }
 
     // Pressing the space key causes a scroll to the bottom of the window view,
     // so suppress it.
@@ -312,17 +336,8 @@ export class CalendarEvent extends MozLitElement {
     );
   }
 
-  expandLinksSection(e) {
-    this.linksCollapsed = false;
-    if (
-      e.mozInputSource == MouseEvent.MOZ_SOURCE_KEYBOARD ||
-      e.mozInputSource == MouseEvent.MOZ_SOURCE_UNKNOWN
-    ) {
-      this.updateComplete.then(() => {
-        // If the links were expanded with the keyboard, restore focus.
-        this.firstExpandedLink.focus();
-      });
-    }
+  toggleLinksSection(e) {
+    this._linksCollapsed = this.linksCollapsed = !this.linksCollapsed;
   }
 
   eventLinkTemplate(link) {
@@ -352,22 +367,27 @@ export class CalendarEvent extends MozLitElement {
     return html`
       <div class="event-meeting-links">
         ${this.eventDetailHeaderTemplate("companion-event-document-and-links")}
-        <div
-          class=${classMap({
-            "event-links": true,
-            "event-links-collapsed": shouldCollapseLinks,
-          })}
-        >
-          ${linksToShow.map(link => this.eventLinkTemplate(link))}
-          ${shouldCollapseLinks
+        <div class="event-links-wrapper">
+          <div
+            class=${classMap({
+              "event-links": true,
+              "event-links-collapsed": shouldCollapseLinks,
+            })}
+          >
+            ${linksToShow.map(link => this.eventLinkTemplate(link))}
+          </div>
+          ${links.length > 2
             ? html`
                 <button
-                  data-l10n-id="companion-expand-event-links-button"
+                  data-l10n-id=${this.linksCollapsed
+                    ? "companion-expand-event-links-button"
+                    : "companion-collapse-event-links-button"}
                   data-l10n-args=${JSON.stringify({
                     linkCount: this.event.links.length - 2,
                   })}
-                  class="event-link text-body-s"
-                  @click=${this.expandLinksSection}
+                  class="event-link event-links-toggle-collapsed text-body-s"
+                  ?expanded=${!this.linksCollapsed}
+                  @click=${this.toggleLinksSection}
                 ></button>
               `
             : ""}

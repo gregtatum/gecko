@@ -24,7 +24,7 @@ add_task(async function testEventWithLinks() {
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
 
       let eventLinksSection = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector(".event-links");
+        return event.shadowRoot.querySelector(".event-links-wrapper");
       });
       let links = eventLinksSection.querySelectorAll("a");
       let favicon = links[0].querySelector("img").src;
@@ -42,6 +42,9 @@ add_task(async function testEventWithLinks() {
         ["https://example.com/", "https://example.com/2"],
         "The text content must be the urls themselves."
       );
+
+      let expandLinksButton = eventLinksSection.querySelector("button");
+      ok(!expandLinksButton, "There is no expand links button");
     });
   });
 });
@@ -70,7 +73,7 @@ add_task(async function testEventWithSeveralLinks() {
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
 
       let eventLinksSection = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector(".event-links");
+        return event.shadowRoot.querySelector(".event-links-wrapper");
       });
       let links = eventLinksSection.querySelectorAll("a");
       let expandLinksButton = eventLinksSection.querySelector("button");
@@ -94,6 +97,11 @@ add_task(async function testEventWithSeveralLinks() {
         eventLinksSection.querySelectorAll("a").length,
         4,
         "Event links section should show all links."
+      );
+      is(
+        expandLinksButton.getAttribute("data-l10n-id"),
+        "companion-collapse-event-links-button",
+        "Collapse links button is localized"
       );
     });
   });
@@ -141,7 +149,7 @@ add_task(async function testEventLinksFocus() {
       );
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
       let eventLinksSection = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector(".event-links");
+        return event.shadowRoot.querySelector(".event-links-wrapper");
       });
 
       info("Ensure focus is on the correct meeting link");
@@ -158,8 +166,20 @@ add_task(async function testEventLinksFocus() {
       EventUtils.sendKey("space", content);
       await event.updateComplete;
 
+      is(
+        event.shadowRoot.activeElement,
+        expandLinksButton,
+        "Expand button stays focused"
+      );
+
       let links = eventLinksSection.querySelectorAll("a");
-      is(event.shadowRoot.activeElement, links[2], "Third link is focused");
+      is(links.length, 4, "All links are now shown");
+
+      EventUtils.sendKey("space", content);
+      await event.updateComplete;
+
+      links = eventLinksSection.querySelectorAll("a");
+      is(links.length, 2, "Links are collapsed again");
     });
   });
 });
