@@ -208,6 +208,13 @@
     --pine-onboarding-footer-border-color: #e0e0e6;
 
     --toolbar-field-focus-background-color: var(--colors-lightgrey-20);
+
+    /* flow-reset.css */
+    --flowreset-button-border-color: #CFCFD8;
+    --flowreset-button-boxshadow-color: rgba(58, 57, 68, 0.2);
+    --flowreset-button-background-color: #9982C9;
+    --flowreset-button-text-color: #FFFFFF;
+    --flowreset-textshadow-color: rgba(0,0,0, 0.6);
   }
 }
 
@@ -219,5 +226,11 @@
 
     /* Icon Colors */
     --icon-color-success: WindowText;
+
+    --flowreset-button-border-color: transparent;
+    --flowreset-button-boxshadow-color: transparent;
+    --flowreset-button-background-color: ButtonFace;
+    --flowreset-button-text-color: ButtonText;
+    --flowreset-textshadow-color: unset;
   }
 }
