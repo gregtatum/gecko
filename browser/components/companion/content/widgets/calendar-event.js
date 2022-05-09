@@ -628,7 +628,7 @@ export class CalendarEvent extends MozLitElement {
       this.status = "up-next";
       this._eventUpcomingTimer = this.setExtendedTimeout(
         () => this.requestUpdate(),
-        endDate - now
+        eventStartTimeMinus10 - now
       );
     } else if (now >= eventStartTimeMinus10 && now <= startDate) {
       this.status = "upcoming";
