@@ -300,6 +300,9 @@ class ViewGroup {
   /** @type {boolean} */
   #isApp;
 
+  /** @type {Number} */
+  #id;
+
   /**
    * @param {InternalView[]} views
    *   The InternalViews that have been grouped.
@@ -309,6 +312,16 @@ class ViewGroup {
   constructor(views, isApp = false) {
     this.#views = views;
     this.#isApp = isApp;
+    for (let internalView of this.#views) {
+      ViewGroup.#viewGroupMap.set(internalView, this);
+    }
+
+    this.#id = ViewGroup.#nextViewGroupID++;
+  }
+
+  /** @type {Number} */
+  get id() {
+    return this.#id;
   }
 
   /** @type {View} */
@@ -361,6 +374,27 @@ class ViewGroup {
 
   get isApp() {
     return this.#isApp;
+  }
+
+  /**
+   * Repurposes this ViewGroup for a new set of InternalViews which may
+   * or may not be a pinned app.
+   *
+   * @param {InternalView[]} internalViews
+   *   The new InternalViews to assign to this ViewGroup.
+   * @param {boolean} isApp
+   *   True if this ViewGroup is for a Pinned App.
+   */
+  #recycle(internalViews, isApp) {
+    for (let internalView of this.#views) {
+      ViewGroup.#viewGroupMap.delete(internalView);
+    }
+
+    this.#views = internalViews;
+    this.#isApp = isApp;
+    for (let internalView of this.#views) {
+      ViewGroup.#viewGroupMap.set(internalView, this);
+    }
   }
 
   /**
@@ -498,7 +532,9 @@ class ViewGroup {
         // represent them in reverse order. We _could_ have used unshift
         // to put each item at the start of the Array, but that's apparently
         // more expensive than doing one big reverse at the end.
-        groups.push(new ViewGroup(currentGroup.reverse(), isPinnedApp));
+        groups.push(
+          ViewGroup.#recycleOrCreateFor(currentGroup.reverse(), isPinnedApp)
+        );
 
         if (groups.length >= limit) {
           break;
@@ -527,7 +563,9 @@ class ViewGroup {
       //
       // See the comment inside of the loop for why we're reversing the
       // currentGroup.
-      groups.push(new ViewGroup(currentGroup.reverse(), isPinnedApp));
+      groups.push(
+        ViewGroup.#recycleOrCreateFor(currentGroup.reverse(), isPinnedApp)
+      );
     }
 
     // Finally, we reverse the displayed ViewGroups that we've collected.
@@ -594,6 +632,34 @@ class ViewGroup {
 
     return { groups, overflowed, pinned };
   }
+
+  /**
+   * Will attempt to find an appropriate ViewGroup to recycle to hold the
+   * passed in InternalViews. If an existing ViewGroup cannot be recycled,
+   * then a new ViewGroup is constructed.
+   *
+   * @param {InternalView[]} internalViews
+   *   The set of InternalViews to get or construct a ViewGroup for.
+   * @param {boolean} isApp
+   *   True if this ViewGroup should be for a Pinned App.
+   * @return {ViewGroup}
+   */
+  static #recycleOrCreateFor(internalViews, isApp) {
+    let lastInternalView = internalViews.at(-1);
+    let existingViewGroup = ViewGroup.#viewGroupMap.get(lastInternalView);
+    if (!existingViewGroup) {
+      return new ViewGroup(internalViews, isApp);
+    }
+
+    existingViewGroup.#recycle(internalViews, isApp);
+    return existingViewGroup;
+  }
+
+  /** @type {WeakMap<InternalView, ViewGroup>} */
+  static #viewGroupMap = new WeakMap();
+
+  /** @type {Number} */
+  static #nextViewGroupID = 0;
 }
 
 class InternalView {
