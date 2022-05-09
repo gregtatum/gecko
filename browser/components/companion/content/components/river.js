@@ -8,6 +8,8 @@ import ActiveViewManager from "chrome://browser/content/companion/components/act
 import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 
 export default class River extends MozLitElement {
+  #focusedChild;
+
   static get properties() {
     return {
       viewGroups: { type: Array, attribute: false, state: true },
@@ -154,6 +156,17 @@ export default class River extends MozLitElement {
         </div>
       </div>
     `;
+  }
+
+  willUpdate() {
+    this.#focusedChild = this.renderRoot.activeElement;
+  }
+
+  updated() {
+    if (this.#focusedChild) {
+      this.#focusedChild.focus();
+    }
+    this.#focusedChild = null;
   }
 }
 
