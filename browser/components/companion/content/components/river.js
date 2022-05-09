@@ -3,13 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
-import { html } from "chrome://browser/content/companion/lit.all.js";
+import { html, repeat } from "chrome://browser/content/companion/lit.all.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 
 export default class River extends MozLitElement {
-  #views;
-
   static get properties() {
     return {
       viewGroups: { type: Array, attribute: false, state: true },
@@ -116,11 +114,8 @@ export default class River extends MozLitElement {
     // we still want the River <div> to render in order to take the appropriate
     // amount of vertical space in the toolbar - it just doesn't have any
     // contents.
-    let river = [...this.viewGroups];
-    // If there's a topViewGroup, we need to wrap it in a new Array in order for
-    // LitElement to know to re-render the ViewGroup.
-    let topViewGroup =
-      containsActive && this.viewGroups.length ? river.pop() : null;
+    let topViewGroup = containsActive ? this.viewGroups.at(-1) : null;
+
     return html`
       <link
         rel="stylesheet"
@@ -142,27 +137,20 @@ export default class River extends MozLitElement {
           class="view-groups-wrapper"
           ?topisactive=${topViewGroup?.includes(this.activeView)}
         >
-          ${river.map(
-            viewGroup =>
-              html`
-                <view-group
-                  exportparts="domain, history"
-                  tabindex="0"
-                  ?active=${viewGroup.includes(this.activeView)}
-                  .viewGroup=${viewGroup}
-                  .activeView=${this.activeView}
-                ></view-group>
-              `
+          ${repeat(
+            this.viewGroups,
+            viewGroup => viewGroup.id,
+            (viewGroup, index) => html`
+              <view-group
+                ?top=${viewGroup === topViewGroup}
+                exportparts="domain, history"
+                tabindex="0"
+                ?active=${viewGroup.includes(this.activeView)}
+                .viewGroup=${viewGroup}
+                .activeView=${this.activeView}
+              ></view-group>
+            `
           )}
-          <view-group
-            ?hidden=${!topViewGroup}
-            top="true"
-            tabindex="0"
-            exportparts="domain, history"
-            ?active=${topViewGroup && topViewGroup.includes(this.activeView)}
-            .viewGroup=${topViewGroup || null}
-            .activeView=${this.activeView}
-          ></view-group>
         </div>
       </div>
     `;
