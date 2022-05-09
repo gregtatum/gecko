@@ -19,6 +19,7 @@
 #include "mozilla/dom/Element.h"
 #include "nsIWidget.h"
 #include "mozilla/dom/Document.h"
+#include "mozilla/intl/LocaleService.h"
 
 #include "nsINode.h"
 
@@ -158,6 +159,16 @@ nsMenuGroupOwnerX::Observe(nsISupports* aSubject, const char* aTopic, const char
   if (mMenuBar && !strcmp(aTopic, "intl:app-locales-changed")) {
     // Rebuild the menu with the new locale strings.
     mMenuBar->SetNeedsRebuild();
+
+    if (intl::LocaleService::GetInstance()->IsAppLocaleRTL()) {
+      [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"AppleTextDirection"];
+      [[NSUserDefaults standardUserDefaults] setObject:@"YES"
+                                                forKey:@"NSForceRightToLeftWritingDirection"];
+    } else {
+      [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"AppleTextDirection"];
+      [[NSUserDefaults standardUserDefaults]
+          removeObjectForKey:@"NSForceRightToLeftWritingDirection"];
+    }
   }
   return NS_OK;
 }
