@@ -70,7 +70,7 @@ if CONFIG["PINEBUILD"]:
 if CONFIG["NIGHTLY_BUILD"]:
     DIRS += [
         "colorways",
-        "myfirefox",
+        "firefoxview",
     ]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":

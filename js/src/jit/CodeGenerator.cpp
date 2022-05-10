@@ -1245,6 +1245,8 @@ void CodeGenerator::visitInt32ToIntPtr(LInt32ToIntPtr* lir) {
     masm.branchPtr(Assembler::BelowOrEqual, output, ImmWord(INT32_MAX), &ok);
     masm.assumeUnreachable("LInt32ToIntPtr: unexpected range for value");
     masm.bind(&ok);
+#  else
+    MOZ_CRASH("Not used in non-debug mode");
 #  endif
     return;
   }
@@ -3970,6 +3972,15 @@ void CodeGenerator::visitNewClassBodyEnvironmentObject(
                                              Handle<ClassBodyScope*>,
                                              HandleObject, gc::InitialHeap);
   callVM<Fn, ClassBodyLexicalEnvironmentObject::create>(lir);
+}
+
+void CodeGenerator::visitNewVarEnvironmentObject(
+    LNewVarEnvironmentObject* lir) {
+  pushArg(ToRegister(lir->enclosing()));
+  pushArg(ImmGCPtr(lir->mir()->scope()));
+
+  using Fn = VarEnvironmentObject* (*)(JSContext*, HandleScope, HandleObject);
+  callVM<Fn, VarEnvironmentObject::create>(lir);
 }
 
 void CodeGenerator::visitCopyLexicalEnvironmentObject(
@@ -7945,7 +7956,6 @@ void CodeGenerator::visitWasmRegisterResult(LWasmRegisterResult* lir) {
 void CodeGenerator::visitWasmCall(LWasmCall* lir) {
   const MWasmCallBase* callBase = lir->callBase();
 
-#ifdef ENABLE_WASM_EXCEPTIONS
   // If this call is in Wasm try code block, initialise a WasmTryNote for this
   // call.
   bool inTry = callBase->inTry();
@@ -7955,7 +7965,6 @@ void CodeGenerator::visitWasmCall(LWasmCall* lir) {
     wasm::WasmTryNote& tryNote = tryNotes[tryNoteIndex];
     tryNote.begin = masm.currentOffset();
   }
-#endif
 
   MOZ_ASSERT((sizeof(wasm::Frame) + masm.framePushed()) % WasmStackAlignment ==
              0);
@@ -7972,8 +7981,8 @@ void CodeGenerator::visitWasmCall(LWasmCall* lir) {
 #endif
 
   // LWasmCallBase::isCallPreserved() assumes that all MWasmCalls preserve the
-  // TLS and pinned regs. The only case where where we don't have to reload
-  // the TLS and pinned regs is when the callee preserves them.
+  // instance and pinned regs. The only case where where we don't have to
+  // reload the instance and pinned regs is when the callee preserves them.
   bool reloadRegs = true;
   bool switchRealm = true;
 
@@ -8073,7 +8082,6 @@ void CodeGenerator::visitWasmCall(LWasmCall* lir) {
     MOZ_ASSERT(!switchRealm);
   }
 
-#ifdef ENABLE_WASM_EXCEPTIONS
   if (inTry) {
     // Set the end of the try note range
     size_t tryNoteIndex = callBase->tryNoteIndex();
@@ -8093,7 +8101,6 @@ void CodeGenerator::visitWasmCall(LWasmCall* lir) {
     jumpToBlock(lir->mirCatchable()->getSuccessor(
         MWasmCallCatchable::FallthroughBranchIndex));
   }
-#endif
 }
 
 void CodeGenerator::visitWasmCallLandingPrePad(LWasmCallLandingPrePad* lir) {
@@ -8210,14 +8217,15 @@ void CodeGenerator::visitWasmDerivedIndexPointer(
 }
 
 void CodeGenerator::visitWasmStoreRef(LWasmStoreRef* ins) {
-  Register tls = ToRegister(ins->tls());
+  Register instance = ToRegister(ins->instance());
   Register valueAddr = ToRegister(ins->valueAddr());
   Register value = ToRegister(ins->value());
   Register temp = ToRegister(ins->temp0());
 
   Label skipPreBarrier;
-  wasm::EmitWasmPreBarrierGuard(masm, tls, temp, valueAddr, &skipPreBarrier);
-  wasm::EmitWasmPreBarrierCall(masm, tls, temp, valueAddr);
+  wasm::EmitWasmPreBarrierGuard(masm, instance, temp, valueAddr,
+                                &skipPreBarrier);
+  wasm::EmitWasmPreBarrierCall(masm, instance, temp, valueAddr);
   masm.bind(&skipPreBarrier);
 
   masm.storePtr(value, Address(valueAddr, 0));
@@ -8629,7 +8637,7 @@ void CodeGenerator::visitModPowTwoD(LModPowTwoD* ins) {
 
 void CodeGenerator::visitWasmBuiltinModD(LWasmBuiltinModD* ins) {
   masm.Push(InstanceReg);
-  int32_t framePushedAfterTls = masm.framePushed();
+  int32_t framePushedAfterInstance = masm.framePushed();
 
   FloatRegister lhs = ToFloatRegister(ins->lhs());
   FloatRegister rhs = ToFloatRegister(ins->rhs());
@@ -8640,9 +8648,9 @@ void CodeGenerator::visitWasmBuiltinModD(LWasmBuiltinModD* ins) {
   masm.passABIArg(lhs, MoveOp::DOUBLE);
   masm.passABIArg(rhs, MoveOp::DOUBLE);
 
-  int32_t tlsOffset = masm.framePushed() - framePushedAfterTls;
+  int32_t instanceOffset = masm.framePushed() - framePushedAfterInstance;
   masm.callWithABI(ins->mir()->bytecodeOffset(), wasm::SymbolicAddress::ModD,
-                   mozilla::Some(tlsOffset), MoveOp::DOUBLE);
+                   mozilla::Some(instanceOffset), MoveOp::DOUBLE);
 
   masm.Pop(InstanceReg);
 }
@@ -15498,7 +15506,7 @@ void CodeGenerator::visitWasmInterruptCheck(LWasmInterruptCheck* lir) {
   addOutOfLineCode(ool, lir->mir());
   masm.branch32(
       Assembler::NotEqual,
-      Address(ToRegister(lir->tlsPtr()), wasm::Instance::offsetOfInterrupt()),
+      Address(ToRegister(lir->instance()), wasm::Instance::offsetOfInterrupt()),
       Imm32(0), ool->entry());
   masm.bind(ool->rejoin());
 }
@@ -15575,25 +15583,25 @@ void CodeGenerator::visitWasmAlignmentCheck64(LWasmAlignmentCheck64* ins) {
                      ool->entry());
 }
 
-void CodeGenerator::visitWasmLoadTls(LWasmLoadTls* ins) {
+void CodeGenerator::visitWasmLoadInstance(LWasmLoadInstance* ins) {
   switch (ins->mir()->type()) {
     case MIRType::RefOrNull:
     case MIRType::Pointer:
-      masm.loadPtr(Address(ToRegister(ins->tlsPtr()), ins->mir()->offset()),
+      masm.loadPtr(Address(ToRegister(ins->instance()), ins->mir()->offset()),
                    ToRegister(ins->output()));
       break;
     case MIRType::Int32:
-      masm.load32(Address(ToRegister(ins->tlsPtr()), ins->mir()->offset()),
+      masm.load32(Address(ToRegister(ins->instance()), ins->mir()->offset()),
                   ToRegister(ins->output()));
       break;
     default:
-      MOZ_CRASH("MIRType not supported in WasmLoadTls");
+      MOZ_CRASH("MIRType not supported in WasmLoadInstance");
   }
 }
 
-void CodeGenerator::visitWasmLoadTls64(LWasmLoadTls64* ins) {
+void CodeGenerator::visitWasmLoadInstance64(LWasmLoadInstance64* ins) {
   MOZ_ASSERT(ins->mir()->type() == MIRType::Int64);
-  masm.load64(Address(ToRegister(ins->tlsPtr()), ins->mir()->offset()),
+  masm.load64(Address(ToRegister(ins->instance()), ins->mir()->offset()),
               ToOutRegister64(ins));
 }
 

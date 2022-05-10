@@ -16,6 +16,7 @@
 #include "nsINode.h"
 #include "nsIStreamListener.h"
 #include "nsILoadInfo.h"
+#include "nsIMIMEService.h"
 #include "nsIOService.h"
 #include "nsContentUtils.h"
 #include "nsCORSListenerProxy.h"
@@ -801,6 +802,22 @@ static void DebugDoContentSecurityCheck(nsIChannel* aChannel,
 
   // we only log http channels, unless loglevel is 5.
   if (httpChannel || MOZ_LOG_TEST(sCSMLog, LogLevel::Verbose)) {
+    MOZ_LOG(sCSMLog, LogLevel::Verbose, ("doContentSecurityCheck:\n"));
+
+    nsAutoCString remoteType;
+    if (XRE_IsParentProcess()) {
+      nsCOMPtr<nsIParentChannel> parentChannel;
+      NS_QueryNotificationCallbacks(aChannel, parentChannel);
+      if (parentChannel) {
+        parentChannel->GetRemoteType(remoteType);
+      }
+    } else {
+      remoteType.Assign(
+          mozilla::dom::ContentChild::GetSingleton()->GetRemoteType());
+    }
+    MOZ_LOG(sCSMLog, LogLevel::Verbose,
+            ("  processType: \"%s\"\n", remoteType.get()));
+
     nsCOMPtr<nsIURI> channelURI;
     nsAutoCString channelSpec;
     nsAutoCString channelMethod;
@@ -808,9 +825,6 @@ static void DebugDoContentSecurityCheck(nsIChannel* aChannel,
     if (channelURI) {
       channelURI->GetSpec(channelSpec);
     }
-
-    MOZ_LOG(sCSMLog, LogLevel::Verbose, ("doContentSecurityCheck:\n"));
-
     MOZ_LOG(sCSMLog, LogLevel::Verbose,
             ("  channelURI: \"%s\"\n", channelSpec.get()));
 
@@ -1212,6 +1226,39 @@ nsresult nsContentSecurityManager::CheckChannelHasProtocolSecurityFlag(
   return NS_ERROR_CONTENT_BLOCKED;
 }
 
+// We should not allow loading non-JavaScript files as scripts using
+// a file:// URL.
+static nsresult CheckAllowFileProtocolScriptLoad(nsIChannel* aChannel) {
+  nsCOMPtr<nsILoadInfo> loadInfo = aChannel->LoadInfo();
+  ExtContentPolicyType type = loadInfo->GetExternalContentPolicyType();
+
+  // Only check script loads.
+  if (type != ExtContentPolicy::TYPE_SCRIPT) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIURI> uri;
+  nsresult rv = NS_GetFinalChannelURI(aChannel, getter_AddRefs(uri));
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (!uri || !uri->SchemeIs("file")) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIMIMEService> mime = do_GetService("@mozilla.org/mime;1", &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoCString contentType;
+  rv = mime->GetTypeFromURI(uri, contentType);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!nsContentUtils::IsJavascriptMIMEType(
+          NS_ConvertUTF8toUTF16(contentType))) {
+    return NS_ERROR_CONTENT_BLOCKED;
+  }
+
+  return NS_OK;
+}
+
 /*
  * Based on the security flags provided in the loadInfo of the channel,
  * doContentSecurityCheck() performs the following content security checks
@@ -1239,6 +1286,9 @@ nsresult nsContentSecurityManager::doContentSecurityCheck(
   }
 
   nsresult rv = CheckAllowLoadInSystemPrivilegedContext(aChannel);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = CheckAllowFileProtocolScriptLoad(aChannel);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = CheckChannelHasProtocolSecurityFlag(aChannel);

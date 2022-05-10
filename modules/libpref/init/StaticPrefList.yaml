@@ -1320,12 +1320,6 @@
   mirror: always
   rust: true
 
-- name: browser.proton.places-tooltip.enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-  rust: true
-
 # Blocked plugin content
 - name: browser.safebrowsing.blockedURIs.enabled
   type: bool
@@ -2212,13 +2206,7 @@
   value: true
   mirror: always
 
-# Disable clipboard.read() by default
-- name: dom.events.asyncClipboard.read
-  type: bool
-  value: false
-  mirror: always
-
-# Disable ClipboardItem and clipboard.write by default
+# Disable clipboard.read(), clipboard.write() and ClipboardItem by default
 - name: dom.events.asyncClipboard.clipboardItem
   type: bool
   value: false
@@ -2795,6 +2783,12 @@
 - name: dom.moduleScripts.enabled
   type: bool
   value: true
+  mirror: always
+
+# Is support for import maps (<script type="importmap">) enabled for content?
+- name: dom.importMaps.enabled
+  type: bool
+  value: false
   mirror: always
 
 # Whether we disable triggering mutation events for changes to style
@@ -4884,7 +4878,11 @@
 #ifdef FUZZING
 -   name: fuzzing.enabled
     type: bool
+#ifdef FUZZING_SNAPSHOT
+    value: true
+#else
     value: false
+#endif
     mirror: always
 
 -   name: fuzzing.necko.enabled
@@ -6692,7 +6690,7 @@
 
 - name: javascript.options.wasm_caching
   type: bool
-  value: false
+  value: true
   mirror: always
 
 # The amount of time we wait between a request to GC (due to leaving a page) and doing the actual GC, in ms.
@@ -11945,7 +11943,7 @@
   # true means win32k system calls are not permitted.
 -   name: security.sandbox.content.win32k-disable
     type: RelaxedAtomicBool
-    value: @IS_EARLY_BETA_OR_EARLIER@
+    value: true
     mirror: always
 
   # Note: win32k is currently _not_ disabled for GMP due to intermittent test
@@ -13319,11 +13317,6 @@
 - name: widget.swipe.velocity-twitch-tolerance
   type: float
   value: 0.0000001f
-  mirror: always
-
-- name: widget.swipe.success-threshold
-  type: float
-  value: 0.25f
   mirror: always
 
 - name: widget.swipe.success-velocity-contribution
