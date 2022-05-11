@@ -42,12 +42,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  white-space: nowrap;
 }
 
 .subtitle {
   display: flex;
   gap: 5px;
 }
+
+.snapshot-sitetitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 
 .title {
   font-size: 13px;
