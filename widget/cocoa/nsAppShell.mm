@@ -35,6 +35,7 @@
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/ProfilerThreadSleep.h"
 #include "mozilla/widget/ScreenManager.h"
+#include "mozilla/intl/LocaleService.h"
 #include "HeadlessScreenHelper.h"
 #include "MOZMenuOpeningCoordinator.h"
 #include "pratom.h"
@@ -770,6 +771,24 @@ bool nsAppShell::ProcessNextNativeEvent(bool aMayWait) {
   return moreEvents;
 }
 
+void SyncAppleLanguages() {
+  // Ensures that the Mozilla managed language for the app syncs with Apple's AppleLanguages
+  // defaults.
+  NSMutableArray<NSString*>* arrayOfText = [[NSMutableArray alloc] init];
+  nsTArray<nsCString> appLocales;
+  mozilla::intl::LocaleService::GetInstance()->GetAppLocalesAsBCP47(appLocales);
+  for (const auto& locale : appLocales) {
+    [arrayOfText addObject:[NSString stringWithUTF8String:locale.get()]];
+  }
+  [[NSUserDefaults standardUserDefaults] setObject:arrayOfText forKey:@"AppleLanguages"];
+
+  if (mozilla::intl::LocaleService::GetInstance()->IsAppLocaleRTL()) {
+    [[NSUserDefaults standardUserDefaults] setInteger:1 forKey:@"AppleTextDirection"];
+  } else {
+    [[NSUserDefaults standardUserDefaults] setInteger:0 forKey:@"AppleTextDirection"];
+  }
+}
+
 // Run
 //
 // Overrides the base class's Run() method to call [NSApp run] (which spins
@@ -790,6 +809,7 @@ nsAppShell::Run(void) {
   mStarted = true;
 
   if (XRE_IsParentProcess()) {
+    SyncAppleLanguages();
     AddScreenWakeLockListener();
   }
 

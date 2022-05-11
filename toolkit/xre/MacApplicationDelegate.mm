@@ -36,6 +36,7 @@
 #include "nsCommandLineServiceMac.h"
 #include "nsCommandLine.h"
 #include "nsStandaloneNativeMenu.h"
+#include "mozilla/intl/LocaleService.h"
 
 class AutoAutoreleasePool {
  public:
