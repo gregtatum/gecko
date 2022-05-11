@@ -377,24 +377,24 @@ class ViewGroup {
   }
 
   /**
-   * Repurposes this ViewGroup for a new set of InternalViews which may
-   * or may not be a pinned app.
+   * Creates and returns a new ViewGroup with the passed in InternalViews
+   * and isApp state, but transfers the ID of this ViewGroup to that new
+   * ViewGroup.
    *
    * @param {InternalView[]} internalViews
    *   The new InternalViews to assign to this ViewGroup.
    * @param {boolean} isApp
    *   True if this ViewGroup is for a Pinned App.
+   * @return {ViewGroup}
    */
-  #recycle(internalViews, isApp) {
+  #transfer(internalViews, isApp) {
     for (let internalView of this.#views) {
       ViewGroup.#viewGroupMap.delete(internalView);
     }
 
-    this.#views = internalViews;
-    this.#isApp = isApp;
-    for (let internalView of this.#views) {
-      ViewGroup.#viewGroupMap.set(internalView, this);
-    }
+    let newViewGroup = new ViewGroup(internalViews, isApp);
+    newViewGroup.#id = this.#id;
+    return newViewGroup;
   }
 
   /**
@@ -533,7 +533,7 @@ class ViewGroup {
         // to put each item at the start of the Array, but that's apparently
         // more expensive than doing one big reverse at the end.
         groups.push(
-          ViewGroup.#recycleOrCreateFor(currentGroup.reverse(), isPinnedApp)
+          ViewGroup.#transferOrCreateFor(currentGroup.reverse(), isPinnedApp)
         );
 
         if (groups.length >= limit) {
@@ -564,7 +564,7 @@ class ViewGroup {
       // See the comment inside of the loop for why we're reversing the
       // currentGroup.
       groups.push(
-        ViewGroup.#recycleOrCreateFor(currentGroup.reverse(), isPinnedApp)
+        ViewGroup.#transferOrCreateFor(currentGroup.reverse(), isPinnedApp)
       );
     }
 
@@ -634,8 +634,8 @@ class ViewGroup {
   }
 
   /**
-   * Will attempt to find an appropriate ViewGroup to recycle to hold the
-   * passed in InternalViews. If an existing ViewGroup cannot be recycled,
+   * Will attempt to find an appropriate ViewGroup to transfer the
+   * passed in InternalViews to. If an existing ViewGroup cannot be found,
    * then a new ViewGroup is constructed.
    *
    * @param {InternalView[]} internalViews
@@ -644,15 +644,14 @@ class ViewGroup {
    *   True if this ViewGroup should be for a Pinned App.
    * @return {ViewGroup}
    */
-  static #recycleOrCreateFor(internalViews, isApp) {
+  static #transferOrCreateFor(internalViews, isApp) {
     let lastInternalView = internalViews.at(-1);
     let existingViewGroup = ViewGroup.#viewGroupMap.get(lastInternalView);
     if (!existingViewGroup) {
       return new ViewGroup(internalViews, isApp);
     }
 
-    existingViewGroup.#recycle(internalViews, isApp);
-    return existingViewGroup;
+    return existingViewGroup.#transfer(internalViews, isApp);
   }
 
   /** @type {WeakMap<InternalView, ViewGroup>} */
