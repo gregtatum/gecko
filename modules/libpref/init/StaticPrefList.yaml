@@ -2856,6 +2856,13 @@
   value: 0
   mirror: always
 
+# Origin trial state for OffscreenCanvas.
+# 0: normal, 1: always-enabled, 2: always-disabled
+- name: dom.origin-trials.offscreen-canvas.state
+  type: RelaxedAtomicInt32
+  value: 0
+  mirror: always
+
 # Is support for Window.paintWorklet enabled?
 - name: dom.paintWorklet.enabled
   type: bool
@@ -5372,6 +5379,13 @@
   type: int32_t
   value: 0
   mirror: once
+
+# Rate by which the frame rate is divided. I.e. at a number higher than 1 we
+# will only refresh every <x> frames.
+- name: gfx.display.frame-rate-divisor
+  type: RelaxedAtomicInt32
+  value: 1
+  mirror: always
 
 # Whether to preserve color bitmap tables in fonts (bypassing OTS).
 # Currently these are supported only on platforms where we use Freetype
@@ -10344,6 +10358,12 @@
 - name: network.preload
   type: RelaxedAtomicBool
   value: true
+  mirror: always
+
+# Enable 103 Early Hint status code (RFC 8297)
+- name: network.early-hints.enabled
+  type: RelaxedAtomicBool
+  value: false
   mirror: always
 
 # Whether to use the network process or not

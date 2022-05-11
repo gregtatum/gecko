@@ -484,6 +484,22 @@ HistoryDownload.prototype = {
   },
 
   /**
+   * This method mimicks the "manuallyRemoveData" method of session downloads.
+   */
+  async manuallyRemoveData() {
+    let { path } = this.target;
+    if (this.target.path && this.succeeded) {
+      // Temp files are made "read-only" by DownloadIntegration.downloadDone, so
+      // reset the permission bits to read/write. This won't be necessary after
+      // bug 1733587 since Downloads won't ever be temporary.
+      await IOUtils.setPermissions(path, 0o660);
+      await IOUtils.remove(path, { ignoreAbsent: true });
+    }
+    this.deleted = true;
+    await this.refresh();
+  },
+
+  /**
    * Returns a static representation of the current object state.
    *
    * @return A JavaScript object that can be serialized via structuredClone.

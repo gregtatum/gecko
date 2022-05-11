@@ -635,7 +635,6 @@ body[flow-reset] #tabbrowser-tabpanels[session-change="2"] {
   background-repeat: repeat-x;
 }
 
-#TabsToolbar #firefox-view-button[open]:-moz-lwtheme,
 .tabbrowser-tab:is([selected], [multiselected]):-moz-lwtheme {
   color: var(--lwt-tab-text, var(--toolbar-color));
 }
