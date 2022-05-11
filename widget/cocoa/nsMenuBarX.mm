@@ -391,6 +391,10 @@ void nsMenuBarX::SetSystemHelpMenu() {
   nsMenuX* xulHelpMenu = GetXULHelpMenu();
   if (xulHelpMenu) {
     NSMenu* helpMenu = xulHelpMenu->NativeNSMenu();
+    printf("!!! helpMenu.dir %s\n",
+           helpMenu.userInterfaceLayoutDirection == NSUserInterfaceLayoutDirectionLeftToRight
+               ? "ltr"
+               : "rtl");
     if (helpMenu) {
       NSApp.helpMenu = helpMenu;
     }
