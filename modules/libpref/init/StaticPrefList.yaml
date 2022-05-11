@@ -2329,7 +2329,7 @@
   mirror: always
 
 - name: dom.gamepad.test.enabled
-  type: bool
+  type: RelaxedAtomicBool
   value: false
   mirror: always
 
@@ -4248,7 +4248,7 @@
 
 - name: dom.window.sidebar.enabled
   type: bool
-  value: @IS_NOT_EARLY_BETA_OR_EARLIER@
+  value: false
   mirror: always
 
 - name: dom.worker.canceling.timeoutMilliseconds
@@ -5734,7 +5734,7 @@
 
 - name: gfx.webrender.svg-images
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 - name: gfx.webrender.debug.blob.paint-flashing

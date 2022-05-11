@@ -37,8 +37,7 @@
 #  undef max
 #endif
 
-namespace mozilla {
-namespace wmf {
+namespace mozilla::wmf {
 
 // A helper class for automatically starting and shuting down the Media
 // Foundation. Prior to using Media Foundation in a process, users should call
@@ -168,7 +167,6 @@ HRESULT MFCreatePresentationDescriptor(
 
 HRESULT MFCreateMemoryBuffer(DWORD cbMaxLength, IMFMediaBuffer** ppBuffer);
 
-}  // end namespace wmf
-}  // end namespace mozilla
+}  // namespace mozilla::wmf
 
 #endif

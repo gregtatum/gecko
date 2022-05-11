@@ -1991,7 +1991,7 @@ var gBrowserInit = {
     );
     Services.obs.addObserver(
       gXPInstallObserver,
-      "addon-install-webapi-blocked-policy"
+      "addon-install-policy-blocked"
     );
     Services.obs.addObserver(
       gXPInstallObserver,
@@ -2628,7 +2628,7 @@ var gBrowserInit = {
       );
       Services.obs.removeObserver(
         gXPInstallObserver,
-        "addon-install-webapi-blocked-policy"
+        "addon-install-policy-blocked"
       );
       Services.obs.removeObserver(
         gXPInstallObserver,
@@ -8565,6 +8565,16 @@ const gRemoteControl = {
   },
 
   updateVisualCue() {
+    // Disable updating the remote control cue for performance tests,
+    // because these could fail due to an early initialization of Marionette.
+    const disableRemoteControlCue = Services.prefs.getBoolPref(
+      "browser.chrome.disableRemoteControlCueForTests",
+      false
+    );
+    if (disableRemoteControlCue && Cu.isInAutomation) {
+      return;
+    }
+
     const mainWindow = document.documentElement;
     const remoteControlComponent = this.getRemoteControlComponent();
     if (remoteControlComponent) {
