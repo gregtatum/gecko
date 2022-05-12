@@ -447,7 +447,7 @@ e-global-nav-debugging h2 {
 }
 
 #companion-deck-button-now img {
-  background: center center no-repeat url(chrome://activity-stream/content/data/content/assets/glyph-trending-16.svg);
+  background: center center no-repeat url(chrome://browser/skin/trending.svg);
 }
 
 .browse {
