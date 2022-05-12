@@ -4439,14 +4439,12 @@ BrowserGlue.prototype = {
   },
 
   async _showUpgradeDialog() {
-    const msg = await OnboardingMessageProvider.getUpgradeMessage();
+    const data = await OnboardingMessageProvider.getUpgradeMessage();
     const win = BrowserWindowTracker.getTopWindow();
     const browser = win.gBrowser.selectedBrowser;
     const config = {
       type: "SHOW_SPOTLIGHT",
-      data: {
-        content: msg.content,
-      },
+      data,
     };
     SpecialMessageActions.handleAction(config, browser);
   },
