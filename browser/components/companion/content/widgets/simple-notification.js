@@ -35,6 +35,7 @@ class SimpleNotification extends MozLitElement {
         border: 0.5px solid var(--notification-icon-border-color);
         border-radius: 50%;
         box-sizing: border-box;
+        flex-shrink: 0;
       }
 
       .notification-icon {
