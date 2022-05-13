@@ -11,6 +11,9 @@ export const timeFormat = new Intl.DateTimeFormat([], {
 });
 
 export class CalendarEvent extends MozLitElement {
+  static FUTURE_BEFORE_START_OFFSET = 15 * 60 * 1000;
+  static UP_NEXT_BEFORE_START_OFFSET = 10 * 60 * 1000;
+
   dateCreator = { now: () => new Date() };
 
   // This method is required to set timeouts longer than 10 days. It's expected
@@ -50,6 +53,7 @@ export class CalendarEvent extends MozLitElement {
       detailsCollapsed: { type: Boolean },
       isFakeTime: { type: Boolean },
       serial: { type: Number },
+      status: { type: String },
       listType: { type: String }, // "now" | "browse"
     };
   }
@@ -614,38 +618,41 @@ export class CalendarEvent extends MozLitElement {
     clearTimeout(this._eventUpcomingTimer?.id);
     let endDate = new Date(end);
     let startDate = new Date(start);
-    let eventStartTimeMinus10 = startDate - 60 * 10 * 1000;
-    let eventStartTimeMinus15 = startDate - 60 * 15 * 1000;
     let now = this.dateCreator.now();
+    let futureBeforeTime = startDate - CalendarEvent.FUTURE_BEFORE_START_OFFSET;
+    let upNextBeforeTime =
+      startDate - CalendarEvent.UP_NEXT_BEFORE_START_OFFSET;
 
-    if (eventStartTimeMinus15 > now) {
-      this.status = "";
-      this._eventUpcomingTimer = this.setExtendedTimeout(
-        () => this.requestUpdate(),
-        eventStartTimeMinus15 - now
-      );
-    } else if (now >= eventStartTimeMinus15 && now <= eventStartTimeMinus10) {
-      this.status = "up-next";
-      this._eventUpcomingTimer = this.setExtendedTimeout(
-        () => this.requestUpdate(),
-        eventStartTimeMinus10 - now
-      );
-    } else if (now >= eventStartTimeMinus10 && now <= startDate) {
-      this.status = "upcoming";
-      // The endDate can be in more than 24 days... so we must use setExtendedTimeout
-      // in order to avoid to have a delay considered as a 0!
-      this._eventUpcomingTimer = this.setExtendedTimeout(
-        () => this.requestUpdate(),
-        endDate - now
-      );
-    } else if (now >= startDate && now <= endDate) {
-      this.status = "in-progress";
-      this._eventUpcomingTimer = this.setExtendedTimeout(
-        () => this.requestUpdate(),
-        endDate - now
-      );
-    } else if (now >= endDate) {
-      this.status = "finished";
+    // This is an array of statuses, ordered by the time that they stop being
+    // in that status. The first status that has now < statusBeforeTime is the
+    // currently active status.
+    let statusBeforeTimes = [
+      ["future", futureBeforeTime],
+      ["up-next", upNextBeforeTime],
+      ["upcoming", startDate],
+      ["in-progress", endDate],
+      ["finished", Infinity],
+    ];
+
+    // Find the first status that has a inStatusBeforeTime less than now.
+    for (let i = 0; i < statusBeforeTimes.length; i++) {
+      let [status, inStatusBeforeTime] = statusBeforeTimes[i];
+      if (now < inStatusBeforeTime) {
+        this.status = status;
+
+        // If there's another status to transition to, then we want to
+        // reevaluate our status when our inStatusBeforeTime occurs.
+        if (i + 1 < statusBeforeTimes.length) {
+          // The timeout can be in more than 24 days away... so we must use
+          // setExtendedTimeout to avoid a delay considered as a 0!
+          this._eventUpcomingTimer = this.setExtendedTimeout(() => {
+            this.setStatus(start, end);
+          }, inStatusBeforeTime - now);
+        }
+
+        // Once we've found a status we're done.
+        break;
+      }
     }
   }
 
@@ -687,11 +694,15 @@ export class CalendarEvent extends MozLitElement {
         @mousedown=${this.toggleDetails}
       >
         <div class="event-top">
-          <relative-time
-            .eventStart=${startDate}
-            .eventEnd=${endDate}
-            .dateCreator=${this.dateCreator}
-          ></relative-time>
+          ${this.status != "future"
+            ? html`
+                <relative-time
+                  .eventStart=${startDate}
+                  .eventEnd=${endDate}
+                  .dateCreator=${this.dateCreator}
+                ></relative-time>
+              `
+            : ""}
         </div>
         <div class="event-info">
           <div class="event-content">
