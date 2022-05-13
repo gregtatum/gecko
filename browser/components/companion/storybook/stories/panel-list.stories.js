@@ -19,7 +19,7 @@ const Template = ({ open, items }) =>
         background-image: url("chrome://browser/content/companion/googleAccount.png");
       }
       panel-item[icon="outlook"]::part(button) {
-        background-image: url("chrome://browser/content/companion/microsoft365.ico");
+        background-image: url("chrome://browser/content/companion/microsoft365.svg");
       }
     </style>
     <button @click=${openMenu}>Toggle</button>

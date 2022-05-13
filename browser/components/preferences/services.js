@@ -37,7 +37,7 @@ const extraServices = [
     type: "microsoft",
     nameId: "preferences-services-microsoft-account",
     labelsId: "preferences-services-microsoft-labels",
-    icon: "chrome://browser/content/companion/microsoft365.ico",
+    icon: "chrome://browser/content/companion/microsoft365.svg",
   },
 ];
 

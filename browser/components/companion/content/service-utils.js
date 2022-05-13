@@ -18,7 +18,7 @@ const GOOGLE_SERVICE = {
 };
 
 const MICROSOFT_SERVICE = {
-  icon: "chrome://browser/content/companion/microsoft365.ico",
+  icon: "chrome://browser/content/companion/microsoft365.svg",
   name: "Microsoft 365",
   services: "Outlook, Teams, OneDrive",
   domains: [

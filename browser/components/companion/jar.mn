@@ -30,7 +30,7 @@ browser.jar:
     content/browser/companion/listDiff.js (content/listDiff.js)
     content/browser/companion/lit.all.js (content/lit.all.js)
     content/browser/companion/media.js (content/media.js)
-    content/browser/companion/microsoft365.ico (content/microsoft365.ico)
+    content/browser/companion/microsoft365.svg (content/microsoft365.svg)
     content/browser/companion/mozsocial.png (content/mozsocial.png)
     content/browser/companion/notifications.js (content/notifications.js)
     content/browser/companion/onboarding-services.js (content/onboarding-services.js)
