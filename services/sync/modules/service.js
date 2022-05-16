@@ -1649,6 +1649,6 @@ Sync11Service.prototype = {
 };
 
 var Service = new Sync11Service();
-this.Service.promiseInitialized = new Promise(resolve => {
-  this.Service.onStartup().then(resolve);
+Service.promiseInitialized = new Promise(resolve => {
+  Service.onStartup().then(resolve);
 });

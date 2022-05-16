@@ -62,8 +62,10 @@ SIGNING_SCOPE_ALIAS_TO_PROJECT = [
             "mozilla-beta",
             "mozilla-release",
             "mozilla-esr91",
+            "mozilla-esr102",
             "comm-beta",
             "comm-esr91",
+            "comm-esr102",
         },
     ],
 ]
@@ -108,8 +110,10 @@ BEETMOVER_SCOPE_ALIAS_TO_PROJECT = [
             "mozilla-beta",
             "mozilla-release",
             "mozilla-esr91",
+            "mozilla-esr102",
             "comm-beta",
             "comm-esr91",
+            "comm-esr102",
         },
     ],
 ]
@@ -167,12 +171,19 @@ BALROG_SCOPE_ALIAS_TO_PROJECT = [
         {
             "mozilla-release",
             "comm-esr91",
+            "comm-esr102",
         },
     ],
     [
         "esr91",
         {
             "mozilla-esr91",
+        },
+    ],
+    [
+        "esr102",
+        {
+            "mozilla-esr102",
         },
     ],
 ]
@@ -185,6 +196,7 @@ BALROG_SERVER_SCOPES = {
     "beta": "balrog:server:beta",
     "release": "balrog:server:release",
     "esr91": "balrog:server:esr",
+    "esr102": "balrog:server:esr",
     "default": "balrog:server:dep",
 }
 

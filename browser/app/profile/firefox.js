@@ -358,6 +358,13 @@ pref("browser.urlbar.accessibility.tabToSearch.announceResults", true);
 // Control autoFill behavior
 pref("browser.urlbar.autoFill", true);
 
+// Whether enabling adaptive history autofill.
+#ifdef NIGHTLY_BUILD
+pref("browser.urlbar.autoFill.adaptiveHistory.enabled", true);
+#else
+pref("browser.urlbar.autoFill.adaptiveHistory.enabled", false);
+#endif
+
 // Whether to warm up network connections for autofill or search results.
 pref("browser.urlbar.speculativeConnect.enabled", true);
 
@@ -1587,6 +1594,14 @@ pref("browser.newtabpage.activity-stream.improvesearch.handoffToAwesomebar", tru
 
 pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
 
+// URLs from the user's history that contain this search param will be hidden
+// from the top sites. The value is a string with one of the following forms:
+// - "" (empty) - Disable this feature
+// - "key" - Search param named "key" with any or no value
+// - "key=" - Search param named "key" with no value
+// - "key=value" - Search param named "key" with value "value"
+pref("browser.newtabpage.activity-stream.hideTopSitesWithSearchParam", "");
+
 // Used to display triplet cards on newtab
 pref("trailhead.firstrun.newtab.triplets", "");
 // Separate about welcome
@@ -2077,11 +2092,7 @@ pref("extensions.pocket.showHome", true);
 pref("extensions.pocket.loggedOutVariant", "control");
 
 // Enable the new Pocket panels.
-#ifdef NIGHTLY_BUILD
-  pref("extensions.pocket.refresh.layout.enabled", true);
-#else
-  pref("extensions.pocket.refresh.layout.enabled", false);
-#endif
+pref("extensions.pocket.refresh.layout.enabled", true);
 
 // Just for the new Pocket panels, enables the email signup button.
 pref("extensions.pocket.refresh.emailButton.enabled", false);

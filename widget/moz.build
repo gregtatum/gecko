@@ -119,7 +119,6 @@ XPIDL_SOURCES += [
     "nsIPaperMargin.idl",
     "nsIPrinter.idl",
     "nsIPrinterList.idl",
-    "nsIPrintSession.idl",
     "nsIPrintSettings.idl",
     "nsIPrintSettingsService.idl",
     "nsIScreen.idl",
@@ -145,7 +144,6 @@ EXPORTS += [
     "nsBaseScreen.h",
     "nsBaseWidget.h",
     "nsIDeviceContextSpec.h",
-    "nsIPrintDialogService.h",
     "nsIRollupListener.h",
     "nsIWidget.h",
     "nsIWidgetListener.h",
@@ -259,6 +257,9 @@ if CONFIG["OS_ARCH"] == "Linux":
     SOURCES += ["LSBUtils.cpp"]
 
 if CONFIG["NS_PRINTING"]:
+    XPIDL_SOURCES += [
+        "nsIPrintDialogService.idl",
+    ]
     EXPORTS += [
         "nsDeviceContextSpecProxy.h",
         "nsPrintSettingsService.h",
@@ -269,7 +270,6 @@ if CONFIG["NS_PRINTING"]:
         "nsPaperMargin.cpp",
         "nsPrinterBase.cpp",
         "nsPrinterListBase.cpp",
-        "nsPrintSession.cpp",
         "nsPrintSettingsService.cpp",
     ]
 

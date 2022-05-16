@@ -142,6 +142,7 @@ jobs:
           - mozilla-beta
           - mozilla-release
           - mozilla-esr91
+          - mozilla-esr102
           - elm
           - pine
       # For all non m-c jobs we just run once daily matching the 10 UTC
@@ -242,6 +243,7 @@ jobs:
           - mozilla-beta
           - mozilla-release
           - mozilla-esr91
+          - mozilla-esr102
       when:
           - {weekday: 'Monday', hour: 8, minute: 0}
           - {weekday: 'Thursday', hour: 8, minute: 0}
