@@ -150,11 +150,18 @@ add_task(async function testEventInBrowseView() {
           "Four events must be in the browse section"
         );
         let eventRelativeTimes = await Promise.all(
-          [...viewEvents].map(async e =>
-            ContentTaskUtils.waitForCondition(() => {
-              return e.shadowRoot.querySelector("relative-time");
-            })
-          )
+          [...viewEvents]
+            .filter(e => e.status != "future")
+            .map(async e =>
+              ContentTaskUtils.waitForCondition(() => {
+                return e.shadowRoot.querySelector("relative-time");
+              })
+            )
+        );
+        is(
+          eventRelativeTimes.length,
+          3,
+          "One event doesn't have a relative-time"
         );
         let relativeTimeContents = eventRelativeTimes.map(relativeTime =>
           relativeTime.shadowRoot.querySelector(".event-relative-time")
@@ -173,12 +180,6 @@ add_task(async function testEventInBrowseView() {
             "companion-almost-over",
           ].includes(l10nIds[2]),
           "An event is happening now"
-        );
-        ok(
-          ["companion-up-next", "companion-starting-soon", ""].includes(
-            l10nIds[3]
-          ),
-          "An event will happen"
         );
       },
       [EXPECTED_EVENT_COUNT]
