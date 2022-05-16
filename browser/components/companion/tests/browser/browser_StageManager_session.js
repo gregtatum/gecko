@@ -484,3 +484,40 @@ add_task(async function testSessionRestorePinnedViewsAndApps() {
 
   await BrowserTestUtils.closeWindow(win);
 });
+
+/**
+ * Tests that restoring an expired session works properly.
+ */
+add_task(async function testSessionExpiredRestore() {
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+  let { gBrowser, gStageManager } = win;
+
+  let [, view2] = await PinebuildTestUtils.loadViews(
+    [TEST_URL1, TEST_URL2],
+    win
+  );
+
+  PinebuildTestUtils.assertUrlsAre([TEST_URL1, TEST_URL2], win);
+  Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
+  Assert.equal(gStageManager.currentView, view2);
+
+  let guid = await PinebuildTestUtils.setAsideSession(win);
+  Assert.ok(guid, "A session was successfully started and stored.");
+
+  // Expire the session.
+  // Now remove the session store file, then attempt recovery.
+  await IOUtils.remove(
+    PathUtils.join(PathUtils.profileDir, "sessions", `${guid}.jsonlz4`)
+  );
+
+  let result = await SessionManager.query({ guid, includePages: true });
+  Assert.equal(result.length, 1);
+  Assert.equal(result[0].pages.length, 2);
+
+  await PinebuildTestUtils.restoreSession(guid, win);
+
+  PinebuildTestUtils.assertUrlsAre([TEST_URL1, TEST_URL2], win);
+  assertTabUrls(win, [TEST_URL1, TEST_URL2]);
+
+  await BrowserTestUtils.closeWindow(win);
+});

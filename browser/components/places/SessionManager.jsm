@@ -49,6 +49,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
 const SESSION_CLOSED_OBJECTS_CHANGED = "sessionstore-closed-objects-changed";
 const SESSION_WRITE_COMPLETE_TOPIC = "sessionstore-state-write-complete";
 const IDLE_DAILY_TOPIC = "idle-daily";
+const DEFAULT_WORKSPACE_ID = 0;
 
 /**
  * @typedef {object} SessionPageRecord
@@ -642,7 +643,13 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       // There is no record of what was loaded in particular tabs, simply
       // load everything in separate tabs.
       data.tabs = sessionData[0].pages.map((p, i) => {
-        historyState.push({ id: i, cachedEntry: null });
+        historyState.push({
+          id: i,
+          cachedEntry: null,
+          // TODO: MR2-2472. We don't current save workspace Ids in the
+          // places database, so default to the first workspace.
+          workspaceId: DEFAULT_WORKSPACE_ID,
+        });
         return {
           entries: [
             {
