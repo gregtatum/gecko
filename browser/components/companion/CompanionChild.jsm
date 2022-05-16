@@ -163,12 +163,20 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.stageManager = stageManager;
         break;
       }
-      case "Companion:ViewTab":
+      case "Companion:ViewTab": {
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.document.getElementById(
           "companion-deck"
         ).selectedViewName = message.data.tab;
         break;
+      }
+      case "Companion:SignIn":
+      case "Companion:SignOut": {
+        let { connectedServices } = message.data;
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.CompanionUtils.connectedServices = connectedServices;
+        break;
+      }
     }
 
     this.sendToContent(message.name, message.data);

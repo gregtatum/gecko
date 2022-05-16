@@ -320,6 +320,7 @@ export class CalendarEventList extends MozLitElement {
       } else {
         let plainEvents = this.getRelevantEvents(e.detail.events);
         let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
+        this.connected = !!window.CompanionUtils?.connectedServices?.length;
         this.events = eventsAndBreaks;
         noteTelemetryTimestamp("Companion:CalendarPainted", {
           numberOfEvents: this.events.length,
