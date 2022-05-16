@@ -11972,11 +11972,9 @@
 
   # Whether win32k is disabled for content processes.
   # true means win32k system calls are not permitted.
-  # TODO(MR2-2268): Workshop crashes on new profile startup with win32k
-  # lockdown enabled. Once that is fixed we should re-enable this.
 -   name: security.sandbox.content.win32k-disable
     type: RelaxedAtomicBool
-    value: false
+    value: true
     mirror: always
 
   # Note: win32k is currently _not_ disabled for GMP due to intermittent test
