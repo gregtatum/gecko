@@ -50,6 +50,7 @@ use crate::image_tiling::simplify_repeated_primitive;
 use crate::clip::{ClipChainId, ClipItemKey, ClipStore, ClipItemKeyKind};
 use crate::clip::{ClipInternData, ClipNodeKind, ClipInstance, SceneClipInstance};
 use crate::clip::{PolygonDataHandle};
+use crate::segment::EdgeAaSegmentMask;
 use crate::spatial_tree::{SceneSpatialTree, SpatialNodeIndex, get_external_scroll_offset};
 use crate::frame_builder::{ChasePrimitive, FrameBuilderConfig};
 use crate::glyph_rasterizer::{FontInstance, SharedFontResources};
@@ -637,8 +638,8 @@ impl<'a> SceneBuilder<'a> {
 
             // If we're a surface, use that spatial node, otherwise the parent
             let spatial_node_index = match pic.composite_mode {
-                Some(_) => pic.spatial_node_index,
-                None => parent_spatial_node_index.expect("bug: no parent"),
+                Some(_) if !pic.flags.contains(PictureFlags::WRAPS_SUB_GRAPH) => pic.spatial_node_index,
+                Some(_) | None => parent_spatial_node_index.expect("bug: no parent"),
             };
 
             (
@@ -1428,7 +1429,7 @@ impl<'a> SceneBuilder<'a> {
                     &mut end,
                     info.gradient.extend_mode,
                     &mut stops,
-                    &mut |rect, start, end, stops| {
+                    &mut |rect, start, end, stops, edge_aa_mask| {
                         let layout = LayoutPrimitiveInfo { rect: *rect, clip_rect: *rect, flags };
                         if let Some(prim_key_kind) = self.create_linear_gradient_prim(
                             &layout,
@@ -1439,6 +1440,7 @@ impl<'a> SceneBuilder<'a> {
                             rect.size(),
                             LayoutSize::zero(),
                             None,
+                            edge_aa_mask,
                         ) {
                             self.add_nonshadowable_primitive(
                                 spatial_node_index,
@@ -1461,6 +1463,7 @@ impl<'a> SceneBuilder<'a> {
                         tile_size,
                         info.tile_spacing,
                         None,
+                        EdgeAaSegmentMask::all(),
                     ) {
                         self.add_nonshadowable_primitive(
                             spatial_node_index,
@@ -2271,6 +2274,13 @@ impl<'a> SceneBuilder<'a> {
             None => true,
         };
 
+        let pic_flags = if stacking_context.flags.contains(StackingContextFlags::WRAPS_BACKDROP_FILTER) {
+            assert!(stacking_context.blit_reason.contains(BlitReason::CLIP));
+            PictureFlags::WRAPS_SUB_GRAPH
+        } else {
+            PictureFlags::empty()
+        };
+
         let mut source = match stacking_context.context_3d {
             // TODO(gw): For now, as soon as this picture is in
             //           a 3D context, we draw it to an intermediate
@@ -2295,7 +2305,7 @@ impl<'a> SceneBuilder<'a> {
                         stacking_context.prim_list,
                         stacking_context.spatial_node_index,
                         stacking_context.raster_space,
-                        PictureFlags::empty(),
+                        pic_flags,
                     ))
                 );
 
@@ -2339,7 +2349,7 @@ impl<'a> SceneBuilder<'a> {
                             stacking_context.prim_list,
                             stacking_context.spatial_node_index,
                             stacking_context.raster_space,
-                            PictureFlags::empty(),
+                            pic_flags,
                         ))
                     );
 
@@ -3189,6 +3199,7 @@ impl<'a> SceneBuilder<'a> {
                             LayoutSize::new(border.height as f32, border.width as f32),
                             LayoutSize::zero(),
                             Some(Box::new(nine_patch)),
+                            EdgeAaSegmentMask::all(),
                         ) {
                             Some(prim) => prim,
                             None => return,
@@ -3270,6 +3281,7 @@ impl<'a> SceneBuilder<'a> {
         stretch_size: LayoutSize,
         mut tile_spacing: LayoutSize,
         nine_patch: Option<Box<NinePatchDescriptor>>,
+        edge_aa_mask: EdgeAaSegmentMask,
     ) -> Option<LinearGradient> {
         let mut prim_rect = info.rect;
         simplify_repeated_primitive(&stretch_size, &mut tile_spacing, &mut prim_rect);
@@ -3334,6 +3346,7 @@ impl<'a> SceneBuilder<'a> {
             reverse_stops,
             nine_patch,
             cached,
+            edge_aa_mask,
         })
     }
 

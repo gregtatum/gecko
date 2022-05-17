@@ -1866,6 +1866,9 @@ pref("browser.contentblocking.reject-and-isolate-cookies.preferences.ui.enabled"
 //   OCSP cache partitioning:
 //     "ocsp": OCSP cache partitioning enabled
 //     "-ocsp": OCSP cache partitioning disabled
+//   Query parameter stripping:
+//     "qps": Query parameter stripping enabled
+//     "-qps": Query parameter stripping disabled
 //   Cookie behavior:
 //     "cookieBehavior0": cookie behaviour BEHAVIOR_ACCEPT
 //     "cookieBehavior1": cookie behaviour BEHAVIOR_REJECT_FOREIGN
@@ -1881,7 +1884,7 @@ pref("browser.contentblocking.reject-and-isolate-cookies.preferences.ui.enabled"
 //     "cookieBehaviorPBM4": cookie behaviour BEHAVIOR_REJECT_TRACKER
 //     "cookieBehaviorPBM5": cookie behaviour BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN
 // One value from each section must be included in the browser.contentblocking.features.strict pref.
-pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cookieBehaviorPBM5,cm,fp,stp,lvl2,rp,rpTop,ocsp");
+pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cookieBehaviorPBM5,cm,fp,stp,lvl2,rp,rpTop,ocsp,qps");
 
 // Hide the "Change Block List" link for trackers/tracking content in the custom
 // Content Blocking/ETP panel. By default, it will not be visible. There is also
@@ -2693,6 +2696,10 @@ pref("browser.snapshots.score.IsUsedRemoved", -10);
 // the last decimal map to the keys of `Snapshots.recommendationSources`.
 pref("browser.snapshots.source.CommonReferrer", 3);
 pref("browser.snapshots.source.Overlapping", 3);
+pref("browser.snapshots.source.TimeOfDay", 3);
+
+// Other preferences affecting snapshots scoring.
+pref("browser.snapshots.relevancy.timeOfDayIntervalSeconds", 3600);
 
 // Expiration days for snapshots.
 pref("browser.places.snapshots.expiration.days", 210);
