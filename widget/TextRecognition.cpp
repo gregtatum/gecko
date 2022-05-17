@@ -72,9 +72,6 @@ void TextRecognition::FillShadow(ShadowRoot& aShadow,
   auto& doc = *aShadow.OwnerDoc();
   RefPtr<Element> div = doc.CreateHTMLElement(nsGkAtoms::div);
 
-  RefPtr<Element> canvas = doc.CreateHTMLElement(nsGkAtoms::canvas);
-  div->AppendChildTo(canvas, true, IgnoreErrors());
-
   for (const auto& quad : aResult.quads()) {
     RefPtr<Element> span = doc.CreateHTMLElement(nsGkAtoms::span);
     // TODO: We probably want to position them here and so on. For now, expose
