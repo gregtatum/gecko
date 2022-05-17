@@ -37,30 +37,54 @@ this.TextRecognitionWidget = class {
     if (this.shadowRoot.children.length === 0) {
       return;
     }
+
     const [div] = this.shadowRoot.children;
-    const spans = [...div.children];
-    // TODO - Add mutation observer.
+    const [canvas, ...spans] = [...div.children];
     const imgRect = this.element.getBoundingClientRect();
+
     Object.assign(div.style, {
       width: imgRect.width + "px",
       height: imgRect.height + "px",
       position: "absolute",
-      outline: "red 1px solid",
       overflow: "clip",
       /* Prevent inheritance */
-      lineHeight: "1.3",
+      lineHeight: "1",
       textAlign: "left",
       font: "normal normal normal 100%/normal sans-serif !important",
       textDecoration: "none !important",
       whiteSpace: "normal !important",
     });
+
+    Object.assign(canvas.style, {
+      position: "absolute",
+      userSelect: "none",
+      inset: "0",
+    });
+    console.log(`!!! canvas`, canvas.tagName, canvas);
+    const dpr = this.window.devicePixelRatio;
+    canvas.width = imgRect.width * dpr;
+    canvas.height = imgRect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = "#00000088";
+    ctx.fillRect(0, 0, imgRect.width, imgRect.height);
+
+    let clipPath = "";
+    let i = 0;
+    ctx.beginPath();
     for (const span of spans) {
+      let spanRect = this.spanRects.get(span);
+      if (!spanRect) {
+        // This only needs to happen once.
+        spanRect = span.getBoundingClientRect();
+        this.spanRects.set(span, spanRect);
+      }
+
       const points = span.dataset.points.split(",").map(p => Number(p));
       // Use the points in the string, e.g.
       // "0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273"
       //  0         1       2         3        4        5        6        7
       //  ^ bottomleft      ^ topleft          ^ topright        ^ bottomright
-      const [
+      let [
         bottomLeftX,
         bottomLeftY,
         topLeftX,
@@ -70,22 +94,20 @@ this.TextRecognitionWidget = class {
         bottomRightX,
         bottomRightY,
       ] = points;
-      // Don't account for skew yet, assume the text is orthogonal to the screen.
 
-      let spanRect = this.spanRects.get(span);
-      if (!spanRect) {
-        // This only needs to happen once.
-        spanRect = span.getBoundingClientRect();
-        this.spanRects.set(span, spanRect);
-      }
+      // Invert the Y.
+      topLeftY = 1 - topLeftY;
+      topRightY = 1 - topRightY;
+      bottomLeftY = 1 - bottomLeftY;
+      bottomRightY = 1 - bottomRightY;
 
       // prettier-ignore
       const mat4 = projectPoints(
         spanRect.width,               spanRect.height,
-        imgRect.width * topLeftX,     imgRect.height * (1 - topLeftY),
-        imgRect.width * topRightX,    imgRect.height * (1 - topRightY),
-        imgRect.width * bottomLeftX,  imgRect.height * (1 - bottomLeftY),
-        imgRect.width * bottomRightX, imgRect.height * (1 - bottomRightY)
+        imgRect.width * topLeftX,     imgRect.height * topLeftY,
+        imgRect.width * topRightX,    imgRect.height * topRightY,
+        imgRect.width * bottomLeftX,  imgRect.height * bottomLeftY,
+        imgRect.width * bottomRightX, imgRect.height * bottomRightY
       );
 
       Object.assign(span.style, {
@@ -93,9 +115,25 @@ this.TextRecognitionWidget = class {
         transformOrigin: "0 0",
         transform: "matrix3d(" + mat4.join(", ") + ")",
         color: "transparent",
-        borderRadius: "3px",
       });
+
+      const inset = 3;
+      ctx.moveTo(imgRect.width * bottomLeftX + inset, imgRect.height * bottomLeftY - inset);
+      ctx.lineTo(imgRect.width * topLeftX + inset,  imgRect.height * topLeftY + inset);
+      ctx.lineTo(imgRect.width * topRightX - inset,  imgRect.height * topRightY + inset);
+      ctx.lineTo(imgRect.width * bottomRightX - inset,  imgRect.height * bottomRightY - inset);
+      ctx.closePath();
     }
+    // This composite operation will cut out the text quads.
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ffffff';
+    ctx.fill();
+
+    // Creating a round line will grow the selection slightly, and round the corners.
+    ctx.lineWidth = 10;
+    ctx.lineJoin = "round"
+    ctx.stroke();
   }
 
   /*
@@ -157,11 +195,14 @@ function multiplyMat3Vec3(m, v) {
 function basisToPoints(x1, y1, x2, y2, x3, y3, x4, y4) {
   let mat3 = [x1, x2, x3, y1, y2, y3, 1, 1, 1];
   let vec3 = multiplyMat3Vec3(computeAdjugate(mat3), [x4, y4, 1]);
+  // prettier-ignore
   return multiplyMat3(
     mat3,
-    // prettier-ignore
-    [vec3[0], 0, 0, 0,
-    vec3[1], 0, 0, 0, vec3[2]]
+    [
+      vec3[0], 0,       0,
+      0,       vec3[1], 0,
+      0,       0,       vec3[2]
+    ]
   );
 }
 
