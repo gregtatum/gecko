@@ -95,7 +95,11 @@ export default TaskDefiner.defineSimpleTask([
       for (const calInfo of results.value) {
         // For now we only want folders that the user owns, so we skip
         // any folders associated with shared calendars, etc.
-        if (calInfo.owner?.address !== account.accountDef.name) {
+        // calInfo.owner can be null: in this case we keep it.
+        if (
+          calInfo.owner &&
+          calInfo.owner.address !== account.accountDef.name
+        ) {
           continue;
         }
 
