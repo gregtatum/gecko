@@ -2832,7 +2832,11 @@ BrowserGlue.prototype = {
       // pre-init buffer.
       {
         task: () => {
-          Services.fog.initializeFOG();
+          if (AppConstants.PINEBUILD) {
+            Services.fog.initializeFOG("", "pine");
+          } else {
+            Services.fog.initializeFOG();
+          }
         },
       },
 
