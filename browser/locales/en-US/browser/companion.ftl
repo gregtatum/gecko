@@ -156,6 +156,8 @@ snapshot-options =
 browse-list-snapshot-groups = Snapshot Groups
 browse-list-sessions = Sessions
 browse-list-downloads = Downloads
+browse-list-passwords = Passwords
+browse-list-calendar = Calendar
 
 # Titles of the browse sections.
 session-section-header = Sessions
