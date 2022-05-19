@@ -411,7 +411,7 @@
               <menuseparator id="devToolsSeparator"/>
               <menu id="browserToolsMenu"
                     data-l10n-id="menu-tools-browser-tools"
-#ifdef PINEBUILD
+#if defined(PINEBUILD) && defined(MOZILLA_OFFICIAL)
                     hidden="true"
 #endif
               >
