@@ -747,7 +747,7 @@ class CompanionParent extends JSWindowActorParent {
       this.snapshotSelector &&
       pageData.url == gBrowser.currentURI.spec
     ) {
-      this.snapshotSelector.setType(type);
+      this.snapshotSelector.updateDetailsAndRebuild({ type });
     }
   }
 
@@ -882,15 +882,17 @@ class CompanionParent extends JSWindowActorParent {
     if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
       // Reset the current URL for the snapshot selector, as this is a
       // non-web page, and we want to allow all snapshots to be displayed.
-      this.snapshotSelector.setUrl();
+      this.snapshotSelector.updateDetailsAndRebuild({
+        url: null,
+        time: Date.now(),
+      });
       return;
     }
 
-    let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
-    let referrerUrl =
-      gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
-
-    this.snapshotSelector.setUrl(aLocationURI.spec, referrerUrl);
+    this.snapshotSelector.updateDetailsAndRebuild({
+      url: aLocationURI.spec,
+      time: Date.now(),
+    });
 
     if (!selectByType) {
       return;
@@ -900,7 +902,7 @@ class CompanionParent extends JSWindowActorParent {
       for (let regex of list) {
         if (regex.test(aLocationURI.spec)) {
           this._pageType = type;
-          this.snapshotSelector.setType(type);
+          this.snapshotSelector.updateDetailsAndRebuild({ type });
 
           return;
         }
@@ -940,12 +942,11 @@ class CompanionParent extends JSWindowActorParent {
       getCurrentSessionUrls: () =>
         new Set(gStageManager.views.map(view => view.url)),
     });
-    let referrerUrl =
-      gBrowser.selectedBrowser.referrerInfo?.computedReferrerSpec;
-    this.snapshotSelector.setUrlAndRebuildNow(
-      gBrowser.currentURI.spec,
-      referrerUrl
-    );
+    this.snapshotSelector.updateDetailsAndRebuild({
+      url: gBrowser.currentURI.spec,
+      time: Date.now(),
+      rebuildImmediately: true,
+    });
 
     gBrowser.addProgressListener(this);
 
