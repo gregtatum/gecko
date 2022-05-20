@@ -11,6 +11,7 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  CompanionParent: "resource:///actors/CompanionParent.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
 });
 
@@ -19,17 +20,7 @@ class FlowResetParent extends JSWindowActorParent {
     let window = this.browsingContext.topChromeWindow;
     switch (message.name) {
       case "ViewCompanionBrowseTab":
-        let companion = window.document.getElementById("companion-box");
-        if (!companion.isOpen) {
-          companion.toggleVisible();
-        }
-        let browser = window.document.getElementById("companion-browser");
-        let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
-          "Companion"
-        );
-        if (actor) {
-          actor.viewTab("browse");
-        }
+        CompanionParent.openCompanionTab("browse");
         break;
       case "RestoreLastSession":
         SessionManager.restoreLastSession(window);

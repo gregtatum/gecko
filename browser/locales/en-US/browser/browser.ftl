@@ -119,6 +119,9 @@ urlbar-search-tips-redirect-2 = Start your search in the address bar to see sugg
 # search engine, e.g. google.com or amazon.com.
 urlbar-tabtosearch-onboard = Select this shortcut to find what you need faster.
 
+# Allows users to open Search results in the Companion from the Urlbar.
+urlbar-open-search-companion = Search within history
+
 ## Local search mode indicator labels in the urlbar
 
 urlbar-search-mode-bookmarks = Bookmarks

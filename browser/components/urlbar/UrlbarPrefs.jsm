@@ -238,6 +238,9 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // Whether results will include sponsored quick suggest suggestions.
   ["suggest.quicksuggest.sponsored", false],
 
+  // Add a result that lets the user open search results in the companion.
+  ["opencompanionsearch.enabled", false],
+
   // Whether results will include search suggestions.
   ["suggest.searches", false],
 

@@ -82,6 +82,8 @@ if (AppConstants.PINEBUILD) {
     "resource:///modules/UrlbarProviderRecentSearches.jsm";
   localProviderModules.UrlbarProviderContextualSearch =
     "resource:///modules/UrlbarProviderContextualSearch.jsm";
+  localProviderModules.UrlbarProviderOpenCompanionSearch =
+    "resource:///modules/UrlbarProviderOpenCompanionSearch.jsm";
   delete localProviderModules.UrlbarProviderTopSites;
 }
 

@@ -629,6 +629,23 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
+  /*
+   * Switch the companion to a specific tab view.
+   *
+   * @param {String} tab
+   *   The name of the tab to switch to.
+   */
+  static openCompanionTab(tab) {
+    let window = BrowserWindowTracker.getTopWindow();
+    let browser = window.document.getElementById("companion-browser");
+    let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
+      "Companion"
+    );
+    if (actor) {
+      actor.viewTab(tab);
+    }
+  }
+
   viewTab(tab) {
     this.sendAsyncMessage("Companion:ViewTab", { tab });
     let win = this.browsingContext.topChromeWindow;
