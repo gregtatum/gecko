@@ -150,8 +150,6 @@ errors["NS_ERROR_ILLEGAL_VALUE"] = 0x80070057
 errors["NS_ERROR_INVALID_ARG"] = errors["NS_ERROR_ILLEGAL_VALUE"]
 errors["NS_ERROR_INVALID_POINTER"] = errors["NS_ERROR_INVALID_ARG"]
 errors["NS_ERROR_NULL_POINTER"] = errors["NS_ERROR_INVALID_ARG"]
-# Returned when a class doesn't allow aggregation
-errors["NS_ERROR_NO_AGGREGATION"] = 0x80040110
 # Returned when an operation can't complete due to an unavailable resource
 errors["NS_ERROR_NOT_AVAILABLE"] = 0x80040111
 # Returned when a class is not registered
@@ -342,6 +340,9 @@ with modules["NETWORK"]:
     errors["NS_ERROR_HTTPS_ONLY"] = FAILURE(86)
     # A WebSocket connection is failed.
     errors["NS_ERROR_WEBSOCKET_CONNECTION_REFUSED"] = FAILURE(87)
+    # A connection to a non local address is refused because
+    # xpc::AreNonLocalConnectionsDisabled() returns true.
+    errors["NS_ERROR_NON_LOCAL_CONNECTION_REFUSED"] = FAILURE(88)
 
     # XXX really need to better rationalize these error codes.  are consumers of
     # necko really expected to know how to discern the meaning of these??

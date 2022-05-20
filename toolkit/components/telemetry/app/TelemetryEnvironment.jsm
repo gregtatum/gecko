@@ -252,6 +252,11 @@ const DEFAULT_ENVIRONMENT_PREFS = new Map([
   ["browser.search.widget.inNavBar", { what: RECORD_DEFAULTPREF_VALUE }],
   ["browser.startup.homepage", { what: RECORD_PREF_STATE }],
   ["browser.startup.page", { what: RECORD_PREF_VALUE }],
+  ["browser.urlbar.autoFill", { what: RECORD_DEFAULTPREF_VALUE }],
+  [
+    "browser.urlbar.autoFill.adaptiveHistory.enabled",
+    { what: RECORD_DEFAULTPREF_VALUE },
+  ],
   [
     "browser.urlbar.quicksuggest.onboardingDialogChoice",
     { what: RECORD_DEFAULTPREF_VALUE },
@@ -326,6 +331,7 @@ const DEFAULT_ENVIRONMENT_PREFS = new Map([
   ["media.gmp-gmpopenh264.lastInstallStart", { what: RECORD_PREF_VALUE }],
   ["media.gmp-gmpopenh264.lastDownload", { what: RECORD_PREF_VALUE }],
   ["media.gmp-gmpopenh264.lastDownloadFailed", { what: RECORD_PREF_VALUE }],
+  ["media.gmp-gmpopenh264.lastDownloadFailReason", { what: RECORD_PREF_VALUE }],
   ["media.gmp-gmpopenh264.lastUpdate", { what: RECORD_PREF_VALUE }],
   ["media.gmp-gmpopenh264.visible", { what: RECORD_PREF_VALUE }],
   ["media.gmp-manager.lastCheck", { what: RECORD_PREF_VALUE }],
@@ -1199,10 +1205,10 @@ EnvironmentCache.prototype = {
    * Only used in tests, set the preferences to watch.
    * @param aPreferences A map of preferences names and their recording policy.
    */
-  async _watchPreferences(aPreferences) {
+  _watchPreferences(aPreferences) {
     this._stopWatchingPrefs();
     this._watchedPrefs = aPreferences;
-    await this._updateSettings();
+    this._updateSettings();
     this._startWatchingPrefs();
   },
 
@@ -1414,7 +1420,7 @@ EnvironmentCache.prototype = {
   /**
    * Update the default search engine value.
    */
-  async _updateSearchEngine() {
+  _updateSearchEngine() {
     if (!this._canQuerySearch) {
       this._log.trace("_updateSearchEngine - ignoring early call");
       return;
@@ -1431,7 +1437,7 @@ EnvironmentCache.prototype = {
     this._currentEnvironment.settings = this._currentEnvironment.settings || {};
 
     // Update the search engine entry in the current environment.
-    const defaultEngineInfo = await Services.search.getDefaultEngineInfo();
+    const defaultEngineInfo = Services.search.getDefaultEngineInfo();
     this._currentEnvironment.settings.defaultSearchEngine =
       defaultEngineInfo.defaultSearchEngine;
     this._currentEnvironment.settings.defaultSearchEngineData = {
@@ -1451,12 +1457,12 @@ EnvironmentCache.prototype = {
   /**
    * Update the default search engine value and trigger the environment change.
    */
-  async _onSearchEngineChange() {
+  _onSearchEngineChange() {
     this._log.trace("_onSearchEngineChange");
 
     // Finally trigger the environment change notification.
     let oldEnvironment = Cu.cloneInto(this._currentEnvironment, {});
-    await this._updateSearchEngine();
+    this._updateSearchEngine();
     this._onEnvironmentChange("search-engine-changed", oldEnvironment);
   },
 
@@ -1576,7 +1582,7 @@ EnvironmentCache.prototype = {
   /**
    * Update the cached settings data.
    */
-  async _updateSettings() {
+  _updateSettings() {
     let updateChannel = null;
     try {
       updateChannel = Utils.getUpdateChannel();
@@ -1617,7 +1623,7 @@ EnvironmentCache.prototype = {
       this._updateAttribution();
     }
     this._updateDefaultBrowser();
-    await this._updateSearchEngine();
+    this._updateSearchEngine();
     this._loadAsyncUpdateSettingsFromCache();
   },
 
