@@ -271,6 +271,109 @@ add_task(async function testEmptyStateWithoutConnectedAccount() {
   });
 });
 
+add_task(async function testExpandableDetailsWithoutLinks() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+    let { start, end } = PinebuildTestUtils.generateEventTimes(0, 30);
+    let events = [
+      {
+        summary: "My Meeting",
+        startDate: start,
+        endDate: end,
+        organizer: {
+          email: "test123@gmail.com",
+        },
+      },
+    ];
+
+    await setBrowseCalendarEvents(helper, events);
+    await helper.runCompanionTask(async () => {
+      let browseEventList = content.document.getElementById(
+        "browse-event-list"
+      );
+      let event = browseEventList.shadowRoot.querySelector("calendar-event");
+
+      info(
+        "If there are no meeting links, don't render event details section."
+      );
+      let eventDetailsSection = event.shadowRoot.querySelector(
+        ".event-details"
+      );
+      ok(
+        !eventDetailsSection,
+        "Event details are not rendered when meeting links aren't available."
+      );
+    });
+  });
+});
+
+add_task(async function testExpandableDetailsWithLinks() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+    let { start, end } = PinebuildTestUtils.generateEventTimes(0, 30);
+    let events = [
+      {
+        summary: "My Meeting",
+        startDate: start,
+        endDate: end,
+        organizer: {
+          email: "test123@gmail.com",
+        },
+        links: [
+          { url: "https://example.com/" },
+          { url: "https://example.com/2" },
+        ],
+      },
+    ];
+
+    await setBrowseCalendarEvents(helper, events);
+    await helper.runCompanionTask(async () => {
+      let browseEventList = content.document.getElementById(
+        "browse-event-list"
+      );
+      let event = browseEventList.shadowRoot.querySelector("calendar-event");
+
+      info(
+        "If the event isn't expanded, then we don't show additional details."
+      );
+      let eventLinksSection = await ContentTaskUtils.waitForCondition(() => {
+        return event.shadowRoot.querySelector(".event-links-wrapper");
+      });
+      ok(
+        eventLinksSection,
+        "Links and documents are rendered when card is collapsed."
+      );
+
+      info("Expand details");
+      let eventCard = event.shadowRoot.querySelector(".event");
+      EventUtils.sendMouseEvent(
+        {
+          type: "mousedown",
+        },
+        eventCard,
+        content
+      );
+      await event.updateComplete;
+
+      info("Ensure links are still shown");
+      let meetingLinksSection = eventCard.querySelector(".event-links");
+      ok(meetingLinksSection, "Meeting links are shown.");
+
+      info("Host details are not shown for browse");
+      let hostDetailSection = eventCard.querySelector(".event-host");
+      ok(!hostDetailSection, "Host section isn't shown.");
+    });
+  });
+});
+
 async function checkEmptyCalendarMessage(helper, messageId) {
   await helper.runCompanionTask(
     async message => {

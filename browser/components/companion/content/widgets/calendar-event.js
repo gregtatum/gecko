@@ -402,7 +402,7 @@ export class CalendarEvent extends MozLitElement {
 
   joinConferenceTemplate() {
     let { conference } = this.event;
-    if (!conference) {
+    if (!conference || this.status === "finished") {
       return "";
     }
     return html`
@@ -461,6 +461,23 @@ export class CalendarEvent extends MozLitElement {
               this.eventLinksTemplate(),
             ]
           : fallbackDetailTemplate}
+      </div>
+    `;
+  }
+
+  browseEventDetailsTemplate() {
+    if (!this.event.links.length) {
+      return "";
+    }
+
+    // A browse event only shows links + documents.
+    return html`
+      <div
+        class=${classMap({
+          "event-details": true,
+        })}
+      >
+        ${this.eventLinksTemplate()}
       </div>
     `;
   }
@@ -731,7 +748,9 @@ export class CalendarEvent extends MozLitElement {
             ? this.joinConferenceTemplate()
             : ""}
         </div>
-        ${this.eventDetailsTemplate()}
+        ${this.listType !== "browse"
+          ? this.eventDetailsTemplate()
+          : this.browseEventDetailsTemplate()}
         <panel-list action="more-options">
           <panel-item
             class="event-item-running-late-action"
