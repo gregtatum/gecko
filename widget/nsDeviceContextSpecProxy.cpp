@@ -32,8 +32,7 @@ nsDeviceContextSpecProxy::nsDeviceContextSpecProxy(
 nsDeviceContextSpecProxy::~nsDeviceContextSpecProxy() = default;
 
 NS_IMETHODIMP
-nsDeviceContextSpecProxy::Init(nsIWidget* aWidget,
-                               nsIPrintSettings* aPrintSettings,
+nsDeviceContextSpecProxy::Init(nsIPrintSettings* aPrintSettings,
                                bool aIsPrintPreview) {
   mPrintSettings = aPrintSettings;
 
