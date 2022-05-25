@@ -49,7 +49,8 @@ export default class River extends MozLitElement {
   #onKeyUp(event) {
     if (
       event.composedTarget == this.overflowButton &&
-      event.keyCode == KeyEvent.DOM_VK_SPACE
+      (event.keyCode == KeyEvent.DOM_VK_SPACE ||
+        event.keyCode == KeyEvent.DOM_VK_RETURN)
     ) {
       this.#openOverflowMenu();
     } else if (
