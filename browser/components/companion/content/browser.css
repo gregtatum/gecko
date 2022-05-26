@@ -203,6 +203,7 @@ body:not([browser-ready]) .browserStack > browser {
   -moz-box-flex: 1;
 }
 
+body[onboarding] #companion-box,
 body[onboarding] #pinebuild-toolbar,
 body[onboarding] #urlbar-container,
 body[onboarding] #PanelUI-button,
