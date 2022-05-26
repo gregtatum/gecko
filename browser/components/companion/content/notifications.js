@@ -49,6 +49,7 @@ const workshopEnabled = Services.prefs.getBoolPref(
 
 XPCOMUtils.defineLazyGetter(globalThis, "logConsole", function() {
   return console.createInstance({
+    maxLogLevel: "Error",
     prefix: "notifications.js",
     maxLogLevelPref: "browser.pinebuild.notifications.logLevel",
   });
