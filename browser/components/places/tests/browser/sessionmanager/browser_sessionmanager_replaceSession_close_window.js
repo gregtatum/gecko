@@ -51,7 +51,7 @@ add_task(async function test_close_window() {
 
   await assertSavedSession(
     sessionGuid,
-    [{ url: TEST_URL, position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
     dateCheckpoint
   );
 });
@@ -80,7 +80,7 @@ add_task(async function test_close_tabs() {
 
   await assertSavedSession(
     sessionGuid,
-    [{ url: TEST_URL, position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
     sessionTime
   );
 

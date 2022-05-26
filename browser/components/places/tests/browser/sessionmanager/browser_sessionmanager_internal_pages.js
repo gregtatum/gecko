@@ -41,7 +41,7 @@ add_task(async function test_internal_pages_not_saved() {
       let chromeURL = getRootDirectory(gTestPath);
       await BrowserTestUtils.openNewForegroundTab(win.gBrowser, chromeURL);
     },
-    [{ url: TEST_URL, position: 0 }]
+    [{ url: TEST_URL, title: "mochitest index /", position: 0 }]
   );
 
   // Check the session store file as well, the database is tested above.

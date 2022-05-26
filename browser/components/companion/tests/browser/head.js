@@ -873,6 +873,20 @@ var PinebuildTestUtils = {
   },
 
   /**
+   * Helper assertion function that compares a window's array of Views and
+   * compares their titles to those provided.
+   *
+   * @param {string[]} titles
+   *   An Array of titles.
+   * @param {Window?} win
+   *   The window the views are from, the current window is used by default
+   */
+  assertTitlesAre(titles, win = window) {
+    let riverTitles = win.gStageManager.views.map(view => view.title);
+    Assert.deepEqual(riverTitles, titles);
+  },
+
+  /**
    * Helper assertion function that compares a window's array of
    * Views with viewArray and logs information if they don't match.
    *

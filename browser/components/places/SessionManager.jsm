@@ -488,9 +488,11 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         // TODO: MR2-869 Potentially merge this with the query above to
         // improve performance.
         let pageRows = await db.executeCached(
-          `SELECT h.url, p.position FROM moz_session_metadata s
+          `SELECT h.url, IFNULL(ms.title, h.title) as title, p.position
+           FROM moz_session_metadata s
            JOIN moz_session_to_places p ON p.session_id = s.id
            JOIN moz_places h ON h.id = p.place_id
+           LEFT JOIN moz_places_metadata_snapshots ms ON ms.place_id = p.place_id
            WHERE s.guid = :guid
            ORDER BY p.position ASC
           `,
@@ -499,6 +501,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         session.pages = pageRows.map(row => {
           return {
             url: row.getResultByName("url"),
+            title: row.getResultByName("title") ?? "",
             position: row.getResultByName("position"),
           };
         });
@@ -655,6 +658,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
             {
               ID: i,
               url: p.url,
+              title: p.title,
             },
           ],
         };

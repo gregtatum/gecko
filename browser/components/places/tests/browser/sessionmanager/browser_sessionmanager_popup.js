@@ -106,7 +106,7 @@ add_task(async function test_popup_ignored_on_setaside() {
   });
   Assert.deepEqual(
     sessions[0].pages,
-    [{ url: TEST_URL, position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
     "Only the main content window should be in the session"
   );
 
@@ -123,7 +123,7 @@ add_task(async function test_popup_ignored_on_setaside() {
   });
   Assert.deepEqual(
     sessions[0].pages,
-    [{ url: TEST_URL, position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
     "Only the main content window should be in the session after popup close"
   );
 });

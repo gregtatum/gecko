@@ -492,7 +492,15 @@ add_task(async function testSessionExpiredRestore() {
   let win = await BrowserTestUtils.openNewBrowserWindow();
   let { gBrowser, gStageManager } = win;
 
-  let [, view2] = await PinebuildTestUtils.loadViews(
+  // Additional check that a snapshot with a user specified title has the title
+  // restored correctly.
+  await Snapshots.add({
+    url: TEST_URL1,
+    title: "User title",
+    userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+  });
+
+  let [view1, view2] = await PinebuildTestUtils.loadViews(
     [TEST_URL1, TEST_URL2],
     win
   );
@@ -500,6 +508,8 @@ add_task(async function testSessionExpiredRestore() {
   PinebuildTestUtils.assertUrlsAre([TEST_URL1, TEST_URL2], win);
   Assert.equal(gBrowser.selectedBrowser, gBrowser.browsers[0]);
   Assert.equal(gStageManager.currentView, view2);
+
+  let titles = [view1.title, view2.title];
 
   let guid = await PinebuildTestUtils.setAsideSession(win);
   Assert.ok(guid, "A session was successfully started and stored.");
@@ -516,7 +526,12 @@ add_task(async function testSessionExpiredRestore() {
 
   await PinebuildTestUtils.restoreSession(guid, win);
 
+  // Currently there's no capability to load the title from the snapshot via the
+  // river/AVM, so override the title with what we expect for the added snapshot.
+  titles[0] = "User title";
+
   PinebuildTestUtils.assertUrlsAre([TEST_URL1, TEST_URL2], win);
+  PinebuildTestUtils.assertTitlesAre(titles, win);
   assertTabUrls(win, [TEST_URL1, TEST_URL2]);
 
   await BrowserTestUtils.closeWindow(win);

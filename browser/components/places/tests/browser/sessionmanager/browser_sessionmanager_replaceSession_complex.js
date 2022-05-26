@@ -46,9 +46,13 @@ add_task(async function test_replaceSession_complex_session() {
       await BrowserTestUtils.openNewForegroundTab(win.gBrowser, TEST_URL3);
     },
     [
-      { url: TEST_URL, position: 0 },
-      { url: TEST_URL2, position: 1 },
-      { url: TEST_URL3, position: 2 },
+      { url: TEST_URL, title: "mochitest index /", position: 0 },
+      { url: TEST_URL2, title: "mochitest index /browser/", position: 1 },
+      {
+        url: TEST_URL3,
+        title: "mochitest index /browser/browser/",
+        position: 2,
+      },
     ]
   );
 

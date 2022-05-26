@@ -43,7 +43,7 @@ add_task(async function test_replaceSession_window_size_unchanged() {
         TEST_URL
       );
     },
-    [{ url: TEST_URL, position: 0 }]
+    [{ url: TEST_URL, title: "mochitest index /", position: 0 }]
   );
 
   if (AppConstants.platform != "linux") {
