@@ -203,6 +203,9 @@ body:not([browser-ready]) .browserStack > browser {
   -moz-box-flex: 1;
 }
 
+body[onboarding] #pinebuild-toolbar,
+body[onboarding] #urlbar-container,
+body[onboarding] #PanelUI-button,
 body[flow-reset] #pinebuild-back-button,
 body[flow-reset] #pinebuild-reload-button,
 body[flow-reset] #session-setaside-button,
@@ -339,8 +342,7 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   visibility: hidden;
 }
 
-#pinebuild-toolbar {
-  display: flex;
+#nav-bar {
   min-height: 64px;
 }
 
