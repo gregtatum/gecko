@@ -11,6 +11,8 @@ const POPUP_URL = "https://example.com/browser/";
 let win;
 
 add_setup(async () => {
+  await clearSessionDatabase();
+
   // Run tests in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
 
@@ -56,14 +58,19 @@ add_task(async function test_popup_ignored_on_close() {
 
   popup.close();
 
+  let changeComplete = SessionManager.once("session-replaced");
+  win.document.getElementById("session-setaside-button").click();
+  await changeComplete;
+
   let sessions = await SessionManager.query({
-    guid: sessionGuid,
+    includeActive: true,
     includePages: true,
   });
+  Assert.equal(sessions.length, 1, "Should have saved only one session");
   Assert.equal(
     sessions[0].pages.length,
-    0,
-    "There should be no pages in the session"
+    1,
+    "Should have only one page in the session"
   );
 });
 
