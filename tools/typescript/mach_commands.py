@@ -9,73 +9,77 @@ import sys
 import subprocess
 
 from mach.decorators import (
-    CommandArgument,
-    CommandProvider,
     Command,
     SubCommand,
 )
 
-from mozbuild.base import MachCommandBase
 from mozbuild.util import mkdir
 
-@CommandProvider
-class TypeScriptProvider(MachCommandBase):
-    @Command('typescript', category='misc',
-             description='Generate TypeScript definitions.')
-    def typescript_default(self):
-        self.typescript_xpcom()
+@Command(
+    "typescript",
+    category="misc",
+    description='Generate TypeScript definitions.'
+)
+def typescript():
+    """
+    Re-generate typescript static files"
+    """
+    typescript_xpcom()
+    typescript_webidl()
 
-    @SubCommand('typescript',
-                'xpcom',
-                description='Generate TypeScript definitions for XPCOM.')
-    def typescript_xpcom(self):
-        target = os.path.join(self.topsrcdir, '@types', 'xpcom')
-        mkdir(target)
 
-        python_path = list(sys.path)
-        python_path.append(os.path.join(self.topsrcdir, 'xpcom', 'idl-parser'))
-        python_path.append(os.path.join(self.topsrcdir, 'xpcom', 'idl-parser', 'xpidl'))
-        append_env = {
-            b'PYTHONDONTWRITEBYTECODE': str('1'),
-            b'PYTHONPATH': os.pathsep.join(python_path)
-        }
+@SubCommand('typescript',
+            'xpcom',
+            description='Generate TypeScript definitions for XPCOM.')
+def typescript_xpcom(self):
+    target = os.path.join(self.topsrcdir, '@types', 'xpcom')
+    mkdir(target)
 
-        script = os.path.join(self.topsrcdir, 'tools', 'typescript', 'build_xpcom_defs.py')
-        bindings = os.path.join(self.topsrcdir, 'dom', 'bindings', 'Bindings.conf')
+    python_path = list(sys.path)
+    python_path.append(os.path.join(self.topsrcdir, 'xpcom', 'idl-parser'))
+    python_path.append(os.path.join(self.topsrcdir, 'xpcom', 'idl-parser', 'xpidl'))
+    append_env = {
+        b'PYTHONDONTWRITEBYTECODE': str('1'),
+        b'PYTHONPATH': os.pathsep.join(python_path)
+    }
 
-        process = subprocess.Popen([sys.executable, script, bindings, target],
-                                   stdin=subprocess.PIPE, env=append_env)
+    script = os.path.join(self.topsrcdir, 'tools', 'typescript', 'build_xpcom_defs.py')
+    bindings = os.path.join(self.topsrcdir, 'dom', 'bindings', 'Bindings.conf')
 
-        reader = self.mozbuild_reader(config_mode='empty')
-        for context in reader.read_topsrcdir():
-            if 'XPIDL_SOURCES' in context:
-                for source in context['XPIDL_SOURCES']:
-                    process.stdin.write('%s\n' % source.full_path)
+    process = subprocess.Popen([sys.executable, script, bindings, target],
+                                stdin=subprocess.PIPE, env=append_env)
 
-        process.stdin.close()
-        process.wait()
+    reader = self.mozbuild_reader(config_mode='empty')
+    for context in reader.read_topsrcdir():
+        if 'XPIDL_SOURCES' in context:
+            for source in context['XPIDL_SOURCES']:
+                process.stdin.write('%s\n' % source.full_path)
 
-    @SubCommand('typescript',
-                'webidl',
-                description='Generate TypeScript definitions for WebIDL.')
-    def typescript_webidl(self):
-        target = os.path.join(self.topsrcdir, '@types', 'webidl')
-        mkdir(target)
+    process.stdin.close()
+    process.wait()
 
-        python_path = list(sys.path)
-        python_path.append(os.path.join(self.topsrcdir, 'dom', 'bindings', 'parser'))
-        append_env = {
-            b'PYTHONDONTWRITEBYTECODE': str('1'),
-            b'PYTHONPATH': os.pathsep.join(python_path)
-        }
 
-        lists = os.path.join(self.topobjdir, 'dom', 'bindings', 'file-lists.json')
-        if not os.path.exists(lists):
-            print('Building the WebIDL types requires a fully built object directory (couldn\'t find "%s").' % lists)
-            return
+@SubCommand('typescript',
+            'webidl',
+            description='Generate TypeScript definitions for WebIDL.')
+def typescript_webidl(self):
+    target = os.path.join(self.topsrcdir, '@types', 'webidl')
+    mkdir(target)
 
-        script = os.path.join(self.topsrcdir, 'tools', 'typescript', 'build_webidl_defs.py')
+    python_path = list(sys.path)
+    python_path.append(os.path.join(self.topsrcdir, 'dom', 'bindings', 'parser'))
+    append_env = {
+        b'PYTHONDONTWRITEBYTECODE': str('1'),
+        b'PYTHONPATH': os.pathsep.join(python_path)
+    }
 
-        process = subprocess.Popen([sys.executable, script, lists, target],
-                                   stdin=subprocess.PIPE, env=append_env)
-        process.wait()
+    lists = os.path.join(self.topobjdir, 'dom', 'bindings', 'file-lists.json')
+    if not os.path.exists(lists):
+        print('Building the WebIDL types requires a fully built object directory (couldn\'t find "%s").' % lists)
+        return
+
+    script = os.path.join(self.topsrcdir, 'tools', 'typescript', 'build_webidl_defs.py')
+
+    process = subprocess.Popen([sys.executable, script, lists, target],
+                                stdin=subprocess.PIPE, env=append_env)
+    process.wait()
