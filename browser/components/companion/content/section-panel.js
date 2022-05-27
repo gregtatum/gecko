@@ -6,6 +6,9 @@ import { MozLitElement } from "./widget-utils.js";
 import { css, html } from "./lit.all.js";
 
 class SectionPanel extends MozLitElement {
+  static properties = {
+    l10nId: { attribute: "heading-l10n-id", type: String },
+  };
   static get styles() {
     return css`
       :host() {
@@ -38,11 +41,6 @@ class SectionPanel extends MozLitElement {
         padding: 0;
       }
 
-      ::slotted(h1) {
-        margin: 0 !important;
-        display: block;
-      }
-
       .section-panel-content {
         flex-grow: 1;
       }
@@ -67,6 +65,10 @@ class SectionPanel extends MozLitElement {
         rel="stylesheet"
         href="chrome://global/skin/in-content/common.css"
       />
+      <link
+        rel="stylesheet"
+        href="chrome://browser/content/companion/fonts.css"
+      />
 
       <div class="section-panel-header">
         <button
@@ -75,7 +77,7 @@ class SectionPanel extends MozLitElement {
           @click=${this.goBack}
         ></button>
         <span class="section-panel-heading">
-          <slot name="heading"></slot>
+          <h1 class="text-heading-m-med" data-l10n-id="${this.l10nId}"></h1>
         </span>
       </div>
       <div class="section-panel-content">

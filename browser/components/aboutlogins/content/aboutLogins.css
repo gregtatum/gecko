@@ -145,10 +145,10 @@ login-intro {
   white-space: pre-wrap;
 }
 
-:root.in-companion header {
+:root.in-companion .panel-header {
   padding-inline-end: 0;
 }
 
-:root.in-companion header > :not(:last-child) {
+:root.in-companion .panel-header > :not(:last-child) {
   display: none;
 }

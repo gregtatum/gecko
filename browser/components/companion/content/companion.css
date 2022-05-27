@@ -498,16 +498,6 @@ e-global-nav-debugging h2 {
   background-image: url("sessions.svg");
 }
 
-toolbarbutton.subviewbutton-back:hover,
-.browse button:hover {
-  background-color: var(--in-content-button-background-hover);
-}
-
-toolbarbutton.subviewbutton-back:hover:active,
-.browse button:hover:active {
-  background-color: var(--in-content-button-background-active);
-}
-
 .browse button.downloads {
   background-image: url("chrome://browser/skin/downloads/downloads.svg");
 }
@@ -520,16 +510,6 @@ toolbarbutton.subviewbutton-back:hover:active,
   background-image: url("calendar.svg");
 }
 
-/*** PASSWORD PANEL ***/
-toolbarbutton.subviewbutton-back {
-  background-image: url(chrome://global/skin/icons/arrow-left.svg);
-  background-repeat: no-repeat;
-  margin-inline-start: 16px;
-  width: 24px;
-  height: 24px;
-  background-position: center;
-  border-radius: 4px;
-}
 
 #companion-downloads-browser {
   background: unset;

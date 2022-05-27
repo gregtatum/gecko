@@ -175,7 +175,7 @@ companion-deck-browse = Browse
 
 # The < back arrow to go back to the root Browse view.
 companion-header-back-button =
-    .title = Go back
+    .aria-label = Go back
 
 # Shows the number of snapshots within a group.
 # Variables:

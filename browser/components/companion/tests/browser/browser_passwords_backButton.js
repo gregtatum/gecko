@@ -67,7 +67,9 @@ add_task(async function testLoginsBackButton() {
         ok(ContentTaskUtils.is_hidden(loginList), "The login list is hidden");
 
         info("login form shown, testing back nav with no unsaved changes");
-        let backButton = content.document.querySelector(".subviewbutton-back");
+        let backButton = content.document
+          .querySelector("section-panel")
+          .shadowRoot.querySelector(".back-button");
         ok(backButton, "Found back button");
         info("Click the back button once");
         backButton.click();
@@ -97,5 +99,74 @@ add_task(async function testLoginsBackButton() {
         ok(browsePanelShown, "Made it back to the browse panel");
       });
     });
+    // Reset the companion's state
+    await helper.reload();
+  });
+});
+
+// Due to window context issues when synthesizing keys, this particular task only navigates
+// to the passwords panel, tabs to the back button, and then leaves via the Enter key.
+// This test should behave similar to testLoginsBackButton, testing all the standard
+// functionality but through keyboard navigation instead of mouse clicks.
+add_task(async function testLoginsBackButtonKeyboardNavigation() {
+  await CompanionHelper.whenReady(async helper => {
+    info("Navigating to companion browse menu");
+    await helper.selectCompanionTab("browse");
+    await helper.runCompanionTask(async () => {
+      info("Looking for passwords entry in the companion browse menu");
+      let passwordsEntry = content.document.querySelector(".passwords");
+      ok(
+        !ContentTaskUtils.is_hidden(passwordsEntry),
+        "Passwords option is visible"
+      );
+
+      let passwordsShown = ContentTaskUtils.waitForEvent(
+        content.document,
+        "browse-panel-shown"
+      );
+      passwordsEntry.focus();
+      EventUtils.synthesizeKey("KEY_Enter", {}, content);
+      await passwordsShown;
+
+      let passwordsBrowser = content.document.getElementById(
+        "companion-login-browser"
+      );
+      await SpecialPowers.spawn(passwordsBrowser, [], async () => {
+        function getFocusedElement() {
+          let element = content.document.activeElement;
+          const getShadowRootFocus = e => {
+            if (e.shadowRoot) {
+              return getShadowRootFocus(e.shadowRoot.activeElement);
+            }
+            return e;
+          };
+          return getShadowRootFocus(element);
+        }
+        const EventUtils = ContentTaskUtils.getEventUtils(content);
+        let backButton;
+        await ContentTaskUtils.waitForCondition(() => {
+          return content.document
+            .querySelector("section-panel")
+            .shadowRoot.querySelector(".back-button");
+        });
+        EventUtils.synthesizeKey("KEY_Tab", {}, content);
+        EventUtils.synthesizeKey("KEY_Tab", {}, content);
+        is(getFocusedElement(), backButton, "Back button should be focused");
+        let browsePanelShown = ContentTaskUtils.waitForEvent(
+          content.document,
+          "browse-panel-shown"
+        );
+
+        EventUtils.synthesizeKey("KEY_Enter", {}, content);
+        isnot(
+          getFocusedElement(),
+          backButton,
+          "Back button should no longer be focused"
+        );
+        ok(browsePanelShown, "Navigated back to the browse panel");
+      });
+    });
+    // Reset the companion's state
+    await helper.reload();
   });
 });

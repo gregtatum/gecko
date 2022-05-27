@@ -17,7 +17,7 @@ const gElements = {
   loginItem: document.querySelector("login-item"),
   loginFilter: document.querySelector("login-filter"),
   menuButton: document.querySelector("menu-button"),
-  backButton: document.querySelector(".subviewbutton-back"),
+  sectionPanel: document.querySelector("section-panel"),
   headerTitle: document.querySelector("#panel-header-title"),
   // removeAllLogins button is nested inside of menuButton
   get removeAllButton() {
@@ -86,7 +86,7 @@ function exitDetailView() {
   gElements.loginList.classList.remove("login-selected");
 }
 
-gElements.backButton.addEventListener("click", event => {
+gElements.sectionPanel.addEventListener("section-panel-back", event => {
   // If in the login list view, go back to companion browse.
   // If in any other login view, go back to password list.
   if (gElements.loginItem.dataset.hasOwnProperty("editing")) {
@@ -104,6 +104,7 @@ gElements.backButton.addEventListener("click", event => {
       exitDetailView();
     }
   } else {
+    event.explicitOriginalTarget.blur();
     document.dispatchEvent(
       new CustomEvent("AboutLoginsBrowsePanel", { bubbles: true })
     );
