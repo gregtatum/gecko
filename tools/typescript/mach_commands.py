@@ -46,7 +46,6 @@ class TypeScriptProvider(MachCommandBase):
         process = subprocess.Popen([sys.executable, script, bindings, target],
                                    stdin=subprocess.PIPE, env=append_env)
 
-        contracts = []
         reader = self.mozbuild_reader(config_mode='empty')
         for context in reader.read_topsrcdir():
             if 'XPIDL_SOURCES' in context:
@@ -54,4 +53,29 @@ class TypeScriptProvider(MachCommandBase):
                     process.stdin.write('%s\n' % source.full_path)
 
         process.stdin.close()
+        process.wait()
+
+    @SubCommand('typescript',
+                'webidl',
+                description='Generate TypeScript definitions for WebIDL.')
+    def typescript_webidl(self):
+        target = os.path.join(self.topsrcdir, '@types', 'webidl')
+        mkdir(target)
+
+        python_path = list(sys.path)
+        python_path.append(os.path.join(self.topsrcdir, 'dom', 'bindings', 'parser'))
+        append_env = {
+            b'PYTHONDONTWRITEBYTECODE': str('1'),
+            b'PYTHONPATH': os.pathsep.join(python_path)
+        }
+
+        lists = os.path.join(self.topobjdir, 'dom', 'bindings', 'file-lists.json')
+        if not os.path.exists(lists):
+            print('Building the WebIDL types requires a fully built object directory (couldn\'t find "%s").' % lists)
+            return
+
+        script = os.path.join(self.topsrcdir, 'tools', 'typescript', 'build_webidl_defs.py')
+
+        process = subprocess.Popen([sys.executable, script, lists, target],
+                                   stdin=subprocess.PIPE, env=append_env)
         process.wait()
