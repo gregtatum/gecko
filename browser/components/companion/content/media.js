@@ -12,14 +12,12 @@ const allowMute = Services.prefs.getBoolPref(
 );
 
 export class MediaList extends HTMLElement {
-  constructor(title) {
+  constructor() {
     super();
 
-    this.title = title;
     let shadow = this.attachShadow({ mode: "open" });
     let template = document.getElementById("template-media-list");
     let fragment = template.content.cloneNode(true);
-    fragment.querySelector(".list-title").textContent = this.title;
 
     this.muteAll = fragment.querySelector(".mute-all");
     if (allowMute) {
@@ -228,7 +226,7 @@ export class Media extends HTMLElement {
   get artworkBackground() {
     return this.querySelector(".artwork-background");
   }
-  get title() {
+  get mediaTitle() {
     return this.querySelector(".title");
   }
   get artist() {
@@ -256,7 +254,8 @@ export class Media extends HTMLElement {
   render() {
     // TODO: Check supportedkeys to dynamically add / remove buttons
     let metadata = this.tab.media.metadata;
-
+    // If the tab's media is muted then there is no "media" or "metadata"
+    // associated with the tab, so we will not render a media element.
     if (!metadata) {
       this.hidden = true;
       return;
@@ -266,7 +265,8 @@ export class Media extends HTMLElement {
     let artwork = metadata?.artwork[0]
       ? "url(" + metadata.artwork[0].src + ")"
       : "";
-    this.title.textContent = metadata?.title ?? this.tab.title;
+    this.mediaTitle.textContent = metadata?.title ?? this.tab.title;
+    this.title = metadata?.title ?? this.tab.title;
     this.artist.textContent = metadata?.artist ?? "";
     this.artwork.style.backgroundImage = artwork;
     this.artworkBackground.style.backgroundImage = artwork;

@@ -56,7 +56,7 @@ function maybeInitializeUI() {
   eventsPlaceholder.appendChild(new CalendarEventList());
 
   let content = document.getElementById("content");
-  content.appendChild(new MediaList("Media"));
+  content.appendChild(new MediaList());
   content.appendChild(new StageManagerDebugging());
   content.appendChild(new SuggestedSnapshotList("Suggested"));
 
