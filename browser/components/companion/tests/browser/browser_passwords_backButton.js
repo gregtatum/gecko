@@ -143,8 +143,7 @@ add_task(async function testLoginsBackButtonKeyboardNavigation() {
           return getShadowRootFocus(element);
         }
         const EventUtils = ContentTaskUtils.getEventUtils(content);
-        let backButton;
-        await ContentTaskUtils.waitForCondition(() => {
+        let backButton = await ContentTaskUtils.waitForCondition(() => {
           return content.document
             .querySelector("section-panel")
             .shadowRoot.querySelector(".back-button");
