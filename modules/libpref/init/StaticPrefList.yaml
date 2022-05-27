@@ -8161,6 +8161,12 @@
   value: 1
   mirror: always
 
+# Whether we should throttle in-process iframes in the active tab.
+- name: layout.throttle_in_process_iframes
+  type: bool
+  value: true
+  mirror: always
+
 # Activity granted to out-of-process iframes in the foreground tab, in milliseconds.
 - name: layout.oopif_activity_grace_period_ms
   type: uint32_t
@@ -11335,12 +11341,6 @@
   value: true
   mirror: always
 
-# Whether we allow the print progress dialog to show up.
-- name: print.show_print_progress
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-
 # Whether we attempt to generate links in Save As PDF output.
 - name: print.save_as_pdf.links.enabled
   type: RelaxedAtomicBool
@@ -13669,7 +13669,7 @@
 - name: widget.disable-swipe-tracker
   type: bool
 #ifdef XP_WIN
-  value: @IS_NOT_NIGHTLY_BUILD@
+  value: @IS_NOT_EARLY_BETA_OR_EARLIER@
 #else
   value: false
 #endif
