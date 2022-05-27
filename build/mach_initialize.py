@@ -351,6 +351,7 @@ def initialize(topsrcdir):
         "install-moz-phab": MachCommandReference("tools/phabricator/mach_commands.py"),
         "power": MachCommandReference("tools/power/mach_commands.py"),
         "try": MachCommandReference("tools/tryselect/mach_commands.py"),
+        "typescript": MachCommandReference("tools/typescript/mach_commands.py"),
         "import-pr": MachCommandReference("tools/vcs/mach_commands.py"),
         "test-interventions": MachCommandReference(
             "testing/webcompat/mach_commands.py"
