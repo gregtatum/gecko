@@ -1,0 +1,16 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+browser.jar:
+    content/browser/history-plus/history-plus.css      (history-plus.css)
+    content/browser/history-plus/index.html            (index.html)
+    content/browser/history-plus/initializer.js        (initializer.js)
+
+    content/browser/history-plus/src/actions-plain.js  (src/actions-plain.js)
+    content/browser/history-plus/src/actions-thunk.js  (src/actions-thunk.js)
+    content/browser/history-plus/src/components.js     (src/components.js)
+    content/browser/history-plus/src/reducers.js       (src/reducers.js)
+    content/browser/history-plus/src/selectors.js      (src/selectors.js)
+    content/browser/history-plus/src/utils.js          (src/utils.js)
+    content/browser/history-plus/src/vendor.js         (src/vendor.js)
