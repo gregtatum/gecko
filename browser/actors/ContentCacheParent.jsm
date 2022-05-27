@@ -11,7 +11,7 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
-  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs"
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
 });
 
 /**
@@ -26,7 +26,6 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
     prefix: "ContentCacheParent",
   });
 });
-
 
 /**
  * @typedef {Object} PageData
@@ -171,7 +170,6 @@ class DB {
         lazy.console.log("Inserting the text");
         await DB.insertText(db, text, placesId);
       }
-
     });
   }
 }
