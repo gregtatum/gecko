@@ -79,6 +79,7 @@ py2commands="
     test-info
     tps-build
     try
+    typescript
     valgrind-test
     visualmetrics
     warnings-list

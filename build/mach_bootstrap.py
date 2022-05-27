@@ -79,6 +79,7 @@ MACH_MODULES = [
     'tools/phabricator/mach_commands.py',
     'tools/power/mach_commands.py',
     'tools/tryselect/mach_commands.py',
+    'tools/typescript/mach_commands.py',
     'tools/vcs/mach_commands.py',
 ]
 
