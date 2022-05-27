@@ -55,8 +55,8 @@ const DEFAULT_WORKSPACE_ID = 0;
  * @typedef {object} SessionPageRecord
  * @property {string} url
  *   The url visited.
- * @property {number} position
- *   The position of the url in the active view manager.
+ * @property {number} title
+ *   The title of the page.
  */
 
 /**
@@ -66,7 +66,7 @@ const DEFAULT_WORKSPACE_ID = 0;
  * @property {Date} lastSavedAt
  *   The time the session was last saved.
  * @property {SessionPageRecord[]} pages
- *   A list of pages associated with the session.
+ *   An ordered list of pages associated with the session.
  */
 
 /**
@@ -411,7 +411,8 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *    if guid is not specified.
    * @param {boolean} [options.includePages]
    *    Optionally include the pages associated with the session in the query
-   *    results. This is a more expensive lookup, so is off by default.
+   *    results. Sessions with no pages will not be returned.
+   *    This is a more expensive lookup, so is off by default.
    * @param {number} [options.limit]
    *    A limit to the number of query results to return. Use -1 for unlimited.
    * @param {number} [options.beforeDate]
@@ -447,33 +448,59 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     };
 
     if (guid) {
-      clauses.push("guid = :guid");
+      clauses.push("s.guid = :guid");
       bindings.guid = guid;
     }
 
     if (beforeDate) {
-      clauses.push("last_saved_at < :beforeDate");
+      clauses.push("s.last_saved_at < :beforeDate");
       bindings.beforeDate = beforeDate;
     }
 
     let whereStatement = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
+    let pagesColumns = "";
+    let pagesJoins = "";
+    if (includePages) {
+      pagesColumns = `,
+        json_group_object(p.position, json_object('url', url, 'title', IFNULL(ms.title, h.title))) as pages
+      `;
+      pagesJoins = `
+        JOIN moz_session_to_places p ON p.session_id = s.id
+        JOIN moz_places h ON h.id = p.place_id
+        LEFT JOIN moz_places_metadata_snapshots ms ON ms.place_id = p.place_id
+      `;
+    }
+
     let rows = await db.executeCached(
       `
-      SELECT guid, last_saved_at, data FROM moz_session_metadata
+      SELECT s.guid, s.last_saved_at, s.data
+      ${pagesColumns}
+      FROM moz_session_metadata s
+      ${pagesJoins}
       ${whereStatement}
+      GROUP BY s.guid
       ORDER BY last_saved_at DESC
       LIMIT :limit
-    `,
+      `,
       bindings
     );
     let sessionData = rows
       .map(row => {
-        return {
+        let result = {
           guid: row.getResultByName("guid"),
           lastSavedAt: this.#dateOrNull(row.getResultByName("last_saved_at")),
           data: row.getResultByName("data"),
         };
+        if (includePages) {
+          let pages = [];
+          let pagesData = JSON.parse(row.getResultByName("pages"));
+          for (let [key, value] of Object.entries(pagesData)) {
+            pages[key] = value;
+          }
+          result.pages = pages.filter(p => !!p);
+        }
+        return result;
       })
       .filter(row => !activeSessions.includes(row.guid));
 
@@ -481,31 +508,6 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     // in the result.
     if (limit !== -1 && sessionData.length > limit) {
       sessionData.length = limit;
-    }
-
-    if (includePages) {
-      for (let session of sessionData) {
-        // TODO: MR2-869 Potentially merge this with the query above to
-        // improve performance.
-        let pageRows = await db.executeCached(
-          `SELECT h.url, IFNULL(ms.title, h.title) as title, p.position
-           FROM moz_session_metadata s
-           JOIN moz_session_to_places p ON p.session_id = s.id
-           JOIN moz_places h ON h.id = p.place_id
-           LEFT JOIN moz_places_metadata_snapshots ms ON ms.place_id = p.place_id
-           WHERE s.guid = :guid
-           ORDER BY p.position ASC
-          `,
-          { guid: session.guid }
-        );
-        session.pages = pageRows.map(row => {
-          return {
-            url: row.getResultByName("url"),
-            title: row.getResultByName("title") ?? "",
-            position: row.getResultByName("position"),
-          };
-        });
-      }
     }
 
     return sessionData;

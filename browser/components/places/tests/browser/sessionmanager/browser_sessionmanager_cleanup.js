@@ -36,7 +36,7 @@ add_task(async function test_cleanup_session_data() {
 
   await assertSavedSession(
     sessionGuid,
-    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /" }],
     dateCheckpoint
   );
 
@@ -45,7 +45,7 @@ add_task(async function test_cleanup_session_data() {
   await SessionManager.cleanup(startPoint - 1);
   await assertSavedSession(
     sessionGuid,
-    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /" }],
     dateCheckpoint
   );
 

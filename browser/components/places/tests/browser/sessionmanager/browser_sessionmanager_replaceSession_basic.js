@@ -36,7 +36,7 @@ add_task(async function test_replaceSession_set_aside_simple_session() {
         TEST_URL
       );
     },
-    [{ url: TEST_URL, title: "mochitest index /", position: 0 }]
+    [{ url: TEST_URL, title: "mochitest index /" }]
   );
 
   await replaceSession(win, originalSessionGuid, 1);

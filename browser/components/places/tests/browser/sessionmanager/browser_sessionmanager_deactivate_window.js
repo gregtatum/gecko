@@ -50,16 +50,20 @@ add_task(async function test_save_after_switch() {
   sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
   Assert.ok(sessionGuid, "Should have an active session");
 
-  await assertSession(
-    (await SessionManager.query({ guid: sessionGuid, includePages: true }))[0],
-    {
-      sessionGuid,
-      lastSavedAt: dateCheckpoint,
-      data: {},
-      // At this stage, no pages should have been saved.
-      pages: [],
-    }
+  await assertSession((await SessionManager.query({ guid: sessionGuid }))[0], {
+    sessionGuid,
+    lastSavedAt: dateCheckpoint,
+    data: {},
+  });
+
+  // Manually check that no pages were saved as .query won't give that
+  // information.
+  let db = await PlacesUtils.promiseDBConnection();
+  let rows = await db.execute(
+    `SELECT session_id FROM moz_session_to_places WHERE session_id = :sessionGuid`,
+    { sessionGuid }
   );
+  Assert.equal(rows.length, 0, "Should not have stored any pages yet");
 
   dateCheckpoint = Date.now();
 
@@ -75,7 +79,7 @@ add_task(async function test_save_after_switch() {
 
   await assertSavedSession(
     sessionGuid,
-    [{ url: TEST_URL, title: "mochitest index /", position: 0 }],
+    [{ url: TEST_URL, title: "mochitest index /" }],
     dateCheckpoint
   );
 });
