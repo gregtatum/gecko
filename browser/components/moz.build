@@ -38,6 +38,7 @@ DIRS += [
     "enterprisepolicies",
     "extensions",
     "firefoxview",
+    "history-plus",
     "ion",
     "migration",
     "newtab",
