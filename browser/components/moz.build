@@ -39,6 +39,7 @@ DIRS += [
     'enterprisepolicies',
     'extensions',
     'fxmonitor',
+    'history-plus',
     'migration',
     'newtab',
     'originattributes',
