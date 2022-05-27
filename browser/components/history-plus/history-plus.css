@@ -1,0 +1,59 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+body {
+  position: absolute;
+  inset: 0;
+  padding: 40px;
+  font-size: 12px;
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+}
+
+.historyInputWrapper {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+input.historyInput {
+  padding-left: 35px;
+}
+
+.historyInputIcon {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  top: 13px;
+  left: 14px;
+  pointer-events: none;
+  -moz-context-properties: fill, fill-opacity;
+  fill: currentColor;
+  fill-opacity: 0.8;
+}
+
+.historyResultsRow {
+  margin: 32px 0;
+  max-width: 652px;
+}
+
+.historyResultsUrl {
+  margin: 4px 0;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.historyResultsTitle {
+  display: block;
+  font-size: 15px;
+  white-space: nowrap;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
