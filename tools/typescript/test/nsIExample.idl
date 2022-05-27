@@ -1,0 +1,29 @@
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+interface nsIArray;
+
+[scriptable, uuid(bbc4d191-1aa7-4ddf-9e44-fcb61e99b94f)]
+interface nsIExample
+{
+    const long longExample = 0;
+
+   /**
+    * This is the documentation for exampleMethod.
+    *
+    * @param  aTransferable The transferable
+    * @param  anOwner The owner of the transferable
+    * @param  aWhichClipboard Specifies the clipboard to which this operation applies.
+    * @result NS_Ok if no errors
+    */
+
+    void examplleMethod ( in Array<ACString> arrayOfStrings ) ;
+};
+
+
+%{ C++
+
+%}

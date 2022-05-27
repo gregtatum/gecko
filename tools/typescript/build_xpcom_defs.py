@@ -8,8 +8,16 @@ import argparse
 from traceback import print_exc
 import tempfile
 from shutil import rmtree
+import logging
 
 from xpidl import xpidl
+
+# Setup the logging.
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+LOG.addHandler(handler)
 
 idl_header = """/// <reference path="types.d.ts" />
 /*
@@ -35,6 +43,7 @@ lists_footer = """
 }
 """
 
+# Some IDLs use JavaScript keywords. This map will rewrite the names to something safe.
 NAMEMAP = {
     'debugger': 'aDebugger',
     'function': 'aFunction',
@@ -43,6 +52,7 @@ NAMEMAP = {
 def js_name(name):
     return NAMEMAP.get(name, name)
 
+# This map converts IDL types into valid TypeScript types.
 BUILTINS = {
     'boolean': 'boolean',
     'void': 'void',
@@ -402,8 +412,9 @@ class DefinitionManager:
         fp.write('\n'.join(result[1:]))
         fp.write(idl_footer)
 
-
+# This function is bound to `./mach typescript xpcom`
 def main(argv):
+    LOG.info("Generating TypeScript definitions for XPCOM bindings")
     parser = argparse.ArgumentParser()
     parser.add_argument('bindings_conf',
                         help='The bindings config file.')
@@ -412,17 +423,23 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
+    LOG.info(' - "bindings_conf" set to: %s' % args.bindings_conf)
+    LOG.info(' - "target" set to: %s' % args.target)
+
     tempdir = tempfile.mkdtemp()
     try:
-        p = xpidl.IDLParser(outputdir=tempdir)
+        LOG.info("Loading the IDL parser using temp directory %s" % tempdir)
+        parser = xpidl.IDLParser(outputdir=tempdir)
 
+        LOG.info("Executing the file: %s" % args.bindings_conf)
         glbl = {}
         execfile(args.bindings_conf, glbl)
         webidlconfig = glbl['DOMInterfaces']
 
+        LOG.info("Read stdin for the list of files to process")
+        # This list comes from stdin and is sent to this script via the mach command.
         dirs = set()
         files = []
-
         for line in sys.stdin:
             filename = line.strip()
             dirs.add(os.path.dirname(filename))
@@ -430,18 +447,24 @@ def main(argv):
 
         manager = DefinitionManager()
 
+        LOG.info("Start processing the files")
         for filename in files:
+            LOG.debug("Parse: %s" % filename)
             idl_data = open(filename).read()
-            idl = p.parse(idl_data, filename)
-            idl.resolve(list(dirs), p, webidlconfig)
+            idl = parser.parse(idl_data, filename)
+            idl.resolve(list(dirs), parser, webidlconfig)
             manager.append_idl(idl)
 
         manager.resolve()
 
-        with open(os.path.join(args.target, 'idl.d.ts'), 'w') as fp:
+        idl_path = os.path.join(args.target, 'idl.d.ts')
+        LOG.info("Writing: %s" % idl_path)
+        with open(idl_path, 'w') as fp:
             manager.write_interfaces(fp)
 
-        with open(os.path.join(args.target, 'interface_lists.d.ts'), 'w') as fp:
+        interface_lists = os.path.join(args.target, 'interface_lists.d.ts')
+        LOG.info("Writing: %s" % interface_lists)
+        with open(interface_lists, 'w') as fp:
             manager.write_lists(fp)
 
     finally:

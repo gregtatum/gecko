@@ -14,7 +14,6 @@ declare namespace XPCOM {
     nsIProtocolProxyChannelFilter: nsIProtocolProxyChannelFilterRef;
     nsIPreloadedStyleSheet: nsIPreloadedStyleSheetRef;
     nsIDebug2: nsIDebug2Ref;
-    nsIAsyncStreamReader: nsIAsyncStreamReaderRef;
     nsINativeFileWatcherCallback: nsINativeFileWatcherCallbackRef;
     nsISupportsPRBool: nsISupportsPRBoolRef;
     nsIScriptErrorNote: nsIScriptErrorNoteRef;
@@ -36,7 +35,7 @@ declare namespace XPCOM {
     nsIPropertyBag: nsIPropertyBagRef;
     nsIFontEnumerator: nsIFontEnumeratorRef;
     nsIStringInputStream: nsIStringInputStreamRef;
-    nsIAddonPolicyService: nsIAddonPolicyServiceRef;
+    nsIPermissionDelegateHandler: nsIPermissionDelegateHandlerRef;
     nsIProfileStartup: nsIProfileStartupRef;
     nsIHttpChannel: nsIHttpChannelRef;
     nsICacheEntryOpenCallback: nsICacheEntryOpenCallbackRef;
@@ -125,7 +124,7 @@ declare namespace XPCOM {
     nsIBasicCardResponseData: nsIBasicCardResponseDataRef;
     nsIFormPOSTActionChannel: nsIFormPOSTActionChannelRef;
     mozIStorageResultSet: mozIStorageResultSetRef;
-    nsIStreamListenerTee: nsIStreamListenerTeeRef;
+    nsIURISetSpec: nsIURISetSpecRef;
     nsITLSServerSocket: nsITLSServerSocketRef;
     nsIWebNavigationInfo: nsIWebNavigationInfoRef;
     nsIXPCComponents_Classes: nsIXPCComponents_ClassesRef;
@@ -219,9 +218,9 @@ declare namespace XPCOM {
     imgITools: imgIToolsRef;
     nsIExpatSink: nsIExpatSinkRef;
     nsIBinaryInputStream: nsIBinaryInputStreamRef;
-    rrIControl: rrIControlRef;
     nsIDirIndexParser: nsIDirIndexParserRef;
     mozIStorageValueArray: mozIStorageValueArrayRef;
+    nsIInputStreamPriority: nsIInputStreamPriorityRef;
     nsIPrivacyTransitionObserver: nsIPrivacyTransitionObserverRef;
     nsIProtocolProxyService2: nsIProtocolProxyService2Ref;
     nsISupportsPRTime: nsISupportsPRTimeRef;
@@ -265,7 +264,6 @@ declare namespace XPCOM {
     nsIInputStreamCallback: nsIInputStreamCallbackRef;
     nsIIncrementalDownload: nsIIncrementalDownloadRef;
     nsIPaymentDetailsModifier: nsIPaymentDetailsModifierRef;
-    nsIMutable: nsIMutableRef;
     nsIHttpAuthManager: nsIHttpAuthManagerRef;
     nsISupports: nsISupportsRef;
     nsINativeAppSupport: nsINativeAppSupportRef;
@@ -287,7 +285,6 @@ declare namespace XPCOM {
     nsIChromeRegistry: nsIChromeRegistryRef;
     nsILoadContextInfo: nsILoadContextInfoRef;
     nsIX509Cert: nsIX509CertRef;
-    nsIURISetSpec: nsIURISetSpecRef;
     nsISlowScriptDebug: nsISlowScriptDebugRef;
     nsILocalCertCallback: nsILocalCertCallbackRef;
     nsIBinaryOutputStream: nsIBinaryOutputStreamRef;
@@ -415,7 +412,7 @@ declare namespace XPCOM {
     nsISharePicker: nsISharePickerRef;
     nsIStreamLoader: nsIStreamLoaderRef;
     nsIPersistentProperties: nsIPersistentPropertiesRef;
-    mozITXTToHTMLConv: mozITXTToHTMLConvRef;
+    nsINativeDNSResolverOverride: nsINativeDNSResolverOverrideRef;
     nsIDocumentLoaderFactory: nsIDocumentLoaderFactoryRef;
     nsIRunnable: nsIRunnableRef;
     nsIPrintSettingsService: nsIPrintSettingsServiceRef;
@@ -480,7 +477,6 @@ declare namespace XPCOM {
     nsIUrlClassifierCacheEntry: nsIUrlClassifierCacheEntryRef;
     nsIPK11Token: nsIPK11TokenRef;
     nsIGeneralResponseData: nsIGeneralResponseDataRef;
-    nsIPermissionDelegateHandler: nsIPermissionDelegateHandlerRef;
     nsIPushClearResultCallback: nsIPushClearResultCallbackRef;
     nsICacheEntryDescriptor: nsICacheEntryDescriptorRef;
     nsIObserverService: nsIObserverServiceRef;
@@ -500,6 +496,7 @@ declare namespace XPCOM {
     mozIStorageStatement: mozIStorageStatementRef;
     mozIStorageError: mozIStorageErrorRef;
     nsIXPCComponents_utils_Sandbox: nsIXPCComponents_utils_SandboxRef;
+    mozITXTToHTMLConv: mozITXTToHTMLConvRef;
     mozIExtensionProcessScriptJSM: mozIExtensionProcessScriptJSMRef;
     nsIEditorObserver: nsIEditorObserverRef;
     nsICaptivePortalService: nsICaptivePortalServiceRef;
@@ -524,8 +521,9 @@ declare namespace XPCOM {
     nsISupportsChar: nsISupportsCharRef;
     nsIFileProtocolHandler: nsIFileProtocolHandlerRef;
     nsICacheStorageConsumptionObserver: nsICacheStorageConsumptionObserverRef;
+    nsIUrlClassifierCallback: nsIUrlClassifierCallbackRef;
     nsIUnsubscribeResultCallback: nsIUnsubscribeResultCallbackRef;
-    nsIPlaintextEditor: nsIPlaintextEditorRef;
+    nsIPurgeTrackerService: nsIPurgeTrackerServiceRef;
     nsIBlocklistService: nsIBlocklistServiceRef;
     nsIProxiedChannel: nsIProxiedChannelRef;
     nsIFileOutputStream: nsIFileOutputStreamRef;
@@ -553,7 +551,7 @@ declare namespace XPCOM {
     nsIDOMXULButtonElement: nsIDOMXULButtonElementRef;
     nsIXULChromeRegistry: nsIXULChromeRegistryRef;
     nsIDirectoryServiceProvider2: nsIDirectoryServiceProvider2Ref;
-    nsILoginManager: nsILoginManagerRef;
+    nsIClientAuthRemember: nsIClientAuthRememberRef;
     nsIWebPageDescriptor: nsIWebPageDescriptorRef;
     nsIAsyncStreamCopier: nsIAsyncStreamCopierRef;
     nsIPresentationControlService: nsIPresentationControlServiceRef;
@@ -644,16 +642,15 @@ declare namespace XPCOM {
     nsIOutputIterator: nsIOutputIteratorRef;
     nsIProtocolHandlerWithDynamicFlags: nsIProtocolHandlerWithDynamicFlagsRef;
     nsIUnicharOutputStream: nsIUnicharOutputStreamRef;
-    rrIReplay: rrIReplayRef;
     nsIServiceManager: nsIServiceManagerRef;
     nsIGeneralChangeDetails: nsIGeneralChangeDetailsRef;
-    rrIConnection: rrIConnectionRef;
     nsICookieManager: nsICookieManagerRef;
     nsIProcess: nsIProcessRef;
     imgIContainer: imgIContainerRef;
     nsPIExternalAppLauncher: nsPIExternalAppLauncherRef;
     nsIPaymentResponseData: nsIPaymentResponseDataRef;
     nsICacheStorage: nsICacheStorageRef;
+    nsIContentChild: nsIContentChildRef;
     nsIOfflineCacheUpdateObserver: nsIOfflineCacheUpdateObserverRef;
     nsIEditorSpellCheck: nsIEditorSpellCheckRef;
     mozIJSSubScriptLoader: mozIJSSubScriptLoaderRef;
@@ -667,7 +664,7 @@ declare namespace XPCOM {
     nsIAppShellService: nsIAppShellServiceRef;
     nsIPresentationControlChannel: nsIPresentationControlChannelRef;
     nsIFakePluginTag: nsIFakePluginTagRef;
-    nsIXPCComponentsBase: nsIXPCComponentsBaseRef;
+    nsIAddonPolicyService: nsIAddonPolicyServiceRef;
     nsIHTMLInlineTableEditor: nsIHTMLInlineTableEditorRef;
     nsIPaymentShippingOption: nsIPaymentShippingOptionRef;
     nsIDOMXULCommandDispatcher: nsIDOMXULCommandDispatcherRef;
@@ -741,6 +738,7 @@ declare namespace XPCOM {
     nsIKeyValueVoidCallback: nsIKeyValueVoidCallbackRef;
     nsIURISetters: nsIURISettersRef;
     nsIDOMMozWakeLockListener: nsIDOMMozWakeLockListenerRef;
+    nsILoginManager: nsILoginManagerRef;
     txIEXSLTFunctions: txIEXSLTFunctionsRef;
     nsITransactionListener: nsITransactionListenerRef;
     nsIUDPMessage: nsIUDPMessageRef;
@@ -756,18 +754,19 @@ declare namespace XPCOM {
     nsIOutputStream: nsIOutputStreamRef;
     nsIWebVTTListener: nsIWebVTTListenerRef;
     nsIOpenSignedAppFileCallback: nsIOpenSignedAppFileCallbackRef;
+    nsIContentParent: nsIContentParentRef;
     nsIDashboard: nsIDashboardRef;
     nsIDomainPolicy: nsIDomainPolicyRef;
     nsIPresentationSessionListener: nsIPresentationSessionListenerRef;
     nsIHTMLEditor: nsIHTMLEditorRef;
-    nsIUrlClassifierCallback: nsIUrlClassifierCallbackRef;
+    nsIPrinterEnumerator: nsIPrinterEnumeratorRef;
     nsISupportsFloat: nsISupportsFloatRef;
     nsIClipboardHelper: nsIClipboardHelperRef;
     nsIWebBrowserPersistDocumentReceiver: nsIWebBrowserPersistDocumentReceiverRef;
     nsIDOMXULContainerItemElement: nsIDOMXULContainerItemElementRef;
     nsIWebProgress: nsIWebProgressRef;
     nsIBrowserDOMWindow: nsIBrowserDOMWindowRef;
-    nsIPrinterEnumerator: nsIPrinterEnumeratorRef;
+    nsIBrowserController: nsIBrowserControllerRef;
     nsIUrlClassifierFeature: nsIUrlClassifierFeatureRef;
     nsIUrlClassifierStreamUpdater: nsIUrlClassifierStreamUpdaterRef;
     nsIArrayExtensions: nsIArrayExtensionsRef;
@@ -853,7 +852,6 @@ declare namespace XPCOM {
     nsIIdleServiceInternal: nsIIdleServiceInternalRef;
     nsIPluginTag: nsIPluginTagRef;
     nsIBackgroundFileSaverObserver: nsIBackgroundFileSaverObserverRef;
-    nsISubstitutionObserver: nsISubstitutionObserverRef;
     nsIMediaManagerService: nsIMediaManagerServiceRef;
     nsIPresentationDevicePrompt: nsIPresentationDevicePromptRef;
     nsICertBlocklist: nsICertBlocklistRef;
@@ -921,6 +919,7 @@ declare namespace XPCOM {
     nsIContentPref: nsIContentPrefRef;
     nsIMemory: nsIMemoryRef;
     nsISupportsPRUint32: nsISupportsPRUint32Ref;
+    nsIStreamListenerTee: nsIStreamListenerTeeRef;
     nsINativeOSFileErrorCallback: nsINativeOSFileErrorCallbackRef;
     mozIStorageBindingParamsArray: mozIStorageBindingParamsArrayRef;
     nsIDOMGeoPositionErrorCallback: nsIDOMGeoPositionErrorCallbackRef;
@@ -941,7 +940,6 @@ declare namespace XPCOM {
     nsIGfxInfo: nsIGfxInfoRef;
     nsIMenuBuilder: nsIMenuBuilderRef;
     nsIAppWindow: nsIAppWindowRef;
-    rrIGraphics: rrIGraphicsRef;
     mozIOSPreferences: mozIOSPreferencesRef;
     nsIJSURIMutator: nsIJSURIMutatorRef;
     nsICacheVisitor: nsICacheVisitorRef;
@@ -963,7 +961,6 @@ declare namespace XPCOM {
     nsIFileStream: nsIFileStreamRef;
     mozIStorageVacuumParticipant: mozIStorageVacuumParticipantRef;
     nsITokenDialogs: nsITokenDialogsRef;
-    nsIQuotaOriginsResult: nsIQuotaOriginsResultRef;
     nsIProtocolHandler: nsIProtocolHandlerRef;
     nsINavHistoryContainerResultNode: nsINavHistoryContainerResultNodeRef;
     nsIUrlClassifierFeatureResult: nsIUrlClassifierFeatureResultRef;
@@ -980,7 +977,6 @@ declare namespace XPCOM {
     nsIProtocolProxyChannelFilter: nsIProtocolProxyChannelFilter;
     nsIPreloadedStyleSheet: nsIPreloadedStyleSheet;
     nsIDebug2: nsIDebug2;
-    nsIAsyncStreamReader: nsIAsyncStreamReader;
     nsINativeFileWatcherCallback: nsINativeFileWatcherCallback;
     nsISupportsPRBool: nsISupportsPRBool;
     nsIScriptErrorNote: nsIScriptErrorNote;
@@ -1002,7 +998,7 @@ declare namespace XPCOM {
     nsIPropertyBag: nsIPropertyBag;
     nsIFontEnumerator: nsIFontEnumerator;
     nsIStringInputStream: nsIStringInputStream;
-    nsIAddonPolicyService: nsIAddonPolicyService;
+    nsIPermissionDelegateHandler: nsIPermissionDelegateHandler;
     nsIProfileStartup: nsIProfileStartup;
     nsIHttpChannel: nsIHttpChannel;
     nsICacheEntryOpenCallback: nsICacheEntryOpenCallback;
@@ -1091,7 +1087,7 @@ declare namespace XPCOM {
     nsIBasicCardResponseData: nsIBasicCardResponseData;
     nsIFormPOSTActionChannel: nsIFormPOSTActionChannel;
     mozIStorageResultSet: mozIStorageResultSet;
-    nsIStreamListenerTee: nsIStreamListenerTee;
+    nsIURISetSpec: nsIURISetSpec;
     nsITLSServerSocket: nsITLSServerSocket;
     nsIWebNavigationInfo: nsIWebNavigationInfo;
     nsIXPCComponents_Classes: nsIXPCComponents_Classes;
@@ -1185,9 +1181,9 @@ declare namespace XPCOM {
     imgITools: imgITools;
     nsIExpatSink: nsIExpatSink;
     nsIBinaryInputStream: nsIBinaryInputStream;
-    rrIControl: rrIControl;
     nsIDirIndexParser: nsIDirIndexParser;
     mozIStorageValueArray: mozIStorageValueArray;
+    nsIInputStreamPriority: nsIInputStreamPriority;
     nsIPrivacyTransitionObserver: nsIPrivacyTransitionObserver;
     nsIProtocolProxyService2: nsIProtocolProxyService2;
     nsISupportsPRTime: nsISupportsPRTime;
@@ -1231,7 +1227,6 @@ declare namespace XPCOM {
     nsIInputStreamCallback: nsIInputStreamCallback;
     nsIIncrementalDownload: nsIIncrementalDownload;
     nsIPaymentDetailsModifier: nsIPaymentDetailsModifier;
-    nsIMutable: nsIMutable;
     nsIHttpAuthManager: nsIHttpAuthManager;
     nsISupports: nsISupports;
     nsINativeAppSupport: nsINativeAppSupport;
@@ -1253,7 +1248,6 @@ declare namespace XPCOM {
     nsIChromeRegistry: nsIChromeRegistry;
     nsILoadContextInfo: nsILoadContextInfo;
     nsIX509Cert: nsIX509Cert;
-    nsIURISetSpec: nsIURISetSpec;
     nsISlowScriptDebug: nsISlowScriptDebug;
     nsILocalCertCallback: nsILocalCertCallback;
     nsIBinaryOutputStream: nsIBinaryOutputStream;
@@ -1381,7 +1375,7 @@ declare namespace XPCOM {
     nsISharePicker: nsISharePicker;
     nsIStreamLoader: nsIStreamLoader;
     nsIPersistentProperties: nsIPersistentProperties;
-    mozITXTToHTMLConv: mozITXTToHTMLConv;
+    nsINativeDNSResolverOverride: nsINativeDNSResolverOverride;
     nsIDocumentLoaderFactory: nsIDocumentLoaderFactory;
     nsIRunnable: nsIRunnable;
     nsIPrintSettingsService: nsIPrintSettingsService;
@@ -1446,7 +1440,6 @@ declare namespace XPCOM {
     nsIUrlClassifierCacheEntry: nsIUrlClassifierCacheEntry;
     nsIPK11Token: nsIPK11Token;
     nsIGeneralResponseData: nsIGeneralResponseData;
-    nsIPermissionDelegateHandler: nsIPermissionDelegateHandler;
     nsIPushClearResultCallback: nsIPushClearResultCallback;
     nsICacheEntryDescriptor: nsICacheEntryDescriptor;
     nsIObserverService: nsIObserverService;
@@ -1466,6 +1459,7 @@ declare namespace XPCOM {
     mozIStorageStatement: mozIStorageStatement;
     mozIStorageError: mozIStorageError;
     nsIXPCComponents_utils_Sandbox: nsIXPCComponents_utils_Sandbox;
+    mozITXTToHTMLConv: mozITXTToHTMLConv;
     mozIExtensionProcessScriptJSM: mozIExtensionProcessScriptJSM;
     nsIEditorObserver: nsIEditorObserver;
     nsICaptivePortalService: nsICaptivePortalService;
@@ -1490,8 +1484,9 @@ declare namespace XPCOM {
     nsISupportsChar: nsISupportsChar;
     nsIFileProtocolHandler: nsIFileProtocolHandler;
     nsICacheStorageConsumptionObserver: nsICacheStorageConsumptionObserver;
+    nsIUrlClassifierCallback: nsIUrlClassifierCallback;
     nsIUnsubscribeResultCallback: nsIUnsubscribeResultCallback;
-    nsIPlaintextEditor: nsIPlaintextEditor;
+    nsIPurgeTrackerService: nsIPurgeTrackerService;
     nsIBlocklistService: nsIBlocklistService;
     nsIProxiedChannel: nsIProxiedChannel;
     nsIFileOutputStream: nsIFileOutputStream;
@@ -1519,7 +1514,7 @@ declare namespace XPCOM {
     nsIDOMXULButtonElement: nsIDOMXULButtonElement;
     nsIXULChromeRegistry: nsIXULChromeRegistry;
     nsIDirectoryServiceProvider2: nsIDirectoryServiceProvider2;
-    nsILoginManager: nsILoginManager;
+    nsIClientAuthRemember: nsIClientAuthRemember;
     nsIWebPageDescriptor: nsIWebPageDescriptor;
     nsIAsyncStreamCopier: nsIAsyncStreamCopier;
     nsIPresentationControlService: nsIPresentationControlService;
@@ -1610,16 +1605,15 @@ declare namespace XPCOM {
     nsIOutputIterator: nsIOutputIterator;
     nsIProtocolHandlerWithDynamicFlags: nsIProtocolHandlerWithDynamicFlags;
     nsIUnicharOutputStream: nsIUnicharOutputStream;
-    rrIReplay: rrIReplay;
     nsIServiceManager: nsIServiceManager;
     nsIGeneralChangeDetails: nsIGeneralChangeDetails;
-    rrIConnection: rrIConnection;
     nsICookieManager: nsICookieManager;
     nsIProcess: nsIProcess;
     imgIContainer: imgIContainer;
     nsPIExternalAppLauncher: nsPIExternalAppLauncher;
     nsIPaymentResponseData: nsIPaymentResponseData;
     nsICacheStorage: nsICacheStorage;
+    nsIContentChild: nsIContentChild;
     nsIOfflineCacheUpdateObserver: nsIOfflineCacheUpdateObserver;
     nsIEditorSpellCheck: nsIEditorSpellCheck;
     mozIJSSubScriptLoader: mozIJSSubScriptLoader;
@@ -1633,7 +1627,7 @@ declare namespace XPCOM {
     nsIAppShellService: nsIAppShellService;
     nsIPresentationControlChannel: nsIPresentationControlChannel;
     nsIFakePluginTag: nsIFakePluginTag;
-    nsIXPCComponentsBase: nsIXPCComponentsBase;
+    nsIAddonPolicyService: nsIAddonPolicyService;
     nsIHTMLInlineTableEditor: nsIHTMLInlineTableEditor;
     nsIPaymentShippingOption: nsIPaymentShippingOption;
     nsIDOMXULCommandDispatcher: nsIDOMXULCommandDispatcher;
@@ -1707,6 +1701,7 @@ declare namespace XPCOM {
     nsIKeyValueVoidCallback: nsIKeyValueVoidCallback;
     nsIURISetters: nsIURISetters;
     nsIDOMMozWakeLockListener: nsIDOMMozWakeLockListener;
+    nsILoginManager: nsILoginManager;
     txIEXSLTFunctions: txIEXSLTFunctions;
     nsITransactionListener: nsITransactionListener;
     nsIUDPMessage: nsIUDPMessage;
@@ -1722,18 +1717,19 @@ declare namespace XPCOM {
     nsIOutputStream: nsIOutputStream;
     nsIWebVTTListener: nsIWebVTTListener;
     nsIOpenSignedAppFileCallback: nsIOpenSignedAppFileCallback;
+    nsIContentParent: nsIContentParent;
     nsIDashboard: nsIDashboard;
     nsIDomainPolicy: nsIDomainPolicy;
     nsIPresentationSessionListener: nsIPresentationSessionListener;
     nsIHTMLEditor: nsIHTMLEditor;
-    nsIUrlClassifierCallback: nsIUrlClassifierCallback;
+    nsIPrinterEnumerator: nsIPrinterEnumerator;
     nsISupportsFloat: nsISupportsFloat;
     nsIClipboardHelper: nsIClipboardHelper;
     nsIWebBrowserPersistDocumentReceiver: nsIWebBrowserPersistDocumentReceiver;
     nsIDOMXULContainerItemElement: nsIDOMXULContainerItemElement;
     nsIWebProgress: nsIWebProgress;
     nsIBrowserDOMWindow: nsIBrowserDOMWindow;
-    nsIPrinterEnumerator: nsIPrinterEnumerator;
+    nsIBrowserController: nsIBrowserController;
     nsIUrlClassifierFeature: nsIUrlClassifierFeature;
     nsIUrlClassifierStreamUpdater: nsIUrlClassifierStreamUpdater;
     nsIArrayExtensions: nsIArrayExtensions;
@@ -1819,7 +1815,6 @@ declare namespace XPCOM {
     nsIIdleServiceInternal: nsIIdleServiceInternal;
     nsIPluginTag: nsIPluginTag;
     nsIBackgroundFileSaverObserver: nsIBackgroundFileSaverObserver;
-    nsISubstitutionObserver: nsISubstitutionObserver;
     nsIMediaManagerService: nsIMediaManagerService;
     nsIPresentationDevicePrompt: nsIPresentationDevicePrompt;
     nsICertBlocklist: nsICertBlocklist;
@@ -1887,6 +1882,7 @@ declare namespace XPCOM {
     nsIContentPref: nsIContentPref;
     nsIMemory: nsIMemory;
     nsISupportsPRUint32: nsISupportsPRUint32;
+    nsIStreamListenerTee: nsIStreamListenerTee;
     nsINativeOSFileErrorCallback: nsINativeOSFileErrorCallback;
     mozIStorageBindingParamsArray: mozIStorageBindingParamsArray;
     nsIDOMGeoPositionErrorCallback: nsIDOMGeoPositionErrorCallback;
@@ -1907,7 +1903,6 @@ declare namespace XPCOM {
     nsIGfxInfo: nsIGfxInfo;
     nsIMenuBuilder: nsIMenuBuilder;
     nsIAppWindow: nsIAppWindow;
-    rrIGraphics: rrIGraphics;
     mozIOSPreferences: mozIOSPreferences;
     nsIJSURIMutator: nsIJSURIMutator;
     nsICacheVisitor: nsICacheVisitor;
@@ -1929,7 +1924,6 @@ declare namespace XPCOM {
     nsIFileStream: nsIFileStream;
     mozIStorageVacuumParticipant: mozIStorageVacuumParticipant;
     nsITokenDialogs: nsITokenDialogs;
-    nsIQuotaOriginsResult: nsIQuotaOriginsResult;
     nsIProtocolHandler: nsIProtocolHandler;
     nsINavHistoryContainerResultNode: nsINavHistoryContainerResultNode;
     nsIUrlClassifierFeatureResult: nsIUrlClassifierFeatureResult;

@@ -80,4 +80,5 @@ PYTHON_UNITTEST_MANIFESTS += [
     'lint/test/python.ini',
     'rb/python.ini',
     'tryselect/test/python.ini',
+    'typescript/test/python.ini',
 ]

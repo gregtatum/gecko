@@ -580,23 +580,11 @@ declare namespace XPCOM {
      * @param aMessage the string to pass to panic!().
      */
     readonly rustPanic: (aMessage: string) => void;
-  }
-
-  export interface nsIAsyncStreamReaderRef {
-    readonly name: "nsIAsyncStreamReader";
-    readonly number: "{aafadd3f-fe7e-4a75-83d3-26fe3d992364}";
-  }
-
-  export interface nsIAsyncStreamReader extends nsISupports {
 
     /**
-     * Read an asynchronous input stream and return a promise which will resolve
-     * with a string containing the contents of the stream when the read is
-     * finished successfully, or rejected with an error.
-     *
-     * @param aInputStream the input stream to read from.
+     * Cause an Out of Memory Crash.
      */
-    readonly readAsyncStream: (aInputStream: (nsIAsyncInputStream | null)) => IDLPromise;
+    readonly crashWithOOM: () => void;
   }
 
   export interface nsINativeFileWatcherCallbackRef {
@@ -1303,77 +1291,16 @@ declare namespace XPCOM {
     readonly setUTF8Data: (data: IDLAUTF8String) => void;
   }
 
-  export interface nsIAddonPolicyServiceRef {
-    readonly name: "nsIAddonPolicyService";
-    readonly number: "{8a034ef9-9d14-4c5d-8319-06c1ab574baa}";
+  export interface nsIPermissionDelegateHandlerRef {
+    readonly name: "nsIPermissionDelegateHandler";
+    readonly number: "{07611dc6-bf4d-4d8a-a64b-f3a5904dddc7}";
   }
 
-  /**
-   * This interface allows the security manager to query custom per-addon security
-   * policy.
-   */
-  export interface nsIAddonPolicyService extends nsISupports {
+  export interface nsIPermissionDelegateHandler extends nsISupports {
 
-    /**
-     * Returns the base content security policy, which is applied to all
-     * extension documents, in addition to any custom policies.
-     */
-    readonly baseCSP: IDLAString;
+    readonly maybeUnsafePermissionDelegate: (aTypes: IDLACString[]) => boolean;
 
-    /**
-     * Returns the default content security policy which applies to extension
-     * documents which do not specify any custom policies.
-     */
-    readonly defaultCSP: IDLAString;
-
-    /**
-     * Returns the content security policy which applies to documents belonging
-     * to the extension with the given ID. This may be either a custom policy,
-     * if one was supplied, or the default policy if one was not.
-     */
-    readonly getExtensionPageCSP: (aAddonId: IDLAString) => IDLAString;
-
-    /**
-     * Returns the content security policy which applies to content scripts belonging
-     * to the extension with the given ID. This may be either a custom policy,
-     * if one was supplied, or the default policy if one was not.
-     */
-    readonly getContentScriptCSP: (aAddonId: IDLAString) => IDLAString;
-
-    /**
-     * Returns the generated background page as a data-URI, if any. If the addon
-     * does not have an auto-generated background page, an empty string is
-     * returned.
-     */
-    readonly getGeneratedBackgroundPageUrl: (aAddonId: IDLACString) => IDLACString;
-
-    /**
-     * Returns true if the addon was granted the |aPerm| API permission.
-     */
-    readonly addonHasPermission: (aAddonId: IDLAString, aPerm: IDLAString) => boolean;
-
-    /**
-     * Returns true if unprivileged code associated with the given addon may load
-     * data from |aURI|.  If |aExplicit| is true, the <all_urls> permission and
-     * permissive host globs are ignored when checking for a match.
-     */
-    readonly addonMayLoadURI: (aAddonId: IDLAString, aURI: (nsIURI | null), aExplicit?: boolean) => boolean;
-
-    /**
-     * Returns the name of the WebExtension with the given ID, or the ID string
-     * if no matching add-on can be found.
-     */
-    readonly getExtensionName: (aAddonId: IDLAString) => IDLAString;
-
-    /**
-     * Returns true if a given extension:// URI is web-accessible.
-     */
-    readonly extensionURILoadableByAnyone: (aURI: (nsIURI | null)) => boolean;
-
-    /**
-     * Maps an extension URI to the ID of the addon it belongs to.
-     */
-    readonly extensionURIToAddonId: (aURI: (nsIURI | null)) => IDLAString;
+    readonly permissionDelegateFPEnabled: boolean;
   }
 
   export interface nsIProfileStartupRef {
@@ -2603,6 +2530,12 @@ declare namespace XPCOM {
      * the docShell has created the default request.)
      */
     defaultLoadFlags: number;
+
+    /**
+     * Returns true if the loadGroup belongs to a discarded context, such as, a
+     * terminated private browsing session.
+     */
+    readonly isBrowsingContextDiscarded: boolean;
   }
 
   export interface nsILoginReputationQueryCallbackRef {
@@ -2803,7 +2736,7 @@ declare namespace XPCOM {
 
   export interface nsISDBConnection extends nsISupports {
 
-    readonly init: (aPrincipal: (nsIPrincipal | null)) => void;
+    readonly init: (aPrincipal: (nsIPrincipal | null), aPersistenceType?: IDLACString) => void;
 
     readonly open: (aName: IDLAString) => (nsISDBRequest | null);
 
@@ -5388,6 +5321,7 @@ declare namespace XPCOM {
      * @param aFile      Target file. This may be a nsIFile object or an
      *                   nsIURI object with a file scheme or a scheme that
      *                   supports uploading (e.g. ftp).
+     * @param aContentPolicyType The type of content we're saving.
      * @param aPrivacyContext A context from which the privacy status of this
      *                   save operation can be determined. Must only be null
      *                   in situations in which no such context is available
@@ -5400,7 +5334,7 @@ declare namespace XPCOM {
      *
      * @throws NS_ERROR_INVALID_ARG One or more arguments was invalid.
      */
-    readonly saveURI: (aURI: (nsIURI | null), aTriggeringPrincipal: (nsIPrincipal | null), aCacheKey: number, aReferrerInfo: (nsIReferrerInfo | null), aPostData: (nsIInputStream | null), aExtraHeaders: string, aFile: (nsISupports | null), aPrivacyContext: (nsILoadContext | null)) => void;
+    readonly saveURI: (aURI: (nsIURI | null), aTriggeringPrincipal: (nsIPrincipal | null), aCacheKey: number, aReferrerInfo: (nsIReferrerInfo | null), aPostData: (nsIInputStream | null), aExtraHeaders: string, aFile: (nsISupports | null), aContentPolicyType: number, aPrivacyContext: (nsILoadContext | null)) => void;
 
     /**
      * @param aIsPrivate Treat the save operation as private (ie. with
@@ -5408,7 +5342,7 @@ declare namespace XPCOM {
      *                   of intermediate data, etc.)
      * @see saveURI for all other parameter descriptions
      */
-    readonly savePrivacyAwareURI: (aURI: (nsIURI | null), aTriggeringPrincipal: (nsIPrincipal | null), aCacheKey: number, aReferrerInfo: (nsIReferrerInfo | null), aPostData: (nsIInputStream | null), aExtraHeaders: string, aFile: (nsISupports | null), aIsPrivate: boolean) => void;
+    readonly savePrivacyAwareURI: (aURI: (nsIURI | null), aTriggeringPrincipal: (nsIPrincipal | null), aCacheKey: number, aReferrerInfo: (nsIReferrerInfo | null), aPostData: (nsIInputStream | null), aExtraHeaders: string, aFile: (nsISupports | null), aContentPolicyType: number, aIsPrivate: boolean) => void;
 
     /**
      * Save a channel to a file. It must not be opened yet.
@@ -7367,6 +7301,24 @@ declare namespace XPCOM {
     TYPE_INTERNAL_FORCE_ALLOWED_DTD: 48;
 
     /**
+     * Indicates an internal constant for scripts loaded through an
+     * audioWorklet.
+     *
+     * This will be mapped to TYPE_SCRIPT before being passed to content policy
+     * implementations.
+     */
+    TYPE_INTERNAL_AUDIOWORKLET: 49;
+
+    /**
+     * Indicates an internal constant for scripts loaded through an
+     * paintWorklet.
+     *
+     * This will be mapped to TYPE_SCRIPT before being passed to content policy
+     * implementations.
+     */
+    TYPE_INTERNAL_PAINTWORKLET: 50;
+
+    /**
      * Returned from shouldLoad or shouldProcess if the load or process request
      * is rejected based on details of the request.
      */
@@ -7834,43 +7786,20 @@ declare namespace XPCOM {
     readonly getNextRow: () => (mozIStorageRow | null);
   }
 
-  export interface nsIStreamListenerTeeRef {
-    readonly name: "nsIStreamListenerTee";
-    readonly number: "{62b27fc1-6e8c-4225-8ad0-b9d44252973a}";
+  export interface nsIURISetSpecRef {
+    readonly name: "nsIURISetSpec";
+    readonly number: "{1fc53257-898b-4c5e-b69c-05bc84b4cd8f}";
   }
 
-  /**
-   * As data "flows" into a stream listener tee, it is copied to the output stream
-   * and then forwarded to the real listener.
-   */
-  export interface nsIStreamListenerTee extends nsIStreamListener {
+  export interface nsIURISetSpec extends nsISupports {
 
     /**
-     * Initalize the tee.
-     *
-     * @param listener
-     *    the original listener the tee will propagate onStartRequest,
-     *    onDataAvailable and onStopRequest notifications to, exceptions from
-     *    the listener will be propagated back to the channel
-     * @param sink
-     *    the stream the data coming from the channel will be written to,
-     *    should be blocking
-     * @param requestObserver
-     *    optional parameter, listener that gets only onStartRequest and
-     *    onStopRequest notifications; exceptions threw within this optional
-     *    observer are also propagated to the channel, but exceptions from
-     *    the original listener (listener parameter) are privileged
+     * This setter is different from all other setters because it may be used to
+     * initialize the object. We define it separately allowing mutator implementors
+     * to define it separately, while the rest of the setters may be simply
+     * forwarded to the mutable URI.
      */
-    readonly init: (listener: (nsIStreamListener | null), sink: (nsIOutputStream | null), requestObserver?: (nsIRequestObserver | null)) => void;
-
-    /**
-     * Initalize the tee like above, but with the extra parameter to make it
-     * possible to copy the output asynchronously
-     * @param anEventTarget
-     *    if set, this event-target is used to copy data to the output stream,
-     *    giving an asynchronous tee
-     */
-    readonly initAsync: (listener: (nsIStreamListener | null), eventTarget: (nsIEventTarget | null), sink: (nsIOutputStream | null), requestObserver?: (nsIRequestObserver | null)) => void;
+    readonly setSpec: (aSpec: IDLAUTF8String) => (nsIURIMutator | null);
   }
 
   export interface nsITLSServerSocketRef {
@@ -8162,20 +8091,6 @@ declare namespace XPCOM {
     readonly classificationFlags: number;
 
     /**
-     * Returns true if the channel has loaded a resource that is classified as
-     * tracker.
-     * This is a helper attribute which returns the same value of
-     * (classificationFlags & CLASSIFIED_ANY_BASIC_TRACKING) or
-     * (classificationFlags & CLASSIFIED_ANY_STRICT_TRACKING) or
-     * (classificationFlags & CLASSIFIED_ANY_SOCIAL_TRACKING)
-     *
-     * Note that top-level channels could be marked as tracking
-     * resource. In order to identify third-party tracking resources
-     * specifically, use isThirdPartyTrackingResource().
-     */
-    readonly isTrackingResource: () => boolean;
-
-    /**
      * Returns true  if the channel has been processed by URL-Classifier features
      * and is considered third-party with the top window URI, and if it has loaded
      * a resource that is classified as a tracker.
@@ -8188,8 +8103,8 @@ declare namespace XPCOM {
     readonly isThirdPartyTrackingResource: () => boolean;
 
     /**
-     * Returns true if the channel has loaded a resource that is classified as
-     * a social tracker.
+     * Returns true if the channel has loaded a 3rd party resource that is
+     * classified as a social tracker.
      *
      * This is a helper attribute which returns the same value of
      * (classificationFlags & CLASSIFIED_ANY_SOCIAL_TRACKING)
@@ -8198,7 +8113,7 @@ declare namespace XPCOM {
      * resources. In order to identify third-party social tracking resources
      * specifically, check the flags manually or add a new helper here.
      */
-    readonly isSocialTrackingResource: () => boolean;
+    readonly isThirdPartySocialTrackingResource: () => boolean;
   }
 
   export interface nsIBitsCallbackRef {
@@ -8587,6 +8502,12 @@ declare namespace XPCOM {
     RESOLVE_REFRESH_CACHE: 1024;
 
     /**
+     * These two bits encode the TRR mode of the request.
+     * Use the static helper methods convert between the TRR mode and flags.
+     */
+    RESOLVE_TRR_MODE_MASK: 6144;
+
+    /**
      * This ure dns request types that are currently supported.
      * RESOLVE_TYPE_DEFAULT is standard A/AAAA lookup
      * The others (currently only TXT supported) are wireformat types
@@ -8624,6 +8545,33 @@ declare namespace XPCOM {
      * @return An object that can be used to cancel the host lookup.
      */
     readonly asyncResolve: (aHostName: IDLAUTF8String, aFlags: number, aListener: (nsIDNSListener | null), aListenerTarget: (nsIEventTarget | null), aOriginAttributes?: IDLjsval) => (nsICancelable | null);
+
+    /**
+     * kicks off an asynchronous host lookup with a specific TRR server to be
+     * used. This request will not be cached.
+     *
+     * @param aHostName
+     *        the hostname or IP-address-literal to resolve.
+     * @param aTrrServer
+     *        the uri of a trr server to be used.
+     * @param aFlags
+     *        a bitwise OR of the RESOLVE_ prefixed constants defined below.
+     * @param aListener
+     *        the listener to be notified when the result is available.
+     * @param aListenerTarget
+     *        optional parameter (may be null).  if non-null, this parameter
+     *        specifies the nsIEventTarget of the thread on which the
+     *        listener's onLookupComplete should be called.  however, if this
+     *        parameter is null, then onLookupComplete will be called on an
+     *        unspecified thread (possibly recursively).
+     * @param aOriginAttributes
+     *        the originAttribute for this resolving, the DNS cache will be
+     *        separated according to this originAttributes. This attribute is
+     *        optional to avoid breaking add-ons.
+     *
+     * @return An object that can be used to cancel the host lookup.
+     */
+    readonly asyncResolveWithTrrServer: (aHostName: IDLAUTF8String, aTrrServer: IDLAUTF8String, aFlags: number, aListener: (nsIDNSListener | null), aListenerTarget: (nsIEventTarget | null), aOriginAttributes?: IDLjsval) => (nsICancelable | null);
 
     /**
      * kicks off an asynchronous host lookup by type, e.g. TXT.
@@ -8669,6 +8617,26 @@ declare namespace XPCOM {
      *        to avoid breaking add-ons.
      */
     readonly cancelAsyncResolve: (aHostName: IDLAUTF8String, aFlags: number, aListener: (nsIDNSListener | null), aReason: number, aOriginAttributes?: IDLjsval) => void;
+
+    /**
+     * Attempts to cancel a previously requested async DNS lookup
+     *
+     * @param aHostName
+     *        the hostname or IP-address-literal to resolve.
+     * @param aTrrServer
+     *        the uri of a trr server to be used.
+     * @param aFlags
+     *        a bitwise OR of the RESOLVE_ prefixed constants defined below.
+     * @param aListener
+     *        the original listener which was to be notified about the host lookup
+     *        result - used to match request information to requestor.
+     * @param aReason
+     *        nsresult reason for the cancellation
+     * @param aOriginAttributes
+     *        the originAttribute for this resolving. This attribute is optional
+     *        to avoid breaking add-ons.
+     */
+    readonly cancelAsyncResolveWithTrrServer: (aHostName: IDLAUTF8String, aTrrServer: IDLAUTF8String, aFlags: number, aListener: (nsIDNSListener | null), aReason: number, aOriginAttributes?: IDLjsval) => void;
 
     /**
      * Attempts to cancel a previously requested async DNS lookup
@@ -8879,12 +8847,6 @@ declare namespace XPCOM {
     /** message is warning */
     warningFlag: 1;
 
-    /** exception was thrown for this case - exception-aware hosts can ignore */
-    exceptionFlag: 2;
-
-    /** error or warning is due to strict option */
-    strictFlag: 4;
-
     /** just a log message */
     infoFlag: 8;
   }
@@ -8940,12 +8902,6 @@ declare namespace XPCOM {
     errorMessageName: IDLAString;
 
     readonly notes: (nsIArray | null);
-
-    /**
-     * If we are recording or replaying, this value may identify the point
-     * where the error was generated, otherwise zero.
-     */
-    timeWarpTarget: number;
 
     /**
      * If the ScriptError is a CSS parser error, this value will contain the
@@ -10133,7 +10089,7 @@ declare namespace XPCOM {
     /**
      * Returns a cached CrossOriginOpenerPolicy that is computed just before we
      * determine if there is a policy mismatch.
-     * @throws NS_ERROR_NOT_AVAILABLE if it has not been computed yet
+     * @throws NS_ERROR_NOT_AVAILABLE if called before onStartRequest
      */
     readonly crossOriginOpenerPolicy: nsILoadInfo_CrossOriginOpenerPolicy;
   }
@@ -11663,6 +11619,18 @@ declare namespace XPCOM {
     readonly modifyLogin: (oldLogin: (nsILoginInfo | null), newLoginData: (nsISupports | null)) => void;
 
     /**
+     * Record that the password of a saved login was used (e.g. submitted or copied).
+     *
+     * @param nsILoginInfo aLogin
+     *        The login record of the password that was used.
+     *
+     * If only the username was used, this method shouldn't be called as we don't
+     * want to double-count the use if both the username and password are copied.
+     * Copying of the username normally precedes the copying of the password anyways.
+     */
+    readonly recordPasswordUse: (aLogin: (nsILoginInfo | null)) => void;
+
+    /**
      * Remove all stored logins.
      *
      * The browser sanitization feature allows the user to clear any stored
@@ -12257,23 +12225,6 @@ declare namespace XPCOM {
     readonly stopApzAutoscroll: (aScrollId: number, aPresShellId: number) => void;
 
     /**
-     * Save a recording of the associated content process' behavior to the
-     * specified filename. Returns whether the process is being recorded.
-     */
-    readonly saveRecording: (aFileName: IDLAString) => boolean;
-
-    /**
-     * Asynchronously retrieve a JSON string representing a log of the
-     * content blocking events happened so far in the current tab from the
-     * content process.
-     *
-     * This returns a Promise which resolves to a string on success, and is
-     * rejected on failure.  For documentation on the string format, please
-     * see nsISecureBrowserUI.contentBlockingLogJSON.
-     */
-    readonly getContentBlockingLog: () => IDLPromise;
-
-    /**
      * Interrupt content scripts if possible/needed to allow chrome scripts in the
      * content process to run (in particular, to allow navigating through browser
      * history.
@@ -12459,9 +12410,6 @@ declare namespace XPCOM {
      *
      * @param aRequest
      *        the request being observed (may QI to nsIChannel).
-     * @param aContext
-     *        if aRequest is a channel, then this parameter is the listener
-     *        context passed to nsIChannel::asyncOpen.
      * @param aProgress
      *        numeric value in the range 0 to aProgressMax indicating the
      *        number of bytes transfered thus far.
@@ -12469,7 +12417,7 @@ declare namespace XPCOM {
      *        numeric value indicating maximum number of bytes that will be
      *        transfered (or -1 if total is unknown).
      */
-    readonly onProgress: (aRequest: (nsIRequest | null), aContext: (nsISupports | null), aProgress: number, aProgressMax: number) => void;
+    readonly onProgress: (aRequest: (nsIRequest | null), aProgress: number, aProgressMax: number) => void;
 
     /**
      * Called to notify the event sink with a status message for the given
@@ -12477,9 +12425,6 @@ declare namespace XPCOM {
      *
      * @param aRequest
      *        the request being observed (may QI to nsIChannel).
-     * @param aContext
-     *        if aRequest is a channel, then this parameter is the listener
-     *        context passed to nsIChannel::asyncOpen.
      * @param aStatus
      *        status code (not necessarily an error code) indicating the
      *        state of the channel (usually the state of the underlying
@@ -12492,7 +12437,7 @@ declare namespace XPCOM {
      *        of the status code.  for socket status codes, this parameter
      *        indicates the host:port associated with the status code.
      */
-    readonly onStatus: (aRequest: (nsIRequest | null), aContext: (nsISupports | null), aStatus: number, aStatusArg: string) => void;
+    readonly onStatus: (aRequest: (nsIRequest | null), aStatus: number, aStatusArg: string) => void;
   }
 
   export interface nsILoadContextInfoFactoryRef {
@@ -12579,20 +12524,6 @@ declare namespace XPCOM {
      * @throws NS_ERROR_NOT_AVAILABLE if resURI.host() is an unknown root key.
      */
     readonly resolveURI: (resURI: (nsIURI | null)) => IDLAUTF8String;
-
-    /**
-     * Adds an observer that will be notified on the main thread whenever a
-     * substitition is set or unset. Notifications are not sent for substitutions
-     * that were set prior to the observer being added. Holds an owning reference
-     * to the observer until removeObserver is called or the protocol handler is
-     * destroyed.
-     */
-    readonly addObserver: (observer: (nsISubstitutionObserver | null)) => void;
-
-    /**
-     * Removes the observer.
-     */
-    readonly removeObserver: (observer: (nsISubstitutionObserver | null)) => void;
   }
 
   export interface nsIPK11TokenDBRef {
@@ -13113,28 +13044,6 @@ declare namespace XPCOM {
     readonly readArrayBuffer: (aLength: number, aArrayBuffer: IDLjsval) => number;
   }
 
-  export interface rrIControlRef {
-    readonly name: "rrIControl";
-    readonly number: "{c296e7c3-8a27-4fd0-94c2-b6e5126909ba}";
-  }
-
-  export interface rrIControl extends nsISupports {
-
-    readonly Initialize: (recordingChildId: IDLjsval) => void;
-
-    readonly ConnectDebugger: (replayDebugger: IDLjsval) => void;
-
-    readonly ManifestFinished: (rootId: number, forkId: number, response: IDLjsval) => void;
-
-    readonly PingResponse: (rootId: number, forkId: number, pingId: number, progress: number) => void;
-
-    readonly BeforeSaveRecording: () => void;
-
-    readonly AfterSaveRecording: () => void;
-
-    readonly ChildCrashed: (rootId: number, forkId: number) => void;
-  }
-
   export interface nsIDirIndexParserRef {
     readonly name: "nsIDirIndexParser";
     readonly number: "{38e3066c-1dd2-11b2-9b59-8be515c1ee3f}";
@@ -13233,6 +13142,20 @@ declare namespace XPCOM {
     readonly getBlobAsUTF8String: (aIndex: number) => IDLAUTF8String;
 
     readonly getIsNull: (aIndex: number) => boolean;
+  }
+
+  export interface nsIInputStreamPriorityRef {
+    readonly name: "nsIInputStreamPriority";
+    readonly number: "{daa45b24-98ee-4eb2-9cec-aad0bc023e9d}";
+  }
+
+  export interface nsIInputStreamPriority extends nsISupports {
+
+    /**
+     * An input stream implementing this interface will dispatch runnable
+     * events with this priority. See nsIRunnablePriority.
+     */
+    priority: number;
   }
 
   export interface nsIPrivacyTransitionObserverRef {
@@ -13433,6 +13356,12 @@ declare namespace XPCOM {
     FLAG_NOPARENTFRAME: 8;
 
     /**
+     * This flag is used for window and element focus operations to signal
+     * wether the caller is system or non system.
+     */
+    FLAG_NONSYSTEMCALLER: 16;
+
+    /**
      * Focus is changing due to a mouse operation, for instance the mouse was
      * clicked on an element.
      */
@@ -13542,12 +13471,16 @@ declare namespace XPCOM {
 
     /**
      * The most active (frontmost) window, or null if no window that is part of
-     * the application is active. Setting the activeWindow raises it, and
-     * focuses the current child window's current element, if any. Setting this
-     * to null or to a non-top-level window throws an NS_ERROR_INVALID_ARG
-     * exception.
+     * the application is active.
      */
-    activeWindow: (mozIDOMWindowProxy | null);
+    readonly activeWindow: (mozIDOMWindowProxy | null);
+
+    /**
+     * In the parent process: The BrowsingContext corresponding to activeWindow.
+     * In content processes: The top-level Web content browsing context that
+     * focus is in if the application is active and focus is in Web content.
+     */
+    readonly activeBrowsingContext: WebIDL.BrowsingContext;
 
     /**
      * The child window within the activeWindow that is focused. This will
@@ -13558,6 +13491,7 @@ declare namespace XPCOM {
      * will actually be set to the child window and the current element within
      * that set as the focused element. This process repeats downwards until a
      * non-frame element is found.
+     * The setter for this attribute defaults to CallerType::System.
      */
     focusedWindow: (mozIDOMWindowProxy | null);
 
@@ -14100,7 +14034,7 @@ declare namespace XPCOM {
 
     /**
      * Sets a value for a specified node's attribute, except in
-     * the case below (following the original XULDocument::persist):
+     * the case below:
      * If the value is empty and if calling `hasValue` with the node's
      * document and ID and `attr` would return true, then the
      * value instead gets removed from the store (see Bug 1476680).
@@ -15641,26 +15575,6 @@ declare namespace XPCOM {
     readonly data: IDLjsval;
   }
 
-  export interface nsIMutableRef {
-    readonly name: "nsIMutable";
-    readonly number: "{321578d0-03c1-4d95-8821-021ac612d18d}";
-  }
-
-  /**
-   * nsIMutable defines an interface to be implemented by objects which
-   * can be made immutable.
-   */
-  export interface nsIMutable extends nsISupports {
-
-    /**
-     * Control whether or not this object can be modified.  If the flag is
-     * false, no modification is allowed.  Once the flag has been set to false,
-     * it cannot be reset back to true -- attempts to do so throw
-     * NS_ERROR_INVALID_ARG.
-     */
-    mutable: boolean;
-  }
-
   export interface nsIHttpAuthManagerRef {
     readonly name: "nsIHttpAuthManager";
     readonly number: "{54f90444-c52b-4d2d-8916-c59a2bb25938}";
@@ -16122,6 +16036,12 @@ declare namespace XPCOM {
      * A flag that indicates that this URI must be loaded in an extension process (if available).
      */
     URI_MUST_LOAD_IN_EXTENSION_PROCESS: 512;
+
+    /**
+     * A flag that indicates that this about: URI needs to allow unsanitized content.
+     * Only to be used by about:home and about:newtab.
+     */
+    ALLOW_UNSANITIZED_CONTENT: 1024;
   }
 
   export interface nsIAboutModule extends nsISupports {
@@ -16174,6 +16094,8 @@ declare namespace XPCOM {
      * Like equals, but takes document.domain changes into account.
      */
     readonly equalsConsideringDomain: (other: (nsIPrincipal | null)) => boolean;
+
+    readonly equalsURI: (aOtherURI: (nsIURI | null)) => boolean;
 
     /**
      * The principal URI to which this principal pertains.  This is
@@ -16287,6 +16209,8 @@ declare namespace XPCOM {
      */
     readonly origin: IDLACString;
 
+    readonly exposablePrePath: IDLACString;
+
     /**
      * Checks if the Principal's URI Scheme matches with the parameter
      *
@@ -16294,9 +16218,15 @@ declare namespace XPCOM {
      */
     readonly schemeIs: (scheme: string) => boolean;
 
-    readonly IsURIInPrefList: (pref: string) => boolean;
+    readonly isURIInPrefList: (pref: string) => boolean;
 
-    readonly IsSameOrigin: (otherURI: (nsIURI | null), aIsPrivateWin: boolean) => boolean;
+    readonly isSameOrigin: (otherURI: (nsIURI | null), aIsPrivateWin: boolean) => boolean;
+
+    readonly allowsRelaxStrictFileOriginPolicy: (aURI: (nsIURI | null)) => boolean;
+
+    readonly getPrefLightCacheKey: (aURI: (nsIURI | null), aWithCredentials: boolean) => IDLACString;
+
+    readonly localStorageQuotaKey: IDLACString;
 
     /**
      * Implementation of
@@ -16314,7 +16244,15 @@ declare namespace XPCOM {
      * Returns the Flags of the Principals
      * associated AboutModule, in case there is one.
      */
-    readonly GetAboutModuleFlags: () => number;
+    readonly getAboutModuleFlags: () => number;
+
+    readonly storageOriginKey: IDLACString;
+
+    /**
+     * Creates and Returns a new ReferrerInfo with the
+     * Principals URI
+     */
+    readonly createReferrerInfo: (aReferrerPolicy: IDLReferrerPolicy) => (nsIReferrerInfo | null);
 
     /**
      * The base part of |origin| without the concatenation with |originSuffix|.
@@ -16418,6 +16356,15 @@ declare namespace XPCOM {
     readonly isAddonOrExpandedAddonPrincipal: boolean;
 
     readonly isOnion: boolean;
+
+    readonly isScriptAllowedByPolicy: boolean;
+
+    readonly isL10nAllowed: (aDocumentURI: (nsIURI | null)) => boolean;
+
+    /**
+     * Returns if the principal is for an IP address.
+     */
+    readonly isIpAddress: boolean;
   }
 
   export interface nsICrashReporterRef {
@@ -16565,13 +16512,6 @@ declare namespace XPCOM {
      * @throws NS_ERROR_NOT_INITIALIZED if crash reporting is disabled.
      */
     readonly saveMemoryReport: () => void;
-
-    /**
-     * Set the telemetry session ID which is recorded in crash metadata. This is
-     * saved in the crash manager and telemetry but is not submitted as a
-     * crash-stats annotation.
-     */
-    readonly setTelemetrySessionId: (id: IDLAUTF8String) => void;
   }
 
   export interface nsIChromeRegistryRef {
@@ -16844,22 +16784,6 @@ declare namespace XPCOM {
      * or mark it as untrusted.
      */
     readonly markForPermDeletion: () => void;
-  }
-
-  export interface nsIURISetSpecRef {
-    readonly name: "nsIURISetSpec";
-    readonly number: "{1fc53257-898b-4c5e-b69c-05bc84b4cd8f}";
-  }
-
-  export interface nsIURISetSpec extends nsISupports {
-
-    /**
-     * This setter is different from all other setters because it may be used to
-     * initialize the object. We define it separately allowing mutator implementors
-     * to define it separately, while the rest of the setters may be simply
-     * forwarded to the mutable URI.
-     */
-    readonly setSpec: (aSpec: IDLAUTF8String) => (nsIURIMutator | null);
   }
 
   export interface nsISlowScriptDebugRef {
@@ -17390,6 +17314,19 @@ declare namespace XPCOM {
      *          information.
      */
     readonly queryReputation: (aQuery: (nsIApplicationReputationQuery | null), aCallback: (nsIApplicationReputationCallback | nsIApplicationReputationCallbackFunction | null)) => void;
+
+    /**
+     * Check if a file with this name should be treated as a binary executable,
+     * and is therefore subject to application reputation checks.
+     * Will return true if the filename's extension is either:
+     * - in kBinaryFileExtensions in ApplicationReputation.cpp
+     * - in sExecutableExts in nsLocalFileCommon.h *and* not in
+     *   kNonBinaryExecutables in ApplicationReputation.cpp
+     *
+     * @param aFilename
+     *        The filename to check.
+     */
+    readonly isBinary: (aFilename: IDLAUTF8String) => boolean;
   }
 
   export interface nsIPushSubscriptionRef {
@@ -19510,6 +19447,8 @@ declare namespace XPCOM {
      */
     readonly getViewportInfo: (aDisplayWidth: number, aDisplayHeight: number, aDefaultZoom: Out<number>, aAllowZoom: Out<boolean>, aMinZoom: Out<number>, aMaxZoom: Out<number>, aWidth: Out<number>, aHeight: Out<number>, aAutoSize: Out<boolean>) => void;
 
+    readonly getViewportFitInfo: () => IDLAString;
+
     /**
      * Information about the window size in device pixels.
      */
@@ -20059,8 +19998,23 @@ declare namespace XPCOM {
 
     /**
      * Get the number of screen pixels per CSS pixel.
+     *
+     * This is the same as window.devicePixelRatio, except it bypasses
+     * the fingerprinting resistance efforts that window.devicePixelRatio
+     * does (which is fine as this is only exposed to browser internals).
      */
     readonly screenPixelsPerCSSPixel: number;
+
+    /**
+     * Get the number of screen pixels per CSS pixel,
+     * not taking into account any override of the device pixel scale
+     * that's imposed by Responsive Design Mode.
+     *
+     * This is needed to e.g. correctly translate "window.mozInnerScreenX/Y"
+     * into device pixels even when "window" is the window of a document
+     * inside an RDM pane.
+     */
+    readonly screenPixelsPerCSSPixelNoOverride: number;
 
     /**
      * Get the current zoom factor.
@@ -20371,6 +20325,15 @@ declare namespace XPCOM {
     readonly flushApzRepaints: () => boolean;
 
     /**
+     * Sets a flag on the element to forcibly disable APZ on it. This affects
+     * the result of nsLayoutUtils::ShouldDisableApzForElement when called on
+     * this element. This function also schedules a repaint to ensure that the
+     * change takes effect. Note that this is not reversible; it is intended for
+     * use by test code only.
+     */
+    readonly disableApzForElement: (aElement: WebIDL.Element) => void;
+
+    /**
      * Ask APZ to pan and zoom to the focused input element.
      */
     readonly zoomToFocusedInput: () => void;
@@ -20463,7 +20426,7 @@ declare namespace XPCOM {
      * Get file ref count info for given database and file id.
      *
      */
-    readonly getFileReferences: (aDatabaseName: IDLAString, aId: number, aOptions?: IDLjsval, aRefCnt?: Out<number>, aDBRefCnt?: Out<number>, aSliceRefCnt?: Out<number>) => boolean;
+    readonly getFileReferences: (aDatabaseName: IDLAString, aId: number, aOptions?: IDLjsval, aRefCnt?: Out<number>, aDBRefCnt?: Out<number>) => boolean;
 
     readonly flushPendingFileDeletions: () => void;
 
@@ -20648,12 +20611,6 @@ declare namespace XPCOM {
      * Posts an RestyleHint::RESTYLE_SELF restyle event for the given element.
      */
     readonly postRestyleSelfEvent: (aElement: WebIDL.Element) => void;
-
-    /**
-     * Used to pause or resume all media in this window. Use-cases are audio
-     * competing, remote media control and to prevent auto-playing media.
-     */
-    mediaSuspend: number;
 
     /**
      * This method doesn't do anything useful.  It was solely added for the
@@ -21439,7 +21396,7 @@ declare namespace XPCOM {
 
     readonly getAllowsInline: (aContentPolicyType: number, aNonce: IDLAString, aParserCreated: boolean, aTriggeringElement: WebIDL.Element, aCSPEventListener: (nsICSPEventListener | nsICSPEventListenerFunction | null), aContentOfPseudoScript: IDLAString, aLineNumber: number, aColumnNumber: number) => boolean;
 
-    readonly getAllowsNavigateTo: (aURI: (nsIURI | null), aLoadInfo: (nsILoadInfo | null), aWasRedirected: boolean, aEnforceWhitelist: boolean) => boolean;
+    readonly getAllowsNavigateTo: (aURI: (nsIURI | null), aIsFormSubmission: boolean, aWasRedirected: boolean, aEnforceWhitelist: boolean) => boolean;
 
     /**
      * whether this policy allows eval and eval-like functions
@@ -21692,15 +21649,11 @@ declare namespace XPCOM {
   }
 
   export enum nsILoadInfo_CrossOriginOpenerPolicy {
-    OPENER_POLICY_NULL = 0,
+    OPENER_POLICY_UNSAFE_NONE = 0,
     OPENER_POLICY_SAME_ORIGIN = 1,
-    OPENER_POLICY_SAME_SITE = 2,
-    OPENER_POLICY_SAMENESS_MASK = 15,
+    OPENER_POLICY_SAME_ORIGIN_ALLOW_POPUPS = 2,
     OPENER_POLICY_EMBEDDER_POLICY_REQUIRE_CORP_FLAG = 16,
-    OPENER_POLICY_UNSAFE_ALLOW_OUTGOING_FLAG = 128,
     OPENER_POLICY_SAME_ORIGIN_EMBEDDER_POLICY_REQUIRE_CORP = 17,
-    OPENER_POLICY_SAME_ORIGIN_ALLOW_OUTGOING = 129,
-    OPENER_POLICY_SAME_SITE_ALLOW_OUTGOING = 130,
   }
 
   export enum nsILoadInfo_CrossOriginEmbedderPolicy {
@@ -21712,15 +21665,11 @@ declare namespace XPCOM {
     readonly name: "nsILoadInfo";
     readonly number: "{ddc65bf9-2f60-41ab-b22a-4f1ae9efcd36}";
 
-    OPENER_POLICY_NULL: 0;
+    OPENER_POLICY_UNSAFE_NONE: 0;
     OPENER_POLICY_SAME_ORIGIN: 1;
-    OPENER_POLICY_SAME_SITE: 2;
-    OPENER_POLICY_SAMENESS_MASK: 15;
+    OPENER_POLICY_SAME_ORIGIN_ALLOW_POPUPS: 2;
     OPENER_POLICY_EMBEDDER_POLICY_REQUIRE_CORP_FLAG: 16;
-    OPENER_POLICY_UNSAFE_ALLOW_OUTGOING_FLAG: 128;
     OPENER_POLICY_SAME_ORIGIN_EMBEDDER_POLICY_REQUIRE_CORP: 17;
-    OPENER_POLICY_SAME_ORIGIN_ALLOW_OUTGOING: 129;
-    OPENER_POLICY_SAME_SITE_ALLOW_OUTGOING: 130;
 
     EMBEDDER_POLICY_NULL: 0;
     EMBEDDER_POLICY_REQUIRE_CORP: 1;
@@ -21825,24 +21774,12 @@ declare namespace XPCOM {
      * is loading the URI "http://b.com/whatever", GetChannelResultPrincipal
      * will return a principal from "http://a.com/".
      *
-     * This flag can not be used together with SEC_SANDBOXED.  If both are passed
-     * to the LoadInfo constructor then this flag will be dropped.  If you need
-     * to know whether this flag would have been present but was dropped due to
-     * sandboxing, check for the forceInheritPrincipalDropped flag.
+     * This flag can not be used together with SANDBOXED_ORIGIN sandbox flag.  If
+     * both are passed to the LoadInfo constructor then this flag will be dropped.
+     * If you need to know whether this flag would have been present but was dropped
+     * due to sandboxing, check for the forceInheritPrincipalDropped flag.
      */
     SEC_FORCE_INHERIT_PRINCIPAL: 128;
-
-    /**
-     * Sandbox the load. The resulting resource will use a freshly created
-     * null principal. So GetChannelResultPrincipal will always return a
-     * null principal whenever this flag is set.
-     *
-     * This will happen independently of the scheme of the URI that the
-     * channel is loading.
-     *
-     * This flag can not be used together with SEC_FORCE_INHERIT_PRINCIPAL.
-     */
-    SEC_SANDBOXED: 256;
 
     /**
      * Inherit the Principal for about:blank.
@@ -21891,6 +21828,33 @@ declare namespace XPCOM {
      * channel is loading.
      */
     SEC_FORCE_INHERIT_PRINCIPAL_OVERRULE_OWNER: 16384;
+
+    /**
+     * (default) If this flag is set, it has not yet been determined if the
+     * HTTPS-Only mode will upgrade the request.
+     */
+    HTTPS_ONLY_UNINITIALIZED: 1;
+
+    /**
+     * Indicates that the request will get upgraded, and the HTTPS-Only
+     * StreamListener got registered.
+     */
+    HTTPS_ONLY_UPGRADED_LISTENER_NOT_REGISTERED: 2;
+
+    /**
+     * Indicates that this is the first time the request gets upgraded, and thus
+     * the HTTPS-Only StreamListener hasn't been registered yet. Even though there
+     * might be multiple channels per request that have to be upgraded (e.g.,
+     * because of redirects), the StreamListener only has to be attached to one
+     * channel.
+     */
+    HTTPS_ONLY_UPGRADED_LISTENER_REGISTERED: 4;
+
+    /**
+     * This flag can be manually set if the HTTPS-Only mode should exempt the
+     * request and not upgrade it. (e.g in the case of OCSP.
+     */
+    HTTPS_ONLY_EXEMPT: 8;
 
     /**
      * Constants reflecting the channel tainting.  These are mainly defined here
@@ -21974,6 +21938,8 @@ declare namespace XPCOM {
     BLOCKING_REASON_CONTENT_POLICY_PRELOAD: 4006;
 
     BLOCKING_REASON_NOT_SAME_ORIGIN: 5000;
+
+    BLOCKING_REASON_EXTENSION_WEBREQUEST: 6000;
   }
 
   export interface nsILoadInfo extends nsISupports {
@@ -22082,6 +22048,11 @@ declare namespace XPCOM {
     readonly securityFlags: number;
 
     /**
+     * The sandboxFlags of that channel.
+     */
+    readonly sandboxFlags: number;
+
+    /**
      * Allows to query only the security mode bits from above.
      */
     readonly securityMode: number;
@@ -22093,6 +22064,12 @@ declare namespace XPCOM {
      * context.
      */
     skipContentSniffing: boolean;
+
+    /**
+     * Upgrade state of HTTPS-Only Mode. The flag HTTPS_ONLY_EXEMPT can get
+     * set on requests that should be excempt from an upgrade.
+     */
+    httpsOnlyStatus: number;
 
     /**
      * True if this request is embedded in a context that can't be third-party
@@ -22109,6 +22086,12 @@ declare namespace XPCOM {
      * otherwise.
      */
     readonly cookiePolicy: number;
+
+    /**
+     * True if the loading document has the storage permission. This value would
+     * be set during opening the channel.
+     */
+    hasStoragePermission: boolean;
 
     /**
      * If forceInheritPrincipal is true, the data coming from the channel should
@@ -22171,15 +22154,6 @@ declare namespace XPCOM {
     readonly loadErrorPage: boolean;
 
     /**
-     * Returns true if this is a non-subresource request that was triggered
-     * by docshell with the LOAD_CMD_RELOAD flag set.  Note, this is more
-     * specific than looking at the load flags which indicate whether to
-     * bypass the http cache.  The load flags can be set for other reasons,
-     * so they can't be used to infer this value.
-     */
-    isDocshellReload: boolean;
-
-    /**
      * True if the load was initiated by a form request.
      * This is important to know to handle the CSP directive navigate-to.
      */
@@ -22199,6 +22173,8 @@ declare namespace XPCOM {
      * Default value: true.
      */
     sendCSPViolationEvents: boolean;
+
+    readonly internalContentPolicyType: number;
 
     /**
      * Returns true if document or any of the documents ancestors
@@ -22263,9 +22239,9 @@ declare namespace XPCOM {
 
     /**
      * The SEC_FORCE_INHERIT_PRINCIPAL flag may be dropped when a load info
-     * object is created.  Specifically, it will be dropped if the SEC_SANDBOXED
-     * flag is also present.  This flag is set if SEC_FORCE_INHERIT_PRINCIPAL was
-     * dropped.
+     * object is created.  Specifically, it will be dropped if the SANDBOXED_ORIGIN
+     * sandbox flag is also present.  This flag is set if SEC_FORCE_INHERIT_PRINCIPAL
+     * was dropped.
      */
     readonly forceInheritPrincipalDropped: boolean;
 
@@ -22311,6 +22287,16 @@ declare namespace XPCOM {
     readonly frameBrowsingContextID: number;
 
     readonly frameBrowsingContext: WebIDL.BrowsingContext;
+
+    /**
+     * If the element being loaded is a nsFrameLoaderOwner,
+     * `targetBrowsingContext` is the Browsing Context which will contain the
+     * loading document (see `frameBrowsingContext`). Otherwise, it is the
+     * Browsing Context performing the load (see `browsingContext`).
+     */
+    readonly targetBrowsingContextID: number;
+
+    readonly targetBrowsingContext: WebIDL.BrowsingContext;
 
     /**
      * Resets the PrincipalToInherit to a freshly created NullPrincipal
@@ -22437,6 +22423,16 @@ declare namespace XPCOM {
      * load belongs had finished loading when the load was initiated.
      */
     documentHasLoaded: boolean;
+
+    /**
+     * During a top-level document channel redirect from tracking to
+     * non-tracking resources, our anti-tracking heuristic, grants the storage
+     * access permission for a short amount of seconds (See
+     * privacy.restrict3rdpartystorage.expiration_redirect pref).
+     * We use this flag to remember this decision even if this channel is part
+     * of a chain of redirects.
+     */
+    allowListFutureDocumentsCreatedFromThisRedirectChain: boolean;
 
     /**
      * A snapshot of the nonce at load start time which is used for CSP
@@ -24271,18 +24267,17 @@ declare namespace XPCOM {
      * <ul>
      *  <li> escaping back the result (unescaped string) is not guaranteed to
      *       give the original escaped string
-     *  <li> In case of a conversion error, the URI fragment (escaped) is
-     *       assumed to be in UTF-8 and converted to AString (UTF-16)
+     *  <li> The URI fragment (escaped) is assumed to be in UTF-8 and converted
+     *       to AString (UTF-16)
      *  <li> In case of successful conversion any resulting character listed
      *       in netwerk/dns/IDNCharacterBlocklist.inc (except space) is escaped
      *  <li> Always succeeeds (callers don't need to do error checking)
      * </ul>
      *
-     * @param aCharset the charset to convert from
      * @param aURIFragment the URI (or URI fragment) to unescape
      * @return Unescaped aURIFragment  converted to unicode
      */
-    readonly unEscapeURIForUI: (aCharset: IDLACString, aURIFragment: IDLAUTF8String) => IDLAString;
+    readonly unEscapeURIForUI: (aURIFragment: IDLAUTF8String) => IDLAString;
 
     /**
      * Unescapes only non ASCII characters in the given URI fragment
@@ -24367,6 +24362,24 @@ declare namespace XPCOM {
      * Record retreived with TRR.
      */
     readonly IsTRR: () => boolean;
+
+    /**
+     * This attribute is only set if TRR is used and it measures time between
+     * asyncOpen on a channel and the time parsing of response if done.
+     * Thee time is measured in milliseconds.
+     */
+    readonly trrFetchDuration: number;
+
+    /**
+     * This attribute is only set if TRR is used and it measures time between
+     * sending a request and the time response is received from the network.
+     * This time is similat to the time above, but exludes a time needed to
+     * make a connection and a time neededto parse results (this also does not
+     * include delays that may be introduce because parsing is perform on the main
+     * thread).
+     * Thee time is measured in milliseconds.
+     */
+    readonly trrFetchDurationNetworkOnly: number;
   }
 
   export interface nsIDOMXULSelectControlElementRef {
@@ -25722,73 +25735,32 @@ declare namespace XPCOM {
     readonly setStringProperty: (key: IDLAUTF8String, value: IDLAString) => IDLAString;
   }
 
-  export interface mozITXTToHTMLConvRef {
-    readonly name: "mozITXTToHTMLConv";
-    readonly number: "{77c0e42a-1dd2-11b2-8ebf-edc6606f2f4b}";
-
-    kEntities: 0;
-
-    kURLs: 2;
-
-    kGlyphSubstitution: 4;
-
-    kStructPhrase: 8;
+  export interface nsINativeDNSResolverOverrideRef {
+    readonly name: "nsINativeDNSResolverOverride";
+    readonly number: "{8e38d536-5501-48c0-a412-6c450040c8c8}";
   }
 
-  export interface mozITXTToHTMLConv extends nsIStreamConverter {
+  export interface nsINativeDNSResolverOverride extends nsISupports {
 
     /**
-      @param text: plain text to scan. May be a line, paragraph (recommended)
-                   or just a substring.<p>
-                   Must be non-escaped, pure unicode.<p>
-                   <em>Note:</em> ScanTXT(a, o) + ScanTXT(b, o) may be !=
-                   Scan(a + b, o)
-      @param whattodo: Bitfield describing the modes of operation
-      @result      "<", ">" and "&" are escaped and HTML tags are inserted where
-                   appropriate.
+     * Adds an IP override for this specific host.
      */
-    readonly scanTXT: (text: IDLAString, whattodo: number) => IDLAString;
+    readonly addIPOverride: (aHost: IDLAUTF8String, aIPLiteral: IDLACString) => void;
 
     /**
-      Adds additional formatting to user edited text, that the user was too lazy
-      or "unknowledged" (DELETEME: is that a word?) to make.
-      <p>
-      <em>Note:</em> Don't use kGlyphSubstitution with this function. This option
-      generates tags, that are unuseable for UAs other than Mozilla. This would
-      be a data loss bug.
-
-      @param text: HTML source to scan. May be a line, paragraph (recommended)
-                   or just a substring.<p>
-                   Must be correct HTML. "<", ">" and "&" must be escaped,
-                   other chars must be pure unicode.<p>
-                   <em>Note:</em> ScanTXT(a, o) + ScanTXT(b, o) may be !=
-                   Scan(a + b, o)
-      @param whattodo: Bitfield describing the modes of operation
-      @result      Additional HTML tags are inserted where appropriate.
+     * Sets a CNAME override for this specific host.
      */
-    readonly scanHTML: (text: IDLAString, whattodo: number) => IDLAString;
+    readonly setCnameOverride: (aHost: IDLAUTF8String, aCNAME: IDLACString) => void;
 
     /**
-      @param line: line in original msg, possibly starting starting with
-                   txt quote tags like ">"
-      @param logLineStart: pos in line, where the real content (logical line)
-                   begins, i.e. pos after all txt quote tags.
-                   E.g. position of "t" in "> > text".
-                   Initial value must be 0, unless line is not real line.
-      @return      Cite Level, i.e. number of txt quote tags found, i.e. number of
-                   nested quotes.
+     * Clears the overrides for this specific host
      */
-    readonly citeLevelTXT: (line: string, logLineStart: Out<number>) => number;
+    readonly clearHostOverride: (aHost: IDLAUTF8String) => void;
 
     /**
-     @param a wide string to scan for the presence of a URL.
-     @param aLength --> the length of the buffer to be scanned
-     @param aPos --> the position in the buffer to start scanning for a url
-
-     aStartPos --> index into the start of a url (-1 if no url found)
-     aEndPos --> index of the last character in the url (-1 if no url found)
+     * Clears all the host overrides that were previously set.
      */
-    readonly findURLInPlaintext: (text: string, aLength: number, aPos: number, aStartPos: Out<number>, aEndPos: Out<number>) => void;
+    readonly clearOverrides: () => void;
   }
 
   export interface nsIDocumentLoaderFactoryRef {
@@ -26009,8 +25981,8 @@ declare namespace XPCOM {
     readonly httpChannelId: number;
 
     /**
-     * Similar to the previous one but without nsICookieSettings.
-     * This method is used by JS code where nsICookieSettings is not exposed.
+     * Similar to the previous one but without nsICookieJarSettings.
+     * This method is used by JS code where nsICookieJarSettings is not exposed.
      */
     readonly initLoadInfo: (aLoadingNode: WebIDL.Node, aLoadingPrincipal: (nsIPrincipal | null), aTriggeringPrincipal: (nsIPrincipal | null), aSecurityFlags: number, aContentPolicyType: number) => void;
 
@@ -26544,16 +26516,6 @@ declare namespace XPCOM {
      */
     readonly remoteWebProgressManager: (nsIWebProgress | null);
 
-    /**
-     * Called by the child to inform the parent that a command update has occurred
-     * and the supplied set of commands are now enabled and disabled.
-     *
-     * @param action command updater action
-     * @param enabledCommands commands to enable
-     * @param disabledCommand commands to disable
-     */
-    readonly enableDisableCommandsRemoteOnly: (action: IDLAString, enabledCommands: IDLACString[], disabledCommands: IDLACString[]) => void;
-
     readonly contentPrincipal: (nsIPrincipal | null);
 
     readonly contentStoragePrincipal: (nsIPrincipal | null);
@@ -26623,7 +26585,7 @@ declare namespace XPCOM {
      * @param aRequestContextID the request context ID
      * @param aContentType the content type of the document
      */
-    readonly updateForLocationChange: (aLocation: (nsIURI | null), aCharset: IDLAString, aMayEnableCharacterEncodingMenu: boolean, aCharsetAutodetected: boolean, aDocumentURI: (nsIURI | null), aTitle: IDLAString, aContentPrincipal: (nsIPrincipal | null), aContentStoragePrincipal: (nsIPrincipal | null), aContentBlockingAllowListPrincipal: (nsIPrincipal | null), aCSP: (nsIContentSecurityPolicy | null), aReferrerInfo: (nsIReferrerInfo | null), aIsSynthetic: boolean, aInnerWindowID: number, aHasRequestContextID: boolean, aRequestContextID: number, aContentType: IDLAString) => void;
+    readonly updateForLocationChange: (aLocation: (nsIURI | null), aCharset: IDLAString, aMayEnableCharacterEncodingMenu: boolean, aCharsetAutodetected: boolean, aDocumentURI: (nsIURI | null), aTitle: IDLAString, aContentPrincipal: (nsIPrincipal | null), aContentStoragePrincipal: (nsIPrincipal | null), aCSP: (nsIContentSecurityPolicy | null), aReferrerInfo: (nsIReferrerInfo | null), aIsSynthetic: boolean, aInnerWindowID: number, aHasRequestContextID: boolean, aRequestContextID: number, aContentType: IDLAString) => void;
 
     /**
      * Called by Gecko when a security chang event needs to update the event
@@ -26839,6 +26801,12 @@ declare namespace XPCOM {
      * to use esni and query dns for esni keys.
      */
     DONT_TRY_ESNI: 1024;
+
+    /**
+     * These two bits encode the TRR mode of the request.
+     * Use the static helper methods convert between the TRR mode and flags.
+     */
+    TRR_MODE_FLAGS: 6144;
   }
 
   /**
@@ -27342,6 +27310,18 @@ declare namespace XPCOM {
      */
     LOAD_FLAGS_IS_REDIRECT: 8388608;
 
+    /**
+     * These flags force TRR modes 1 or 3 for the load.
+     */
+    LOAD_FLAGS_DISABLE_TRR: 16777216;
+
+    LOAD_FLAGS_FORCE_TRR: 33554432;
+
+    /**
+     * This load should bypass the LoadURIDelegate.loadUri.
+     */
+    LOAD_FLAGS_BYPASS_LOAD_URI_DELEGATE: 67108864;
+
     /****************************************************************************
      * The following flags may be passed as the stop flags parameter to the stop
      * method defined on this interface.
@@ -27771,7 +27751,11 @@ declare namespace XPCOM {
 
     readonly groupId: IDLAString;
 
+    readonly rawGroupId: IDLAString;
+
     readonly scary: boolean;
+
+    readonly rawName: IDLAString;
   }
 
   export interface nsIPlatformInfoRef {
@@ -28016,8 +28000,6 @@ declare namespace XPCOM {
     readonly init: (docShell: (nsIDocShell | null)) => void;
 
     readonly state: number;
-
-    readonly contentBlockingEvent: number;
 
     readonly isSecureContext: boolean;
 
@@ -28808,7 +28790,7 @@ declare namespace XPCOM {
 
   export interface nsISessionStoreFunctions extends nsISupports {
 
-    readonly UpdateSessionStore: (aBrowser: WebIDL.Element, aFlushId: number, aIsFinal: boolean, aEpoch: number, aData: IDLjsval) => void;
+    readonly UpdateSessionStore: (aBrowser: WebIDL.Element, aFlushId: number, aIsFinal: boolean, aEpoch: number, aData: IDLjsval, aCollectSHistory: boolean) => void;
   }
 
   export interface mozIMozIntlHelperRef {
@@ -29238,18 +29220,6 @@ declare namespace XPCOM {
      *  @param aData - the javascript object of the content.
      */
     readonly initData: (aData: IDLjsval) => void;
-  }
-
-  export interface nsIPermissionDelegateHandlerRef {
-    readonly name: "nsIPermissionDelegateHandler";
-    readonly number: "{07611dc6-bf4d-4d8a-a64b-f3a5904dddc7}";
-  }
-
-  export interface nsIPermissionDelegateHandler extends nsISupports {
-
-    readonly maybeUnsafePermissionDelegate: (aTypes: IDLACString[]) => boolean;
-
-    readonly permissionDelegateFPEnabled: boolean;
   }
 
   export interface nsIPushClearResultCallbackRef {
@@ -30450,6 +30420,75 @@ declare namespace XPCOM {
   export interface nsIXPCComponents_utils_Sandbox extends nsISupports {
   }
 
+  export interface mozITXTToHTMLConvRef {
+    readonly name: "mozITXTToHTMLConv";
+    readonly number: "{77c0e42a-1dd2-11b2-8ebf-edc6606f2f4b}";
+
+    kEntities: 0;
+
+    kURLs: 2;
+
+    kGlyphSubstitution: 4;
+
+    kStructPhrase: 8;
+  }
+
+  export interface mozITXTToHTMLConv extends nsIStreamConverter {
+
+    /**
+      @param text: plain text to scan. May be a line, paragraph (recommended)
+                   or just a substring.<p>
+                   Must be non-escaped, pure unicode.<p>
+                   <em>Note:</em> ScanTXT(a, o) + ScanTXT(b, o) may be !=
+                   Scan(a + b, o)
+      @param whattodo: Bitfield describing the modes of operation
+      @result      "<", ">" and "&" are escaped and HTML tags are inserted where
+                   appropriate.
+     */
+    readonly scanTXT: (text: IDLAString, whattodo: number) => IDLAString;
+
+    /**
+      Adds additional formatting to user edited text, that the user was too lazy
+      or "unknowledged" (DELETEME: is that a word?) to make.
+      <p>
+      <em>Note:</em> Don't use kGlyphSubstitution with this function. This option
+      generates tags, that are unuseable for UAs other than Mozilla. This would
+      be a data loss bug.
+
+      @param text: HTML source to scan. May be a line, paragraph (recommended)
+                   or just a substring.<p>
+                   Must be correct HTML. "<", ">" and "&" must be escaped,
+                   other chars must be pure unicode.<p>
+                   <em>Note:</em> ScanTXT(a, o) + ScanTXT(b, o) may be !=
+                   Scan(a + b, o)
+      @param whattodo: Bitfield describing the modes of operation
+      @result      Additional HTML tags are inserted where appropriate.
+     */
+    readonly scanHTML: (text: IDLAString, whattodo: number) => IDLAString;
+
+    /**
+      @param line: line in original msg, possibly starting starting with
+                   txt quote tags like ">"
+      @param logLineStart: pos in line, where the real content (logical line)
+                   begins, i.e. pos after all txt quote tags.
+                   E.g. position of "t" in "> > text".
+                   Initial value must be 0, unless line is not real line.
+      @return      Cite Level, i.e. number of txt quote tags found, i.e. number of
+                   nested quotes.
+     */
+    readonly citeLevelTXT: (line: string, logLineStart: Out<number>) => number;
+
+    /**
+     @param a wide string to scan for the presence of a URL.
+     @param aLength --> the length of the buffer to be scanned
+     @param aPos --> the position in the buffer to start scanning for a url
+
+     aStartPos --> index into the start of a url (-1 if no url found)
+     aEndPos --> index of the last character in the url (-1 if no url found)
+     */
+    readonly findURLInPlaintext: (text: string, aLength: number, aPos: number, aStartPos: Out<number>, aEndPos: Out<number>) => void;
+  }
+
   export interface mozIExtensionProcessScriptJSMRef {
     readonly name: "mozIExtensionProcessScriptJSM";
     readonly number: "{9f2a6434-f0ef-4063-ae33-368d929805d2}";
@@ -30863,6 +30902,13 @@ declare namespace XPCOM {
      * The connection info's hash key. We use it to test connection separation.
      */
     readonly connectionInfoHashKey: IDLACString;
+
+    /**
+     * Returns a cached CrossOriginOpenerPolicy that is computed just before we
+     * determine if there is a policy mismatch.
+     * @throws NS_ERROR_NOT_AVAILABLE if it has not been computed yet
+     */
+    readonly crossOriginOpenerPolicy: nsILoadInfo_CrossOriginOpenerPolicy;
   }
 
   export interface nsIWebBrowserPersistURIMapRef {
@@ -30988,9 +31034,9 @@ declare namespace XPCOM {
      * This function is typically called at the end of the document lifecycle,
      * since calling it multiple times results in multiple new entries.
      *
-     * @param aInputStream the content blocking log as an input stream that outputs a JSON string
+     * @param data    a json string containing the content blocking log.
      */
-    readonly recordContentBlockingLog: (aInputStream: (nsIAsyncInputStream | null)) => void;
+    readonly recordContentBlockingLog: (data: IDLACString) => void;
 
     /**
      * Save new events in the content blocking database
@@ -31411,6 +31457,18 @@ declare namespace XPCOM {
     readonly onNetworkCacheDiskConsumption: (aDiskSize: number) => void;
   }
 
+  export interface nsIUrlClassifierCallbackRef {
+    readonly name: "nsIUrlClassifierCallback";
+    readonly number: "{4ca27b6b-a674-4b3d-ab30-d21e2da2dffb}";
+  }
+
+  type nsIUrlClassifierCallbackFunction = (value: IDLACString) => void;
+
+  export interface nsIUrlClassifierCallback extends nsISupports {
+
+    readonly handleEvent: (value: IDLACString) => void;
+  }
+
   export interface nsIUnsubscribeResultCallbackRef {
     readonly name: "nsIUnsubscribeResultCallback";
     readonly number: "{d574118f-61a9-4270-b1f6-4461aa85c4f5}";
@@ -31429,92 +31487,17 @@ declare namespace XPCOM {
     readonly onUnsubscribe: (status: number, success: boolean) => void;
   }
 
-  export interface nsIPlaintextEditorRef {
-    readonly name: "nsIPlaintextEditor";
-    readonly number: "{b74fb158-1265-4102-91eb-edd0136b49f8}";
-
-    eEditorPlaintextMask: 1;
-
-    eEditorSingleLineMask: 2;
-
-    eEditorPasswordMask: 4;
-
-    eEditorReadonlyMask: 8;
-
-    eEditorDisabledMask: 16;
-
-    eEditorFilterInputMask: 32;
-
-    eEditorMailMask: 64;
-
-    eEditorEnableWrapHackMask: 128;
-
-    eEditorWidgetMask: 256;
-
-    eEditorNoCSSMask: 512;
-
-    eEditorAllowInteraction: 1024;
-
-    eEditorDontEchoPassword: 2048;
-
-    eEditorRightToLeft: 4096;
-
-    eEditorLeftToRight: 8192;
-
-    eEditorSkipSpellCheck: 16384;
-
-    eNewlinesPasteIntact: 0;
-
-    eNewlinesPasteToFirst: 1;
-
-    eNewlinesReplaceWithSpaces: 2;
-
-    eNewlinesStrip: 3;
-
-    eNewlinesReplaceWithCommas: 4;
-
-    eNewlinesStripSurroundingWhitespace: 5;
+  export interface nsIPurgeTrackerServiceRef {
+    readonly name: "nsIPurgeTrackerService";
+    readonly number: "{cd68d61e-9a44-402d-9671-838ac0872176}";
   }
 
-  export interface nsIPlaintextEditor extends nsISupports {
+  export interface nsIPurgeTrackerService extends nsISupports {
 
     /**
-     * The length of the contents in characters.
-     * XXX change this type to 'unsigned long'
+     * Purge cookies and associated data of sites which no longer have the user interaction permission.
      */
-    readonly textLength: number;
-
-    /** Get and set the body wrap width.
-     *
-     * Special values:
-     *    0 = wrap to window width
-     *   -1 = no wrap at all
-     */
-    wrapWidth: number;
-
-    /** Get and set newline handling.
-     *
-     *  Values are the constants defined above.
-     */
-    newlineHandling: number;
-
-    /**
-     * Inserts a string at the current location,
-     * given by the selection.
-     * If the selection is not collapsed, the selection is deleted
-     * and the insertion takes place at the resulting collapsed selection.
-     *
-     * @param aString   the string to be inserted
-     */
-    readonly insertText: (aStringToInsert: IDLAString) => void;
-
-    /**
-     * Insert a line break into the content model.
-     * The interpretation of a break is up to the implementation:
-     * it may enter a character, split a node in the tree, etc.
-     * This may be more efficient than calling InsertText with a newline.
-     */
-    readonly insertLineBreak: () => void;
+    readonly purgeTrackingCookieJars: () => IDLPromise;
   }
 
   export interface nsIBlocklistServiceRef {
@@ -32362,6 +32345,11 @@ declare namespace XPCOM {
      * @returns an empty string if XREAppData.sourceURL is not set.
      */
     readonly sourceURL: IDLACString;
+
+    /**
+     * @see XREAppData.updateURL
+     */
+    readonly updateURL: IDLACString;
   }
 
   export interface nsIPresentationSessionTransportBuilderRef {
@@ -32440,8 +32428,6 @@ declare namespace XPCOM {
 
   export interface nsIXULChromeRegistry extends nsIChromeRegistry {
 
-    readonly getSelectedLocale: (packageName: IDLACString, asBCP47?: boolean) => IDLACString;
-
     readonly isLocaleRTL: (package: IDLACString) => boolean;
 
     /**
@@ -32503,216 +32489,14 @@ declare namespace XPCOM {
     readonly getFiles: (prop: string) => (nsISimpleEnumerator | null);
   }
 
-  export interface nsILoginManagerRef {
-    readonly name: "nsILoginManager";
-    readonly number: "{38c7f6af-7df9-49c7-b558-2776b24e6cc1}";
+  export interface nsIClientAuthRememberRef {
+    readonly name: "nsIClientAuthRemember";
+    readonly number: "{1dbc6eb6-0972-4bdb-9dc4-acd0abf72369}";
   }
 
-  export interface nsILoginManager extends nsISupports {
+  export interface nsIClientAuthRemember extends nsISupports {
 
-    /**
-     * This promise is resolved when initialization is complete, and is rejected
-     * in case initialization failed.  This includes the initial loading of the
-     * login data as well as any migration from previous versions.
-     *
-     * Calling any method of nsILoginManager before this promise is resolved
-     * might trigger the synchronous initialization fallback.
-     */
-    readonly initializationPromise: IDLPromise;
-
-    /**
-     * Store a new login in the login manager.
-     *
-     * @param aLogin
-     *        The login to be added.
-     * @return a clone of the login info with the guid set (even if it was not provided)
-     *
-     * Default values for the login's nsILoginMetaInfo properties will be
-     * created. However, if the caller specifies non-default values, they will
-     * be used instead.
-     */
-    readonly addLogin: (aLogin: (nsILoginInfo | null)) => (nsILoginInfo | null);
-
-    /**
-     * Like addLogin, but asynchronous and for many logins.
-     *
-     * @param aLogins
-     *        A JS Array of nsILoginInfos to add.
-     * @return A promise which resolves with a JS Array of cloned logins with
-     *         the guids set.
-     *
-     * Default values for each login's nsILoginMetaInfo properties will be
-     * created. However, if the caller specifies non-default values, they will
-     * be used instead.
-     */
-    readonly addLogins: (aLogins: IDLjsval) => IDLPromise;
-
-    /**
-     * Remove a login from the login manager.
-     *
-     * @param aLogin
-     *        The login to be removed.
-     *
-     * The specified login must exactly match a stored login. However, the
-     * values of any nsILoginMetaInfo properties are ignored.
-     */
-    readonly removeLogin: (aLogin: (nsILoginInfo | null)) => void;
-
-    /**
-     * Modify an existing login in the login manager.
-     *
-     * @param oldLogin
-     *        The login to be modified.
-     * @param newLoginData
-     *        The new login values (either a nsILoginInfo or nsIProperyBag)
-     *
-     * If newLoginData is a nsILoginInfo, all of the old login's nsILoginInfo
-     * properties are changed to the values from newLoginData (but the old
-     * login's nsILoginMetaInfo properties are unmodified).
-     *
-     * If newLoginData is a nsIPropertyBag, only the specified properties
-     * will be changed. The nsILoginMetaInfo properties of oldLogin can be
-     * changed in this manner.
-     *
-     * If the propertybag contains an item named "timesUsedIncrement", the
-     * login's timesUsed property will be incremented by the item's value.
-     */
-    readonly modifyLogin: (oldLogin: (nsILoginInfo | null), newLoginData: (nsISupports | null)) => void;
-
-    /**
-     * Remove all logins known to login manager.
-     *
-     * The browser sanitization feature allows the user to clear any stored
-     * passwords. This interface allows that to be done without getting each
-     * login first (which might require knowing the master password).
-     */
-    readonly removeAllLogins: () => void;
-
-    /**
-     * Fetch all logins in the login manager. An array is always returned;
-     * if there are no logins the array is empty.
-     *
-     * @return An array of nsILoginInfo objects.
-     */
-    readonly getAllLogins: () => (nsILoginInfo | null)[];
-
-    /**
-     * Like getAllLogins, but asynchronous. This method is faster when large
-     * amounts of logins are present since it will handle decryption in one batch.
-     *
-     * @return A promise which resolves with a JS Array of nsILoginInfo objects.
-     */
-    readonly getAllLoginsAsync: () => IDLPromise;
-
-    /**
-     * Obtain a list of all origins for which password saving is disabled.
-     *
-     * @return An array of origin strings. For example: ["https://www.site.com"].
-     */
-    readonly getAllDisabledHosts: () => IDLAString[];
-
-    /**
-     * Check to see if saving logins has been disabled for an origin.
-     *
-     * @param aHost
-     *        The origin to check. For example: "http://foo.com".
-     */
-    readonly getLoginSavingEnabled: (aHost: IDLAString) => boolean;
-
-    /**
-     * Disable (or enable) storing logins for the specified origin. When
-     * disabled, the login manager will not prompt to store logins for
-     * that origin. Existing logins are not affected.
-     *
-     * @param aHost
-     *        The origin to set. For example: "http://foo.com".
-     * @param isEnabled
-     *        Specify if saving logins should be enabled (true) or
-     *        disabled (false)
-     */
-    readonly setLoginSavingEnabled: (aHost: IDLAString, isEnabled: boolean) => void;
-
-    /**
-     * Search for logins matching the specified criteria. Called when looking
-     * for logins that might be applicable to a form or authentication request.
-     *
-     * @param aOrigin
-     *        The origin to restrict searches to. For example: "http://www.site.com".
-     *        To find logins for a given nsIURI, you would typically pass in
-     *        its prePath (excluding userPass).
-     * @param aActionOrigin
-     *        For form logins, this argument should be the origin to which the
-     *        form will be submitted, not the whole URL.
-     *        For HTTP auth. logins, specify null.
-     *        An empty string ("") will match any value (except null).
-     * @param aHttpRealm
-     *        For HTTP auth. logins, this argument should be the HTTP Realm
-     *        for which the login applies. This is obtained from the
-     *        WWW-Authenticate header. See RFC2617. For form logins,
-     *        specify null.
-     *        An empty string ("") will match any value (except null).
-     * @return An array of nsILoginInfo objects.
-     */
-    readonly findLogins: (aOrigin: IDLAString, aActionOrigin: IDLAString, aHttpRealm: IDLAString) => (nsILoginInfo | null)[];
-
-    /**
-     * Search for logins matching the specified criteria, as with
-     * findLogins(). This interface only returns the number of matching
-     * logins (and not the logins themselves), which allows a caller to
-     * check for logins without causing the user to be prompted for a master
-     * password to decrypt the logins.
-     *
-     * @param aOrigin
-     *        The origin to restrict searches to. Specify an empty string
-     *        to match all origins. A null value will not match any logins, and
-     *        will thus always return a count of 0.
-     * @param aActionOrigin
-     *        The origin to which a form login will be submitted. To match any
-     *        form login, specify an empty string. To not match any form
-     *        login, specify null.
-     * @param aHttpRealm
-     *        The HTTP Realm for which the login applies. To match logins for
-     *        any realm, specify an empty string. To not match logins for any
-     *        realm, specify null.
-     */
-    readonly countLogins: (aOrigin: IDLAString, aActionOrigin: IDLAString, aHttpRealm: IDLAString) => number;
-
-    /**
-     * Asynchonously search for logins in the login manager. The Promise always
-     * resolves to an array; if there are no logins the array is empty.
-     *
-     * @param {object} matchData
-     *        The data used to search as a JS object. This does not follow the same
-     *        requirements as findLogins for those fields. Wildcard matches are
-     *        simply not specified.
-     * @return A promise resolving to an array of nsILoginInfo objects.
-     */
-    readonly searchLoginsAsync: (matchData: IDLjsval) => IDLPromise;
-
-    /**
-     * Search for logins in the login manager. An array is always returned;
-     * if there are no logins the array is empty.
-     * @deprecated New code should use `searchLoginsAsync`.
-     *             Only autocomplete, prompt, and test code still use this.
-     *
-     * @param matchData
-     *        The data used to search. This does not follow the same
-     *        requirements as findLogins for those fields. Wildcard matches are
-     *        simply not specified.
-     * @return An array of nsILoginInfo objects.
-     */
-    readonly searchLogins: (matchData: (nsIPropertyBag | null)) => (nsILoginInfo | null)[];
-
-    /**
-     * True when a master password prompt is being displayed.
-     */
-    readonly uiBusy: boolean;
-
-    /**
-     * True when the master password has already been entered, and so a caller
-     * can ask for decrypted logins without triggering a prompt.
-     */
-    readonly isLoggedIn: boolean;
+    readonly clearRememberedDecisions: () => void;
   }
 
   export interface nsIWebPageDescriptorRef {
@@ -34311,6 +34095,17 @@ declare namespace XPCOM {
     readonly getPublicSuffix: (aURI: (nsIURI | null)) => IDLACString;
 
     /**
+     * Similar to getPublicSuffix, but the suffix is validated against
+     * the Public Suffix List. If the suffix is unknown this will return
+     * an empty string.
+     *
+     * @param   aURI   The URI to be analyzed
+     * @returns the public suffix if known, an empty string otherwise
+     * @see     getPublicSuffixFromHost()
+     */
+    readonly getKnownPublicSuffix: (aURI: (nsIURI | null)) => IDLACString;
+
+    /**
      * Returns the base domain of a URI; that is, the public suffix with a given
      * number of additional domain name parts. For example, the result of this method
      * for "www.bbc.co.uk", depending on the value of aAdditionalParts parameter, will
@@ -34366,6 +34161,17 @@ declare namespace XPCOM {
      * @see     getPublicSuffix()
      */
     readonly getPublicSuffixFromHost: (aHost: IDLAUTF8String) => IDLACString;
+
+    /**
+     * Similar to getPublicSuffixFromHost, but the suffix is validated against
+     * the Public Suffix List. If the suffix is unknown this will return
+     * an empty string.
+     *
+     * @param   aHost   The host to be analyzed.
+     * @returns the public suffix if known, an empty string otherwise
+     * @see     getPublicSuffixFromHost()
+     */
+    readonly getKnownPublicSuffixFromHost: (aHost: IDLAUTF8String) => IDLACString;
 
     /**
      * NOTE: It is strongly recommended to use getBaseDomain() above if a suitable
@@ -34639,11 +34445,6 @@ declare namespace XPCOM {
     readonly indexExists: (aIndexName: IDLAUTF8String) => boolean;
 
     /**
-     * Returns true if a transaction is active on this connection.
-     */
-    readonly transactionInProgress: boolean;
-
-    /**
      * Begin a new transaction. If a transaction is active, throws an error.
      */
     readonly beginTransaction: () => void;
@@ -34871,7 +34672,16 @@ declare namespace XPCOM {
     readonly number: "{aa28aaf6-70ce-4b03-9514-afe43c7dfda8}";
   }
 
-  export interface nsIXPCComponents extends nsIXPCComponentsBase {
+  /**
+   * Interface for the 'Components' object.
+   */
+  export interface nsIXPCComponents extends nsISupports {
+
+    readonly interfaces: (nsIXPCComponents_Interfaces | null);
+
+    readonly results: (nsIXPCComponents_Results | null);
+
+    readonly isSuccessCode: (result: number) => boolean;
 
     readonly classes: (nsIXPCComponents_Classes | null);
 
@@ -35587,14 +35397,10 @@ declare namespace XPCOM {
       */
     readonly getWindowByName: (aTargetName: IDLAString, aCurrentWindow: (mozIDOMWindowProxy | null)) => (mozIDOMWindowProxy | null);
 
-    /** The Watcher serves as a global storage facility for the current active
-          (frontmost non-floating-palette-type) window, storing and returning
-          it on demand. Users must keep this attribute current, including after
-          the topmost window is closed. This attribute obviously can return null
-          if no windows are open, but should otherwise always return a valid
-          window.
+    /**
+          Retrieves the active window from the focus manager.
       */
-    activeWindow: (mozIDOMWindowProxy | null);
+    readonly activeWindow: (mozIDOMWindowProxy | null);
   }
 
   export interface nsIInputIteratorRef {
@@ -35842,9 +35648,9 @@ declare namespace XPCOM {
 
     readonly getCookieStringFromHttp: (aURI: (nsIURI | null), aFirstURI: (nsIURI | null), aChannel: (nsIChannel | null)) => IDLACString;
 
-    readonly setCookieString: (aURI: (nsIURI | null), aPrompt: (nsIPrompt | null), aCookie: IDLACString, aChannel: (nsIChannel | null)) => void;
+    readonly setCookieString: (aURI: (nsIURI | null), aCookie: IDLACString, aChannel: (nsIChannel | null)) => void;
 
-    readonly setCookieStringFromHttp: (aURI: (nsIURI | null), aFirstURI: (nsIURI | null), aPrompt: (nsIPrompt | null), aCookie: IDLACString, aServerTime: IDLACString, aChannel: (nsIChannel | null)) => void;
+    readonly setCookieStringFromHttp: (aURI: (nsIURI | null), aFirstURI: (nsIURI | null), aCookie: IDLACString, aServerTime: IDLACString, aChannel: (nsIChannel | null)) => void;
 
     readonly runInTransaction: (aCallback: (nsICookieTransactionCallback | nsICookieTransactionCallbackFunction | null)) => void;
   }
@@ -36044,17 +35850,6 @@ declare namespace XPCOM {
   export interface nsIURIContentListener extends nsISupports {
 
     /**
-     * Gives the original content listener first crack at stopping a load before
-     * it happens.
-     *
-     * @param aURI   URI that is being opened.
-     *
-     * @return       <code>false</code> if the load can continue;
-     *               <code>true</code> if the open should be aborted.
-     */
-    readonly onStartURIOpen: (aURI: (nsIURI | null)) => boolean;
-
-    /**
      * Notifies the content listener to hook up an nsIStreamListener capable of
      * consuming the data stream.
      *
@@ -36184,10 +35979,12 @@ declare namespace XPCOM {
      * OS.
      *
      * @param prompt A short string that may be incorporated in the dialog
+     * @param caption A short string that may be shown as the dialog caption (usually Product Name)
+     * @param parentWindow Used to associate the OS dialog with the calling window.
      * @return Promise resolving to true if the user successfully authenticated
      *         and false otherwise.
      */
-    readonly asyncReauthenticateUser: (prompt: IDLACString) => IDLPromise;
+    readonly asyncReauthenticateUser: (prompt: IDLAString, caption: IDLAString, parentWindow: (mozIDOMWindow | null)) => IDLPromise;
   }
 
   export interface nsIExceptionRef {
@@ -36987,22 +36784,6 @@ declare namespace XPCOM {
     readonly close: () => void;
   }
 
-  export interface rrIReplayRef {
-    readonly name: "rrIReplay";
-    readonly number: "{8b86b71f-8471-472e-9997-c5f21f9d0598}";
-  }
-
-  export interface rrIReplay extends nsISupports {
-
-    readonly ManifestStart: (manifest: IDLjsval) => void;
-
-    readonly HitCheckpoint: (checkpoint: number) => void;
-
-    readonly NewTimeWarpTarget: () => number;
-
-    readonly ScriptResumeFrame: (script: number) => void;
-  }
-
   export interface nsIServiceManagerRef {
     readonly name: "nsIServiceManager";
     readonly number: "{8bb35ed9-e332-462d-9155-4a002ab5c958}";
@@ -37044,20 +36825,6 @@ declare namespace XPCOM {
      *  @param aData - the javascript object of the content.
      */
     readonly initData: (aDetails: IDLjsval) => void;
-  }
-
-  export interface rrIConnectionRef {
-    readonly name: "rrIConnection";
-    readonly number: "{df6d8e96-4cba-4a1d-893a-1ee19e8d8468}";
-  }
-
-  export interface rrIConnection extends nsISupports {
-
-    readonly Initialize: (callback: IDLjsval) => void;
-
-    readonly Connect: (channelId: number, address: IDLAString) => number;
-
-    readonly SendMessage: (connectionId: number, buf: IDLjsval) => void;
   }
 
   export interface nsICookieManagerRef {
@@ -37356,6 +37123,8 @@ declare namespace XPCOM {
 
     TYPE_VECTOR: 1;
 
+    TYPE_REQUEST: 2;
+
     /**
      * Flags for imgIContainer operations.
      *
@@ -37503,6 +37272,16 @@ declare namespace XPCOM {
      * zero is returned, and an exception will be thrown.
      */
     readonly height: number;
+
+    /**
+     * The x coordinate of the image's hotspot, or 0 if there is no hotspot.
+     */
+    readonly hotspotX: number;
+
+    /**
+     * The y coordinate of the image's hotspot, or 0 if there is no hotspot.
+     */
+    readonly hotspotY: number;
 
     /**
      * The type of this image (one of the TYPE_* values above).
@@ -37742,6 +37521,16 @@ declare namespace XPCOM {
     readonly asyncVisitStorage: (aVisitor: (nsICacheStorageVisitor | null), aVisitEntries: boolean) => void;
   }
 
+  export interface nsIContentChildRef {
+    readonly name: "nsIContentChild";
+    readonly number: "{b0c6e5f3-02f1-4f11-a0af-336fc231f3bf}";
+  }
+
+  export interface nsIContentChild extends nsISupports {
+
+    readonly childID: number;
+  }
+
   export interface nsIOfflineCacheUpdateObserverRef {
     readonly name: "nsIOfflineCacheUpdateObserver";
     readonly number: "{47360d57-8ef4-4a5d-8865-1a27a739ad1a}";
@@ -37962,9 +37751,13 @@ declare namespace XPCOM {
      * @param optionsObject an object with parameters. Valid parameters are:
      *                      - target:  an object to evaluate onto (default: global object of the caller)
      *                      - ignoreCache: if set to true, will bypass the cache for reading the file.
-     *                      - async: if set to true, the script will be loaded
-     *                        asynchronously, and a Promise is returned which
-     *                        resolves to its result when execution is complete.
+     *                      - useCompilationScope: If true, the script will be
+     *                        parsed in the compilation cache realm first, and
+     *                        then cloned into the target realm for execution.
+     *                        The script cache strongly holds scripts, so if you
+     *                        load a script into an arbitrary realm without this
+     *                        option enabled, you risk leaking that realm.
+     *                        Defaults to false.
      *                      - wantReturnValue: If true, the script will return
      *                        the value of the last statement that it evaluated.
      *                        This option disables most optimizations in the
@@ -38396,11 +38189,6 @@ declare namespace XPCOM {
     chromeEventHandler: WebIDL.EventTarget;
 
     /**
-     * This allows chrome to set a custom User agent on a specific docshell
-     */
-    customUserAgent: IDLAString;
-
-    /**
      * Whether CSS error reporting is enabled.
      */
     cssErrorReportingEnabled: boolean;
@@ -38550,6 +38338,8 @@ declare namespace XPCOM {
      */
     readonly finishRestore: () => void;
 
+    readonly clearCachedUserAgent: () => void;
+
     readonly restoringDocument: boolean;
 
     useErrorPages: boolean;
@@ -38643,12 +38433,6 @@ declare namespace XPCOM {
      * hasMixedActiveContentBlocked.
      */
     readonly hasMixedDisplayContentBlocked: boolean;
-
-    /**
-     * This attribute determines whether a document has Tracking Content
-     * that has been blocked from loading.
-     */
-    readonly hasTrackingContentBlocked: boolean;
 
     /**
      * If true, this browser is not visible in the traditional sense, but
@@ -39019,15 +38803,11 @@ declare namespace XPCOM {
     readonly messageManager: WebIDL.ContentFrameMessageManager;
 
     /**
-     * Asynchronously retrieve a JSON string representing a log of the
-     * content blocking events happened so far in the current tab from the
-     * content process.
-     *
-     * This returns a Promise which resolves to a string on success, and is
-     * rejected on failure.  For documentation on the string format, please
-     * see nsISecureBrowserUI.contentBlockingLogJSON.
+     * This returns a Promise which resolves to a boolean. True when the
+     * document has Tracking Content that has been blocked from loading, false
+     * otherwise.
      */
-    readonly getContentBlockingLog: () => IDLPromise;
+    readonly getHasTrackingContentBlocked: () => IDLPromise;
 
     /**
      * Whether developer tools are watching activity in this docshell.
@@ -39229,25 +39009,77 @@ declare namespace XPCOM {
     readonly sandboxScript: IDLAString;
   }
 
-  export interface nsIXPCComponentsBaseRef {
-    readonly name: "nsIXPCComponentsBase";
-    readonly number: "{eeeada2f-86c0-4609-b2bf-4bf2351b1ce6}";
+  export interface nsIAddonPolicyServiceRef {
+    readonly name: "nsIAddonPolicyService";
+    readonly number: "{8a034ef9-9d14-4c5d-8319-06c1ab574baa}";
   }
 
   /**
-   * Interface for the 'Components' object.
-   *
-   * The first interface contains things that are available to non-chrome XBL code
-   * that runs in a scope with an ExpandedPrincipal. The second interface
-   * includes members that are only exposed to chrome.
+   * This interface allows the security manager to query custom per-addon security
+   * policy.
    */
-  export interface nsIXPCComponentsBase extends nsISupports {
+  export interface nsIAddonPolicyService extends nsISupports {
 
-    readonly interfaces: (nsIXPCComponents_Interfaces | null);
+    /**
+     * Returns the base content security policy, which is applied to all
+     * extension documents, in addition to any custom policies.
+     */
+    readonly baseCSP: IDLAString;
 
-    readonly results: (nsIXPCComponents_Results | null);
+    /**
+     * Returns the default content security policy which applies to extension
+     * documents which do not specify any custom policies.
+     */
+    readonly defaultCSP: IDLAString;
 
-    readonly isSuccessCode: (result: number) => boolean;
+    /**
+     * Returns the content security policy which applies to documents belonging
+     * to the extension with the given ID. This may be either a custom policy,
+     * if one was supplied, or the default policy if one was not.
+     */
+    readonly getExtensionPageCSP: (aAddonId: IDLAString) => IDLAString;
+
+    /**
+     * Returns the content security policy which applies to content scripts belonging
+     * to the extension with the given ID. This may be either a custom policy,
+     * if one was supplied, or the default policy if one was not.
+     */
+    readonly getContentScriptCSP: (aAddonId: IDLAString) => IDLAString;
+
+    /**
+     * Returns the generated background page as a data-URI, if any. If the addon
+     * does not have an auto-generated background page, an empty string is
+     * returned.
+     */
+    readonly getGeneratedBackgroundPageUrl: (aAddonId: IDLACString) => IDLACString;
+
+    /**
+     * Returns true if the addon was granted the |aPerm| API permission.
+     */
+    readonly addonHasPermission: (aAddonId: IDLAString, aPerm: IDLAString) => boolean;
+
+    /**
+     * Returns true if unprivileged code associated with the given addon may load
+     * data from |aURI|.  If |aExplicit| is true, the <all_urls> permission and
+     * permissive host globs are ignored when checking for a match.
+     */
+    readonly addonMayLoadURI: (aAddonId: IDLAString, aURI: (nsIURI | null), aExplicit?: boolean) => boolean;
+
+    /**
+     * Returns the name of the WebExtension with the given ID, or the ID string
+     * if no matching add-on can be found.
+     */
+    readonly getExtensionName: (aAddonId: IDLAString) => IDLAString;
+
+    /**
+     * Returns true if a given extension:// URI is web-accessible.
+     */
+    readonly extensionURILoadableByAnyone: (aURI: (nsIURI | null)) => boolean;
+
+    /**
+     * Maps an extension URI to the ID of the addon it belongs to.
+     */
+    readonly extensionURIToAddonId: (aURI: (nsIURI | null)) => IDLAString;
   }
 
   export interface nsIHTMLInlineTableEditorRef {
@@ -41550,10 +41382,6 @@ declare namespace XPCOM {
 
     readonly dispatch: (runnable: IDLjsval, scope?: IDLjsval) => void;
 
-    strict: boolean;
-
-    werror: boolean;
-
     strict_mode: boolean;
 
     readonly isInAutomation: boolean;
@@ -41918,12 +41746,6 @@ declare namespace XPCOM {
     readonly setContentType: (contentType: number) => void;
 
     /**
-     * Stores information about an access from site identified by unique siteID.
-     * It's used for first party cache isolation telemetry.
-     */
-    readonly addBaseDomainAccess: (siteID: number) => void;
-
-    /**
      * This method is intended to override the per-spec cache validation
      * decisions for a duration specified in seconds. The current state can
      * be examined with isForcedValid (see below). This value is not persisted,
@@ -42260,6 +42082,15 @@ declare namespace XPCOM {
     readonly newFileURI: (aFile: (nsIFile | null)) => (nsIURI | null);
 
     /**
+     * Converts an internal URI (e.g. one that has a username and password in
+     * it) into one which we can expose to the user, for example on the URL bar.
+     *
+     * @param  aURI The URI to be converted.
+     * @return nsIURI The converted, exposable URI.
+     */
+    readonly createExposableURI: (aURI: (nsIURI | null)) => (nsIURI | null);
+
+    /**
      * Creates a channel for a given URI.
      *
      * @param aURI
@@ -42424,13 +42255,27 @@ declare namespace XPCOM {
     readonly number: "{050cdc00-3b8e-11d3-9ce4-a458f454fcbc}";
   }
 
+  /**
+   * Due to the historical reason, this listener interface says "document state",
+   * but this listener listens to HTML editor state.
+   */
   export interface nsIDocumentStateListener extends nsISupports {
 
-    readonly NotifyDocumentCreated: () => void;
-
+    /**
+     * NotifyDocumentWillBeDestroyed() is called when HTML editor instance is
+     * being destroyed.  Note that related objects may have already gone when
+     * this is called because that may cause destroying HTML editor.
+     */
     readonly NotifyDocumentWillBeDestroyed: () => void;
 
-    readonly NotifyDocumentStateChanged: (nowDirty: boolean) => void;
+    /**
+     * NotifyDocumentStateChanged() is called when dirty state of HTML editor
+     * is changed.
+     *
+     * @param aNowDirty   if true, this is called when the HTML editor becomes
+     *                    dirty.  Otherwise, called when it becomes not dirty.
+     */
+    readonly NotifyDocumentStateChanged: (aNowDirty: boolean) => void;
   }
 
   export interface nsIRedirectHistoryEntryRef {
@@ -43119,6 +42964,30 @@ declare namespace XPCOM {
      * fail with a "too many SQL variables" error.
      */
     readonly variableLimit: number;
+
+    /**
+     * Returns true if a transaction is active on this connection.
+     *
+     * Note that this is true if a transaction is active on the connection,
+     * regardless of how it was opened. There are several ways to open one:
+     *
+     * 1. Explicitly calling `beginTransaction` on a `mozIStorageConnection`.
+     * 2. Calling `executeSimpleSQL("BEGIN")` or
+     *    `createStatement("BEGIN").execute()` on a `mozIStorageConnection`.
+     * 3. Executing an async statement, like
+     *    `createAsyncStatement("BEGIN").executeAsync(...)`. This is what
+     *    `Sqlite.jsm` does under the hood.
+     *
+     * Because of this, it's important *not* to use this attribute to decide
+     * whether to *commit* the active transaction, because the caller that opened
+     * it may not expect that. This is why both `mozStorageTransaction` and
+     * `Sqlite.jsm` use an internal variable (`mHasTransaction` for the former;
+     * `_hasInProgressTransaction` for the latter) to check if their transaction
+     * is already in progress, instead of just checking this attribute before
+     * committing. Otherwise, mozStorage might accidentally commit (or roll back!)
+     * a transaction started by `Sqlite.jsm`, and vice versa.
+     */
+    readonly transactionInProgress: boolean;
 
     /**
      * Close this database connection, allowing all pending statements
@@ -43931,6 +43800,230 @@ declare namespace XPCOM {
     readonly callback: (aTopic: IDLAString, aState: IDLAString) => void;
   }
 
+  export interface nsILoginManagerRef {
+    readonly name: "nsILoginManager";
+    readonly number: "{38c7f6af-7df9-49c7-b558-2776b24e6cc1}";
+  }
+
+  export interface nsILoginManager extends nsISupports {
+
+    /**
+     * This promise is resolved when initialization is complete, and is rejected
+     * in case initialization failed.  This includes the initial loading of the
+     * login data as well as any migration from previous versions.
+     *
+     * Calling any method of nsILoginManager before this promise is resolved
+     * might trigger the synchronous initialization fallback.
+     */
+    readonly initializationPromise: IDLPromise;
+
+    /**
+     * Store a new login in the login manager.
+     *
+     * @param aLogin
+     *        The login to be added.
+     * @return a clone of the login info with the guid set (even if it was not provided)
+     *
+     * Default values for the login's nsILoginMetaInfo properties will be
+     * created. However, if the caller specifies non-default values, they will
+     * be used instead.
+     */
+    readonly addLogin: (aLogin: (nsILoginInfo | null)) => (nsILoginInfo | null);
+
+    /**
+     * Like addLogin, but asynchronous and for many logins.
+     *
+     * @param aLogins
+     *        A JS Array of nsILoginInfos to add.
+     * @return A promise which resolves with a JS Array of cloned logins with
+     *         the guids set.
+     *
+     * Default values for each login's nsILoginMetaInfo properties will be
+     * created. However, if the caller specifies non-default values, they will
+     * be used instead.
+     */
+    readonly addLogins: (aLogins: IDLjsval) => IDLPromise;
+
+    /**
+     * Remove a login from the login manager.
+     *
+     * @param aLogin
+     *        The login to be removed.
+     *
+     * The specified login must exactly match a stored login. However, the
+     * values of any nsILoginMetaInfo properties are ignored.
+     */
+    readonly removeLogin: (aLogin: (nsILoginInfo | null)) => void;
+
+    /**
+     * Modify an existing login in the login manager.
+     *
+     * @param oldLogin
+     *        The login to be modified.
+     * @param newLoginData
+     *        The new login values (either a nsILoginInfo or nsIProperyBag)
+     *
+     * If newLoginData is a nsILoginInfo, all of the old login's nsILoginInfo
+     * properties are changed to the values from newLoginData (but the old
+     * login's nsILoginMetaInfo properties are unmodified).
+     *
+     * If newLoginData is a nsIPropertyBag, only the specified properties
+     * will be changed. The nsILoginMetaInfo properties of oldLogin can be
+     * changed in this manner.
+     *
+     * If the propertybag contains an item named "timesUsedIncrement", the
+     * login's timesUsed property will be incremented by the item's value.
+     */
+    readonly modifyLogin: (oldLogin: (nsILoginInfo | null), newLoginData: (nsISupports | null)) => void;
+
+    /**
+     * Record that the password of a saved login was used (e.g. submitted or copied).
+     *
+     * @param nsILoginInfo aLogin
+     *        The login record of the password that was used.
+     *
+     * If only the username was used, this method shouldn't be called as we don't
+     * want to double-count the use if both the username and password are copied.
+     * Copying of the username normally precedes the copying of the password anyways.
+     */
+    readonly recordPasswordUse: (aLogin: (nsILoginInfo | null)) => void;
+
+    /**
+     * Remove all logins known to login manager.
+     *
+     * The browser sanitization feature allows the user to clear any stored
+     * passwords. This interface allows that to be done without getting each
+     * login first (which might require knowing the master password).
+     */
+    readonly removeAllLogins: () => void;
+
+    /**
+     * Fetch all logins in the login manager. An array is always returned;
+     * if there are no logins the array is empty.
+     *
+     * @return An array of nsILoginInfo objects.
+     */
+    readonly getAllLogins: () => (nsILoginInfo | null)[];
+
+    /**
+     * Like getAllLogins, but asynchronous. This method is faster when large
+     * amounts of logins are present since it will handle decryption in one batch.
+     *
+     * @return A promise which resolves with a JS Array of nsILoginInfo objects.
+     */
+    readonly getAllLoginsAsync: () => IDLPromise;
+
+    /**
+     * Obtain a list of all origins for which password saving is disabled.
+     *
+     * @return An array of origin strings. For example: ["https://www.site.com"].
+     */
+    readonly getAllDisabledHosts: () => IDLAString[];
+
+    /**
+     * Check to see if saving logins has been disabled for an origin.
+     *
+     * @param aHost
+     *        The origin to check. For example: "http://foo.com".
+     */
+    readonly getLoginSavingEnabled: (aHost: IDLAString) => boolean;
+
+    /**
+     * Disable (or enable) storing logins for the specified origin. When
+     * disabled, the login manager will not prompt to store logins for
+     * that origin. Existing logins are not affected.
+     *
+     * @param aHost
+     *        The origin to set. For example: "http://foo.com".
+     * @param isEnabled
+     *        Specify if saving logins should be enabled (true) or
+     *        disabled (false)
+     */
+    readonly setLoginSavingEnabled: (aHost: IDLAString, isEnabled: boolean) => void;
+
+    /**
+     * Search for logins matching the specified criteria. Called when looking
+     * for logins that might be applicable to a form or authentication request.
+     *
+     * @param aOrigin
+     *        The origin to restrict searches to. For example: "http://www.site.com".
+     *        To find logins for a given nsIURI, you would typically pass in
+     *        its prePath (excluding userPass).
+     * @param aActionOrigin
+     *        For form logins, this argument should be the origin to which the
+     *        form will be submitted, not the whole URL.
+     *        For HTTP auth. logins, specify null.
+     *        An empty string ("") will match any value (except null).
+     * @param aHttpRealm
+     *        For HTTP auth. logins, this argument should be the HTTP Realm
+     *        for which the login applies. This is obtained from the
+     *        WWW-Authenticate header. See RFC2617. For form logins,
+     *        specify null.
+     *        An empty string ("") will match any value (except null).
+     * @return An array of nsILoginInfo objects.
+     */
+    readonly findLogins: (aOrigin: IDLAString, aActionOrigin: IDLAString, aHttpRealm: IDLAString) => (nsILoginInfo | null)[];
+
+    /**
+     * Search for logins matching the specified criteria, as with
+     * findLogins(). This interface only returns the number of matching
+     * logins (and not the logins themselves), which allows a caller to
+     * check for logins without causing the user to be prompted for a master
+     * password to decrypt the logins.
+     *
+     * @param aOrigin
+     *        The origin to restrict searches to. Specify an empty string
+     *        to match all origins. A null value will not match any logins, and
+     *        will thus always return a count of 0.
+     * @param aActionOrigin
+     *        The origin to which a form login will be submitted. To match any
+     *        form login, specify an empty string. To not match any form
+     *        login, specify null.
+     * @param aHttpRealm
+     *        The HTTP Realm for which the login applies. To match logins for
+     *        any realm, specify an empty string. To not match logins for any
+     *        realm, specify null.
+     */
+    readonly countLogins: (aOrigin: IDLAString, aActionOrigin: IDLAString, aHttpRealm: IDLAString) => number;
+
+    /**
+     * Asynchonously search for logins in the login manager. The Promise always
+     * resolves to an array; if there are no logins the array is empty.
+     *
+     * @param {object} matchData
+     *        The data used to search as a JS object. This does not follow the same
+     *        requirements as findLogins for those fields. Wildcard matches are
+     *        simply not specified.
+     * @return A promise resolving to an array of nsILoginInfo objects.
+     */
+    readonly searchLoginsAsync: (matchData: IDLjsval) => IDLPromise;
+
+    /**
+     * Search for logins in the login manager. An array is always returned;
+     * if there are no logins the array is empty.
+     * @deprecated New code should use `searchLoginsAsync`.
+     *             Only autocomplete, prompt, and test code still use this.
+     *
+     * @param matchData
+     *        The data used to search. This does not follow the same
+     *        requirements as findLogins for those fields. Wildcard matches are
+     *        simply not specified.
+     * @return An array of nsILoginInfo objects.
+     */
+    readonly searchLogins: (matchData: (nsIPropertyBag | null)) => (nsILoginInfo | null)[];
+
+    /**
+     * True when a master password prompt is being displayed.
+     */
+    readonly uiBusy: boolean;
+
+    /**
+     * True when the master password has already been entered, and so a caller
+     * can ask for decrypted logins without triggering a prompt.
+     */
+    readonly isLoggedIn: boolean;
+  }
+
   export interface txIEXSLTFunctionsRef {
     readonly name: "txIEXSLTFunctions";
     readonly number: "{21b1cfa4-00ce-4cc1-bfc1-92af1d00e580}";
@@ -44248,6 +44341,11 @@ declare namespace XPCOM {
      * A URL string pointing to the engine's search form.
      */
     readonly searchForm: IDLAString;
+
+    /**
+     * The identifier to use for this engine when submitting to telemetry.
+     */
+    readonly telemetryId: IDLAString;
 
     /**
      * An optional unique identifier for this search engine within the context of
@@ -44811,9 +44909,21 @@ declare namespace XPCOM {
     readonly currentWindow: (mozIDOMWindow | null);
   }
 
+  export enum nsIRequest_TRRMode {
+    TRR_DEFAULT_MODE = 0,
+    TRR_DISABLED_MODE = 1,
+    TRR_FIRST_MODE = 2,
+    TRR_ONLY_MODE = 3,
+  }
+
   export interface nsIRequestRef {
     readonly name: "nsIRequest";
     readonly number: "{ef6bfbd2-fd46-48d8-96b7-9f8f0fd387fe}";
+
+    TRR_DEFAULT_MODE: 0;
+    TRR_DISABLED_MODE: 1;
+    TRR_FIRST_MODE: 2;
+    TRR_ONLY_MODE: 3;
 
     /**
      * Mask defining the bits reserved for nsIRequest LoadFlags
@@ -44849,9 +44959,16 @@ declare namespace XPCOM {
     LOAD_DOCUMENT_NEEDS_COOKIE: 4;
 
     /**
-     * Set this flag to disable TRR for this request.
+     * These two bits encode the TRR mode.
+     * Do not get/set manually, rather use the getTRRMode/setTRRMode methods.
      */
-    LOAD_DISABLE_TRR: 8;
+    LOAD_TRR_MASK: 24;
+
+    LOAD_TRR_DISABLED_MODE: 8;
+
+    LOAD_TRR_FIRST_MODE: 16;
+
+    LOAD_TRR_ONLY_MODE: 24;
 
     /**************************************************************************
      * The following flags control the flow of data into the cache.
@@ -45032,6 +45149,26 @@ declare namespace XPCOM {
      * the load flags of the load group.
      */
     loadFlags: number;
+
+    /**
+     * These methods encode/decode the TRR mode to/from the loadFlags.
+     * Helper methods Get/SetTRRModeImpl are provided so implementations don't
+     * need to duplicate code.
+     *
+     * Requests with TRR_DEFAULT_MODE will use the mode indicated by the pref
+     *   - see network.trr.mode in all.js
+     * Requests with TRR_DISABLED_MODE will always use native DNS, even if the
+     *   pref is set to mode3 (TRR-only).
+     * Requests with TRR_DISABLED_MODE will first use TRR then fallback to
+     *   regular DNS, unless TRR is disabled by setting the pref to mode5,
+     *   parental control being enabled, or the domain being in the exclusion
+     *   list.
+     * Requests with TRR_ONLY_MODE will only use TRR, unless not allowed by
+     *   the same conditions mentioned above.
+     */
+    readonly getTRRMode: () => nsIRequest_TRRMode;
+
+    readonly setTRRMode: (mode: nsIRequest_TRRMode) => void;
   }
 
   export interface mozILocalizationRef {
@@ -45051,7 +45188,7 @@ declare namespace XPCOM {
 
     readonly formatValues: (aKeys: IDLjsval[]) => IDLPromise;
 
-    readonly formatValue: (aId: IDLAString, aArgs?: IDLjsval) => IDLPromise;
+    readonly formatValue: (aId: IDLAUTF8String, aArgs?: IDLjsval) => IDLPromise;
 
     readonly formatMessagesSync: (aKeys: IDLjsval[]) => IDLjsval[];
 
@@ -45087,18 +45224,6 @@ declare namespace XPCOM {
    * Interface implemented by objects capable of fixing up strings into URIs
    */
   export interface nsIURIFixup extends nsISupports {
-
-    /**
-     * Converts an internal URI (e.g. one that has a username and password in
-     * it) into one which we can expose to the user, for example on the URL bar.
-     *
-     * @param  aURI       The URI to be converted
-     * @return nsIURI     The converted, exposable URI
-     * @throws NS_ERROR_MALFORMED_URI when the exposable portion of aURI is malformed
-     * @throws NS_ERROR_UNKNOWN_PROTOCOL when we can't get a protocol handler service
-     *         for the URI scheme.
-     */
-    readonly createExposableURI: (aURI: (nsIURI | null)) => (nsIURI | null);
 
     /**
      * Converts the specified string into a URI, first attempting
@@ -45292,6 +45417,16 @@ declare namespace XPCOM {
     readonly openSignedAppFileFinished: (rv: number, aZipReader: (nsIZipReader | null), aSignerCert: (nsIX509Cert | null)) => void;
   }
 
+  export interface nsIContentParentRef {
+    readonly name: "nsIContentParent";
+    readonly number: "{81fc08b9-c901-471f-ab0d-876362eba770}";
+  }
+
+  export interface nsIContentParent extends nsISupports {
+
+    readonly childID: number;
+  }
+
   export interface nsIDashboardRef {
     readonly name: "nsIDashboard";
     readonly number: "{c79eb3c6-091a-45a6-8544-5a8d1ab79537}";
@@ -45413,12 +45548,6 @@ declare namespace XPCOM {
     readonly getInlinePropertyWithAttrValue: (aProperty: IDLAString, aAttribute: IDLAString, aValue: IDLAString, aFirst: Out<boolean>, aAny: Out<boolean>, aAll: Out<boolean>) => IDLAString;
 
     /**
-     * removeAllInlineProperties() deletes all the inline properties from all
-     * text in the current selection.
-     */
-    readonly removeAllInlineProperties: () => void;
-
-    /**
      * removeInlineProperty() removes a property which changes inline style of
      * text.  E.g., bold, italic, super and sub.
      *
@@ -45432,20 +45561,6 @@ declare namespace XPCOM {
      *                    "size", "color" or "bgcolor".
      */
     readonly removeInlineProperty: (aProperty: IDLAString, aAttribute: IDLAString) => void;
-
-    /**
-     *  Increase font size for text in selection by 1 HTML unit
-     *  All existing text is scanned for existing <FONT SIZE> attributes
-     *  so they will be incremented instead of inserting new <FONT> tag
-     */
-    readonly increaseFontSize: () => void;
-
-    /**
-     *  Decrease font size for text in selection by 1 HTML unit
-     *  All existing text is scanned for existing <FONT SIZE> attributes
-     *  so they will be decreased instead of inserting new <FONT> tag
-     */
-    readonly decreaseFontSize: () => void;
 
     /**
      * Tests if a node is a BLOCK element according the the HTML 4.0 DTD.
@@ -45521,12 +45636,6 @@ declare namespace XPCOM {
     readonly setCaretAfterElement: (aElement: WebIDL.Element) => void;
 
     /**
-     * SetParagraphFormat       Insert a block paragraph tag around selection
-     * @param aParagraphFormat  "p", "h1" to "h6", "address", "pre", or "blockquote"
-     */
-    readonly setParagraphFormat: (aParagraphFormat: IDLAString) => void;
-
-    /**
      * getParagraphState returns what block tag paragraph format is in
      * the selection.
      * @param aMixed     True if there is more than one format
@@ -45541,13 +45650,6 @@ declare namespace XPCOM {
      *                  tt tag.  "" is returned for none.
      */
     readonly getFontFaceState: (aMixed: Out<boolean>) => IDLAString;
-
-    /**
-     * getBackgroundColorState returns what the background color of the selection.
-     * @param aMixed     True if there is more than one font color
-     * @return           Color string. "" is returned for none.
-     */
-    readonly getBackgroundColorState: (aMixed: Out<boolean>) => IDLAString;
 
     /**
      * getHighlightColorState returns what the highlight color of the selection.
@@ -45601,18 +45703,6 @@ declare namespace XPCOM {
      * @param aListType  Unused.
      */
     readonly removeList: (aListType: IDLAString) => void;
-
-    /**
-     * Document me!
-     *
-     */
-    readonly indent: (aIndent: IDLAString) => void;
-
-    /**
-     * Document me!
-     *
-     */
-    readonly align: (aAlign: IDLAString) => void;
 
     /**
      * GetElementOrParentByTagName() looks for an element node whose name matches
@@ -45718,16 +45808,34 @@ declare namespace XPCOM {
     returnInParagraphCreatesNewParagraph: boolean;
   }
 
-  export interface nsIUrlClassifierCallbackRef {
-    readonly name: "nsIUrlClassifierCallback";
-    readonly number: "{4ca27b6b-a674-4b3d-ab30-d21e2da2dffb}";
+  export interface nsIPrinterEnumeratorRef {
+    readonly name: "nsIPrinterEnumerator";
+    readonly number: "{5e738fff-404c-4c94-9189-e8f2cce93e94}";
   }
 
-  type nsIUrlClassifierCallbackFunction = (value: IDLACString) => void;
+  export interface nsIPrinterEnumerator extends nsISupports {
 
-  export interface nsIUrlClassifierCallback extends nsISupports {
+    /**
+     * The name of the system default printer. This name should also be
+     * present in printerNameList below. This is not necessarily gecko's
+     * default printer; see nsIPrintSettingsService.defaultPrinterName
+     * for that.
+     */
+    readonly defaultPrinterName: IDLAString;
 
-    readonly handleEvent: (value: IDLACString) => void;
+    /**
+     * Initializes certain settings from the native printer into the PrintSettings
+     * These settings include, but are not limited to:
+     *   Page Orientation
+     *   Page Size
+     *   Number of Copies
+     */
+    readonly initPrintSettingsFromPrinter: (aPrinterName: IDLAString, aPrintSettings: (nsIPrintSettings | null)) => void;
+
+    /**
+     * The list of printer names
+     */
+    readonly printerNameList: (nsIStringEnumerator | null);
   }
 
   export interface nsISupportsFloatRef {
@@ -46133,34 +46241,19 @@ declare namespace XPCOM {
     readonly tabCount: number;
   }
 
-  export interface nsIPrinterEnumeratorRef {
-    readonly name: "nsIPrinterEnumerator";
-    readonly number: "{5e738fff-404c-4c94-9189-e8f2cce93e94}";
+  export interface nsIBrowserControllerRef {
+    readonly name: "nsIBrowserController";
+    readonly number: "{5bb3d56b-e733-4a2c-8a53-058123df65e2}";
   }
 
-  export interface nsIPrinterEnumerator extends nsISupports {
+  /**
+   * This interface is used to accompany the nsIController for a
+   * <browser> element. It is used to update the commands in the
+   * parent process when the set of child command have changed.
+   */
+  export interface nsIBrowserController extends nsISupports {
 
-    /**
-     * The name of the system default printer. This name should also be
-     * present in printerNameList below. This is not necessarily gecko's
-     * default printer; see nsIPrintSettingsService.defaultPrinterName
-     * for that.
-     */
-    readonly defaultPrinterName: IDLAString;
-
-    /**
-     * Initializes certain settings from the native printer into the PrintSettings
-     * These settings include, but are not limited to:
-     *   Page Orientation
-     *   Page Size
-     *   Number of Copies
-     */
-    readonly initPrintSettingsFromPrinter: (aPrinterName: IDLAString, aPrintSettings: (nsIPrintSettings | null)) => void;
-
-    /**
-     * The list of printer names
-     */
-    readonly printerNameList: (nsIStringEnumerator | null);
+    readonly enableDisableCommands: (action: IDLAString, enabledCommands: IDLACString[], disabledCommands: IDLACString[]) => void;
   }
 
   export enum nsIUrlClassifierFeature_listType {
@@ -46626,8 +46719,8 @@ declare namespace XPCOM {
      * The default on Windows is 1MB, which is a little more reasonable. But the
      * vast majority of our threads don't need anywhere near that much space.
      *
-     * ASan and TSan builds, however, often need a bit more, so give them a the
-     * platform default.
+     * ASan, TSan and non-opt builds, however, often need a bit more, so give
+     * them the platform default.
      */
     /**
      * Create a new thread (a global, user PRThread).
@@ -46756,13 +46849,6 @@ declare namespace XPCOM {
     readonly currentPrintSettings: (nsIPrintSettings | null);
 
     /**
-     * The "name" of the document that is to be printed.  This is the document's
-     * title, unless that's empty, in which case it is a sanitized version of the
-     * document's URL.
-     */
-    readonly documentName: IDLAString;
-
-    /**
      * Returns whether it is in Print mode
      */
     readonly doingPrint: boolean;
@@ -46883,8 +46969,6 @@ declare namespace XPCOM {
 
     readonly StartTLS: () => void;
 
-    readonly negotiatedNPN: IDLACString;
-
     readonly getAlpnEarlySelection: () => IDLACString;
 
     readonly earlyDataAccepted: boolean;
@@ -46927,11 +47011,6 @@ declare namespace XPCOM {
     readonly failedVerification: boolean;
 
     esniTxt: IDLACString;
-
-    /**
-     * True iff the connection was resumed using the resumption token.
-     */
-    readonly resumed: boolean;
 
     /**
      * The id used to uniquely identify the connection to the peer.
@@ -48795,6 +48874,13 @@ declare namespace XPCOM {
      * Extended Validation (EV).
      */
     readonly isExtendedValidation: boolean;
+
+    readonly negotiatedNPN: IDLACString;
+
+    /**
+     * True iff the connection was resumed using the resumption token.
+     */
+    readonly resumed: boolean;
   }
 
   export interface nsIIdentitySignCallbackRef {
@@ -48931,20 +49017,11 @@ declare namespace XPCOM {
     readonly number: "{2822a840-f009-11e5-a837-0800200c9a66}";
 
     /**
-     * The suspended enum is used in three different situations,
-     * - platform audio focus (Fennec/B2G)
-     * - remote media control (Fennec)
-     * - block auto-play video in non-active page
+     * The suspended enum is used for delaying autoplay video in non-visited tab
      *
      * Note: the "remote side" must control the AudioChannelAgent using
      * nsIAudioChannelAgentCallback.windowSuspendChanged() callback instead using
      * play/pause methods or any button in the webpage.
-     *
-     * - SUSPENDED_PAUSE :
-     * It's used when transiently losing audio focus, the media can't be resumed
-     * until we gain the audio focus again. It would change the internal state of
-     * MediaElement when it's being suspended/resumed, and it would trigger the
-     * related JS event. eg. "play" and "pause" event.
      *
      * - SUSPENDED_BLOCK
      * It's used to prevent auto-playing media in inactive page in order to
@@ -48952,29 +49029,10 @@ declare namespace XPCOM {
      * page becomes active again. It would change the internal state of
      * MediaElement when it's being blocked/resumed, so it won't trigger the
      * related JS event. eg. "play" and "pause" event.
-     *
-     * - SUSPENDED_PAUSE_DISPOSABLE
-     * It's used for remote media-control to pause the playing media and when we
-     * lose audio focus permanently. It's disposable suspended, so the media can
-     * be resumed arbitrary after that. Same as SUSPENDED_PAUSE, it would change
-     * the internal state of MediaElement when it's being suspended.
-     *
-     * - SUSPENDED_STOP_DISPOSABLE
-     * It's used for remote media-control to stop the playing media. The remote
-     * control would disappear after stopping the media, so we would disconnect
-     * the audio channel agent. It's disposable suspended, so the media can be
-     * resumed arbitrary after that. Same as SUSPENDED_PAUSE, it would change
-     * the internal state of MediaElement when it's being suspended.
      */
     NONE_SUSPENDED: 0;
 
-    SUSPENDED_PAUSE: 1;
-
-    SUSPENDED_BLOCK: 2;
-
-    SUSPENDED_PAUSE_DISPOSABLE: 3;
-
-    SUSPENDED_STOP_DISPOSABLE: 4;
+    SUSPENDED_BLOCK: 1;
   }
 
   export interface nsISuspendedTypes extends nsISupports {
@@ -49931,32 +49989,6 @@ declare namespace XPCOM {
     readonly onSaveComplete: (aSaver: (nsIBackgroundFileSaver | null), aStatus: number) => void;
   }
 
-  export interface nsISubstitutionObserverRef {
-    readonly name: "nsISubstitutionObserver";
-    readonly number: "{492c9192-3803-4e2b-8373-d25fe55f5588}";
-  }
-
-  /**
-   * An observer of substitutions being set or unset on a
-   * SubstitutingProtocolHandler. Useful for receiving asynchronous notification
-   * in a child process after a substitution has been set in the parent process
-   * and is propagated to the child.
-   */
-  export interface nsISubstitutionObserver extends nsISupports {
-
-    /**
-     * To be called when a substition has been set or unset on a protocol
-     * handler. Unset operations are identified by a null URI argument.
-     *
-     * @param aRoot the root key of the mapping
-     * @param aBaseURI the base URI to be substituted for the root key by the
-     *        protocol handler. For notifications triggered by unset
-     *        operations (i.e., when is a substitution is removed from the
-     *        protocol handler) this argument is null.
-     */
-    readonly onSetSubstitution: (aRoot: IDLACString, aBaseURI: (nsIURI | null)) => void;
-  }
-
   export interface nsIMediaManagerServiceRef {
     readonly name: "nsIMediaManagerService";
     readonly number: "{24b23e01-33fd-401f-ba25-6e52658750b0}";
@@ -49972,7 +50004,7 @@ declare namespace XPCOM {
 
     readonly activeMediaCaptureWindows: (nsIArray | null);
 
-    readonly mediaCaptureWindowState: (aWindow: (nsIDOMWindow | null), aCamera: Out<number>, aMicrophone: Out<number>, aScreenShare?: Out<number>, aWindowShare?: Out<number>, aBrowserShare?: Out<number>) => void;
+    readonly mediaCaptureWindowState: (aWindow: (nsIDOMWindow | null), aCamera: Out<number>, aMicrophone: Out<number>, aScreenShare: Out<number>, aWindowShare: Out<number>, aBrowserShare: Out<number>, aIncludeDescendants: boolean) => void;
 
     readonly sanitizeDeviceIds: (sinceWhen: number) => void;
   }
@@ -53054,7 +53086,7 @@ declare namespace XPCOM {
      * we have to inform the child side of the protocol of that fact by a special
      * method.
      */
-    readonly completeRedirectSetup: (aListener: (nsIStreamListener | null), aContext: (nsISupports | null)) => void;
+    readonly completeRedirectSetup: (aListener: (nsIStreamListener | null)) => void;
   }
 
   export interface nsIPageThumbsStorageServiceRef {
@@ -53849,16 +53881,6 @@ declare namespace XPCOM {
      */
     readonly selectTableCell: () => void;
 
-    /** Select a rectangular block of cells:
-     *  all cells falling within the row/column index of aStartCell
-     *  to through the row/column index of the aEndCell
-     *  aStartCell can be any location relative to aEndCell,
-     *   as long as they are in the same table
-     *  @param aStartCell  starting cell in block
-     *  @param aEndCell    ending cell in block
-     */
-    readonly selectBlockOfCells: (aStartCell: WebIDL.Element, aEndCell: WebIDL.Element) => void;
-
     readonly selectTableRow: () => void;
 
     readonly selectTableColumn: () => void;
@@ -54091,13 +54113,13 @@ declare namespace XPCOM {
      * @return
      *     0                        aCellElement was not a cell
      *                              (returned result = NS_ERROR_FAILURE)
-     *     TableSelection::Cell     There are 1 or more cells selected but
+     *     TableSelectionMode::Cell     There are 1 or more cells selected but
      *                              complete rows or columns are not selected
-     *     TableSelection::Row      All cells are in 1 or more rows
+     *     TableSelectionMode::Row      All cells are in 1 or more rows
      *                              and in each row, all cells selected
      *                              Note: This is the value if all rows
      *                              (thus all cells) are selected
-     *     TableSelection::Column   All cells are in 1 or more columns
+     *     TableSelectionMode::Column   All cells are in 1 or more columns
      *                              and in each column, all cells are selected
      */
     readonly getSelectedCellsType: (aElement: WebIDL.Element) => number;
@@ -54435,6 +54457,45 @@ declare namespace XPCOM {
     readonly toString: () => string;
   }
 
+  export interface nsIStreamListenerTeeRef {
+    readonly name: "nsIStreamListenerTee";
+    readonly number: "{62b27fc1-6e8c-4225-8ad0-b9d44252973a}";
+  }
+
+  /**
+   * As data "flows" into a stream listener tee, it is copied to the output stream
+   * and then forwarded to the real listener.
+   */
+  export interface nsIStreamListenerTee extends nsIStreamListener {
+
+    /**
+     * Initalize the tee.
+     *
+     * @param listener
+     *    the original listener the tee will propagate onStartRequest,
+     *    onDataAvailable and onStopRequest notifications to, exceptions from
+     *    the listener will be propagated back to the channel
+     * @param sink
+     *    the stream the data coming from the channel will be written to,
+     *    should be blocking
+     * @param requestObserver
+     *    optional parameter, listener that gets only onStartRequest and
+     *    onStopRequest notifications; exceptions threw within this optional
+     *    observer are also propagated to the channel, but exceptions from
+     *    the original listener (listener parameter) are privileged
+     */
+    readonly init: (listener: (nsIStreamListener | null), sink: (nsIOutputStream | null), requestObserver?: (nsIRequestObserver | null)) => void;
+
+    /**
+     * Initalize the tee like above, but with the extra parameter to make it
+     * possible to copy the output asynchronously
+     * @param anEventTarget
+     *    if set, this event-target is used to copy data to the output stream,
+     *    giving an asynchronous tee
+     */
+    readonly initAsync: (listener: (nsIStreamListener | null), eventTarget: (nsIEventTarget | null), sink: (nsIOutputStream | null), requestObserver?: (nsIRequestObserver | null)) => void;
+  }
+
   export interface nsINativeOSFileErrorCallbackRef {
     readonly name: "nsINativeOSFileErrorCallback";
     readonly number: "{f612e0fc-6736-4d24-aa50-fd661b3b40b6}";
@@ -54625,6 +54686,46 @@ declare namespace XPCOM {
     eStrip: 0;
 
     eNoStrip: 1;
+
+    eEditorPlaintextMask: 1;
+
+    eEditorSingleLineMask: 2;
+
+    eEditorPasswordMask: 4;
+
+    eEditorReadonlyMask: 8;
+
+    eEditorFilterInputMask: 16;
+
+    eEditorMailMask: 32;
+
+    eEditorEnableWrapHackMask: 64;
+
+    eEditorWidgetMask: 128;
+
+    eEditorNoCSSMask: 256;
+
+    eEditorAllowInteraction: 512;
+
+    eEditorDontEchoPassword: 1024;
+
+    eEditorRightToLeft: 2048;
+
+    eEditorLeftToRight: 4096;
+
+    eEditorSkipSpellCheck: 8192;
+
+    eNewlinesPasteIntact: 0;
+
+    eNewlinesPasteToFirst: 1;
+
+    eNewlinesReplaceWithSpaces: 2;
+
+    eNewlinesStrip: 3;
+
+    eNewlinesReplaceWithCommas: 4;
+
+    eNewlinesStripSurroundingWhitespace: 5;
   }
 
   export interface nsIEditor extends nsISupports {
@@ -54897,18 +54998,6 @@ declare namespace XPCOM {
     readonly setAttribute: (aElement: WebIDL.Element, attributestr: IDLAString, attvalue: IDLAString) => void;
 
     /**
-     * getAttributeValue() retrieves the attribute's value for aElement.
-     *
-     * @param aElement      the content element to operate on
-     * @param aAttribute    the string representation of the attribute to get
-     * @param aResultValue  [OUT] the value of aAttribute.
-     *                      Only valid if aResultIsSet is PR_TRUE
-     * @return              PR_TRUE if aAttribute is set on the current node,
-     *                      PR_FALSE if it is not.
-     */
-    readonly getAttributeValue: (aElement: WebIDL.Element, attributestr: IDLAString, resultValue: Out<IDLAString>) => boolean;
-
-    /**
      * removeAttribute() deletes aAttribute from the attribute list of aElement.
      * If aAttribute is not an attribute of aElement, nothing is done.
      *
@@ -54916,18 +55005,6 @@ declare namespace XPCOM {
      * @param aAttribute    the string representation of the attribute to get
      */
     readonly removeAttribute: (aElement: WebIDL.Element, aAttribute: IDLAString) => void;
-
-    /**
-     * cloneAttribute() copies the attribute from the source node to
-     * the destination node and delete those not in the source.
-     *
-     * The supplied nodes MUST BE ELEMENTS (most callers are working with nodes)
-     * @param aAttribute     the name of the attribute to copy
-     * @param aDestElement   the destination element to operate on
-     * @param aSourceElement the source element to copy attributes from
-     * @exception NS_ERROR_NULL_POINTER at least one of the elements is null
-     */
-    readonly cloneAttribute: (aAttribute: IDLAString, aDestElement: WebIDL.Element, aSourceElement: WebIDL.Element) => void;
 
     /**
      * cloneAttributes() is similar to Node::cloneNode(),
@@ -54954,41 +55031,10 @@ declare namespace XPCOM {
     readonly insertNode: (node: WebIDL.Node, parent: WebIDL.Node, aPosition: number) => void;
 
     /**
-     * splitNode() creates a new node identical to an existing node,
-     * and split the contents between the two nodes
-     * @param aExistingRightNode   the node to split.
-     *                             It will become the new node's next sibling.
-     * @param aOffset              the offset of aExistingRightNode's
-     *                             content|children to do the split at
-     * @param aNewLeftNode         [OUT] the new node resulting from the split,
-     *                             becomes aExistingRightNode's previous sibling.
-     */
-    readonly splitNode: (existingRightNode: WebIDL.Node, offset: number, newLeftNode: Out<WebIDL.Node>) => void;
-
-    /**
-     * joinNodes() takes 2 nodes and merge their content|children.
-     * @param aLeftNode     The left node.  It will be deleted.
-     * @param aRightNode    The right node. It will remain after the join.
-     * @param aParent       The parent of aExistingRightNode
-     *
-     *                      There is no requirement that the two nodes be
-     *                      of the same type.  However, a text node can be
-     *                      merged only with another text node.
-     */
-    readonly joinNodes: (leftNode: WebIDL.Node, rightNode: WebIDL.Node, parent: WebIDL.Node) => void;
-
-    /**
      * deleteNode removes aChild from aParent.
      * @param aChild    The node to delete
      */
     readonly deleteNode: (child: WebIDL.Node) => void;
-
-    /**
-     * markNodeDirty() sets a special dirty attribute on the node.
-     * Usually this will be called immediately after creating a new node.
-     * @param aNode      The node for which to insert formatting.
-     */
-    readonly markNodeDirty: (node: WebIDL.Node) => void;
 
     /**
      * Output methods:
@@ -54998,9 +55044,6 @@ declare namespace XPCOM {
 
     /** add an EditorObserver to the editors list of observers. */
     readonly addEditorObserver: (observer: (nsIEditorObserver | null)) => void;
-
-    /** Remove an EditorObserver from the editor's list of observers. */
-    readonly removeEditorObserver: (observer: (nsIEditorObserver | null)) => void;
 
     /** add an EditActionListener to the editors list of listeners. */
     readonly addEditActionListener: (listener: (nsIEditActionListener | null)) => void;
@@ -55082,6 +55125,44 @@ declare namespace XPCOM {
      * passwordMask attribute is a mask character which is used to mask password.
      */
     readonly passwordMask: IDLAString;
+
+    /**
+     * The length of the contents in characters.
+     * XXX change this type to 'unsigned long'
+     */
+    readonly textLength: number;
+
+    /** Get and set the body wrap width.
+     *
+     * Special values:
+     *    0 = wrap to window width
+     *   -1 = no wrap at all
+     */
+    wrapWidth: number;
+
+    /** Get and set newline handling.
+     *
+     *  Values are the constants defined above.
+     */
+    newlineHandling: number;
+
+    /**
+     * Inserts a string at the current location,
+     * given by the selection.
+     * If the selection is not collapsed, the selection is deleted
+     * and the insertion takes place at the resulting collapsed selection.
+     *
+     * @param aString   the string to be inserted
+     */
+    readonly insertText: (aStringToInsert: IDLAString) => void;
+
+    /**
+     * Insert a line break into the content model.
+     * The interpretation of a break is up to the implementation:
+     * it may enter a character, split a node in the tree, etc.
+     * This may be more efficient than calling InsertText with a newline.
+     */
+    readonly insertLineBreak: () => void;
   }
 
   export interface nsIUrlClassifierCacheInfoRef {
@@ -55564,6 +55645,12 @@ declare namespace XPCOM {
     FEATURE_BLOCKED_OS_VERSION: 6;
 
     FEATURE_BLOCKED_MISMATCHED_VERSION: 7;
+
+    FEATURE_DENIED: 8;
+
+    FEATURE_ALLOW_ALWAYS: 9;
+
+    FEATURE_ALLOW_QUALIFIED: 10;
   }
 
   export interface nsIGfxInfo extends nsISupports {
@@ -55574,11 +55661,15 @@ declare namespace XPCOM {
 
     readonly usingGPUProcess: boolean;
 
+    readonly hasBattery: boolean;
+
     readonly DWriteVersion: IDLAString;
 
     readonly cleartypeParameters: IDLAString;
 
     readonly windowProtocol: IDLAString;
+
+    readonly desktopEnvironment: IDLAString;
 
     readonly ContentBackend: IDLAString;
 
@@ -55870,18 +55961,6 @@ declare namespace XPCOM {
     XULBrowserWindow: (nsIXULBrowserWindow | null);
   }
 
-  export interface rrIGraphicsRef {
-    readonly name: "rrIGraphics";
-    readonly number: "{941b2e20-8558-4881-b5ad-dc3a1f2d9678}";
-  }
-
-  export interface rrIGraphics extends nsISupports {
-
-    readonly UpdateCanvas: (buffer: IDLjsval, width: number, height: number) => void;
-
-    readonly ClearCanvas: () => void;
-  }
-
   export interface mozIOSPreferencesRef {
     readonly name: "mozIOSPreferences";
     readonly number: "{65944815-e9ae-48bd-a2bf-f1108720950c}";
@@ -56021,8 +56100,7 @@ declare namespace XPCOM {
   export interface IJSDebugger extends nsISupports {
 
     /**
-     * Define the global Debugger and RecordReplayControl constructors on a
-     * given global.
+     * Define the global Debugger constructor on a given global.
      */
     readonly addClass: (global: IDLjsval) => void;
   }
@@ -56167,6 +56245,11 @@ declare namespace XPCOM {
      * Similarly, but for intermediate certificates.
      */
     readonly getEnterpriseIntermediates: () => number[][];
+
+    /**
+     * For clearing both SSL internal and external session cache from JS.
+     */
+    readonly clearSSLExternalAndInternalSessionCache: () => void;
   }
 
   export interface nsISDBRequestRef {
@@ -56270,23 +56353,14 @@ declare namespace XPCOM {
 
   export interface nsIEditorStyleSheets extends nsISupports {
 
-    /** Load and apply the override style sheet, specified by aURL, to the
-     * editor's document, replacing the last override style sheet added (if any).
+    /** Load and apply an override style sheet, specified by aURL, to
+     * the editor's document, on top of any that are already there.
      * This is always synchronous, so aURL should be a local file with only
      * local @imports. This action is not undoable. It is not intended for
      * "user" style sheets, only for editor developers to add sheets to change
      * display behavior for editing (like showing special cursors) that will
      * not be affected by loading "document" style sheets with addStyleSheet or
      * especially replaceStyleSheet.
-     *
-     * @param aURL The style sheet to be loaded and applied.
-     */
-    readonly replaceOverrideStyleSheet: (aURL: IDLAString) => void;
-
-    /** Load and apply an override style sheet, specified by aURL, to
-     * the editor's document, on top of any that are already there.
-     * This is always synchronous, so the same caveats about local files and no
-     * non-local @import as replaceOverrideStyleSheet apply here, too.
      *
      * @param aURL The style sheet to be loaded and applied.
      */
@@ -56328,6 +56402,22 @@ declare namespace XPCOM {
   }
 
   export interface nsIQuotaManagerService extends nsISupports {
+
+    /**
+     * Check if storage is initialized.
+     *
+     * If the dom.quotaManager.testing preference is not true the call will be
+     * a no-op.
+     */
+    readonly storageInitialized: () => (nsIQuotaRequest | null);
+
+    /**
+     * Check if temporary storage is initialized.
+     *
+     * If the dom.quotaManager.testing preference is not true the call will be
+     * a no-op.
+     */
+    readonly temporaryStorageInitialized: () => (nsIQuotaRequest | null);
 
     /**
      * Initializes storage directory. This can be used in tests to verify
@@ -56398,13 +56488,9 @@ declare namespace XPCOM {
     readonly getUsageForPrincipal: (aPrincipal: (nsIPrincipal | null), aCallback: (nsIQuotaUsageCallback | nsIQuotaUsageCallbackFunction | null), aFromMemory?: boolean) => (nsIQuotaUsageRequest | null);
 
     /**
-     * Schedules an asynchronous callback that will inspect all origins and
-     * just returns the origin strings of origins.
-     *
-     * @param aCallback
-     *        The callback that will be called when the origin is collected.
+     * Asynchronously lists all origins and returns them as plain strings.
      */
-    readonly listOrigins: (aCallback: (nsIQuotaCallback | nsIQuotaCallbackFunction | null)) => (nsIQuotaRequest | null);
+    readonly listOrigins: () => (nsIQuotaRequest | null);
 
     /**
      * Removes all storages. The files may not be deleted immediately depending
@@ -56497,11 +56583,8 @@ declare namespace XPCOM {
      *        from Client.h, then only that client's storage will be cleared.
      *        If you want to clear multiple client types (but not all), then you
      *        must call this method multiple times.
-     * @param aResetAll
-     *        An optional boolean to indicate resetting all storages under the
-     *        given origin.
      */
-    readonly resetStoragesForPrincipal: (aPrincipal: (nsIPrincipal | null), aPersistenceType?: IDLACString, aClientType?: IDLAString, aResetAll?: boolean) => (nsIQuotaRequest | null);
+    readonly resetStoragesForPrincipal: (aPrincipal: (nsIPrincipal | null), aPersistenceType?: IDLACString, aClientType?: IDLAString) => (nsIQuotaRequest | null);
 
     /**
      * Check if given origin is persisted.
@@ -56792,16 +56875,6 @@ declare namespace XPCOM {
     readonly displayProtectedAuth: (ctx: (nsIInterfaceRequestor | null), runnable: (nsIProtectedAuthThread | null)) => void;
   }
 
-  export interface nsIQuotaOriginsResultRef {
-    readonly name: "nsIQuotaOriginsResult";
-    readonly number: "{5d8c2fbe-9ccc-4bab-8f03-8591dfc8e351}";
-  }
-
-  export interface nsIQuotaOriginsResult extends nsISupports {
-
-    readonly origin: IDLACString;
-  }
-
   export interface nsIProtocolHandlerRef {
     readonly name: "nsIProtocolHandler";
     readonly number: "{a87210e6-7c8c-41f7-864d-df809015193e}";
@@ -56878,16 +56951,18 @@ declare namespace XPCOM {
      * |                                                                   |
      * +-------------------------------------------------------------------+
      *
+     *    * URI_LOADABLE_BY_ANYONE
+     *    * URI_DANGEROUS_TO_LOAD
+     *    * URI_IS_UI_RESOURCE
+     *    * URI_IS_LOCAL_FILE
+     *    * URI_LOADABLE_BY_SUBSUMERS
+     *
      * These flags are used to determine who is allowed to load URIs for this
      * protocol.  Note that if a URI is nested, only the flags for the
      * innermost URI matter.  See nsINestedURI.
      *
-     * If none of these five flags are set, the URI must be treated as if it
-     * had the URI_LOADABLE_BY_ANYONE flag set, for compatibility with protocol
-     * handlers written against Gecko 1.8 or earlier.  In this case, there may
-     * be run-time warning messages indicating that a "default insecure"
-     * assumption is being made.  At some point in the futures (Mozilla 2.0,
-     * most likely), these warnings will become errors.
+     * If none of these five flags are set, the ContentSecurityManager will
+     * deny the load.
      */
     /**
      * The URIs for this protocol can be loaded by anyone.  For example, any
