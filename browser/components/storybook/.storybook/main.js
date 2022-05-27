@@ -1,6 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/* eslint-env node */
 
 const path = require('path');
 
@@ -24,9 +25,15 @@ module.exports = {
 
     // Make whatever fine-grained changes you need
     const projectRoot = path.resolve(__dirname, "../../../../");
-    config.resolve.alias["browser"] = `${projectRoot}/browser`;
-    config.resolve.alias["toolkit"] = `${projectRoot}/toolkit`;
+    config.resolve.alias.browser = `${projectRoot}/browser`;
+    config.resolve.alias.toolkit = `${projectRoot}/toolkit`;
     config.resolve.alias["toolkit-widgets"] = `${projectRoot}/toolkit/content/widgets/`;
+    config.resolve.alias.companion = `${projectRoot}/browser/components/companion/content`;
+
+    config.module.rules.push({
+      test: /\.ftl$/,
+      type: "asset/source",
+    });
 
     config.optimization = {
       splitChunks: false,

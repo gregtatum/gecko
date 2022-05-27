@@ -1,9 +1,9 @@
-= Storybook for Firefox
+# Storybook for Firefox
 
 Storybook is a component library to document our design system, reusable
 components and any specific components you might want to test with dummy data.
 
-== Background
+## Background
 
 The storybook will list components that can be reused, and will help document
 what common elements we have. It can also list implementation specific
@@ -14,13 +14,13 @@ non-chrome:// paths) should automatically reflect changes in the opened browser.
 If you make a change to a chrome:// referenced file then you'll need to do a
 hard refresh (Cmd+Shift+R/Ctrl+Shift+R) to notice the changes.
 
-== Running Storybook
+## Running Storybook
 
 Installing the npm dependencies and running the `storybook` npm script should be
 enough to get storybook running. This can be done with your personal npm/node
 that happens to be compatible or using `./mach npm`.
 
-=== Running with mach based npm
+### Running with mach based npm
 
 If you do this a lot, you might want to add an alias like this to your shell's
 startup config:
@@ -62,9 +62,9 @@ npm-storybook run start-storybook
 npm-storybook run storybook
 ```
 
-=== Personal npm
+### Personal npm
 
-You can use your own `npm` to install and run storyboook. Compatibility is up
+You can use your own `npm` to install and run storybook. Compatibility is up
 to you to sort out.
 
 ```

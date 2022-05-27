@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import "companion/widgets/simple-notification.js";
-import { html } from "companion/lit.all.js";
+import { html } from "lit";
 
 export default {
   title: "Design System/Components/Simple Notification",

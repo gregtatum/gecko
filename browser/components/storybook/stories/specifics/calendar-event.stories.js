@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { CalendarEvent } from "companion/widgets/calendar-event.js";
-import { html } from "companion/lit.all.js";
+import { html } from "lit";
 
 customElements.define("calendar-event", CalendarEvent);
 
