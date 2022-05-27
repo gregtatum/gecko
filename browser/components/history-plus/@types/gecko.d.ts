@@ -57,17 +57,6 @@ declare namespace MockedExports {
     getService(key: Key): Service;
   }
 
-  namespace Components {
-    interface classes {
-      ["@mozilla.org/browser/nav-history-service;1"]:
-        ServiceGetter<nsINavHistoryService, NavHistory.Service>
-    }
-
-    interface interfaces {
-      nsINavHistoryService: nsINavHistoryService
-    }
-  }
-
   interface MessageManager {
     loadFrameScript(url: string, flag: boolean): void;
     sendAsyncMessage: (event: string, data: any) => void;
@@ -414,8 +403,6 @@ declare module "resource://devtools/client/shared/browser-loader.js" {
 
 declare var ChromeUtils: MockedExports.ChromeUtils;
 declare var Cu: MockedExports.ChromeUtils;
-declare var Ci: MockedExports.Components.interfaces;
-declare var Cc: MockedExports.Components.classes;
 
 /**
  * This is a variant on the normal Document, as it contains chrome-specific properties.

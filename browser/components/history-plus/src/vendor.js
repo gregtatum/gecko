@@ -19,6 +19,8 @@ export const Redux = require("devtools/client/shared/vendor/redux");
 export const ReactDOM = require("devtools/client/shared/vendor/react-dom");
 /** @type {import("react-redux")} */
 export const ReactRedux = require("devtools/client/shared/vendor/react-redux");
+/** @type {import("reselect")} */
+export const reselect = require("devtools/client/shared/vendor/reselect");
 /** @type {import("react-dom-factories")} */
 export const ReactDOMFactories = require("devtools/client/shared/vendor/react-dom-factories");
 /** @type {import("devtools/client/shared/redux/create-store")} */
