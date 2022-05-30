@@ -255,6 +255,11 @@ function DownloadsPlacesView(
   if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
     window.dispatchEvent(new CustomEvent("DownloadGetData", { bubbles: true }));
 
+    let fromSerializable = download => {
+      download.error = download.errorObj;
+      return download;
+    };
+
     window.addEventListener(
       "DownloadToContent",
       evt => {
@@ -275,15 +280,15 @@ function DownloadsPlacesView(
             break;
           }
           case "onDownloadAdded": {
-            this.onDownloadAdded(evt.detail.download);
+            this.onDownloadAdded(fromSerializable(evt.detail.download));
             break;
           }
           case "onDownloadChanged": {
-            this.onDownloadChanged(evt.detail.download);
+            this.onDownloadChanged(fromSerializable(evt.detail.download));
             break;
           }
           case "onDownloadRemoved": {
-            this.onDownloadRemoved(evt.detail.download);
+            this.onDownloadRemoved(fromSerializable(evt.detail.download));
             break;
           }
         }
