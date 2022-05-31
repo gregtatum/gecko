@@ -75,13 +75,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
 
 XPCOMUtils.defineLazyPreferenceGetter(
   this,
-  "OPEN_NEW_TAB_FOR_MOST_NAVIGATIONS",
-  "browser.tabs.openNewTabForMostNavigations",
-  true
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
   "TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK",
   "browser.pinebuild.targetTopLevelLinkClicksToBlank",
   false
@@ -1519,10 +1512,7 @@ class WorkspaceHistory extends EventTarget {
       logConsole.error("Failed to add listener", e);
     }
 
-    if (
-      TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK &&
-      !OPEN_NEW_TAB_FOR_MOST_NAVIGATIONS
-    ) {
+    if (TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK) {
       browser.browsingContext.targetTopLevelLinkClicksToBlank = true;
     }
   }
