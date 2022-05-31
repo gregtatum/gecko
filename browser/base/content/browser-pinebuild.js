@@ -33,9 +33,29 @@ var PineBuildUIUtils = {
     window.top.gHistoryCarousel.init();
     this.setupKeyboardOverrides();
 
+    let cmd;
     if (!Services.prefs.getBoolPref("browser.pinebuild.workspaces.enabled")) {
-      let cmd = document.getElementById("Browser:StartNewWorkspace");
+      cmd = document.getElementById("Browser:StartNewWorkspace");
       cmd.hidden = true;
+    }
+
+    // If the user is in on-boarding, disable UI that enables them to create new windows.
+    if (!Services.prefs.getBoolPref("browser.pinebuild.onboarding.complete")) {
+      cmd = document.getElementById("cmd_newNavigator");
+      cmd.disabled = true;
+      // Disable the command so keyboard shortcuts using this command are disabled.
+      cmd.setAttribute("disabled", true);
+    }
+  },
+
+  onLoad() {
+    if (
+      !Services.prefs.getBoolPref("browser.pinebuild.onboarding.complete") &&
+      !Cu.isInAutomation
+    ) {
+      // Set the "onboarding" attribute on the chrome window, so we know to adjust
+      // behavior for the onboarding experience.
+      window.document.body.setAttribute("onboarding", true);
     }
   },
 

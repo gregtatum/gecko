@@ -2893,19 +2893,6 @@ BrowserGlue.prototype = {
       {
         condition: AppConstants.PINEBUILD,
         task: () => {
-          if (
-            !Services.prefs.getBoolPref(
-              "browser.pinebuild.onboarding.complete"
-            ) &&
-            !Cu.isInAutomation
-          ) {
-            // Set the "onboarding" attribute on the chrome window, so we know to adjust
-            // behavior for the onboarding experience.
-            const win = BrowserWindowTracker.getTopWindow();
-            win.document.body.setAttribute("onboarding", true);
-            return;
-          }
-
           // Use an increasing number to keep track of the current feature
           // onboarding version.
           const ONBOARDING_VERSION = 17;

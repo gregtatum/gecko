@@ -1819,6 +1819,10 @@ var gBrowserInit = {
   },
 
   onLoad() {
+    if (AppConstants.PINEBUILD) {
+      window.PineBuildUIUtils.onLoad();
+    }
+
     gBrowser.addEventListener("DOMUpdateBlockedPopups", gPopupBlockerObserver);
 
     window.addEventListener("AppCommand", HandleAppCommandEvent, true);

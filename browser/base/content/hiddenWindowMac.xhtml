@@ -44,8 +44,10 @@
          the application. -->
     <menuitem data-l10n-id="menu-file-new-window" oncommand="OpenBrowserWindowFromDockMenu();"
               id="macDockMenuNewWindow" />
+#ifndef PINEBUILD
     <menuitem data-l10n-id="menu-file-new-private-window" oncommand="OpenBrowserWindowFromDockMenu({private: true});"
               id="macDockMenuNewPrivateWindow" />
+#endif
   </menupopup>
 </popupset>
 
