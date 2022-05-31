@@ -56,8 +56,7 @@ https://firefox-source-docs.mozilla.org/contributing/build/artifact_builds.html.
 
 Please choose the version of Firefox you want to build (see note above):
 %s
-Your choice:
-""".strip()
+Your choice: """
 
 APPLICATIONS = OrderedDict(
     [
@@ -80,7 +79,7 @@ Paste the lines between the chevrons (>>> and <<<) into
 >>>
 %s
 <<<
-""".strip()
+"""
 
 CONFIGURE_MERCURIAL = """
 Mozilla recommends a number of changes to Mercurial to enhance your
@@ -211,7 +210,7 @@ class Bootstrapper(object):
             cls = OpenBSDBootstrapper
             args["version"] = platform.uname()[2]
 
-        elif sys.platform.startswith("dragonfly") or sys.platform.startswith("freebsd"):
+        elif sys.platform.startswith(("dragonfly", "freebsd", "netbsd")):
             cls = FreeBSDBootstrapper
             args["version"] = platform.release()
             args["flavor"] = platform.system()
@@ -221,7 +220,6 @@ class Bootstrapper(object):
                 cls = MozillaBuildBootstrapper
             else:
                 cls = WindowsBootstrapper
-
         if cls is None:
             raise NotImplementedError(
                 "Bootstrap support is not yet available " "for your OS."

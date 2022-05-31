@@ -401,6 +401,4 @@ AddonUtilsInternal.prototype = {
   },
 };
 
-XPCOMUtils.defineLazyGetter(this, "AddonUtils", function() {
-  return new AddonUtilsInternal();
-});
+const AddonUtils = new AddonUtilsInternal();

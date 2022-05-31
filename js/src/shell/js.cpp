@@ -11845,6 +11845,59 @@ static bool WriteSelfHostedXDRFile(JSContext* cx, JS::SelfHostedCache buffer) {
   return true;
 }
 
+static bool SetGCParameterFromArg(JSContext* cx, char* arg) {
+  char* c = strchr(arg, '=');
+  if (!c) {
+    fprintf(stderr,
+            "Error: --gc-param argument '%s' must be of the form "
+            "name=decimalValue\n",
+            arg);
+    return false;
+  }
+
+  *c = '\0';
+  const char* name = arg;
+  const char* valueStr = c + 1;
+
+  JSGCParamKey key;
+  bool writable;
+  if (!GetGCParameterInfo(name, &key, &writable)) {
+    fprintf(stderr, "Error: Unknown GC parameter name '%s'\n", name);
+    fprintf(stderr, "Writable GC parameter names are:\n");
+#define PRINT_WRITABLE_PARAM_NAME(name, _, writable) \
+  if (writable) {                                    \
+    fprintf(stderr, "  %s\n", name);                 \
+  }
+    FOR_EACH_GC_PARAM(PRINT_WRITABLE_PARAM_NAME)
+#undef PRINT_WRITABLE_PARAM_NAME
+    return false;
+  }
+
+  if (!writable) {
+    fprintf(stderr, "Error: GC parameter '%s' is not writable\n", name);
+    return false;
+  }
+
+  char* end = nullptr;
+  unsigned long int value = strtoul(valueStr, &end, 10);
+  if (end == valueStr || *end) {
+    fprintf(stderr,
+            "Error: Could not parse '%s' as decimal for GC parameter '%s'\n",
+            valueStr, name);
+    return false;
+  }
+
+  uint32_t paramValue = uint32_t(value);
+  if (value == ULONG_MAX || value != paramValue ||
+      !cx->runtime()->gc.setParameter(key, paramValue)) {
+    fprintf(stderr, "Error: Value %s is out of range for GC parameter '%s'\n",
+            valueStr, name);
+    return false;
+  }
+
+  return true;
+}
+
 int main(int argc, char** argv) {
   PreInit();
 
@@ -12266,6 +12319,8 @@ int main(int argc, char** argv) {
       !op.addStringOption('z', "gc-zeal", "LEVEL(;LEVEL)*[,N]",
                           "option ignored in non-gc-zeal builds") ||
 #endif
+      !op.addMultiStringOption('\0', "gc-param", "NAME=VALUE",
+                               "Set a named GC parameter") ||
       !op.addStringOption('\0', "module-load-path", "DIR",
                           "Set directory to load modules from") ||
       !op.addBoolOption('\0', "no-source-pragmas",
@@ -12676,6 +12731,13 @@ int main(int argc, char** argv) {
   JS_SetGCParameter(cx, JSGC_SLICE_TIME_BUDGET_MS, 5);
 
   JS_SetGCParameter(cx, JSGC_PER_ZONE_GC_ENABLED, true);
+
+  for (MultiStringRange args = op.getMultiStringOption("gc-param");
+       !args.empty(); args.popFront()) {
+    if (!SetGCParameterFromArg(cx, args.front())) {
+      return EXIT_FAILURE;
+    }
+  }
 
   JS::SetProcessLargeAllocationFailureCallback(my_LargeAllocFailCallback);
 

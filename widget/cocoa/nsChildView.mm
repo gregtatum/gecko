@@ -710,7 +710,6 @@ void nsChildView::Move(double aX, double aY) {
     [mView setFrame:DevPixelsToCocoaPoints(mBounds)];
   });
 
-  NotifyRollupGeometryChange();
   ReportMoveEvent();
 
   NS_OBJC_END_TRY_IGNORE_BLOCK;
@@ -736,7 +735,6 @@ void nsChildView::Resize(double aWidth, double aHeight, bool aRepaint) {
     [[mView pixelHostingView] setNeedsDisplay:YES];
   }
 
-  NotifyRollupGeometryChange();
   ReportSizeEvent();
 
   NS_OBJC_END_TRY_IGNORE_BLOCK;
@@ -776,7 +774,6 @@ void nsChildView::Resize(double aX, double aY, double aWidth, double aHeight, bo
     [[mView pixelHostingView] setNeedsDisplay:YES];
   }
 
-  NotifyRollupGeometryChange();
   if (isMoving) {
     ReportMoveEvent();
     if (mOnDestroyCalled) return;
@@ -1639,10 +1636,8 @@ static int32_t FindTitlebarBottom(const nsTArray<nsIWidget::ThemeGeometry>& aThe
                                   int32_t aWindowWidth) {
   int32_t titlebarBottom = 0;
   for (auto& g : aThemeGeometries) {
-    if ((g.mType == eThemeGeometryTypeTitlebar ||
-         g.mType == eThemeGeometryTypeVibrantTitlebarLight ||
-         g.mType == eThemeGeometryTypeVibrantTitlebarDark) &&
-        g.mRect.X() <= 0 && g.mRect.XMost() >= aWindowWidth && g.mRect.Y() <= 0) {
+    if (g.mType == eThemeGeometryTypeTitlebar && g.mRect.X() <= 0 &&
+        g.mRect.XMost() >= aWindowWidth && g.mRect.Y() <= 0) {
       titlebarBottom = std::max(titlebarBottom, g.mRect.YMost());
     }
   }
@@ -1708,10 +1703,6 @@ void nsChildView::UpdateThemeGeometries(const nsTArray<ThemeGeometry>& aThemeGeo
 static Maybe<VibrancyType> ThemeGeometryTypeToVibrancyType(
     nsITheme::ThemeGeometryType aThemeGeometryType) {
   switch (aThemeGeometryType) {
-    case eThemeGeometryTypeVibrantTitlebarLight:
-      return Some(VibrancyType::TITLEBAR_LIGHT);
-    case eThemeGeometryTypeVibrantTitlebarDark:
-      return Some(VibrancyType::TITLEBAR_DARK);
     case eThemeGeometryTypeTooltip:
       return Some(VibrancyType::TOOLTIP);
     case eThemeGeometryTypeMenu:
@@ -1761,10 +1752,6 @@ static void MakeRegionsNonOverlapping(Region& aFirst, Regions&... aRest) {
 }
 
 void nsChildView::UpdateVibrancy(const nsTArray<ThemeGeometry>& aThemeGeometries) {
-  LayoutDeviceIntRegion vibrantTitlebarLightRegion =
-      GatherVibrantRegion(aThemeGeometries, VibrancyType::TITLEBAR_LIGHT);
-  LayoutDeviceIntRegion vibrantTitlebarDarkRegion =
-      GatherVibrantRegion(aThemeGeometries, VibrancyType::TITLEBAR_DARK);
   LayoutDeviceIntRegion menuRegion = GatherVibrantRegion(aThemeGeometries, VibrancyType::MENU);
   LayoutDeviceIntRegion tooltipRegion =
       GatherVibrantRegion(aThemeGeometries, VibrancyType::TOOLTIP);
@@ -1777,14 +1764,11 @@ void nsChildView::UpdateVibrancy(const nsTArray<ThemeGeometry>& aThemeGeometries
   LayoutDeviceIntRegion activeSourceListSelectionRegion =
       GatherVibrantRegion(aThemeGeometries, VibrancyType::ACTIVE_SOURCE_LIST_SELECTION);
 
-  MakeRegionsNonOverlapping(vibrantTitlebarLightRegion, vibrantTitlebarDarkRegion, menuRegion,
-                            tooltipRegion, highlightedMenuItemRegion, sourceListRegion,
+  MakeRegionsNonOverlapping(menuRegion, tooltipRegion, highlightedMenuItemRegion, sourceListRegion,
                             sourceListSelectionRegion, activeSourceListSelectionRegion);
 
   auto& vm = EnsureVibrancyManager();
   bool changed = false;
-  changed |= vm.UpdateVibrantRegion(VibrancyType::TITLEBAR_LIGHT, vibrantTitlebarLightRegion);
-  changed |= vm.UpdateVibrantRegion(VibrancyType::TITLEBAR_DARK, vibrantTitlebarDarkRegion);
   changed |= vm.UpdateVibrantRegion(VibrancyType::MENU, menuRegion);
   changed |= vm.UpdateVibrantRegion(VibrancyType::TOOLTIP, tooltipRegion);
   changed |= vm.UpdateVibrantRegion(VibrancyType::HIGHLIGHTED_MENUITEM, highlightedMenuItemRegion);
