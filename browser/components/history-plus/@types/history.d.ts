@@ -2,15 +2,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 declare namespace HistoryPlus {
-  export interface State {
-    history: XPCOM.nsINavHistoryContainerResultNode[]
+
+  type Values<T> = T[keyof T];
+
+  type PlainActions = Values<{
+    [FnName in keyof typeof import("../src/actions-plain")]: ReturnType<
+      typeof import("../src/actions-plain")[FnName]
+    >;
+  }>;
+
+  export type Action = PlainActions;
+
+  type Reducers = typeof import("../src/reducers");
+  export type State = ReturnType<Reducers["reducers"]>;
+
+  interface nsINavHistoryContainerResultNode {
+
   }
 
   export type InitializeStoreValues = {
-    history: XPCOM.nsINavHistoryContainerResultNode[]
+    history: nsINavHistoryContainerResultNode[]
   }
-
-  export type Action = { type: "INITIALIZE_STORE" } & InitializeStoreValues;
 
   export type Reducer<S> = (state: S | undefined, action: Action) => S;
 
@@ -46,4 +58,7 @@ declare namespace HistoryPlus {
   export type Classifier = {
     [domain: string]: HostCategory
   }
+
+  export type UseState<T> = [T, React.Dispatch<React.SetStateAction<T>>]
+
 }

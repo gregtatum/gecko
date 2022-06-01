@@ -32,8 +32,8 @@ declare namespace MockedExports {
       typeof import("resource://gre/modules/AppConstants.jsm");
     "resource://devtools/shared/Loader.jsm":
       typeof import("resource://devtools/shared/Loader.jsm");
-    "resource://devtools/client/shared/browser-loader.js":
-      typeof import("resource://devtools/client/shared/browser-loader.js");
+    "resource://devtools/shared/loader/browser-loader.js":
+      typeof import("resource://devtools/shared/loader/browser-loader.js");
     "resource://gre/modules/PlacesUtils.jsm":
       typeof import("resource://gre/modules/PlacesUtils.jsm");
   }
@@ -129,6 +129,9 @@ declare namespace MockedExports {
       eForceQuit: number,
       eRestart: number
     };
+    scriptloader: {
+      loadSubScript: (path: string, target: any) => any,
+    }
   };
 
   const ServicesJSM: {
@@ -360,8 +363,8 @@ declare namespace MockedExports {
     getBlobAsString(): any;
     getBlobAsUTF8String(): any;
     getIsNull(): any;
-    getResultByIndex(index: number): unknown;
-    getResultByName(column: string): unknown;
+    getResultByIndex(index: number): any;
+    getResultByName(column: string): any;
     numEntries: number;
     VALUE_TYPE_NULL: number;
     VALUE_TYPE_INTEGER: number;
@@ -549,7 +552,7 @@ declare module "resource://devtools/shared/Loader.jsm" {
   export = MockedExports.LoaderJSM;
 }
 
-declare module "resource://devtools/client/shared/browser-loader.js" {
+declare module "resource://devtools/shared/loader/browser-loader.js" {
   export = MockedExports.BrowserLoaderJS;
 }
 

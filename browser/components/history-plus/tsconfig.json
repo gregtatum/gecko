@@ -17,6 +17,7 @@
     "noImplicitAny": true,
   },
   "files": [
+
     "./@types/gecko.d.ts",
     "./@types/history.d.ts"
   ],
