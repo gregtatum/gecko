@@ -24,7 +24,7 @@ export default function(view) {
    * the security status of the page that was blocked from loading.
    */
   function isSecureAboutPage() {
-    let secureInternalPages = /^(?:accounts|addons|cache|certificate|config|crashes|downloads|license|logins|preferences|protections|rights|sessionrestore|support|welcomeback|ion)(?:[?#]|$)/i;
+    let secureInternalPages = /^(?:accounts|addons|cache|certificate|config|crashes|downloads|license|logins|onboarding|preferences|protections|rights|sessionrestore|support|welcomeback|ion)(?:[?#]|$)/i;
     return uri.schemeIs("about") && secureInternalPages.test(uri.pathQueryRef);
   }
 

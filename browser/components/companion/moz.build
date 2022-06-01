@@ -32,6 +32,8 @@ FINAL_TARGET_FILES.actors += [
     "FlowResetParent.jsm",
     "HistoryCarouselChild.jsm",
     "HistoryCarouselParent.jsm",
+    "OnboardingChild.jsm",
+    "OnboardingParent.jsm",
     "ORTChild.jsm",
     "ORTParent.jsm",
     "PyodideChild.jsm",

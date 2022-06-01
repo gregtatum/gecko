@@ -38,6 +38,8 @@ browser.jar:
     content/browser/companion/onboarding.css (content/onboarding.css)
     content/browser/companion/onboarding.html (content/onboarding.html)
     content/browser/companion/onboarding.js (content/onboarding.js)
+    content/browser/companion/onboarding-flow.html (content/onboarding-flow.html)
+    content/browser/companion/onboarding-flow.js (content/onboarding-flow.js)
 #ifdef XP_MACOSX
     content/browser/companion/pinebuildBackground.css (content/pinebuildBackground-mac.css)
     content/browser/companion/statusbarIcon.svg (content/statusbarIcon-mac.svg)

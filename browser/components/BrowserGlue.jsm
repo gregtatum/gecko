@@ -1212,6 +1212,20 @@ BrowserGlue.prototype = {
         remoteTypes: ["privilegedabout"],
       };
 
+      JSWINDOWACTORS.Onboarding = {
+        parent: {
+          moduleURI: "resource:///actors/OnboardingParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/OnboardingChild.jsm",
+          events: {
+            OnboardingCompleted: { wantUntrusted: true },
+          },
+        },
+        matches: ["about:onboarding"],
+        remoteTypes: ["privilegedabout"],
+      };
+
       JSWINDOWACTORS.DownloadsCommon.allFrames = true;
       JSWINDOWACTORS.DownloadsCommon.remoteTypes = ["privilegedabout"];
 
