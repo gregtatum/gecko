@@ -11,7 +11,7 @@ import { Redux } from "./vendor.js";
  */
 function history(state = [], action) {
   switch (action.type) {
-    case "SET_INITIAL_STATE":
+    case "INITIALIZE_STORE":
       return action.history;
     default:
       return state;

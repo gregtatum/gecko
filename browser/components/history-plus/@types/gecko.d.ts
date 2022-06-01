@@ -34,6 +34,8 @@ declare namespace MockedExports {
       typeof import("resource://devtools/shared/Loader.jsm");
     "resource://devtools/client/shared/browser-loader.js":
       typeof import("resource://devtools/client/shared/browser-loader.js");
+    "resource://gre/modules/PlacesUtils.jsm":
+      typeof import("resource://gre/modules/PlacesUtils.jsm");
   }
 
   interface ChromeUtils {
@@ -55,17 +57,6 @@ declare namespace MockedExports {
 
   type ServiceGetter<Key, Service> = {
     getService(key: Key): Service;
-  }
-
-  namespace Components {
-    interface classes {
-      ["@mozilla.org/browser/nav-history-service;1"]:
-        ServiceGetter<nsINavHistoryService, NavHistory.Service>
-    }
-
-    interface interfaces {
-      nsINavHistoryService: nsINavHistoryService
-    }
   }
 
   interface MessageManager {
@@ -333,8 +324,158 @@ declare namespace MockedExports {
     }
   }
 
-  const PlacesUtilsJSM: {
+  // https://searchfox.org/mozilla-central/source/toolkit/modules/Sqlite.jsm
+  interface ConnectionData {
+    TRANSACTION_DEFAULT: string;
+    TRANSACTION_DEFERRED: string;
+    TRANSACTION_IMMEDIATE: string;
+    TRANSACTION_EXCLUSIVE: string;
+    unsafeRawConnection(...args: any): any;
+    variableLimit(...args: any): any;
+    getSchemaVersion(...args: any): any;
+    setSchemaVersion(...args: any): any;
+    close(...args: any): any;
+    clone(...args: any): any;
+    executeBeforeShutdown(...args: any): any;
+    executeCached(...args: any): any;
+    execute(sql: string, params?: Record<string, string> | null, onRow?: any | null): Promise<Row[]>;
+    defaultTransactionType(...args: any): any;
+    transactionInProgress(...args: any): any;
+    executeTransaction(...args: any): any;
+    tableExists(...args: any): any;
+    indexExists(...args: any): any;
+    shrinkMemory(...args: any): any;
+    discardCachedStatements(...args: any): any;
+    interrupt(...args: any): any;
+  }
+
+  interface Row {
+    getTypeOfIndex(): any;
+    getInt32(): any;
+    getInt64(): any;
+    getDouble(): any;
+    getUTF8String(): any;
+    getString(): any;
+    getBlob(): any;
+    getBlobAsString(): any;
+    getBlobAsUTF8String(): any;
+    getIsNull(): any;
+    getResultByIndex(index: number): unknown;
+    getResultByName(column: string): unknown;
+    numEntries: number;
+    VALUE_TYPE_NULL: number;
+    VALUE_TYPE_INTEGER: number;
+    VALUE_TYPE_FLOAT: number;
+    VALUE_TYPE_TEXT: number;
+    VALUE_TYPE_BLOB: number;
+  }
+
+  interface PlacesUtils {
+    TYPE_X_MOZ_PLACE_CONTAINER: any;
+    TYPE_X_MOZ_PLACE_SEPARATOR: any;
+    TYPE_X_MOZ_PLACE: any;
+    TYPE_X_MOZ_URL: any;
+    TYPE_HTML: any;
+    TYPE_UNICODE: any;
+    TYPE_X_MOZ_PLACE_ACTION: any;
+    LMANNO_FEEDURI: any;
+    LMANNO_SITEURI: any;
+    CHARSET_ANNO: any;
+    MOBILE_ROOT_ANNO: any;
+    TOPIC_SHUTDOWN: any;
+    TOPIC_INIT_COMPLETE: any;
+    TOPIC_DATABASE_LOCKED: any;
+    TOPIC_EXPIRATION_FINISHED: any;
+    TOPIC_FAVICONS_EXPIRED: any;
+    TOPIC_VACUUM_STARTING: any;
+    TOPIC_BOOKMARKS_RESTORE_BEGIN: any;
+    TOPIC_BOOKMARKS_RESTORE_SUCCESS: any;
+    TOPIC_BOOKMARKS_RESTORE_FAILED: any;
+    observers: any;
+    virtualAllBookmarksGuid: any;
+    virtualHistoryGuid: any;
+    virtualDownloadsGuid: any;
+    virtualTagsGuid: any;
+    isVirtualLeftPaneItem: any;
+    asContainer: any;
+    asQuery: any;
+    endl: any;
+    isValidGuid: any;
+    isValidGuidPrefix: any;
+    generateGuidWithPrefix: any;
+    toURI: any;
+    toPRTime: any;
+    toDate: any;
+    toISupportsString: any;
+    getFormattedString: any;
+    getString: any;
+    parseActionUrl: any;
+    isQueryGeneratedFolder: any;
+    nodeIsFolder: any;
+    nodeIsBookmark: any;
+    nodeIsSeparator: any;
+    nodeIsURI: any;
+    nodeIsQuery: any;
+    nodeAncestors: any;
+    validateItemProperties: any;
+    BOOKMARK_VALIDATORS: any;
+    PAGEINFO_VALIDATORS: any;
+    SYNC_BOOKMARK_VALIDATORS: any;
+    SYNC_CHANGE_RECORD_VALIDATORS: any;
+    QueryInterface: any;
+    _shutdownFunctions: any;
+    registerShutdownFunction: any;
+    observe: any;
+    nodeIsHost: any;
+    nodeIsDay: any;
+    nodeIsTagQuery: any;
+    containerTypes: any;
+    nodeIsContainer: any;
+    nodeIsHistoryContainer: any;
+    getConcreteItemId: any;
+    getConcreteItemGuid: any;
+    getReversedHost(host: {host: string}): string;
+    wrapNode: any;
+    unwrapNodes: any;
+    validatePageInfo: any;
+    normalizeToURLOrGUID: any;
+    getFolderContents: any;
+    bookmarksMenuFolderId: any;
+    toolbarFolderId: any;
+    isRootItem: any;
+    getContainerNodeWithOptions: any;
+    hasChildURIs: any;
+    getChildCountForFolder: any;
+    getURLsForContainerNode: any;
+    promiseDBConnection(): Promise<ConnectionData>;
+    promiseLargeCacheDBConnection: any;
+    largeCacheDBConnDeferred: any;
+    promiseUnsafeWritableDBConnection: any;
+    withConnectionWrapper: any;
+    promiseFaviconData: any;
+    urlWithSizeRef: any;
+    promiseItemGuid: any;
+    promiseItemId: any;
+    promiseManyItemIds: any;
+    invalidateCachedGuidFor: any;
+    invalidateCachedGuids: any;
+    promiseBookmarksTree: any;
+    chunkArray: any;
+    sqlBindPlaceholders: any;
+    md5: any;
     history: NavHistory.NavHistoryService
+    favicons: any;
+    bookmarks: any;
+    tagging: any;
+    instanceId: any;
+    metadata: any;
+    keywords: any;
+    tagsFolderId: any;
+    placesRootId: any;
+  }
+
+  const PlacesUtilsJSM: {
+    PlacesUtils: PlacesUtils;
   }
 }
 
@@ -412,10 +553,12 @@ declare module "resource://devtools/client/shared/browser-loader.js" {
   export = MockedExports.BrowserLoaderJS;
 }
 
+declare module "resource://gre/modules/PlacesUtils.jsm" {
+  export = MockedExports.PlacesUtilsJSM;
+}
+
 declare var ChromeUtils: MockedExports.ChromeUtils;
 declare var Cu: MockedExports.ChromeUtils;
-declare var Ci: MockedExports.Components.interfaces;
-declare var Cc: MockedExports.Components.classes;
 
 /**
  * This is a variant on the normal Document, as it contains chrome-specific properties.

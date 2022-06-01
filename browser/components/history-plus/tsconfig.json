@@ -13,14 +13,15 @@
     "noEmit": true,
     // Allow esnext syntax. Otherwise the default is ES5 only.
     "target": "esnext",
-    "lib": ["esnext", "dom"]
+    "lib": ["esnext", "dom"],
+    "noImplicitAny": true,
   },
   "files": [
     "./@types/gecko.d.ts",
     "./@types/history.d.ts"
   ],
   // Add a @ts-check comment to a JS file to start type checking it.
-  "include": ["./**/*.js"],
+  "include": ["./**/*.js", "../../../@types/*"],
   "exclude": [
     "../../../devtools/client/performance-new"
   ]
