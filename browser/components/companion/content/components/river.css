@@ -48,15 +48,27 @@ view-group {
   background-color: var(--avm-view-group-element-bgcolor);
 }
 
+#river-overflow-button:focus-visible,
+view-group:focus-visible,
 #river-overflow-button:hover,
 view-group:hover {
-  background-color: var(--avm-view-group-element-hover-bgcolor);
-  color: var(--avm-view-group-element-hover-text-color);
+  background-color: var(--avm-view-group-element-hover-focus-bgcolor);
+  color: var(--avm-view-group-element-hover-focus-text-color);
+}
+
+#river-overflow-button:hover,
+view-group:hover {
   outline: var(--avm-view-group-element-hover-outline);
 }
 
+#river-overflow-button:focus-visible,
+view-group:focus-visible {
+  outline: var(--avm-view-group-element-focus-outline);
+}
+
+view-group:focus-visible::part(icon-container),
 view-group:hover::part(icon-container) {
-  background-color: var(--avm-view-group-element-icon-hover-bgcolor);
+  background-color: var(--avm-view-group-element-icon-hover-focus-bgcolor);
 }
 
 #river[hidden],
@@ -125,11 +137,6 @@ view-group[active]:not(:last-of-type) {
   .view-groups-wrapper:hover > view-group:is([active]) ~ view-group:hover ~ view-group {
     translate: 0;
   }
-}
-
-#river-overflow-button:focus-visible,
-view-group:focus-visible {
-  outline: 2px solid var(--colors-border-focus);
 }
 
 view-group:focus-within::part(history) {

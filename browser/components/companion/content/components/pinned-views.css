@@ -33,14 +33,23 @@ view-group {
   padding: 4px;
 }
 
+view-group:focus-visible,
 view-group:hover {
-  background-color: var(--avm-pinned-view-group-element-hover-bgcolor);
-  color: var(--avm-view-group-element-hover-text-color);
+  background-color: var(--avm-pinned-view-group-element-hover-focus-bgcolor);
+  color: var(--avm-view-group-element-hover-focus-text-color);
+}
+
+view-group:hover {
   outline: var(--avm-view-group-element-hover-outline);
 }
 
+view-group:focus-visible {
+  outline: var(--avm-view-group-element-focus-outline);
+}
+
+view-group:focus-visible::part(icon-container),
 view-group:hover::part(icon-container) {
-  background-color: var(--avm-view-group-element-icon-hover-bgcolor);
+  background-color: var(--avm-view-group-element-icon-hover-focus-bgcolor);
 }
 
 view-group:first-of-type {
@@ -67,8 +76,4 @@ view-group:not([app]) + view-group[app]::before {
   border-inline-start: 1px solid var(--avm-pinned-views-separator-color);
   height: 100%;
   inset-inline-start: -8px;
-}
-
-view-group:focus-visible {
-  outline: 2px solid var(--colors-border-focus);
 }
