@@ -21,22 +21,22 @@ const { require } = BrowserLoader({
 Services.scriptloader.loadSubScript(
   "resource://activity-stream/vendor/redux.js",
   window
-)
+);
 
 Services.scriptloader.loadSubScript(
   "resource://activity-stream/vendor/react.js",
   window
-)
+);
 
 Services.scriptloader.loadSubScript(
   "resource://activity-stream/vendor/react-dom.js",
   window
-)
+);
 
 Services.scriptloader.loadSubScript(
   "resource://activity-stream/vendor/react-redux.js",
   window
-)
+);
 
 /**
  * Coerce to any to read values off the global object.
@@ -61,3 +61,6 @@ export const reselect = require("devtools/client/shared/vendor/reselect");
 
 /** @type {import("react-dom-factories")} */
 export const ReactDOMFactories = require("devtools/client/shared/vendor/react-dom-factories");
+
+/** @type {<T>(func: T, wait: number) => T} */
+export const throttle = require("devtools/shared/throttle.js").throttle;
