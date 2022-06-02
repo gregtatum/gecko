@@ -24,12 +24,6 @@ declare namespace MockedExports {
       typeof import("resource://gre/modules/Services.jsm");
     "Services":
       typeof import("Services");
-    "chrome":
-      typeof import("chrome");
-    "resource://gre/modules/osfile.jsm":
-      typeof import("resource://gre/modules/osfile.jsm");
-    "resource://gre/modules/AppConstants.jsm":
-      typeof import("resource://gre/modules/AppConstants.jsm");
     "resource://devtools/shared/Loader.jsm":
       typeof import("resource://devtools/shared/Loader.jsm");
     "resource://devtools/shared/loader/browser-loader.js":
@@ -49,20 +43,6 @@ declare namespace MockedExports {
      * Then add the file path to the KnownModules above.
      */
     import: <S extends keyof KnownModules>(module: S) => KnownModules[S];
-    exportFunction: (fn: Function, scope: object, options?: object) => void;
-    cloneInto: (value: any, scope: object, options?: object) => void;
-  }
-
-  interface nsINavHistoryService {}
-
-  type ServiceGetter<Key, Service> = {
-    getService(key: Key): Service;
-  }
-
-  interface MessageManager {
-    loadFrameScript(url: string, flag: boolean): void;
-    sendAsyncMessage: (event: string, data: any) => void;
-    addMessageListener: (event: string, listener: (event: any) => void) => void;
   }
 
   interface Browser {
@@ -70,7 +50,6 @@ declare namespace MockedExports {
     contentPrincipal: any;
     selectedTab: BrowserTab;
     selectedBrowser?: ChromeBrowser;
-    messageManager: MessageManager;
     ownerDocument?: ChromeDocument;
   }
 
@@ -138,62 +117,6 @@ declare namespace MockedExports {
     Services: Services;
   };
 
-  const EventEmitter: {
-    decorate: (target: object) => void;
-  };
-
-  const ProfilerGetSymbolsJSM: {
-    ProfilerGetSymbols: {
-      getSymbolTable: (
-        path: string,
-        debugPath: string,
-        breakpadId: string
-      ) => any;
-    };
-  };
-
-  const AppConstantsJSM: {
-    AppConstants: {
-      platform: string;
-    };
-  };
-
-  const osfileJSM: {
-    OS: {
-      Path: {
-        split: (
-          path: string
-        ) => {
-          absolute: boolean;
-          components: string[];
-          winDrive?: string;
-        };
-        join: (...pathParts: string[]) => string;
-      };
-      File: {
-        stat: (path: string) => Promise<{ isDir: boolean }>;
-        Error: any;
-      };
-    };
-  };
-
-  interface BrowsingContextStub {}
-  interface PrincipalStub {}
-
-  interface WebChannelTarget {
-    browsingContext: BrowsingContextStub,
-    browser: Browser,
-    eventTarget: null,
-    principal: PrincipalStub,
-  }
-
-  const WebChannelJSM: any;
-
-  // TS-TODO
-  const CustomizableUIJSM: any;
-  const CustomizableWidgetsJSM: any;
-  const PanelMultiViewJSM: any;
-
   interface BrowserLoaderConfig {
     baseURI: string;
     window: Window;
@@ -208,45 +131,6 @@ declare namespace MockedExports {
   const LoaderJSM: LoaderJSM;
 
   const Services: Services;
-
-  // This class is needed by the Cc importing mechanism. e.g.
-  // Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
-  class nsIFilePicker {}
-
-  interface FilePicker {
-    init: (window: Window, title: string, mode: number) => void;
-    open: (callback: (rv: number) => unknown) => void;
-    // The following are enum values.
-    modeGetFolder: number;
-    returnOK: number;
-    file: {
-      path: string
-    }
-  }
-
-  // This class is needed by the Cc importing mechanism. e.g.
-  // Cc["@mozilla.org/process/environment;1"].getService(Ci.nsIEnvironment);
-  class nsIEnvironment {}
-
-  interface Environment {
-    get(envName: string): string;
-    set(envName: string, value: string): void;
-  }
-
-  const chrome: {
-    Cc: {
-      "@mozilla.org/process/environment;1": {
-        getService(service: nsIEnvironment): Environment
-      },
-      "@mozilla.org/filepicker;1": {
-        createInstance(instance: nsIFilePicker): FilePicker
-      }
-    },
-    Ci: {
-      nsIFilePicker: nsIFilePicker;
-      nsIEnvironment: nsIEnvironment;
-    },
-  };
 
   namespace NavHistory {
     interface Entry {
@@ -483,11 +367,6 @@ declare namespace MockedExports {
 }
 
 
-// declare module "devtools/client/shared/vendor/react" {
-//   import * as React from "react";
-//   export = React;
-// }
-
 declare module "devtools/client/shared/vendor/react-dom-factories" {
   import * as ReactDomFactories from "react-dom-factories";
   export = ReactDomFactories;
@@ -503,49 +382,12 @@ declare module "devtools/client/shared/vendor/react-redux" {
   export = ReactRedux;
 }
 
-declare module "devtools/shared/event-emitter2" {
-  export = MockedExports.EventEmitter;
-}
-
 declare module "resource://gre/modules/Services.jsm" {
   export = MockedExports.ServicesJSM;
 }
 
 declare module "Services" {
   export = MockedExports.Services;
-}
-
-declare module "chrome" {
-  export = MockedExports.chrome;
-}
-
-declare module "resource://gre/modules/osfile.jsm" {
-  export = MockedExports.osfileJSM;
-}
-
-declare module "resource://gre/modules/AppConstants.jsm" {
-  export = MockedExports.AppConstantsJSM;
-}
-
-declare module "resource://gre/modules/ProfilerGetSymbols.jsm" {
-  export = MockedExports.ProfilerGetSymbolsJSM;
-}
-
-declare module "resource://gre/modules/WebChannel.jsm" {
-  export = MockedExports.WebChannelJSM;
-}
-
-
-declare module "resource:///modules/CustomizableUI.jsm" {
-  export = MockedExports.CustomizableUIJSM;
-}
-
-declare module "resource:///modules/CustomizableWidgets.jsm" {
-  export = MockedExports.CustomizableWidgetsJSM;
-}
-
-declare module "resource:///modules/PanelMultiView.jsm" {
-  export = MockedExports.PanelMultiViewJSM;
 }
 
 declare module "resource://devtools/shared/Loader.jsm" {

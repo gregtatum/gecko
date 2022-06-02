@@ -10,8 +10,7 @@
  * @typedef {import("react-redux").ResolveThunks<P>} ResolveThunks<P>
  */
 
-import { React, ReactDOMFactories, ReactRedux } from "./vendor.js";
-import * as selectors from "./selectors.js";
+import { React, ReactDOMFactories } from "./vendor.js";
 const { a, div, h1, input, img } = ReactDOMFactories;
 
 const { PlacesUtils } = ChromeUtils.import(

@@ -4,35 +4,3 @@
  */
 
 // @ts-check
-
-const { PlacesUtils } = ChromeUtils.import(
-  "resource://gre/modules/PlacesUtils.jsm"
-);
-
-/**
- * @param {string} host
- */
-async function getMostRecentByHost(host) {
-  const db = await PlacesUtils.promiseDBConnection();
-  const rows = await db.execute(
-    `
-    SELECT *
-    FROM moz_places
-    WHERE
-      rev_host = :revHost
-    ORDER BY
-      last_visit_date DESC
-    LIMIT 100
-  `,
-    { revHost: PlacesUtils.getReversedHost({ host }) }
-  );
-
-  console.log(
-    `!!! `,
-    rows.map(row => ({
-      url: row.getResultByName("url"),
-      title: row.getResultByName("title"),
-      row,
-    }))
-  );
-}
