@@ -26,11 +26,21 @@
 }
 
 view-group {
-  background-color: var(--avm-view-group-element-bgcolor);
+  background-color: var(--avm-pinned-view-group-element-bgcolor);
   margin-inline: 4px;
   border-radius: 100px;
   height: 32px;
   padding: 4px;
+}
+
+view-group:hover {
+  background-color: var(--avm-pinned-view-group-element-hover-bgcolor);
+  color: var(--avm-view-group-element-hover-text-color);
+  outline: var(--avm-view-group-element-hover-outline);
+}
+
+view-group:hover::part(icon-container) {
+  background-color: var(--avm-view-group-element-icon-hover-bgcolor);
 }
 
 view-group:first-of-type {

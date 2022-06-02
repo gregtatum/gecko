@@ -198,9 +198,15 @@
 
     --avm-pinned-views-separator-color: rgba(0,0,0,0.2);
     --avm-river-outline-color: transparent;
-    --avm-view-group-element-bgcolor: var(--colors-white);
+    --avm-view-group-element-bgcolor: transparent;
+    --avm-view-group-element-hover-bgcolor: transparent;
+    --avm-view-group-element-hover-text-color: unset;
+    --avm-view-group-element-hover-outline: none;
+    --avm-pinned-view-group-element-bgcolor: var(--colors-white);
+    --avm-pinned-view-group-element-hover-bgcolor: var(--colors-white);
     --avm-view-group-element-icon-border-color: var(--colors-cafe-50);
     --avm-view-group-element-icon-bgcolor: var(--colors-white);
+    --avm-view-group-element-icon-hover-bgcolor: var(--colors-white);
     --avm-view-group-element-active-icon-shadow-color: rgba(166,145,121,0.32);
     --avm-view-group-element-active-icon-bgcolor: var(--colors-white);
     --avm-view-group-element-breadcrumb-stroke-color: var(--colors-lightgrey-80);

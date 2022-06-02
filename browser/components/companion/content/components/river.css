@@ -32,10 +32,6 @@
   box-sizing: border-box;
 }
 
-#river-overflow-button:hover {
-  background-color: var(--avm-button-hover-bgcolor);
-}
-
 #river-overflow-button:active {
   background-color: var(--avm-button-active-bgcolor);
 }
@@ -46,6 +42,21 @@
 
 #river:not([containsActive]) {
   padding-inline-end: 5px;
+}
+
+view-group {
+  background-color: var(--avm-view-group-element-bgcolor);
+}
+
+#river-overflow-button:hover,
+view-group:hover {
+  background-color: var(--avm-view-group-element-hover-bgcolor);
+  color: var(--avm-view-group-element-hover-text-color);
+  outline: var(--avm-view-group-element-hover-outline);
+}
+
+view-group:hover::part(icon-container) {
+  background-color: var(--avm-view-group-element-icon-hover-bgcolor);
 }
 
 #river[hidden],

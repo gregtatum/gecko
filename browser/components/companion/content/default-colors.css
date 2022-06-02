@@ -65,9 +65,15 @@
 
   --avm-pinned-views-separator-color: WindowText;
   --avm-river-outline-color: WindowText;
-  --avm-view-group-element-bgcolor: transparent;
+  --avm-view-group-element-bgcolor: ButtonFace;
+  --avm-view-group-element-hover-bgcolor: ButtonText;
+  --avm-view-group-element-hover-text-color: ButtonFace;
+  --avm-view-group-element-hover-outline: 1px solid ButtonFace;
+  --avm-pinned-view-group-element-bgcolor: ButtonFace;
+  --avm-pinned-view-group-element-hover-bgcolor: ButtonText;
   --avm-view-group-element-icon-border-color: var(--toolbarbutton-icon-fill);;
-  --avm-view-group-element-icon-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
+  --avm-view-group-element-icon-bgcolor: ButtonFace;
+  --avm-view-group-element-icon-hover-bgcolor: ButtonText;
   --avm-view-group-element-active-icon-shadow-color: transparent;
   --avm-view-group-element-active-icon-bgcolor: SelectedItem;
   --avm-view-group-element-breadcrumb-stroke-color: var(--toolbarbutton-icon-fill);;
