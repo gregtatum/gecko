@@ -185,6 +185,21 @@ snapshot-count = { $snapshotCount } Snapshots
 # Labeling for the Picture-in-Picture button in the media card
 companion-picture-in-picture-label =
     .aria-label = Picture-in-Picture
+    .title = Picture-in-Picture
+
+# Labeling for the video controls in the media card
+companion-videocontrols-play-button =
+    .aria-label = Play
+    .title = Play
+companion-videocontrols-pause-button =
+    .aria-label = Pause
+    .title = Pause
+companion-videocontrols-next-button =
+    .aria-label = Next
+    .title = Next
+companion-videocontrols-previous-button =
+    .aria-label = Previous
+    .title = Previous
 
 # Title of the calendar section in the browse companion view.
 companion-browse-calendar-header = Calendar

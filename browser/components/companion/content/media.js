@@ -287,8 +287,8 @@ export class Media extends HTMLElement {
       document.l10n.setAttributes(
         this.playPause,
         this.tab.media.isPlaying
-          ? "videocontrols-pause-button"
-          : "videocontrols-play-button"
+          ? "companion-videocontrols-pause-button"
+          : "companion-videocontrols-play-button"
       );
     }
 
