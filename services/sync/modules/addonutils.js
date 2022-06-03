@@ -16,13 +16,15 @@ const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
 
+const lazy = {};
+
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "AddonManager",
   "resource://gre/modules/AddonManager.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "AddonRepository",
   "resource://gre/modules/addons/AddonRepository.jsm"
 );
@@ -49,7 +51,7 @@ AddonUtilsInternal.prototype = {
     // reflected in the AddonInstall, so we can't use it. If we ever get rid
     // of sourceURI rewriting, we can avoid having to reconstruct the
     // AddonInstall.
-    return AddonManager.getInstallForURL(addon.sourceURI.spec, {
+    return lazy.AddonManager.getInstallForURL(addon.sourceURI.spec, {
       name: addon.name,
       icons: addon.iconURL,
       version: addon.version,
@@ -160,7 +162,7 @@ AddonUtilsInternal.prototype = {
 
           // For non-restartless add-ons, we issue the callback on uninstalling
           // because we will likely never see the uninstalled event.
-          AddonManager.removeAddonListener(listener);
+          lazy.AddonManager.removeAddonListener(listener);
           res(addon);
         },
         onUninstalled(uninstalled) {
@@ -168,11 +170,11 @@ AddonUtilsInternal.prototype = {
             return;
           }
 
-          AddonManager.removeAddonListener(listener);
+          lazy.AddonManager.removeAddonListener(listener);
           res(addon);
         },
       };
-      AddonManager.addAddonListener(listener);
+      lazy.AddonManager.addAddonListener(listener);
       addon.uninstall();
     });
   },
@@ -213,7 +215,7 @@ AddonUtilsInternal.prototype = {
       ids.push(addon.id);
     }
 
-    let addons = await AddonRepository.getAddonsByIDs(ids);
+    let addons = await lazy.AddonRepository.getAddonsByIDs(ids);
     this._log.info(
       `Found ${addons.length} / ${ids.length}` +
         " add-ons during repository search."

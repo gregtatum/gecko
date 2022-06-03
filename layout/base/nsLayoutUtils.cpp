@@ -361,17 +361,17 @@ static float GetSuitableScale(float aMaxScale, float aMinScale,
 
 // The first value in this pair is the min scale, and the second one is the max
 // scale.
-using MinAndMaxScale = std::pair<Size, Size>;
+using MinAndMaxScale = std::pair<MatrixScales, MatrixScales>;
 
 static inline void UpdateMinMaxScale(const nsIFrame* aFrame,
                                      const AnimationValue& aValue,
                                      MinAndMaxScale& aMinAndMaxScale) {
   MatrixScales size = aValue.GetScaleValue(aFrame);
-  Size& minScale = aMinAndMaxScale.first;
-  Size& maxScale = aMinAndMaxScale.second;
+  MatrixScales& minScale = aMinAndMaxScale.first;
+  MatrixScales& maxScale = aMinAndMaxScale.second;
 
-  minScale = Min(minScale, {size.xScale, size.yScale});
-  maxScale = Max(maxScale, {size.xScale, size.yScale});
+  minScale = Min(minScale, size);
+  maxScale = Max(maxScale, size);
 }
 
 // The final transform matrix is calculated by merging the final results of each
@@ -394,10 +394,10 @@ static Array<MinAndMaxScale, 2> GetMinAndMaxScaleForAnimationProperty(
   // The first element in the array is for eCSSProperty_transform, and the
   // second one is for eCSSProperty_scale.
   const MinAndMaxScale defaultValue =
-      std::make_pair(Size(std::numeric_limits<float>::max(),
-                          std::numeric_limits<float>::max()),
-                     Size(std::numeric_limits<float>::min(),
-                          std::numeric_limits<float>::min()));
+      std::make_pair(MatrixScales(std::numeric_limits<float>::max(),
+                                  std::numeric_limits<float>::max()),
+                     MatrixScales(std::numeric_limits<float>::min(),
+                                  std::numeric_limits<float>::min()));
   Array<MinAndMaxScale, 2> minAndMaxScales(defaultValue, defaultValue);
 
   for (dom::Animation* anim : aAnimations) {
@@ -445,7 +445,7 @@ static Array<MinAndMaxScale, 2> GetMinAndMaxScaleForAnimationProperty(
   return minAndMaxScales;
 }
 
-Size nsLayoutUtils::ComputeSuitableScaleForAnimation(
+MatrixScales nsLayoutUtils::ComputeSuitableScaleForAnimation(
     const nsIFrame* aFrame, const nsSize& aVisibleSize,
     const nsSize& aDisplaySize) {
   const nsTArray<RefPtr<dom::Animation>> compositorAnimations =
@@ -454,7 +454,7 @@ Size nsLayoutUtils::ComputeSuitableScaleForAnimation(
           nsCSSPropertyIDSet{eCSSProperty_transform, eCSSProperty_scale});
 
   if (compositorAnimations.IsEmpty()) {
-    return Size(1.0, 1.0);
+    return MatrixScales();
   }
 
   const Array<MinAndMaxScale, 2> minAndMaxScales =
@@ -464,22 +464,22 @@ Size nsLayoutUtils::ComputeSuitableScaleForAnimation(
   // (or max()) as the scale value. However, in this case, we may render an
   // extreme small (or large) element, so this may not be a problem. If so,
   // please fix this.
-  Size maxScale(std::numeric_limits<float>::min(),
-                std::numeric_limits<float>::min());
-  Size minScale(std::numeric_limits<float>::max(),
-                std::numeric_limits<float>::max());
+  MatrixScales maxScale(std::numeric_limits<float>::min(),
+                        std::numeric_limits<float>::min());
+  MatrixScales minScale(std::numeric_limits<float>::max(),
+                        std::numeric_limits<float>::max());
 
-  auto isUnset = [](const Size& aMax, const Size& aMin) {
-    return aMax.width == std::numeric_limits<float>::min() &&
-           aMax.height == std::numeric_limits<float>::min() &&
-           aMin.width == std::numeric_limits<float>::max() &&
-           aMin.height == std::numeric_limits<float>::max();
+  auto isUnset = [](const MatrixScales& aMax, const MatrixScales& aMin) {
+    return aMax.xScale == std::numeric_limits<float>::min() &&
+           aMax.yScale == std::numeric_limits<float>::min() &&
+           aMin.xScale == std::numeric_limits<float>::max() &&
+           aMin.yScale == std::numeric_limits<float>::max();
   };
 
   // Iterate the slots to get the final scale value.
   for (const auto& pair : minAndMaxScales) {
-    const Size& currMinScale = pair.first;
-    const Size& currMaxScale = pair.second;
+    const MatrixScales& currMinScale = pair.first;
+    const MatrixScales& currMaxScale = pair.second;
 
     if (isUnset(currMaxScale, currMinScale)) {
       // We don't have this animation property, so skip.
@@ -502,13 +502,14 @@ Size nsLayoutUtils::ComputeSuitableScaleForAnimation(
 
   if (isUnset(maxScale, minScale)) {
     // We didn't encounter any transform-like property.
-    return Size(1.0, 1.0);
+    return MatrixScales();
   }
 
-  return Size(GetSuitableScale(maxScale.width, minScale.width,
-                               aVisibleSize.width, aDisplaySize.width),
-              GetSuitableScale(maxScale.height, minScale.height,
-                               aVisibleSize.height, aDisplaySize.height));
+  return MatrixScales(
+      GetSuitableScale(maxScale.xScale, minScale.xScale, aVisibleSize.width,
+                       aDisplaySize.width),
+      GetSuitableScale(maxScale.yScale, minScale.yScale, aVisibleSize.height,
+                       aDisplaySize.height));
 }
 
 bool nsLayoutUtils::AreAsyncAnimationsEnabled() {
@@ -7119,7 +7120,8 @@ static RefPtr<SourceSurface> ScaleSourceSurface(SourceSurface& aSurface,
 }
 
 SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
-    nsIImageLoadingContent* aElement, uint32_t aSurfaceFlags,
+    nsIImageLoadingContent* aElement, const Maybe<int32_t>& aResizeWidth,
+    const Maybe<int32_t>& aResizeHeight, uint32_t aSurfaceFlags,
     RefPtr<DrawTarget>& aTarget) {
   SurfaceFromElementResult result;
   nsresult rv;
@@ -7198,10 +7200,22 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
     imgWidth = MOZ_KnownLive(element)->Width();
     imgHeight = MOZ_KnownLive(element)->Height();
   } else {
+    auto res = imgContainer->GetResolution();
     rv = imgContainer->GetWidth(&imgWidth);
+    if (NS_SUCCEEDED(rv)) {
+      res.ApplyXTo(imgWidth);
+    } else if (aResizeWidth.isSome()) {
+      imgWidth = *aResizeWidth;
+      rv = NS_OK;
+    }
     nsresult rv2 = imgContainer->GetHeight(&imgHeight);
+    if (NS_SUCCEEDED(rv2)) {
+      res.ApplyYTo(imgHeight);
+    } else if (aResizeHeight.isSome()) {
+      imgHeight = *aResizeHeight;
+      rv2 = NS_OK;
+    }
     if (NS_FAILED(rv) || NS_FAILED(rv2)) return result;
-    imgContainer->GetResolution().ApplyTo(imgWidth, imgHeight);
   }
   result.mSize = result.mIntrinsicSize = IntSize(imgWidth, imgHeight);
 
@@ -7265,7 +7279,7 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
     HTMLImageElement* aElement, uint32_t aSurfaceFlags,
     RefPtr<DrawTarget>& aTarget) {
   return SurfaceFromElement(static_cast<nsIImageLoadingContent*>(aElement),
-                            aSurfaceFlags, aTarget);
+                            Nothing(), Nothing(), aSurfaceFlags, aTarget);
 }
 
 SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
@@ -7372,7 +7386,8 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
 }
 
 SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
-    dom::Element* aElement, uint32_t aSurfaceFlags,
+    dom::Element* aElement, const Maybe<int32_t>& aResizeWidth,
+    const Maybe<int32_t>& aResizeHeight, uint32_t aSurfaceFlags,
     RefPtr<DrawTarget>& aTarget) {
   // If it's a <canvas>, we may be able to just grab its internal surface
   if (HTMLCanvasElement* canvas = HTMLCanvasElement::FromNodeOrNull(aElement)) {
@@ -7391,7 +7406,8 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
     return SurfaceFromElementResult();
   }
 
-  return SurfaceFromElement(imageLoader, aSurfaceFlags, aTarget);
+  return SurfaceFromElement(imageLoader, aResizeWidth, aResizeHeight,
+                            aSurfaceFlags, aTarget);
 }
 
 /* static */

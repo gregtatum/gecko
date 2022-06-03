@@ -4033,9 +4033,6 @@ pref("reader.has_used_toolbar", false);
 // Whether to use a vertical or horizontal toolbar.
 pref("reader.toolbar.vertical", true);
 
-// Whether or not we display additional UI (such as the full screen, reset to default, and browser theme buttons).
-pref("reader.improvements_H12022.enabled", false);
-
 #if !defined(ANDROID)
   pref("narrate.enabled", true);
 #else
@@ -4374,8 +4371,6 @@ pref("devtools.dump.emit", false);
 pref("devtools.discovery.log", false);
 // Whether to scan for DevTools devices via WiFi.
 pref("devtools.remote.wifi.scan", true);
-// Client must complete TLS handshake within this window (ms).
-pref("devtools.remote.tls-handshake-timeout", 10000);
 
 // The extension ID for devtools-adb-extension.
 pref("devtools.remote.adb.extensionID", "adb@mozilla.org");

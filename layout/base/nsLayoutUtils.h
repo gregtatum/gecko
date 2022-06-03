@@ -164,6 +164,7 @@ class nsLayoutUtils {
   typedef mozilla::gfx::Size Size;
   typedef mozilla::gfx::Matrix4x4 Matrix4x4;
   typedef mozilla::gfx::Matrix4x4Flagged Matrix4x4Flagged;
+  typedef mozilla::gfx::MatrixScales MatrixScales;
   typedef mozilla::gfx::MatrixScalesDouble MatrixScalesDouble;
   typedef mozilla::gfx::RectCornerRadii RectCornerRadii;
   typedef mozilla::gfx::StrokeOptions StrokeOptions;
@@ -2218,18 +2219,38 @@ class nsLayoutUtils {
   }
 
   static mozilla::SurfaceFromElementResult SurfaceFromElement(
-      mozilla::dom::Element* aElement, uint32_t aSurfaceFlags,
+      mozilla::dom::Element* aElement,
+      const mozilla::Maybe<int32_t>& aResizeWidth,
+      const mozilla::Maybe<int32_t>& aResizeHeight, uint32_t aSurfaceFlags,
       RefPtr<DrawTarget>& aTarget);
   static mozilla::SurfaceFromElementResult SurfaceFromElement(
       mozilla::dom::Element* aElement, uint32_t aSurfaceFlags = 0) {
     RefPtr<DrawTarget> target = nullptr;
-    return SurfaceFromElement(aElement, aSurfaceFlags, target);
+    return SurfaceFromElement(aElement, mozilla::Nothing(), mozilla::Nothing(),
+                              aSurfaceFlags, target);
+  }
+  static mozilla::SurfaceFromElementResult SurfaceFromElement(
+      mozilla::dom::Element* aElement, uint32_t aSurfaceFlags,
+      RefPtr<DrawTarget>& aTarget) {
+    return SurfaceFromElement(aElement, mozilla::Nothing(), mozilla::Nothing(),
+                              aSurfaceFlags, aTarget);
+  }
+  static mozilla::SurfaceFromElementResult SurfaceFromElement(
+      mozilla::dom::Element* aElement,
+      const mozilla::Maybe<int32_t>& aResizeWidth,
+      const mozilla::Maybe<int32_t>& aResizeHeight,
+      uint32_t aSurfaceFlags = 0) {
+    RefPtr<DrawTarget> target = nullptr;
+    return SurfaceFromElement(aElement, aResizeWidth, aResizeHeight,
+                              aSurfaceFlags, target);
   }
 
   // There are a bunch of callers of SurfaceFromElement.  Just mark it as
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   static mozilla::SurfaceFromElementResult SurfaceFromElement(
-      nsIImageLoadingContent* aElement, uint32_t aSurfaceFlags,
+      nsIImageLoadingContent* aElement,
+      const mozilla::Maybe<int32_t>& aResizeWidth,
+      const mozilla::Maybe<int32_t>& aResizeHeight, uint32_t aSurfaceFlags,
       RefPtr<DrawTarget>& aTarget);
   // Need an HTMLImageElement overload, because otherwise the
   // nsIImageLoadingContent and mozilla::dom::Element overloads are ambiguous
@@ -2420,9 +2441,9 @@ class nsLayoutUtils {
    * @param aVisibleSize is the size of the area we want to paint
    * @param aDisplaySize is the size of the display area of the pres context
    */
-  static Size ComputeSuitableScaleForAnimation(const nsIFrame* aFrame,
-                                               const nsSize& aVisibleSize,
-                                               const nsSize& aDisplaySize);
+  static MatrixScales ComputeSuitableScaleForAnimation(
+      const nsIFrame* aFrame, const nsSize& aVisibleSize,
+      const nsSize& aDisplaySize);
 
   /**
    * Checks whether we want to use the GPU to scale images when
