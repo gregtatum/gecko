@@ -2909,7 +2909,7 @@ BrowserGlue.prototype = {
         task: () => {
           // Use an increasing number to keep track of the current feature
           // onboarding version.
-          const ONBOARDING_VERSION = 17;
+          const ONBOARDING_VERSION = 18;
 
           // Show the onboarding content, if we have something new to show.
           const prefBranch = Services.prefs.getBranch(
