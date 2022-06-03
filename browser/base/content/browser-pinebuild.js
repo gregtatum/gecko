@@ -42,8 +42,9 @@ var PineBuildUIUtils = {
     // If the user is in on-boarding, disable UI that enables them to create new windows.
     if (!Services.prefs.getBoolPref("browser.pinebuild.onboarding.complete")) {
       cmd = document.getElementById("cmd_newNavigator");
-      cmd.disabled = true;
-      // Disable the command so keyboard shortcuts using this command are disabled.
+      cmd.setAttribute("disabled", true);
+
+      cmd = document.getElementById("Browser:OpenFile");
       cmd.setAttribute("disabled", true);
     }
   },

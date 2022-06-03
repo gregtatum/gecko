@@ -14,9 +14,14 @@ class OnboardingParent extends JSWindowActorParent {
       Services.prefs.setBoolPref("browser.pinebuild.onboarding.complete", true);
 
       let browser = this.browsingContext.embedderElement;
-      browser.ownerGlobal.gStageManager.reset({
+      let window = browser.ownerGlobal;
+      window.gStageManager.reset({
         url: "about:flow-reset",
       });
+
+      // Enable commands that were disabled during onboarding.
+      let cmd = window.document.getElementById("Browser:OpenFile");
+      cmd.setAttribute("disabled", false);
     }
   }
 }
