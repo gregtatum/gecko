@@ -2704,6 +2704,7 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   // This is not locked, to allow it to be able to be disabled for tests.
   pref("browser.pagedata.enabled", true);
   pref("startup.homepage_welcome_url", "", locked);
+  pref("startup.homepage_onboarding_url", "about:onboarding", locked);
   pref("startup.homepage_override_url", "", locked);
   pref("browser.startup.page", 1, locked);
   pref("browser.startup.homepage", "about:flow-reset", locked);

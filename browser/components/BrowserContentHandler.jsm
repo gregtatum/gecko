@@ -96,6 +96,7 @@ const OVERRIDE_NONE = 0;
 const OVERRIDE_NEW_PROFILE = 1;
 const OVERRIDE_NEW_MSTONE = 2;
 const OVERRIDE_NEW_BUILD_ID = 3;
+const OVERRIDE_ONBOARDING = 4;
 /**
  * Determines whether a home page override is needed.
  * Returns:
@@ -104,9 +105,17 @@ const OVERRIDE_NEW_BUILD_ID = 3;
  *                      Gecko milestone (i.e. right after an upgrade).
  *  OVERRIDE_NEW_BUILD_ID if this is the first run with a new build ID of the
  *                        same Gecko milestone (i.e. after a nightly upgrade).
+ *  OVERRIDE_ONBOARDING if onboarding is enabled and incomplete on pinebuild.
  *  OVERRIDE_NONE otherwise.
  */
 function needHomepageOverride(prefb) {
+  if (
+    AppConstants.PINEBUILD &&
+    !Services.prefs.getBoolPref("browser.pinebuild.onboarding.complete")
+  ) {
+    return OVERRIDE_ONBOARDING;
+  }
+
   var savedmstone = prefb.getCharPref(
     "browser.startup.homepage_override.mstone",
     ""
@@ -695,6 +704,11 @@ nsBrowserContentHandler.prototype = {
               UpdatePing.handleUpdateSuccess(old_mstone, old_buildId);
             }
             break;
+          case OVERRIDE_ONBOARDING:
+            overridePage = Services.urlFormatter.formatURLPref(
+              "startup.homepage_onboarding_url"
+            );
+            break;
         }
       }
     } catch (ex) {}
@@ -775,8 +789,9 @@ nsBrowserContentHandler.prototype = {
     }
 
     let skipStartPage =
-      override == OVERRIDE_NEW_PROFILE &&
-      prefb.getBoolPref("browser.startup.firstrunSkipsHomepage");
+      (override == OVERRIDE_NEW_PROFILE &&
+        prefb.getBoolPref("browser.startup.firstrunSkipsHomepage")) ||
+      override == OVERRIDE_ONBOARDING;
     // Only show the startPage if we're not restoring an update session and are
     // not set to skip the start page on this profile
     if (overridePage && startPage && !willRestoreSession && !skipStartPage) {

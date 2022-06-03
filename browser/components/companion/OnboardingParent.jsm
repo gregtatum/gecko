@@ -12,6 +12,11 @@ class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
     if (message.name == "OnboardingCompleted") {
       Services.prefs.setBoolPref("browser.pinebuild.onboarding.complete", true);
+
+      let browser = this.browsingContext.embedderElement;
+      browser.ownerGlobal.gStageManager.reset({
+        url: "about:flow-reset",
+      });
     }
   }
 }
