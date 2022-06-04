@@ -79,8 +79,8 @@
   --avm-view-group-element-active-icon-bgcolor: SelectedItem;
   --avm-view-group-element-breadcrumb-stroke-color: var(--toolbarbutton-icon-fill);;
   --avm-view-group-element-breadcrumb-fill-color: var(--pinebuild-toolbarbutton-bgcolor);
-  --avm-view-group-element-breadcrumb-hover-stroke-color: var(--pinebuild-toolbarbutton-bgcolor);
-  --avm-view-group-element-breadcrumb-hover-fill-color: var(--toolbarbutton-icon-fill);;
+  --avm-view-group-element-breadcrumb-hover-stroke-color: ButtonText;
+  --avm-view-group-element-breadcrumb-hover-fill-color: SelectedItem;
   --avm-view-group-element-breadcrumb-active-stroke-color: SelectedItem;
   --avm-view-group-element-breadcrumb-active-fill-color: SelectedItem;
 
