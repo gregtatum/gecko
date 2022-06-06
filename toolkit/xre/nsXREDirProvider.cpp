@@ -1468,8 +1468,13 @@ nsresult nsXREDirProvider::GetUserDataDirectory(nsIFile** aFile, bool aLocal) {
   nsresult rv = GetUserDataDirectoryHome(getter_AddRefs(localDir), aLocal);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = AppendProfilePath(localDir, gAppData->profile, aLocal);
-  NS_ENSURE_SUCCESS(rv, rv);
+  // If there is no XREAppData then there is no information to use to build
+  // the profile path so just do nothing. This should only happen in xpcshell
+  // tests.
+  if (gAppData) {
+    rv = AppendProfilePath(localDir, gAppData->profile, aLocal);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   rv = EnsureDirectoryExists(localDir);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -1535,13 +1540,6 @@ nsresult nsXREDirProvider::AppendSysUserExtensionPath(nsIFile* aFile) {
 
 nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, const char* aProfilePath, bool aLocal) {
   NS_ASSERTION(aFile, "Null pointer!");
-
-  // If there is no XREAppData then there is no information to use to build
-  // the profile path so just do nothing. This should only happen in xpcshell
-  // tests.
-  if (!gAppData) {
-    return NS_OK;
-  }
 
   nsAutoCString appName;
   nsAutoCString vendor;
