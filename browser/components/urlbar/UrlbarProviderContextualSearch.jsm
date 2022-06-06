@@ -164,7 +164,7 @@ class ProviderContextualSearch extends UrlbarProvider {
     // If the current view has engines that haven't been added, return a result
     // that will first add an engine, then use it to search.
     const window = BrowserWindowTracker.getTopWindow();
-    const engineToAdd = window?.gBrowser.selectedBrowser?.engines[0];
+    const engineToAdd = window?.gBrowser.selectedBrowser?.engines?.[0];
 
     if (engineToAdd) {
       const result = this.makeResult({
