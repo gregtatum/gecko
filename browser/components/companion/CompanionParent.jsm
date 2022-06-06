@@ -935,12 +935,19 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.browsingContext.top.embedderElement?.ownerGlobal) {
       return;
     }
+    let sessions = await this.getSessionData();
+    let events = await this.getEvents();
+    // Re-check companion hasn't been closed whilst we were dealing with
+    // the async parts.
+    if (!this.browsingContext.top.embedderElement?.ownerGlobal) {
+      return;
+    }
+
     let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
       w.gBrowser.tabs.map(t => this.getTabData(t))
     );
     let newFavicons = this.consumeCachedFaviconsToSend();
     let stageManager = this.maybeGetStageManager();
-    let sessions = await this.getSessionData();
     this.sendAsyncMessage("Companion:Setup", {
       tabs,
       connectedServices: OnlineServices.connectedServiceTypes,
@@ -988,7 +995,6 @@ class CompanionParent extends JSWindowActorParent {
 
     // To avoid a significant delay in initializing other parts of the UI,
     // we register the events separately.
-    let events = await this.getEvents();
     this.sendAsyncMessage("Companion:RegisterCalendarEvents", {
       events,
       newFavicons: this.consumeCachedFaviconsToSend(),
