@@ -58,6 +58,12 @@ let AVAILABLE_PIP_OVERRIDES;
       },
     },
 
+    hbomax: {
+      "https://play.hbomax.com/feature/*": {
+        videoWrapperScriptPath: "video-wrappers/hbomax.js",
+      },
+    },
+
     hotstar: {
       "https://*.hotstar.com/*": {
         videoWrapperScriptPath: "video-wrappers/hotstar.js",
@@ -76,6 +82,12 @@ let AVAILABLE_PIP_OVERRIDES;
 
     laracasts: {
       "https://*.laracasts.com/*": { policy: TOGGLE_POLICIES.ONE_QUARTER },
+    },
+
+    nebula: {
+      "https://*.nebula.app/*": {
+        videoWrapperScriptPath: "video-wrappers/nebula.js",
+      },
     },
 
     netflix: {
