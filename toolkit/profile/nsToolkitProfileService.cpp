@@ -654,7 +654,7 @@ nsresult nsToolkitProfileService::MaybeMigrateProfile(
   *aProfile = nullptr;
 
   // If there isn't a custom profile path then there isn't anything to do.
-  if (!gAppData->profile) {
+  if (!gAppData || !gAppData->profile) {
     return NS_OK;
   }
 
