@@ -729,7 +729,7 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
             return False
 
         if "unittest_suite" in task.attributes:
-            if task.attributes.get("unittest_variant", "") != "":
+            if task.attributes.get("unittest_variant", "") not in ("", "fission"):
                 return False
 
             if "pinebuild" not in task.attributes.get("test_platform", ""):
