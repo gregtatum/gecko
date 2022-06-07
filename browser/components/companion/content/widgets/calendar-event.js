@@ -753,6 +753,12 @@ export class CalendarEvent extends MozLitElement {
           : this.browseEventDetailsTemplate()}
         <panel-list action="more-options">
           <panel-item
+            class="event-item-hide-action"
+            data-l10n-id="companion-hide-event"
+            @click=${this.hideEvent}
+            ?hidden=${this.listType === "browse"}
+          ></panel-item>
+          <panel-item
             class="event-item-running-late-action"
             data-l10n-id="companion-email-late"
             @click=${this.openRunningLate}

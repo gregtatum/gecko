@@ -191,3 +191,108 @@ add_task(async function testRunningLateSecondaryPersonal() {
     });
   });
 });
+
+add_task(async function testHideEvent() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
+    let eventTime = PinebuildTestUtils.generateEventTimes(0, 30, now);
+    let nextStart = new Date(eventTime.end);
+    nextStart.setMinutes(nextStart.getMinutes() + 10);
+    let nextEventTime = PinebuildTestUtils.generateEventTimes(0, 30, nextStart);
+
+    await helper.setCalendarEvents([
+      {
+        summary: "Test Event",
+        start: eventTime.start,
+        end: eventTime.end,
+      },
+      {
+        summary: "Next Event",
+        start: nextEventTime.start,
+        end: nextEventTime.end,
+      },
+    ]);
+
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      is(visibleEvents.length, 2, "There's 2 events");
+      let event = visibleEvents[1];
+      let breakTime = calendarEventList.shadowRoot.querySelector(
+        ".calendar-break-time"
+      );
+
+      info("Open meatball menu");
+      let openMenuButton = event.shadowRoot.querySelector(
+        ".event-options-button"
+      );
+      let panelMenu = event.shadowRoot.querySelector("panel-list");
+      const EventUtils = ContentTaskUtils.getEventUtils(content);
+      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
+      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
+
+      info("Confirm event and break time are hidden when action is selected.");
+      let hideEventButton = event.shadowRoot.querySelector(
+        ".event-item-hide-action"
+      );
+      ok(!hideEventButton.hidden, "Hide event button is visible");
+      ok(event, "Event is rendered");
+      hideEventButton.click();
+      await event.updateComplete;
+      breakTime = calendarEventList.shadowRoot.querySelector(
+        ".calendar-break-time"
+      );
+      visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      ok(!visibleEvents[1], "Event is not rendered");
+      ok(!breakTime, "Break time is not rendered");
+    });
+
+    info("Check event and break time are still visible in browse");
+    await helper.reload();
+    await helper.selectCompanionTab("browse");
+
+    await helper.runCompanionTask(async () => {
+      let calendarButton = content.document.querySelector(".calendar");
+      let calendarShown = ContentTaskUtils.waitForEvent(
+        content.document.getElementById("companion-deck"),
+        "view-changed"
+      );
+      calendarButton.click();
+      await calendarShown;
+
+      let browseEventList = await ContentTaskUtils.waitForCondition(() => {
+        return content.document.getElementById("browse-event-list");
+      });
+      await ContentTaskUtils.waitForCondition(() => {
+        return (
+          browseEventList.shadowRoot.querySelectorAll("calendar-event")
+            .length === 2
+        );
+      });
+      let browseEvents = browseEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      let browseBreakTime = browseEventList.shadowRoot.querySelector(
+        ".calendar-break-time"
+      );
+      ok(
+        !ContentTaskUtils.is_hidden(browseEvents[1]),
+        "Event is visible in browse"
+      );
+      ok(
+        !ContentTaskUtils.is_hidden(browseBreakTime),
+        "Break time is visible in browse"
+      );
+    });
+  });
+});

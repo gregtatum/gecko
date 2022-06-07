@@ -5,6 +5,7 @@
 companion-join-meeting = Join meeting
 companion-email-late = Running late
 companion-open-calendar = Open in calendar
+companion-hide-event = Dismiss event
 companion-event-document-and-links = Documents & Links
 companion-event-host = Host
 companion-event-organizer = Organizer

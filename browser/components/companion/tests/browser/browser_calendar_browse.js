@@ -234,7 +234,41 @@ add_task(async function testAllDayEventInBrowseView() {
     ];
 
     await checkEventInBrowseView(helper, events);
-    await checkRunningLateForBrowseEvent(helper, true);
+  });
+});
+
+add_task(async function testActionItemVisibilityInBrowseView() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      12,
+      30,
+      now.getHours()
+    );
+
+    let events = [
+      {
+        summary: "My Meeting",
+        startDate: start,
+        endDate: end,
+      },
+    ];
+
+    await checkEventInBrowseView(helper, events);
+    await checkMenuActionForBrowseEvent(
+      helper,
+      ".event-item-running-late-action",
+      true
+    );
+    await checkMenuActionForBrowseEvent(
+      helper,
+      ".event-item-hide-action",
+      true
+    );
   });
 });
 
@@ -429,22 +463,24 @@ async function setBrowseCalendarEvents(helper, events, expectedEventCount) {
   });
 }
 
-async function checkRunningLateForBrowseEvent(helper, isHidden) {
+async function checkMenuActionForBrowseEvent(
+  helper,
+  menuItemSelector,
+  isHidden
+) {
   await helper.runCompanionTask(
-    async shouldBeHidden => {
+    async (selector, shouldBeHidden) => {
       let browseEventList = content.document.getElementById(
         "browse-event-list"
       );
       let event = browseEventList.shadowRoot.querySelector("calendar-event");
-      let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-running-late-action"
-      );
+      let item = event.shadowRoot.querySelector(selector);
       is(
-        runningLateButton.hidden,
+        item.hidden,
         shouldBeHidden,
-        `Running late button is ${shouldBeHidden ? "hidden" : "showing"}`
+        `${selector} button is ${shouldBeHidden ? "hidden" : "showing"}`
       );
     },
-    [isHidden]
+    [menuItemSelector, isHidden]
   );
 }

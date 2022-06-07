@@ -193,6 +193,7 @@ export class CalendarEventList extends MozLitElement {
   constructor() {
     super();
     this.events = [];
+    this.hiddenEvents = new Set();
     this.listView = null;
     this.listType = "";
     this.isFakeTime = false;
@@ -200,16 +201,17 @@ export class CalendarEventList extends MozLitElement {
   }
 
   maybeStopListening() {
-    this.listView.removeListener("seeked", this, this.onListViewUpdated);
+    this.listView.removeListener("seeked", this, this.onEventsUpdated);
   }
 
   maybeListen() {
     this.listView.seekToTop(10, 990);
-    this.listView.on("seeked", this, this.onListViewUpdated);
+    this.listView.on("seeked", this, this.onEventsUpdated);
   }
 
   connectedCallback() {
     document.addEventListener("refresh-events", this);
+    document.addEventListener("hide-event", this);
 
     if (workshopEnabled) {
       this.createCalendarListView();
@@ -226,6 +228,7 @@ export class CalendarEventList extends MozLitElement {
 
   disconnectedCallback() {
     document.removeEventListener("refresh-events", this);
+    document.removeEventListener("hide-event", this);
 
     if (workshopEnabled) {
       this.cleanup();
@@ -251,13 +254,18 @@ export class CalendarEventList extends MozLitElement {
     this.refreshView();
   }
 
-  onListViewUpdated() {
+  onEventsUpdated(e, updateSource = "seeked") {
     let plainEvents = this.getRelevantEvents(
-      this.listView.items.filter(event => event)
+      this.listView.items.filter(event =>
+        this.isBrowse ? event : !this.hiddenEvents.has(event?.id)
+      )
     );
     this.events = this.getEventsAndBreaks(plainEvents);
 
-    if (this.serial !== this.listView.serial) {
+    if (
+      this.serial !== this.listView.serial ||
+      updateSource === "event-hidden"
+    ) {
       this.serial = this.listView.serial;
       this.dispatchOnUpdateComplete(
         new CustomEvent("calendar-events-updated", {
@@ -294,7 +302,7 @@ export class CalendarEventList extends MozLitElement {
       ).values(),
     ];
 
-    if (!debugEnabled() && this.listType != "browse") {
+    if (!debugEnabled() && !this.isBrowse) {
       // TODO: remove this method: this stuff is done in workshop.
       // Return all meetings that start in the next hour or are currently in
       // progress.
@@ -326,6 +334,9 @@ export class CalendarEventList extends MozLitElement {
           numberOfEvents: this.events.length,
         });
       }
+    } else if (e.type === "hide-event") {
+      this.hiddenEvents.add(e.detail.eventId);
+      this.onEventsUpdated({}, "event-hidden");
     }
   }
 
@@ -370,7 +381,7 @@ export class CalendarEventList extends MozLitElement {
 
     let accounts = await Workshop.getConnectedAccounts();
     if (accounts.length) {
-      if (this.listType === "browse") {
+      if (this.isBrowse) {
         this.listView = Workshop.createBrowseListView();
       } else {
         this.listView = Workshop.createCalendarListView();
@@ -424,16 +435,16 @@ export class CalendarEventList extends MozLitElement {
   }
 
   get emptyCalendarMessage() {
-    if (this.listType === "browse" && !this.connected) {
+    if (this.isBrowse && !this.connected) {
       return "companion-calendar-not-connected";
-    } else if (
-      this.listType === "browse" &&
-      this.connected &&
-      !this.events.length
-    ) {
+    } else if (this.isBrowse && this.connected && !this.events.length) {
       return "companion-calendar-no-items";
     }
     return "";
+  }
+
+  get isBrowse() {
+    return this.listType === "browse";
   }
 
   emptyCalendarTemplate() {
@@ -510,6 +521,14 @@ class CalendarEventWrapper extends CalendarEvent {
     let emailTo = emailTargets.map(a => a.email).join(",");
     window.openUrl(
       `mailto:${emailTo}?subject=Running late to meeting ${this.event.summary}`
+    );
+  }
+
+  hideEvent() {
+    document.dispatchEvent(
+      new CustomEvent("hide-event", {
+        detail: { eventId: this.event.id },
+      })
     );
   }
 
