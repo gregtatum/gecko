@@ -227,6 +227,7 @@
       <button class="downloads" data-l10n-id="browse-list-downloads" is="named-deck-button" deck="companion-deck" name="downloads"></button>
       <button class="passwords" data-l10n-id="browse-list-passwords" data-pref="browser.companion.passwords.enabled" is="named-deck-button" deck="companion-deck" name="passwords"></button>
       <button class="calendar" data-l10n-id="browse-list-calendar" data-pref="browser.pinebuild.calendar.browseEnabled" is="named-deck-button" deck="companion-deck" name="calendar"></button>
+      <button class="history" data-l10n-id="browse-list-history" data-pref="browser.urlbar.opencompanionsearch.enabled" is="named-deck-button" deck="companion-deck" name="history"></button>
     </div>
   </template>
 
@@ -312,6 +313,11 @@
       <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups-detail">
         <section-panel>
           <snapshot-group-list-detail id="snapshot-groups-detail"></snapshot-group-list-detail>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="history">
+        <section-panel heading-l10n-id="history-section-header">
         </section-panel>
       </template>
     </html:named-deck>

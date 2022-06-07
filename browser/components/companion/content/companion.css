@@ -515,6 +515,10 @@ e-global-nav-debugging h2 {
   background-image: url("calendar.svg");
 }
 
+.browse button.history {
+  background-image: url("chrome://browser/skin/history.svg");
+}
+
 #companion-downloads-browser {
   background: unset;
   width: 100vw;
