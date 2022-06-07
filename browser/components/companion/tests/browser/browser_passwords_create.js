@@ -15,12 +15,18 @@ add_task(async function testCreateLogin() {
       );
 
       let passwordsShown = ContentTaskUtils.waitForEvent(
-        content.document,
-        "browse-panel-shown"
+        content.document.getElementById("companion-deck"),
+        "view-changed"
       );
       passwordsEntry.click();
       await passwordsShown;
+    });
 
+    // We need to wait for the xul:browser that loads the passwords frame
+    // to load.
+    await BrowserTestUtils.browserLoaded(helper.browser, true);
+
+    await helper.runCompanionTask(async () => {
       let passwordsBrowser = content.document.getElementById(
         "companion-login-browser"
       );

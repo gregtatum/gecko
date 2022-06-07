@@ -39,7 +39,7 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
   return helper.runCompanionTask(
     async (PAGE_TITLES, EXCLUDED_TITLE) => {
       let suggestedSnapshots = content.document.querySelector(
-        "e-suggested-snapshot-list"
+        "suggested-snapshot-list"
       );
       await ContentTaskUtils.waitForCondition(() => {
         let snapshots = Array.from(

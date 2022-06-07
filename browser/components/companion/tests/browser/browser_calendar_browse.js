@@ -45,8 +45,8 @@ add_task(async function testBrowseOpenBack() {
       ok(ContentTaskUtils.is_hidden(calendarEntry), "Calendar button hidden");
 
       let panelHidden = ContentTaskUtils.waitForEvent(
-        content.document,
-        "browse-panel-hidden"
+        content.document.getElementById("companion-deck"),
+        "view-changed"
       );
       backButton.click();
       await panelHidden;
@@ -263,6 +263,7 @@ add_task(async function testEmptyStateWithoutConnectedAccount() {
 
   await CompanionHelper.whenReady(async helper => {
     await helper.reload();
+    await selectCalendarTab(helper);
 
     // Clear workshop data to delete any accounts.
     await helper.clearWorkshopData();
@@ -405,20 +406,23 @@ async function checkEventInBrowseView(helper, events) {
   });
 }
 
-// Ensure the browse view is open before setting events so that we can listen
-// for "calendar-events-updated" on the browse calendar list view.
-async function setBrowseCalendarEvents(helper, events, expectedEventCount) {
+async function selectCalendarTab(helper) {
   await helper.selectCompanionTab("browse");
   await helper.runCompanionTask(async () => {
     let calendarButton = content.document.querySelector(".calendar");
     let calendarShown = ContentTaskUtils.waitForEvent(
-      content.document,
-      "browse-panel-shown"
+      content.document.getElementById("companion-deck"),
+      "view-changed"
     );
     calendarButton.click();
     await calendarShown;
   });
+}
 
+// Ensure the browse view is open before setting events so that we can listen
+// for "calendar-events-updated" on the browse calendar list view.
+async function setBrowseCalendarEvents(helper, events, expectedEventCount) {
+  await selectCalendarTab(helper);
   await helper.setCalendarEvents(events, {
     listType: "browse",
     expectedEventCount: expectedEventCount || events.length,

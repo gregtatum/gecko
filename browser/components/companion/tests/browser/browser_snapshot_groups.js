@@ -101,10 +101,14 @@ add_task(async function test_snapshot_groups_displayed() {
     await helper.runCompanionTask(() =>
       content.document.querySelector("button.snapshot-groups").click()
     );
-    let snapshotGroupsLength = await helper.runCompanionTask(
-      () => content.document.querySelectorAll(".snapshot-group").length
-    );
-    Assert.equal(snapshotGroupsLength, 1, "Showing snapshot groups");
+    let snapshotGroupsLength = async () => {
+      let length = await helper.runCompanionTask(
+        () => content.document.querySelectorAll(".snapshot-group").length
+      );
+      return length;
+    };
+    TestUtils.waitForCondition(async () => snapshotGroupsLength());
+    Assert.equal(await snapshotGroupsLength(), 1, "Showing snapshot groups");
   }, win);
 });
 

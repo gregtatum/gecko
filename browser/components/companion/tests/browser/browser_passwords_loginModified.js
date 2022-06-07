@@ -32,21 +32,27 @@ add_task(async function testCreateLogin() {
   await CompanionHelper.whenReady(async helper => {
     await helper.selectCompanionTab("browse");
 
+    await helper.runCompanionTask(async () => {
+      let passwordsEntry = content.document.querySelector(".passwords");
+      ok(
+        !ContentTaskUtils.is_hidden(passwordsEntry),
+        "Passwords option is visible"
+      );
+
+      let passwordsShown = ContentTaskUtils.waitForEvent(
+        content.document.getElementById("companion-deck"),
+        "view-changed"
+      );
+      passwordsEntry.click();
+      await passwordsShown;
+    });
+
+    // We need to wait for the xul:browser that loads the passwords frame
+    // to load.
+    await BrowserTestUtils.browserLoaded(helper.browser, true);
+
     await helper.runCompanionTask(
       async (LOGIN_OBJ_INTERIOR, LOGIN_UPDATES_INTERIOR) => {
-        let passwordsEntry = content.document.querySelector(".passwords");
-        ok(
-          !ContentTaskUtils.is_hidden(passwordsEntry),
-          "Passwords option is visible"
-        );
-
-        let passwordsShown = ContentTaskUtils.waitForEvent(
-          content.document,
-          "browse-panel-shown"
-        );
-        passwordsEntry.click();
-        await passwordsShown;
-
         let passwordsBrowser = content.document.getElementById(
           "companion-login-browser"
         );

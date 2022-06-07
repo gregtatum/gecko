@@ -12,7 +12,7 @@ const allowMute = Services.prefs.getBoolPref(
 );
 
 export class MediaList extends HTMLElement {
-  constructor() {
+  constructor(title = "Media") {
     super();
 
     let shadow = this.attachShadow({ mode: "open" });
@@ -302,5 +302,5 @@ export class Media extends HTMLElement {
   }
 }
 
-customElements.define("e-media-list", MediaList);
+customElements.define("media-list", MediaList);
 customElements.define("e-media", Media);

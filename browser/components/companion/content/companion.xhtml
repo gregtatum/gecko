@@ -11,6 +11,9 @@
 <?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
 <?xml-stylesheet href="chrome://browser/content/companion/fonts.css" type="text/css"?>
 
+<?xml-stylesheet href="sessions.css" type="text/css"?>
+<?xml-stylesheet href="card.css" type="text/css"?>
+
 <html
   id="companion"
   xmlns="http://www.w3.org/1999/xhtml"
@@ -23,9 +26,18 @@
 >
 <head>
   <title>Firefox Companion</title>
-  <script type="module" src="companion.js"/>
+  <script type="module" src="calendar.js" />
+  <script type="module" src="browse.js" />
+  <script type="module" src="media.js" />
+  <script type="module" src="sessions.js" />
+  <script type="module" src="snapshot-groups.js" />
+  <script type="module" src="onboarding-services.js" />
+  <script type="module" src="snapshots.js" />
+  <script type="module" src="stagemanagerdebugging.js" />
+  <script type="module" src="companion.js" />
   <script type="module" src="relative-time.js" />
-  <script src="chrome://global/content/elements/named-deck.js"/>
+
+  <script src="chrome://global/content/elements/named-deck.js" />
   <script src="chrome://global/content/elements/panel-list.js"/>
 
   <link rel="localization" href="browser/browser.ftl"/>
@@ -141,7 +153,6 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot-list">
-    <link rel="stylesheet" href="card.css"/>
     <h2 class="list-title"/>
     <div class="snapshots-panel"/>
   </template>
@@ -189,13 +200,11 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-list">
-    <link rel="stylesheet" href="sessions.css"/>
     <h2 class="list-title" hidden="true" data-l10n-id="last-session-title"/>
     <div class="last-sessions-panel"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-card">
-    <link rel="stylesheet" href="card.css"/>
     <div class="session-card contents">
       <div class="info">
         <span class="title"/>
@@ -213,11 +222,11 @@
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-browse-list">
     <div class="browse">
-      <button class="snapshot-groups" data-l10n-id="browse-list-snapshot-groups" data-action="viewtab" data-tab="snapshot-groups"></button>
-      <button class="sessions" data-l10n-id="browse-list-sessions" data-action="viewtab" data-tab="sessions"></button>
-      <button class="downloads" data-l10n-id="browse-list-downloads" data-action="viewtab" data-tab="downloads" hidden="true"></button>
-      <button class="passwords" data-l10n-id="browse-list-passwords" hidden="true"></button>
-      <button class="calendar" data-l10n-id="browse-list-calendar" hidden="true"></button>
+      <button class="snapshot-groups" data-l10n-id="browse-list-snapshot-groups" data-pref="browser.companion.snapshot-groups.enabled" is="named-deck-button" deck="companion-deck" name="snapshot-groups"></button>
+      <button class="sessions" data-l10n-id="browse-list-sessions" is="named-deck-button" deck="companion-deck" name="sessions"></button>
+      <button class="downloads" data-l10n-id="browse-list-downloads" is="named-deck-button" deck="companion-deck" name="downloads"></button>
+      <button class="passwords" data-l10n-id="browse-list-passwords" data-pref="browser.companion.passwords.enabled" is="named-deck-button" deck="companion-deck" name="passwords"></button>
+      <button class="calendar" data-l10n-id="browse-list-calendar" data-pref="browser.pinebuild.calendar.browseEnabled" is="named-deck-button" deck="companion-deck" name="calendar"></button>
     </div>
   </template>
 
@@ -239,63 +248,72 @@
       <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-browse"></span></html:button>
     </html:button-group>
     <html:named-deck id="companion-deck">
-      <div xmlns="http://www.w3.org/1999/xhtml" id="scroll" name="now">
-        <section id="flow-reset-placeholder">
-          <img src="chrome://browser/content/companion/flow-reset-placeholder.png" />
-          <button id="flow-reset-close"></button>
-          <h3 data-l10n-id="session-cleared-title"/>
-          <small data-l10n-id="session-cleared">
-            <a id="session-cleared-link" data-l10n-name="session-cleared-link"></a>
-          </small>
-        </section>
-        <section id="now-content">
-          <div id="top-sites-placeholder"></div>
-          <div id="events-placeholder"></div>
-          <div id="email" hidden="true">
-            <div class="email-header">
-              <h2 class="email-title">New Mail</h2>
-              <div>
-                <div id="inbox-link">Go to Inbox &#8594;</div>
-              </div>
-            </div>
-            <div id="email-panel"/>
-          </div>
-          <div id="content">
-          </div>
-        </section>
-      </div>
-      <div xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
-        <div class="content"></div>
-      </div>
-      <div xmlns="http://www.w3.org/1999/xhtml" id="sessions" name="sessions">
-        <header>
-          <button class="back" data-action="viewtab" data-tab="browse"></button>
-          <h2 data-l10n-id="session-section-header"></h2>
-        </header>
-        <div class="content"></div>
-      </div>
-      <div xmlns="http://www.w3.org/1999/xhtml" id="downloads" name="downloads">
-        <header>
-          <button class="back" data-action="viewtab" data-tab="browse"></button>
-          <h2 data-l10n-id="downloads-section-header"></h2>
-        </header>
-        <div class="content">
-          <xul:browser id="companion-downloads-browser" type="content" src="about:downloads"></xul:browser>
+      <template xmlns="http://www.w3.org/1999/xhtml" name="blank">
+        <div></div>
+      </template>
+      <template xmlns="http://www.w3.org/1999/xhtml" name="now" id="scroll">
+        <div>
+          <section id="flow-reset-placeholder">
+            <img src="chrome://browser/content/companion/flow-reset-placeholder.png" />
+            <button id="flow-reset-close" onclick="exitFlowReset()"></button>
+            <h3 data-l10n-id="session-cleared-title"/>
+            <small data-l10n-id="session-cleared">
+              <a id="session-cleared-link" data-l10n-name="session-cleared-link" onclick="exitFlowReset(true)"></a>
+            </small>
+          </section>
+          <section id="now-content">
+            <media-list></media-list>
+            <global-nav-debugging></global-nav-debugging>
+            <services-onboarding></services-onboarding>
+            <calendar-event-list></calendar-event-list>
+            <suggested-snapshot-list></suggested-snapshot-list>
+          </section>
         </div>
-      </div>
-      <div xmlns="http://www.w3.org/1999/xhtml" id="snapshot-groups" name="snapshot-groups">
-        <header>
-          <button class="back" data-action="viewtab" data-tab="browse"></button>
-          <h2 data-l10n-id="snapshot-group-section-header"></h2>
-        </header>
-        <div class="content"></div>
-      </div>
-      <div xmlns="http://www.w3.org/1999/xhtml" id="snapshot-groups-detail" name="snapshot-groups-detail">
-        <header>
-          <button class="back" data-action="viewtab" data-tab="snapshot-groups"></button>
-        </header>
-        <div class="content"></div>
-      </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
+        <div>
+          <browse-list></browse-list>
+          <last-session-list></last-session-list>
+          <recent-snapshot-list></recent-snapshot-list>
+        </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" id="sessions" name="sessions">
+        <section-panel heading-l10n-id="session-section-header">
+          <full-session-list></full-session-list>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" id="downloads" name="downloads">
+        <section-panel class="downloads-panel" heading-l10n-id="downloads-section-header">
+          <xul:browser id="companion-downloads-browser" type="content" src="about:downloads"></xul:browser>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="passwords">
+        <div class="passwords-panel browse-section-panel" id="template-passwords-panel">
+          <xul:browser id="companion-login-browser" type="content" src="about:logins"></xul:browser>
+        </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="calendar">
+        <section-panel class="calendar-panel browse-section-panel" id="template-calendar-panel" heading-l10n-id="companion-browse-calendar-header">
+          <calendar-event-list id="browse-event-list" listtype="browse"></calendar-event-list>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups">
+        <section-panel heading-l10n-id="snapshot-group-section-header">
+          <snapshot-group-list id="snapshot-groups"></snapshot-group-list>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups-detail">
+        <section-panel>
+          <snapshot-group-list-detail id="snapshot-groups-detail"></snapshot-group-list-detail>
+        </section-panel>
+      </template>
     </html:named-deck>
   </div>
 

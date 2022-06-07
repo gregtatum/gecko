@@ -31,7 +31,7 @@ add_task(async function test_open_companion() {
       "The companion content is available"
     );
 
-    let deckContent = content.document.querySelector("#content");
+    let deckContent = content.document.querySelector("#now-content");
     ok(
       deckContent.childElementCount,
       "The companion contents have been populated"

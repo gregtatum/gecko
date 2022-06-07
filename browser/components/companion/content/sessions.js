@@ -110,25 +110,11 @@ export class SessionCard extends HTMLElement {
   }
 }
 
-class HideableElement extends HTMLElement {
-  get hidden() {
-    return this.hasAttribute("hidden");
-  }
-
-  set hidden(val) {
-    if (val) {
-      this.setAttribute("hidden", "true");
-    } else {
-      this.removeAttribute("hidden");
-    }
-  }
-}
-
-class SessionList extends HideableElement {
+class SessionList extends HTMLElement {
   constructor({ showTitle = false, initialSessionData = null } = {}) {
     super();
     this.className = "last-session-list";
-    this.initialSessionData = initialSessionData;
+    this.initialSessionData = window.CompanionUtils.initialSessionData();
 
     let template = document.getElementById("template-session-list");
     let fragment = template.content.cloneNode(true);
@@ -150,28 +136,16 @@ class SessionList extends HideableElement {
       this.sessionUpdated(this.initialSessionData);
     }
     window.addEventListener("Companion:SessionUpdated", this);
-    window.addEventListener("Companion:ResetFlowEntered", this);
-    window.addEventListener("Companion:ResetFlowExited", this);
   }
 
   disconnectedCallback() {
     window.removeEventListener("Companion:SessionUpdated", this);
-    window.removeEventListener("Companion:ResetFlowEntered", this);
-    window.removeEventListener("Companion:ResetFlowExited", this);
   }
 
   handleEvent(event) {
     switch (event.type) {
       case "Companion:SessionUpdated": {
         this.sessionUpdated(event.detail);
-        break;
-      }
-      case "Companion:ResetFlowEntered": {
-        document.body.setAttribute("flow-reset", true);
-        break;
-      }
-      case "Companion:ResetFlowExited": {
-        document.body.removeAttribute("flow-reset");
         break;
       }
     }
@@ -203,5 +177,5 @@ export class FullSessionList extends SessionList {
 }
 
 customElements.define("e-session-card", SessionCard);
-customElements.define("e-last-session-list", LastSessionList);
-customElements.define("e-full-session-list", FullSessionList);
+customElements.define("last-session-list", LastSessionList);
+customElements.define("full-session-list", FullSessionList);

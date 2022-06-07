@@ -27,7 +27,6 @@
 
   #contentAreaDownloadsView, #downloadsListBox {
     background: unset;
-    overflow: hidden;
   }
 
   #downloadsListBox > richlistitem {

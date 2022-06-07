@@ -156,6 +156,7 @@ export class Snapshot extends HTMLElement {
 export class SnapshotList extends HidableElement {
   constructor(snapshotTitle) {
     super();
+    this.snapshots = window.CompanionUtils.initialSnapshotData();
     this.className = "snapshot-list";
 
     let template = document.getElementById("template-snapshot-list");
@@ -180,9 +181,8 @@ export class SnapshotList extends HidableElement {
 }
 
 export class SuggestedSnapshotList extends SnapshotList {
-  constructor(snapshotTitle) {
+  constructor(snapshotTitle = "Suggested") {
     super(snapshotTitle);
-    this.snapshots = [];
   }
 
   handleEvent({ type, detail }) {
@@ -218,7 +218,7 @@ export class SuggestedSnapshotList extends SnapshotList {
 }
 
 export class RecentlyClosedSnapshotList extends SnapshotList {
-  constructor(snapshotTitle) {
+  constructor(snapshotTitle = "Recently Closed") {
     super(snapshotTitle);
   }
 
@@ -230,5 +230,5 @@ export class RecentlyClosedSnapshotList extends SnapshotList {
 }
 
 customElements.define("e-snapshot", Snapshot);
-customElements.define("e-suggested-snapshot-list", SuggestedSnapshotList);
-customElements.define("e-recent-snapshot-list", RecentlyClosedSnapshotList);
+customElements.define("suggested-snapshot-list", SuggestedSnapshotList);
+customElements.define("recent-snapshot-list", RecentlyClosedSnapshotList);

@@ -376,6 +376,17 @@
         view.setAttribute("role", "tabpanel");
 
         if (name === selectedViewName) {
+          if (view.localName == "template") {
+            let template = view;
+            view = template.content.cloneNode(true).firstElementChild;
+            view.setAttribute("aria-labelledby", `${this.id}-button-${name}`);
+            view.setAttribute("role", "tabpanel");
+            view.setAttribute("name", name);
+            if (template.id) {
+              view.id = template.id;
+            }
+            template.replaceWith(view);
+          }
           view.slot = "selected";
         } else {
           view.slot = "";

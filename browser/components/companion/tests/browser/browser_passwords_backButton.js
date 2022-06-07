@@ -24,12 +24,18 @@ add_task(async function testLoginsBackButton() {
       );
 
       let passwordsShown = ContentTaskUtils.waitForEvent(
-        content.document,
-        "browse-panel-shown"
+        content.document.getElementById("companion-deck"),
+        "view-changed"
       );
       passwordsEntry.click();
       await passwordsShown;
+    });
 
+    // We need to wait for the xul:browser that loads the passwords frame
+    // to load.
+    await BrowserTestUtils.browserLoaded(helper.browser, true);
+
+    await helper.runCompanionTask(async () => {
       let passwordsBrowser = content.document.getElementById(
         "companion-login-browser"
       );
@@ -90,8 +96,8 @@ add_task(async function testLoginsBackButton() {
           "The browse panel should be shown after clicking the back button again"
         );
         let browsePanelShown = ContentTaskUtils.waitForEvent(
-          content.document,
-          "browse-panel-shown"
+          content.document.getElementById("companion-deck"),
+          "view-changed"
         );
         info("Click the back button a second time");
         backButton.click();
@@ -121,16 +127,23 @@ add_task(async function testLoginsBackButtonKeyboardNavigation() {
       );
 
       let passwordsShown = ContentTaskUtils.waitForEvent(
-        content.document,
-        "browse-panel-shown"
+        content.document.getElementById("companion-deck"),
+        "view-changed"
       );
       passwordsEntry.focus();
       EventUtils.synthesizeKey("KEY_Enter", {}, content);
       await passwordsShown;
+    });
 
+    // We need to wait for the xul:browser that loads the passwords frame
+    // to load.
+    await BrowserTestUtils.browserLoaded(helper.browser, true);
+
+    await helper.runCompanionTask(async () => {
       let passwordsBrowser = content.document.getElementById(
         "companion-login-browser"
       );
+
       await SpecialPowers.spawn(passwordsBrowser, [], async () => {
         function getFocusedElement() {
           let element = content.document.activeElement;
@@ -152,8 +165,8 @@ add_task(async function testLoginsBackButtonKeyboardNavigation() {
         EventUtils.synthesizeKey("KEY_Tab", {}, content);
         is(getFocusedElement(), backButton, "Back button should be focused");
         let browsePanelShown = ContentTaskUtils.waitForEvent(
-          content.document,
-          "browse-panel-shown"
+          content.document.getElementById("companion-deck"),
+          "view-changed"
         );
 
         EventUtils.synthesizeKey("KEY_Enter", {}, content);

@@ -141,6 +141,6 @@ export class SnapshotGroupListDetail extends HTMLElement {
   }
 }
 
-customElements.define("e-snapshot-group-list", SnapshotGroupList);
+customElements.define("snapshot-group-list", SnapshotGroupList);
 customElements.define("e-snapshot-group-card", SnapshotGroupCard);
-customElements.define("e-snapshot-group-list-detail", SnapshotGroupListDetail);
+customElements.define("snapshot-group-list-detail", SnapshotGroupListDetail);
