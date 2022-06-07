@@ -644,6 +644,7 @@ class CompanionParent extends JSWindowActorParent {
     if (actor) {
       actor.viewTab(tab);
     }
+    return actor;
   }
 
   viewTab(tab) {

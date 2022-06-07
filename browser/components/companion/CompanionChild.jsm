@@ -186,6 +186,11 @@ class CompanionChild extends JSWindowActorChild {
         waivedContent.CompanionUtils.connectedServices = connectedServices;
         break;
       }
+      case "Companion:DoHistorySearch": {
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.gHistorySearch.doQuery(message.data.queryString);
+        break;
+      }
     }
 
     this.sendToContent(message.name, message.data);

@@ -114,8 +114,11 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
     };
   }
 
-  pickResult() {
-    CompanionParent.openCompanionTab("browse");
+  pickResult(result) {
+    let actor = CompanionParent.openCompanionTab("history");
+    actor.sendAsyncMessage("Companion:DoHistorySearch", {
+      queryString: result.payload.input,
+    });
   }
 }
 

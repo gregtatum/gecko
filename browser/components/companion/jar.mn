@@ -23,6 +23,7 @@ browser.jar:
     content/browser/companion/fonts.css (content/fonts.css)
     content/browser/companion/stagemanagerdebugging.js (content/stagemanagerdebugging.js)
     content/browser/companion/googleAccount.png (content/googleAccount.png)
+    content/browser/companion/history.js (content/history.js)
     content/browser/companion/historyCarousel.css (content/historyCarousel.css)
     content/browser/companion/historyCarousel.html (content/historyCarousel.html)
     content/browser/companion/historyCarousel.js (content/historyCarousel.js)
