@@ -257,7 +257,6 @@ export class MailAPI extends Emitter {
 
   willDie() {
     // Must be overwritten in main-frame-setup.js.
-    throw new Error("Not implemented");
   }
 
   /**

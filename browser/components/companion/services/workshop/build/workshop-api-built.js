@@ -3171,7 +3171,6 @@ var MailAPI = class extends import_evt14.Emitter {
     return account && account.folders.getFolderById(folderId);
   }
   willDie() {
-    throw new Error("Not implemented");
   }
   _mapLabels(messageId, folderIds) {
     let accountId = accountIdFromMessageId(messageId);
