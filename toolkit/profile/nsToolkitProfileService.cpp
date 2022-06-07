@@ -659,7 +659,8 @@ nsresult nsToolkitProfileService::MaybeMigrateProfile(
   }
 
   nsCOMPtr<nsIFile> appData;
-  MOZ_TRY(nsXREDirProvider::GetDefaultUserDataDirectory(getter_AddRefs(appData), false));
+  MOZ_TRY(nsXREDirProvider::GetDefaultUserDataDirectory(getter_AddRefs(appData),
+                                                        false));
 
   nsCOMPtr<nsIFile> profileDBFile;
   MOZ_TRY(appData->Clone(getter_AddRefs(profileDBFile)));
@@ -685,7 +686,8 @@ nsresult nsToolkitProfileService::MaybeMigrateProfile(
     if (NS_FAILED(rv)) break;
 
     bool isDefaultProfile = filePath.Equals(defaultDescriptor);
-    // If we're looking for the default and this isn't the default then carry on.
+    // If we're looking for the default and this isn't the default then carry
+    // on.
     if (!aFile && !isDefaultProfile) {
       continue;
     }
@@ -703,7 +705,8 @@ nsresult nsToolkitProfileService::MaybeMigrateProfile(
       MOZ_TRY(rootDir->SetPersistentDescriptor(filePath));
     }
 
-    // If we're looking for a specific profile folder and this isn't it then continue.
+    // If we're looking for a specific profile folder and this isn't it then
+    // continue.
     bool equals;
     if (aFile && (NS_FAILED(rootDir->Equals(aFile, &equals)) || !equals)) {
       continue;
@@ -734,13 +737,40 @@ nsresult nsToolkitProfileService::MaybeMigrateProfile(
     // Return the new profile.
     profile.forget(aProfile);
 
-    // Now remove it from the old profile database. We can ignore failures here,
-    // having the profile listed in both places isn't ideal but the new build
-    // will not look in the old location anymore.
-    profileDB.DeleteSection(profileID.get());
+    // Now remove it from the old profile database.
     if (isDefaultProfile) {
+      // We can ignore this failure as we won't be looking in this place for
+      // profiles in the future.
       profileDB.DeleteSection(mInstallSection.get());
     }
+
+    rv = profileDB.DeleteSection(profileID.get());
+    // Profile section names must be contiguous so if deleting the section was
+    // successful we find the last section and rename it. Otherwise we can just
+    // ignore the error as leaving the profile in the old location isn't a
+    // problem.
+    if (NS_SUCCEEDED(rv)) {
+      unsigned int s = c;
+      do {
+      } while (NS_SUCCEEDED(profileDB.GetString(
+          nsPrintfCString("Profile%d", ++s).get(), "Path", filePath)));
+
+      // s is now one beyond the last section.
+      s--;
+      if (s != c) {
+        nsPrintfCString sectionID("Profile%d", s);
+
+        rv = profileDB.RenameSection(sectionID.get(), profileID.get());
+
+        // If the rename failed then we must not write out the database with
+        // the gap in the contiguous sections. We can continue with the
+        // migration though.
+        if (NS_FAILED(rv)) {
+          return NS_OK;
+        }
+      }
+    }
+
     profileDB.WriteToFile(profileDBFile);
 
     break;
@@ -1470,7 +1500,8 @@ nsresult nsToolkitProfileService::SelectStartupProfile(
 
       // In the case of any failure just go on and create a new profile.
       if (NS_SUCCEEDED(rv) && profile) {
-        if (profile == (mUseDevEditionProfile ? mDevEditionDefault : mNormalDefault)) {
+        if (profile ==
+            (mUseDevEditionProfile ? mDevEditionDefault : mNormalDefault)) {
           mStartupReason = u"restart-migrated-profile"_ns;
         } else {
           mStartupReason = u"restart-migrated-default"_ns;
