@@ -515,7 +515,6 @@ e-global-nav-debugging h2 {
   background-image: url("calendar.svg");
 }
 
-
 #companion-downloads-browser {
   background: unset;
   width: 100vw;
@@ -632,6 +631,14 @@ header h2 {
 #companion-deck-button-browse,
 #companion-deck-button-now {
   border-radius: 16px;
+}
+
+@media (prefers-contrast) {
+  #companion-deck-button-browse:hover img,
+  #companion-deck-button-now:hover img {
+    fill: var(--in-content-button-text-color-hover);
+    -moz-context-properties: fill;
+  }
 }
 
 #snapshot-groups-detail .details {
