@@ -1243,7 +1243,15 @@ class CompanionParent extends JSWindowActorParent {
       queryParams.matchBehavior = MATCH_ANYWHERE_UNMODIFIED;
       queryParams.searchBehavior = BEHAVIOR_HISTORY;
     }
-    let sqlQuery = `SELECT p.url AS url, IFNULL(s.title, p.title) as title, p.last_visit_date / 1000 AS last_visit_date
+    let countQuery = `SELECT COUNT(p.id) as total
+       FROM moz_places p
+       LEFT JOIN moz_places_metadata_snapshots s ON s.place_id = p.id
+       ${queryString}
+      `;
+    let rows = await db.executeCached(countQuery, queryParams);
+    let total = rows[0].getResultByName("total");
+
+    let matchesQuery = `SELECT p.url AS url, IFNULL(s.title, p.title) as title, p.last_visit_date / 1000 AS last_visit_date
        FROM moz_places p
        LEFT JOIN moz_places_metadata_snapshots s ON s.place_id = p.id
        WHERE last_visit_date IS NOT NULL
@@ -1253,7 +1261,7 @@ class CompanionParent extends JSWindowActorParent {
       `;
     queryParams.limit = RESULT_LIMIT;
 
-    let rows = await db.executeCached(sqlQuery, queryParams);
+    rows = await db.executeCached(matchesQuery, queryParams);
 
     let results = rows.map(row => {
       return {
@@ -1266,6 +1274,7 @@ class CompanionParent extends JSWindowActorParent {
     return {
       results,
       limit: RESULT_LIMIT,
+      total,
     };
   }
 

@@ -18,7 +18,7 @@ window.gHistorySearch = {
    *   Resolves once the results have been displayed.
    */
   async doQuery(queryString) {
-    let { results, limit } = await window.CompanionUtils.sendQuery(
+    let { results, limit, total } = await window.CompanionUtils.sendQuery(
       "Companion:BeginHistorySearch",
       {
         query: { input: queryString },
@@ -26,7 +26,7 @@ window.gHistorySearch = {
     );
 
     let viewer = document.getElementById("history-viewer");
-    viewer.showResults(results, queryString, limit);
+    viewer.showResults(results, queryString, limit, total);
   },
 };
 
@@ -112,20 +112,19 @@ export class HistoryViewerEl extends HTMLElement {
    * @param {Number} limit
    *   The maximum number of results that the parent is configured to
    *   send.
+   * @param {Number} total
+   *   The total number of results that exist in the database, without
+   *   the limit applied.
    */
-  showResults(results, queryString, limit) {
+  showResults(results, queryString, limit, total) {
     this.#observer.disconnect();
 
     let query = this.shadowRoot.querySelector(".query");
     query.hidden = !queryString.trim();
     query.textContent = queryString;
     let totalBeforeLimit = this.shadowRoot.querySelector(".total-before-limit");
-
-    // MR2-2604 - We don't currently know how many results we could have
-    // gotten before limiting. For now, just show the total number of
-    // results after limiting.
     totalBeforeLimit.dataset.l10nArgs = JSON.stringify({
-      totalBeforeLimit: results.length,
+      totalBeforeLimit: total,
     });
 
     let resultList = this.shadowRoot.querySelector(".history-result-list");
