@@ -23,8 +23,10 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/AppConstants.jsm"
 );
 
+const lazy = {};
+
 XPCOMUtils.defineLazyServiceGetter(
-  this,
+  lazy,
   "ClipboardHelper",
   "@mozilla.org/widget/clipboardhelper;1",
   "nsIClipboardHelper"
@@ -217,7 +219,7 @@ class AboutLoginsChild extends JSWindowActorChild {
       });
     }
 
-    ClipboardHelper.copyString(detail, ClipboardHelper.Sensitive);
+    lazy.ClipboardHelper.copyString(detail, lazy.ClipboardHelper.Sensitive);
   }
 
   #aboutLoginsCreateLogin(login) {

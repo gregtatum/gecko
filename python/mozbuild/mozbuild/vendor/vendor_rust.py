@@ -75,7 +75,6 @@ PACKAGES_WE_ALWAYS_WANT_AN_OVERRIDE_OF = [
 # If you do need to make changes increasing the number of duplicates, please
 # add a comment as to why.
 TOLERATED_DUPES = {
-    "base64": 2,
     "bytes": 2,
     "crossbeam-deque": 2,
     "crossbeam-epoch": 2,
@@ -89,6 +88,10 @@ TOLERATED_DUPES = {
     # expected to remove the dependency on time altogether).
     "time": 2,
     "tokio": 2,
+    # nom 6 used by plenty of things
+    # nom 7 used by askama (dep of UniFFI, dep of Glean)
+    # See https://github.com/mozilla/uniffi-rs/issues/1260
+    "nom": 2,
 }
 
 

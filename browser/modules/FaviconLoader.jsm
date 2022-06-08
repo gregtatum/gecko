@@ -11,13 +11,15 @@ const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
 
+const lazy = {};
+
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "DeferredTask",
   "resource://gre/modules/DeferredTask.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "PromiseUtils",
   "resource://gre/modules/PromiseUtils.jsm"
 );
@@ -167,7 +169,7 @@ class FaviconLoad {
   }
 
   load() {
-    this._deferred = PromiseUtils.defer();
+    this._deferred = lazy.PromiseUtils.defer();
 
     // Clear the references when we succeed or fail.
     let cleanup = () => {
@@ -635,7 +637,7 @@ class FaviconLoader {
     this.richIconLoader = new IconLoader(actor);
     this.tabIconLoader = new IconLoader(actor);
 
-    this.iconTask = new DeferredTask(
+    this.iconTask = new lazy.DeferredTask(
       () => this.loadIcons(),
       FAVICON_PARSING_TIMEOUT
     );

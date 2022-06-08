@@ -28,32 +28,34 @@ try {
   // The test failed to import these files
 }
 
+const lazy = {};
+
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "PlacesUtils",
   "resource://gre/modules/PlacesUtils.jsm"
 );
 
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "PageThumbs",
   "resource://gre/modules/PageThumbs.jsm"
 );
 
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "BinarySearch",
   "resource://gre/modules/BinarySearch.jsm"
 );
 
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "pktApi",
   "chrome://pocket/content/pktApi.jsm"
 );
 
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "Pocket",
   "chrome://pocket/content/Pocket.jsm"
 );
@@ -69,11 +71,11 @@ try {
   // so it's safe to do nothing with this here.
 }
 
-XPCOMUtils.defineLazyGetter(this, "gCryptoHash", function() {
+XPCOMUtils.defineLazyGetter(lazy, "gCryptoHash", function() {
   return Cc["@mozilla.org/security/hash;1"].createInstance(Ci.nsICryptoHash);
 });
 
-XPCOMUtils.defineLazyGetter(this, "gUnicodeConverter", function() {
+XPCOMUtils.defineLazyGetter(lazy, "gUnicodeConverter", function() {
   let converter = Cc[
     "@mozilla.org/intl/scriptableunicodeconverter"
   ].createInstance(Ci.nsIScriptableUnicodeConverter);
@@ -118,16 +120,16 @@ const PREF_POCKET_LATEST_SINCE = "extensions.pocket.settings.latestSince";
  * @return The base64 representation of the MD5 hash.
  */
 function toHash(aValue) {
-  let value = gUnicodeConverter.convertToByteArray(aValue);
-  gCryptoHash.init(gCryptoHash.MD5);
-  gCryptoHash.update(value, value.length);
-  return gCryptoHash.finish(true);
+  let value = lazy.gUnicodeConverter.convertToByteArray(aValue);
+  lazy.gCryptoHash.init(lazy.gCryptoHash.MD5);
+  lazy.gCryptoHash.update(value, value.length);
+  return lazy.gCryptoHash.finish(true);
 }
 
 /**
  * Singleton that provides storage functionality.
  */
-XPCOMUtils.defineLazyGetter(this, "Storage", function() {
+XPCOMUtils.defineLazyGetter(lazy, "Storage", function() {
   return new LinksStorage();
 });
 
@@ -364,7 +366,7 @@ var PinnedLinks = {
    */
   get links() {
     if (!this._links) {
-      this._links = Storage.get("pinnedLinks", []);
+      this._links = lazy.Storage.get("pinnedLinks", []);
     }
 
     return this._links;
@@ -411,7 +413,7 @@ var PinnedLinks = {
    * Saves the current list of pinned links.
    */
   save: function PinnedLinks_save() {
-    Storage.set("pinnedLinks", this.links);
+    lazy.Storage.set("pinnedLinks", this.links);
   },
 
   /**
@@ -508,7 +510,7 @@ var BlockedLinks = {
    */
   get links() {
     if (!this._links) {
-      this._links = Storage.get("blockedLinks", {});
+      this._links = lazy.Storage.get("blockedLinks", {});
     }
 
     return this._links;
@@ -543,7 +545,7 @@ var BlockedLinks = {
    * Saves the current list of blocked links.
    */
   save: function BlockedLinks_save() {
-    Storage.set("blockedLinks", this.links);
+    lazy.Storage.set("blockedLinks", this.links);
   },
 
   /**
@@ -610,7 +612,7 @@ var PlacesProvider = {
    * @param aCallback The function that the array of links is passed to.
    */
   getLinks: function PlacesProvider_getLinks(aCallback) {
-    let options = PlacesUtils.history.getNewQueryOptions();
+    let options = lazy.PlacesUtils.history.getNewQueryOptions();
     options.maxResults = this.maxNumLinks;
 
     // Sort by frecency, descending.
@@ -662,7 +664,11 @@ var PlacesProvider = {
           }
         }
         for (let link of outOfOrder) {
-          i = BinarySearch.insertionIndexOf(Links.compareLinks, links, link);
+          i = lazy.BinarySearch.insertionIndexOf(
+            Links.compareLinks,
+            links,
+            link
+          );
           links.splice(i, 0, link);
         }
 
@@ -671,8 +677,8 @@ var PlacesProvider = {
     };
 
     // Execute the query.
-    let query = PlacesUtils.history.getNewQuery();
-    PlacesUtils.history.asyncExecuteLegacyQuery(query, options, callback);
+    let query = lazy.PlacesUtils.history.getNewQuery();
+    lazy.PlacesUtils.history.asyncExecuteLegacyQuery(query, options, callback);
   },
 
   /**
@@ -806,9 +812,9 @@ var ActivityStreamProvider = {
   _getCommonParams(aOptions, aParams = {}) {
     return Object.assign(
       {
-        bookmarkType: PlacesUtils.bookmarks.TYPE_BOOKMARK,
+        bookmarkType: lazy.PlacesUtils.bookmarks.TYPE_BOOKMARK,
         limit: this._adjustLimitForBlocked(aOptions),
-        tagsFolderId: PlacesUtils.tagsFolderId,
+        tagsFolderId: lazy.PlacesUtils.tagsFolderId,
       },
       aParams
     );
@@ -891,7 +897,7 @@ var ActivityStreamProvider = {
     // Fetch the largest icon available.
     let faviconData;
     try {
-      faviconData = await PlacesUtils.promiseFaviconData(
+      faviconData = await lazy.PlacesUtils.promiseFaviconData(
         aUri,
         this.THUMB_FAVICON_SIZE
       );
@@ -910,7 +916,7 @@ var ActivityStreamProvider = {
 
     // Also fetch a smaller icon.
     try {
-      faviconData = await PlacesUtils.promiseFaviconData(
+      faviconData = await lazy.PlacesUtils.promiseFaviconData(
         aUri,
         preferredFaviconWidth
       );
@@ -998,14 +1004,14 @@ var ActivityStreamProvider = {
 
     // Do not fetch Pocket items for users that have been inactive for too long, or are not logged in
     if (
-      !pktApi.isUserLoggedIn() ||
+      !lazy.pktApi.isUserLoggedIn() ||
       Date.now() - latestSince > POCKET_INACTIVE_TIME
     ) {
       return Promise.resolve(null);
     }
 
     return new Promise((resolve, reject) => {
-      pktApi.retrieve(requestData, {
+      lazy.pktApi.retrieve(requestData, {
         success(data) {
           resolve(data);
         },
@@ -1138,8 +1144,8 @@ var ActivityStreamProvider = {
 
     const result = await this.executePlacesQuery(sqlQuery, {
       params: {
-        tags_folder: PlacesUtils.tagsFolderId,
-        type_bookmark: PlacesUtils.bookmarks.TYPE_BOOKMARK,
+        tags_folder: lazy.PlacesUtils.tagsFolderId,
+        type_bookmark: lazy.PlacesUtils.bookmarks.TYPE_BOOKMARK,
       },
     });
 
@@ -1371,7 +1377,7 @@ var ActivityStreamProvider = {
    *            - parentGuid and index
    */
   async getBookmark(aInfo) {
-    let bookmark = await PlacesUtils.bookmarks.fetch(aInfo);
+    let bookmark = await lazy.PlacesUtils.bookmarks.fetch(aInfo);
     if (!bookmark) {
       return null;
     }
@@ -1417,7 +1423,7 @@ var ActivityStreamProvider = {
     let { columns, params } = aOptions;
     let items = [];
     let queryError = null;
-    let conn = await PlacesUtils.promiseDBConnection();
+    let conn = await lazy.PlacesUtils.promiseDBConnection();
     await conn.executeCached(aQuery, params, (aRow, aCancel) => {
       try {
         let item = null;
@@ -1499,7 +1505,7 @@ var ActivityStreamLinks = {
    * @returns {Promise} Returns a promise at completion.
    */
   deleteBookmark(aBookmarkGuid) {
-    return PlacesUtils.bookmarks.remove(aBookmarkGuid);
+    return lazy.PlacesUtils.bookmarks.remove(aBookmarkGuid);
   },
 
   /**
@@ -1513,7 +1519,7 @@ var ActivityStreamLinks = {
   deleteHistoryEntry(aUrl) {
     const url = aUrl;
     PinnedLinks.unpin({ url });
-    return PlacesUtils.history.remove(url);
+    return lazy.PlacesUtils.history.remove(url);
   },
 
   /**
@@ -1528,7 +1534,7 @@ var ActivityStreamLinks = {
   deletePocketEntry(aItemID) {
     this._savedPocketStories = null;
     return new Promise((success, error) =>
-      pktApi.deleteItem(aItemID, { success, error })
+      lazy.pktApi.deleteItem(aItemID, { success, error })
     );
   },
 
@@ -1544,7 +1550,7 @@ var ActivityStreamLinks = {
   archivePocketEntry(aItemID) {
     this._savedPocketStories = null;
     return new Promise((success, error) =>
-      pktApi.archiveItem(aItemID, { success, error })
+      lazy.pktApi.archiveItem(aItemID, { success, error })
     );
   },
 
@@ -1564,8 +1570,8 @@ var ActivityStreamLinks = {
    */
   addPocketEntry(aUrl, aTitle, aBrowser) {
     // If the user is not logged in, show the panel to prompt them to log in
-    if (!pktApi.isUserLoggedIn()) {
-      Pocket.savePage(aBrowser, aUrl, aTitle);
+    if (!lazy.pktApi.isUserLoggedIn()) {
+      lazy.Pocket.savePage(aBrowser, aUrl, aTitle);
       return Promise.resolve(null);
     }
 
@@ -1573,7 +1579,7 @@ var ActivityStreamLinks = {
     // will update the page
     this._savedPocketStories = null;
     return new Promise((success, error) => {
-      pktApi.addLink(aUrl, {
+      lazy.pktApi.addLink(aUrl, {
         title: aTitle,
         success,
         error,
@@ -2138,7 +2144,7 @@ var Links = {
   },
 
   _binsearch: function Links__binsearch(aArray, aLink, aMethod) {
-    return BinarySearch[aMethod](this.compareLinks, aArray, aLink);
+    return lazy.BinarySearch[aMethod](this.compareLinks, aArray, aLink);
   },
 
   /**
@@ -2275,7 +2281,7 @@ var LinkChecker = {
 
 var ExpirationFilter = {
   init: function ExpirationFilter_init() {
-    PageThumbs.addExpirationFilter(this);
+    lazy.PageThumbs.addExpirationFilter(this);
   },
 
   filterForThumbnailExpiration: function ExpirationFilter_filterForThumbnailExpiration(
@@ -2377,7 +2383,7 @@ var NewTabUtils = {
    * Restores all sites that have been removed from the grid.
    */
   restore: function NewTabUtils_restore() {
-    Storage.clear();
+    lazy.Storage.clear();
     Links.resetCache();
     PinnedLinks.resetCache();
     BlockedLinks.resetCache();
@@ -2393,7 +2399,7 @@ var NewTabUtils = {
    * @param aCallback the callback method.
    */
   undoAll: function NewTabUtils_undoAll(aCallback) {
-    Storage.remove("blockedLinks");
+    lazy.Storage.remove("blockedLinks");
     Links.resetCache();
     BlockedLinks.resetCache();
     Links.populateCache(aCallback, true);

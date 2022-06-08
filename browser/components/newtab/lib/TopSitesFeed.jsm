@@ -39,52 +39,54 @@ const {
   getSearchFormURL,
 } = ChromeUtils.import("resource://activity-stream/lib/SearchShortcuts.jsm");
 
+const lazy = {};
+
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "FilterAdult",
   "resource://activity-stream/lib/FilterAdult.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "LinksCache",
   "resource://activity-stream/lib/LinksCache.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "NewTabUtils",
   "resource://gre/modules/NewTabUtils.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "Screenshots",
   "resource://activity-stream/lib/Screenshots.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "PageThumbs",
   "resource://gre/modules/PageThumbs.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "RemoteSettings",
   "resource://services-settings/remote-settings.js"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "Region",
   "resource://gre/modules/Region.jsm"
 );
 
-XPCOMUtils.defineLazyGlobalGetters(this, ["fetch"]);
+XPCOMUtils.defineLazyGlobalGetters(lazy, ["fetch"]);
 
-XPCOMUtils.defineLazyGetter(this, "log", () => {
+XPCOMUtils.defineLazyGetter(lazy, "log", () => {
   const { Logger } = ChromeUtils.import(
     "resource://messaging-system/lib/Logger.jsm"
   );
   return new Logger("TopSitesFeed");
 });
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
 });
 
@@ -179,7 +181,9 @@ class ContileIntegration {
 
   async _fetchSites() {
     if (
-      !NimbusFeatures.newtab.getVariable(NIMBUS_VARIABLE_CONTILE_ENABLED) ||
+      !lazy.NimbusFeatures.newtab.getVariable(
+        NIMBUS_VARIABLE_CONTILE_ENABLED
+      ) ||
       !this._topSitesFeed.store.getState().Prefs.values[SHOW_SPONSORED_PREF]
     ) {
       if (this._sites.length) {
@@ -190,9 +194,9 @@ class ContileIntegration {
     }
     try {
       let url = Services.prefs.getStringPref(CONTILE_ENDPOINT_PREF);
-      const response = await fetch(url, { credentials: "omit" });
+      const response = await lazy.fetch(url, { credentials: "omit" });
       if (!response.ok) {
-        log.warn(
+        lazy.log.warn(
           `Contile endpoint returned unexpected status: ${response.status}`
         );
       }
@@ -209,7 +213,7 @@ class ContileIntegration {
         let { tiles } = body;
         tiles = this._filterBlockedSponsors(tiles);
         if (tiles.length > MAX_NUM_SPONSORED) {
-          log.warn(
+          lazy.log.warn(
             `Contile provided more links than permitted. (${tiles.length} received, limit is ${MAX_NUM_SPONSORED})`
           );
           tiles.length = MAX_NUM_SPONSORED;
@@ -218,7 +222,9 @@ class ContileIntegration {
         return true;
       }
     } catch (error) {
-      log.warn(`Failed to fetch data from Contile server: ${error.message}`);
+      lazy.log.warn(
+        `Failed to fetch data from Contile server: ${error.message}`
+      );
     }
     return false;
   }
@@ -234,19 +240,20 @@ class TopSitesFeed {
       getShortURLForCurrentSearch
     );
     this.dedupe = new Dedupe(this._dedupeKey);
-    this.frecentCache = new LinksCache(
-      NewTabUtils.activityStreamLinks,
+    this.frecentCache = new lazy.LinksCache(
+      lazy.NewTabUtils.activityStreamLinks,
       "getTopSites",
       CACHED_LINK_PROPS_TO_MIGRATE,
       (oldOptions, newOptions) =>
         // Refresh if no old options or requesting more items
         !(oldOptions.numItems >= newOptions.numItems)
     );
-    this.pinnedCache = new LinksCache(NewTabUtils.pinnedLinks, "links", [
-      ...CACHED_LINK_PROPS_TO_MIGRATE,
-      ...PINNED_FAVICON_PROPS_TO_MIGRATE,
-    ]);
-    PageThumbs.addExpirationFilter(this);
+    this.pinnedCache = new lazy.LinksCache(
+      lazy.NewTabUtils.pinnedLinks,
+      "links",
+      [...CACHED_LINK_PROPS_TO_MIGRATE, ...PINNED_FAVICON_PROPS_TO_MIGRATE]
+    );
+    lazy.PageThumbs.addExpirationFilter(this);
     this._nimbusChangeListener = this._nimbusChangeListener.bind(this);
   }
 
@@ -276,17 +283,17 @@ class TopSitesFeed {
     Services.prefs.addObserver(REMOTE_SETTING_DEFAULTS_PREF, this);
     Services.prefs.addObserver(DEFAULT_SITES_OVERRIDE_PREF, this);
     Services.prefs.addObserver(DEFAULT_SITES_EXPERIMENTS_PREF_BRANCH, this);
-    NimbusFeatures.newtab.onUpdate(this._nimbusChangeListener);
+    lazy.NimbusFeatures.newtab.onUpdate(this._nimbusChangeListener);
   }
 
   uninit() {
-    PageThumbs.removeExpirationFilter(this);
+    lazy.PageThumbs.removeExpirationFilter(this);
     Services.obs.removeObserver(this, "browser-search-engine-modified");
     Services.obs.removeObserver(this, "browser-region-updated");
     Services.prefs.removeObserver(REMOTE_SETTING_DEFAULTS_PREF, this);
     Services.prefs.removeObserver(DEFAULT_SITES_OVERRIDE_PREF, this);
     Services.prefs.removeObserver(DEFAULT_SITES_EXPERIMENTS_PREF_BRANCH, this);
-    NimbusFeatures.newtab.off(this._nimbusChangeListener);
+    lazy.NimbusFeatures.newtab.off(this._nimbusChangeListener);
   }
 
   observe(subj, topic, data) {
@@ -353,7 +360,7 @@ class TopSitesFeed {
     DEFAULT_TOP_SITES.length = 0;
 
     // Read defaults from contile.
-    const contileEnabled = NimbusFeatures.newtab.getVariable(
+    const contileEnabled = lazy.NimbusFeatures.newtab.getVariable(
       NIMBUS_VARIABLE_CONTILE_ENABLED
     );
     let hasContileTiles = false;
@@ -470,7 +477,7 @@ class TopSitesFeed {
 
   async _getRemoteConfig(firstTime = true) {
     if (!this._remoteConfig) {
-      this._remoteConfig = await RemoteSettings("top-sites");
+      this._remoteConfig = await lazy.RemoteSettings("top-sites");
       this._remoteConfig.on("sync", () => {
         this._readDefaults();
       });
@@ -500,12 +507,12 @@ class TopSitesFeed {
 
     result = result.filter(topsite => {
       // Filter by region.
-      if (topsite.exclude_regions?.includes(Region.home)) {
+      if (topsite.exclude_regions?.includes(lazy.Region.home)) {
         return false;
       }
       if (
         topsite.include_regions?.length &&
-        !topsite.include_regions.includes(Region.home)
+        !topsite.include_regions.includes(lazy.Region.home)
       ) {
         return false;
       }
@@ -715,7 +722,7 @@ class TopSitesFeed {
       }
       // Drop blocked default sites.
       if (
-        NewTabUtils.blockedLinks.isBlocked({
+        lazy.NewTabUtils.blockedLinks.isBlocked({
           url: link.url,
         })
       ) {
@@ -744,7 +751,7 @@ class TopSitesFeed {
       const searchProvider = getSearchProvider(shortURL(link));
       if (
         searchProvider &&
-        NewTabUtils.blockedLinks.isBlocked({ url: searchProvider.url })
+        lazy.NewTabUtils.blockedLinks.isBlocked({ url: searchProvider.url })
       ) {
         continue;
       }
@@ -815,8 +822,8 @@ class TopSitesFeed {
         // Add in favicons if we don't already have it
         if (!copy.favicon) {
           try {
-            NewTabUtils.activityStreamProvider._faviconBytesToDataURI(
-              await NewTabUtils.activityStreamProvider._addFavicons([copy])
+            lazy.NewTabUtils.activityStreamProvider._faviconBytesToDataURI(
+              await lazy.NewTabUtils.activityStreamProvider._addFavicons([copy])
             );
 
             for (const prop of PINNED_FAVICON_PROPS_TO_MIGRATE) {
@@ -841,7 +848,7 @@ class TopSitesFeed {
     const dedupedUnpinned = [...dedupedFrecent, ...dedupedDefaults];
 
     // Remove adult sites if we need to
-    const checkedAdult = FilterAdult.filter(dedupedUnpinned);
+    const checkedAdult = lazy.FilterAdult.filter(dedupedUnpinned);
 
     // Insert the original pinned sites into the deduped frecent and defaults.
     let withPinned = insertPinned(checkedAdult, pinned);
@@ -1037,7 +1044,7 @@ class TopSitesFeed {
     ) {
       return;
     }
-    await Screenshots.maybeCacheScreenshot(
+    await lazy.Screenshots.maybeCacheScreenshot(
       link,
       url,
       "screenshot",
@@ -1060,7 +1067,7 @@ class TopSitesFeed {
    * @param target {string} Id of content process where to dispatch the result
    */
   async getScreenshotPreview(url, target) {
-    const preview = (await Screenshots.getScreenshotForURL(url)) || "";
+    const preview = (await lazy.Screenshots.getScreenshotForURL(url)) || "";
     this.store.dispatch(
       ac.OnlyToOneContent(
         {
@@ -1115,7 +1122,7 @@ class TopSitesFeed {
     if (searchTopSite) {
       toPin.searchTopSite = searchTopSite;
     }
-    NewTabUtils.pinnedLinks.pin(toPin, index);
+    lazy.NewTabUtils.pinnedLinks.pin(toPin, index);
 
     await this._clearLinkCustomScreenshot({ customScreenshotURL, url });
   }
@@ -1146,7 +1153,7 @@ class TopSitesFeed {
       // then we want to make sure to unblock that link if it has previously been
       // blocked. We know if the site has been added because the index will be -1.
       if (index === -1) {
-        NewTabUtils.blockedLinks.unblock({ url: site.url });
+        lazy.NewTabUtils.blockedLinks.unblock({ url: site.url });
         this.frecentCache.expire();
       }
       this.insert(action);
@@ -1158,7 +1165,7 @@ class TopSitesFeed {
    */
   unpin(action) {
     const { site } = action.data;
-    NewTabUtils.pinnedLinks.unpin(site);
+    lazy.NewTabUtils.pinnedLinks.unpin(site);
     this._broadcastPinnedSitesUpdated();
   }
 
@@ -1166,22 +1173,22 @@ class TopSitesFeed {
     Services.prefs.clearUserPref(
       `browser.newtabpage.activity-stream.${SEARCH_SHORTCUTS_HAVE_PINNED_PREF}`
     );
-    for (let pinnedLink of NewTabUtils.pinnedLinks.links) {
+    for (let pinnedLink of lazy.NewTabUtils.pinnedLinks.links) {
       if (pinnedLink && pinnedLink.searchTopSite) {
-        NewTabUtils.pinnedLinks.unpin(pinnedLink);
+        lazy.NewTabUtils.pinnedLinks.unpin(pinnedLink);
       }
     }
     this.pinnedCache.expire();
   }
 
   _unpinSearchShortcut(vendor) {
-    for (let pinnedLink of NewTabUtils.pinnedLinks.links) {
+    for (let pinnedLink of lazy.NewTabUtils.pinnedLinks.links) {
       if (
         pinnedLink &&
         pinnedLink.searchTopSite &&
         shortURL(pinnedLink) === vendor
       ) {
-        NewTabUtils.pinnedLinks.unpin(pinnedLink);
+        lazy.NewTabUtils.pinnedLinks.unpin(pinnedLink);
         this.pinnedCache.expire();
 
         const prevInsertedShortcuts = this.store
@@ -1237,7 +1244,7 @@ class TopSitesFeed {
       return;
     }
 
-    let pinned = NewTabUtils.pinnedLinks.links;
+    let pinned = lazy.NewTabUtils.pinnedLinks.links;
     if (!pinned[index]) {
       this._pinSiteAt(site, index);
     } else {
@@ -1295,7 +1302,7 @@ class TopSitesFeed {
   updatePinnedSearchShortcuts({ addedShortcuts, deletedShortcuts }) {
     // Unpin the deletedShortcuts.
     deletedShortcuts.forEach(({ url }) => {
-      NewTabUtils.pinnedLinks.unpin({ url });
+      lazy.NewTabUtils.pinnedLinks.unpin({ url });
     });
 
     // Pin the addedShortcuts.
@@ -1304,16 +1311,16 @@ class TopSitesFeed {
       TOP_SITES_MAX_SITES_PER_ROW;
     addedShortcuts.forEach(shortcut => {
       // Find first hole in pinnedLinks.
-      let index = NewTabUtils.pinnedLinks.links.findIndex(link => !link);
+      let index = lazy.NewTabUtils.pinnedLinks.links.findIndex(link => !link);
       if (
         index < 0 &&
-        NewTabUtils.pinnedLinks.links.length + 1 < numberOfSlots
+        lazy.NewTabUtils.pinnedLinks.links.length + 1 < numberOfSlots
       ) {
         // pinnedLinks can have less slots than the total available.
-        index = NewTabUtils.pinnedLinks.links.length;
+        index = lazy.NewTabUtils.pinnedLinks.links.length;
       }
       if (index >= 0) {
-        NewTabUtils.pinnedLinks.pin(shortcut, index);
+        lazy.NewTabUtils.pinnedLinks.pin(shortcut, index);
       } else {
         // No slots available, we need to do an insert in first slot and push over other pinned links.
         this._insertPin(shortcut, 0, numberOfSlots);
@@ -1362,7 +1369,9 @@ class TopSitesFeed {
             break;
           case SHOW_SPONSORED_PREF:
             if (
-              NimbusFeatures.newtab.getVariable(NIMBUS_VARIABLE_CONTILE_ENABLED)
+              lazy.NimbusFeatures.newtab.getVariable(
+                NIMBUS_VARIABLE_CONTILE_ENABLED
+              )
             ) {
               this._contile.refresh();
             } else {
