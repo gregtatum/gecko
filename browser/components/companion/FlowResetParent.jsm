@@ -31,7 +31,9 @@ class FlowResetParent extends JSWindowActorParent {
         }
         break;
       case "HasSession":
-        return SessionManager.query({ limit: 1 }).then(
+        // This query includes page data as that has additional checks to
+        // ensure the session has at least one page recorded.
+        return SessionManager.query({ limit: 1, includePages: true }).then(
           sessions => !!sessions.length
         );
     }
