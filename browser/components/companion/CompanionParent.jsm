@@ -799,8 +799,18 @@ class CompanionParent extends JSWindowActorParent {
         this._onOpenURL(message);
         break;
       }
-      case "Companion:DeleteSnapshot": {
-        await this._onDeleteSnapshot(message);
+      case "Companion:DismissSnapshot": {
+        await this._onDismissSnapshot(
+          message,
+          Snapshots.REMOVED_REASON.DISMISS
+        );
+        break;
+      }
+      case "Companion:NotRelevantSnapshot": {
+        await this._onDismissSnapshot(
+          message,
+          Snapshots.REMOVED_REASON.NOT_RELEVANT
+        );
         break;
       }
       case "Companion:FetchSnapshotGroups": {
@@ -1090,9 +1100,9 @@ class CompanionParent extends JSWindowActorParent {
     this.browsingContext.topChromeWindow.openPinebuildCompanionLink(uri);
   }
 
-  async _onDeleteSnapshot(message) {
+  async _onDismissSnapshot(message, reason) {
     let { url } = message.data;
-    await Snapshots.delete(url);
+    await Snapshots.delete(url, reason);
   }
 
   _onRestoreSession(message) {

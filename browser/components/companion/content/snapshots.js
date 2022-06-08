@@ -127,10 +127,20 @@ export class Snapshot extends HTMLElement {
             togglePanel();
             break;
           case "dont-show":
+            window.CompanionUtils.sendAsyncMessage(
+              "Companion:DismissSnapshot",
+              {
+                url: this.data.url,
+              }
+            );
+            break;
           case "not-relevant":
-            window.CompanionUtils.sendAsyncMessage("Companion:DeleteSnapshot", {
-              url: this.data.url,
-            });
+            window.CompanionUtils.sendAsyncMessage(
+              "Companion:NotRelevantSnapshot",
+              {
+                url: this.data.url,
+              }
+            );
             break;
           default:
             this.cardClicked();
