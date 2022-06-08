@@ -24,6 +24,8 @@ class OnboardingParent extends JSWindowActorParent {
 
       // Enable commands that were disabled during onboarding.
       let doc = window.document;
+      doc.body.removeAttribute("onboarding");
+
       let cmd = doc.getElementById("cmd_newNavigator");
       cmd.removeAttribute("disabled");
 
