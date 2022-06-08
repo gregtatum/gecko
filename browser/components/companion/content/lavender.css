@@ -230,6 +230,9 @@
     --flowreset-button-background-color: #9982C9;
     --flowreset-button-text-color: #FFFFFF;
     --flowreset-textshadow-color: rgba(0,0,0, 0.6);
+
+    --favicon-circle-border-color: var(--colors-lavender-10);
+    --favicon-circle-bgcolor: var(--colors-white);
   }
 }
 

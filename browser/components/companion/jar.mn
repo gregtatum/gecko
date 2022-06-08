@@ -83,6 +83,7 @@ browser.jar:
     content/browser/companion/widgets/action-button.js (content/widgets/action-button.js)
     content/browser/companion/widgets/calendar-event.js (content/widgets/calendar-event.js)
     content/browser/companion/widgets/connect-service.js (content/widgets/connect-service.js)
+    content/browser/companion/widgets/favicon-circle.js (content/widgets/favicon-circle.js)
     content/browser/companion/widgets/simple-notification.js (content/widgets/simple-notification.js)
     content/browser/companion/components/companion-manager.js (content/components/companion-manager.js)
     content/browser/companion/components/companion-manager.css (content/components/companion-manager.css)
