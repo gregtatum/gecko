@@ -689,7 +689,7 @@ export class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { summary, startDate, endDate, isAllDay } = this.event;
+    let { summary, startDate, endDate, isAllDay, conference } = this.event;
     let hideShowRunningLateOption =
       this.listType === "browse" && (isAllDay || this.status === "finished");
 
@@ -757,6 +757,12 @@ export class CalendarEvent extends MozLitElement {
             data-l10n-id="companion-hide-event"
             @click=${this.hideEvent}
             ?hidden=${this.listType === "browse"}
+          ></panel-item>
+          <panel-item
+            class="event-item-copy-invite-action"
+            data-l10n-id="companion-copy-invite"
+            @click=${this.copyInvite}
+            ?hidden=${!conference}
           ></panel-item>
           <panel-item
             class="event-item-running-late-action"

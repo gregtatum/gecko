@@ -294,5 +294,62 @@ add_task(async function testHideEvent() {
         "Break time is visible in browse"
       );
     });
+
+    info("Cleanup");
+    await helper.reload();
+  });
+});
+
+add_task(async function testCopyInvite() {
+  await CompanionHelper.whenReady(async helper => {
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
+
+    // generate start and end times for event starting in one minute.
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      0,
+      30,
+      now.getHours(),
+      now.getMinutes() + 1
+    );
+
+    let events = [
+      {
+        summary: "My Meeting",
+        location: "http://meet.google.com/join",
+        start,
+        end,
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.shadowRoot.querySelector("calendar-event");
+
+      info("Open meatball menu");
+      let openMenuButton = event.shadowRoot.querySelector(
+        ".event-options-button"
+      );
+      let panelMenu = event.shadowRoot.querySelector("panel-list");
+      const EventUtils = ContentTaskUtils.getEventUtils(content);
+      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
+      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
+
+      info("Confirm event link is copied to clipboard");
+      let copyInviteButton = event.shadowRoot.querySelector(
+        ".event-item-copy-invite-action"
+      );
+      ok(!copyInviteButton.hidden, "Copy invite button is visible");
+      copyInviteButton.click();
+      await ContentTaskUtils.waitForEvent(
+        content.document,
+        "event-invite-copied"
+      );
+
+      let copiedLink = await content.navigator.clipboard.readText();
+      is(copiedLink, "http://meet.google.com/join", "Invite link was copied");
+    });
   });
 });

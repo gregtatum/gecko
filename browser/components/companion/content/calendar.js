@@ -532,6 +532,11 @@ class CalendarEventWrapper extends CalendarEvent {
     );
   }
 
+  async copyInvite() {
+    await window.navigator.clipboard.writeText(this.event.conference.url);
+    document.dispatchEvent(new CustomEvent("event-invite-copied", {}));
+  }
+
   getCachedDocumentTitle(url, text) {
     return this._cachedDocumentTitles.get(url) || text;
   }
