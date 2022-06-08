@@ -7,6 +7,9 @@
 var EXPORTED_SYMBOLS = ["OnboardingParent"];
 
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
@@ -21,7 +24,10 @@ class OnboardingParent extends JSWindowActorParent {
 
       // Enable commands that were disabled during onboarding.
       let doc = window.document;
-      let cmd = doc.getElementById("Browser:OpenFile");
+      let cmd = doc.getElementById("cmd_newNavigator");
+      cmd.removeAttribute("disabled");
+
+      cmd = doc.getElementById("Browser:OpenFile");
       cmd.setAttribute("disabled", false);
 
       cmd = doc.getElementById("Browser:ShowAllHistory");
@@ -29,6 +35,12 @@ class OnboardingParent extends JSWindowActorParent {
 
       let menu = doc.getElementById("history-menu");
       menu.hidden = false;
+
+      if (AppConstants.platform == "macosx") {
+        let hiddenWindow = Services.appShell.hiddenDOMWindow;
+        let item = hiddenWindow.document.getElementById("macDockMenuNewWindow");
+        item.disabled = false;
+      }
     }
   }
 }
