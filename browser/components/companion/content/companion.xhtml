@@ -221,6 +221,22 @@
     </div>
   </template>
 
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-viewer">
+    <h2 class="query"/>
+    <h2 class="total-before-limit" data-l10n-id="history-results-total-before-limit" data-l10n-args='{"totalBeforeLimit": 0}'/>
+    <h2 data-l10n-id="history-recently-viewed"/>
+    <ol class="history-result-list"/>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-result">
+    <div>
+      <span class="history-result-title"/> - <span class="history-result-url"/>
+    </div>
+    <div>
+      <span class="history-result-last-visited"/>
+    </div>
+  </template>
+
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-browse-list">
     <div class="browse">
       <button class="snapshot-groups" data-l10n-id="browse-list-snapshot-groups" data-pref="browser.companion.snapshot-groups.enabled" is="named-deck-button" deck="companion-deck" name="snapshot-groups"></button>
@@ -319,6 +335,7 @@
 
       <template xmlns="http://www.w3.org/1999/xhtml" name="history">
         <section-panel heading-l10n-id="history-section-header">
+          <e-history-viewer id="history-viewer" />
         </section-panel>
       </template>
     </html:named-deck>

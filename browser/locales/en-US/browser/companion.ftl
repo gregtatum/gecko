@@ -214,3 +214,11 @@ companion-calendar-not-connected = You have no connected accounts.
 
 # Message displayed in the calendar browse view when there are no events.
 companion-calendar-no-items = You have no calendar items.
+
+# This label should be written in all capital letters if your locale supports them.
+history-recently-viewed = RECENTLY VIEWED
+
+# Variables:
+#   $totalBeforeLimit (Number) - The total number of results from a history
+#                                query before limiting is applied.
+history-results-total-before-limit = { $totalBeforeLimit } results

@@ -1231,6 +1231,8 @@ class CompanionParent extends JSWindowActorParent {
     const BEHAVIOR_HISTORY = Ci.mozIPlacesAutoComplete.BEHAVIOR_HISTORY;
 
     let query = message.data.query;
+    query.input = query.input.trim();
+
     let queryString = "";
     let queryParams = {};
     if (query.input) {
