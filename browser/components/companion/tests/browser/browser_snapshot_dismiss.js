@@ -87,13 +87,13 @@ add_task(async function test_dismiss() {
           return snapshots.length == urls.length;
         }, "Should be the correct number of links displayed");
 
-        info("Dismiss the first snapshot with dont-show");
+        info("Dismiss the first snapshot with dismiss");
         let snapshot = suggestedSnapshots.querySelectorAll("e-snapshot")[0];
-        let dontShow = snapshot.lastElementChild.querySelector(
-          "panel-item[data-action=dont-show"
+        let dismiss = snapshot.lastElementChild.querySelector(
+          "panel-item[data-action=dismiss"
         );
-        Assert.ok(dontShow, "Found dontShow option");
-        dontShow.button.click();
+        Assert.ok(dismiss, "Found dismiss option");
+        dismiss.button.click();
         await ContentTaskUtils.waitForCondition(() => {
           let snapshots = Array.from(
             suggestedSnapshots.querySelectorAll("e-snapshot")

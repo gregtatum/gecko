@@ -126,7 +126,7 @@ export class Snapshot extends HTMLElement {
           case "toggle-panel":
             togglePanel();
             break;
-          case "dont-show":
+          case "dismiss":
             window.CompanionUtils.sendAsyncMessage(
               "Companion:DismissSnapshot",
               {
