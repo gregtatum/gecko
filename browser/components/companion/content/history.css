@@ -1,0 +1,99 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+h2 {
+  margin-inline-start: 16px;
+}
+
+.history-result-list {
+  list-style-type: none;
+  padding: 0;
+  width: 100vw;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.history-result-list > li {
+  display: flex;
+  padding-inline: 8px;
+}
+
+.history-result-list > li:not(:first-child) {
+  margin-block-start: 4px;
+}
+
+.history-result-list > li > e-history-result {
+  display: flex;
+  width: 100%;
+}
+
+.query,
+.total-before-limit {
+  margin-block: 0 24px;
+}
+
+.recently-viewed {
+  margin-block: 0;
+}
+
+.history-result-button {
+  appearance: none;
+  font-weight: unset;
+  background: unset;
+  background-color: var(--history-result-button-bgcolor, ButtonFace);
+  border: 1px solid var(--history-result-button-border-color, ButtonText);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  align-items: flex-start;
+  /**
+   * We must supply a min-width here in order for the text inside
+   * the domain / title containers to overflow properly.
+   * See https://css-tricks.com/flexbox-truncated-text/.
+   */
+  min-width: 0;
+  /**
+   * This plus the 1px border gives us the 8px of total padding
+   */
+  padding: 7px;
+  margin: 0;
+}
+
+button.history-result-button:hover {
+  background-color: var(--history-result-button-hover-focus-bgcolor, ButtonText);
+  border-color: var(--history-result-button-hover-focus-border-color, ButtonText);
+}
+
+button.history-result-button:hover:active {
+  background-color: var(--history-result-button-active-bgcolor, ButtonText);
+  border-color: var(--history-result-button-active-border-color, ButtonText);
+}
+
+.history-result-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  align-items: start;
+  min-width: 0;
+  margin-inline-start: 8px;
+}
+
+.history-result-title,
+.history-result-url {
+  text-align: start;
+  overflow: hidden;
+}
+
+.history-result-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.history-result-url {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 100%;
+}

@@ -41,12 +41,15 @@
   <script src="chrome://global/content/elements/named-deck.js" />
   <script src="chrome://global/content/elements/panel-list.js"/>
 
+  <script type="module" src="chrome://browser/content/companion/widgets/favicon-circle.js"/>
+
   <link rel="localization" href="browser/browser.ftl"/>
   <link rel="localization" href="browser/companion.ftl"/>
   <link rel="localization" href="toolkit/global/videocontrols.ftl"/>
 
   <link rel="preload" href="chrome://global/skin/in-content/common.css" as="style"/>
   <link rel="preload" href="chrome://browser/content/companion/fonts.css" as="style"/>
+  <link rel="preload" href="chrome://browser/content/companion/history.css" as="style"/>
 </head>
 <html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" flow-reset-startup="true">
 
@@ -222,19 +225,39 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-viewer">
-    <h2 class="query"/>
-    <h2 class="total-before-limit" data-l10n-id="history-results-total-before-limit" data-l10n-args='{"totalBeforeLimit": 0}'/>
-    <h2 data-l10n-id="history-recently-viewed"/>
+    <link
+      rel="stylesheet"
+      href="chrome://global/skin/in-content/common.css"
+    />
+    <link
+      rel="stylesheet"
+      href="chrome://browser/content/companion/fonts.css"
+    />
+    <link rel="stylesheet" href="history.css"/>
+    <h2 class="query text-body-l-med"/>
+    <h2 class="total-before-limit text-body-s" data-l10n-id="history-results-total-before-limit" data-l10n-args='{"totalBeforeLimit": 0}'/>
+    <h2 class="recently-viewed text-heading-s" data-l10n-id="history-recently-viewed"/>
     <ol class="history-result-list"/>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-result">
-    <div>
-      <span class="history-result-title"/> - <span class="history-result-url"/>
-    </div>
-    <div>
-      <span class="history-result-last-visited"/>
-    </div>
+    <link
+      rel="stylesheet"
+      href="chrome://global/skin/in-content/common.css"
+    />
+    <link
+      rel="stylesheet"
+      href="chrome://browser/content/companion/fonts.css"
+    />
+    <link rel="stylesheet" href="history.css"/>
+    <button class="history-result-button">
+      <favicon-circle class="history-result-icon" aria-hidden="true"/>
+      <div class="history-result-info">
+        <div class="history-result-title text-body-l-med"/>
+        <div class="history-result-url text-body-s"/>
+        <div class="history-result-last-visited text-body-s"/>
+      </div>
+    </button>
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-browse-list">

@@ -51,9 +51,21 @@ window.gHistorySearch = {
 export class HistoryViewerEl extends HTMLElement {
   constructor() {
     super();
+    let shadowRoot = this.attachShadow({ mode: "open" });
     let template = document.getElementById("template-history-viewer");
     let fragment = template.content.cloneNode(true);
-    this.appendChild(fragment);
+    document.l10n.connectRoot(this.shadowRoot);
+    shadowRoot.appendChild(fragment);
+    this.addEventListener("click", this);
+  }
+
+  handleEvent(event) {
+    let node = event.composedTarget;
+    let host = node.getRootNode().host;
+    if (host instanceof HistoryResultEl) {
+      let url = host.getAttribute("url");
+      window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
+    }
   }
 
   /**
@@ -70,10 +82,10 @@ export class HistoryViewerEl extends HTMLElement {
    *   send.
    */
   showResults(results, queryString, limit) {
-    let query = this.querySelector(".query");
+    let query = this.shadowRoot.querySelector(".query");
     query.hidden = !queryString.trim();
     query.textContent = queryString;
-    let totalBeforeLimit = this.querySelector(".total-before-limit");
+    let totalBeforeLimit = this.shadowRoot.querySelector(".total-before-limit");
 
     // MR2-2604 - We don't currently know how many results we could have
     // gotten before limiting. For now, just show the total number of
@@ -82,16 +94,18 @@ export class HistoryViewerEl extends HTMLElement {
       totalBeforeLimit: results.length,
     });
 
-    let resultList = this.querySelector(".history-result-list");
+    let resultList = this.shadowRoot.querySelector(".history-result-list");
     let frag = document.createDocumentFragment();
     for (let result of results) {
-      frag.appendChild(new HistoryResultEl(result));
+      let li = document.createElement("li");
+      li.appendChild(new HistoryResultEl(result));
+      frag.appendChild(li);
     }
     resultList.replaceChildren(frag);
   }
 }
 
-export class HistoryResultEl extends HTMLLIElement {
+export class HistoryResultEl extends HTMLElement {
   /**
    * HistoryResultEl constructor.
    *
@@ -100,19 +114,34 @@ export class HistoryResultEl extends HTMLLIElement {
    */
   constructor(result) {
     super();
+    this.setAttribute("url", result.url);
+
+    let shadowRoot = this.attachShadow({ mode: "open" });
+    document.l10n.connectRoot(this.shadowRoot);
+
     let template = document.getElementById("template-history-result");
     let fragment = template.content.cloneNode(true);
+
+    let button = fragment.querySelector(".history-result-button");
+    button.setAttribute("url", result.url);
+    button.title = result.title || result.url;
 
     let title = fragment.querySelector(".history-result-title");
     let url = fragment.querySelector(".history-result-url");
     title.textContent = result.title;
+    title.title = result.title;
     url.textContent = result.url;
+    url.title = result.url;
+
     let lastVisited = fragment.querySelector(".history-result-last-visited");
     lastVisited.textContent = timeSince(result.lastVisitDate);
 
-    this.appendChild(fragment);
+    let icon = fragment.querySelector(".history-result-icon");
+    icon.setAttribute("src", `page-icon:${result.url}`);
+
+    shadowRoot.appendChild(fragment);
   }
 }
 
 customElements.define("e-history-viewer", HistoryViewerEl);
-customElements.define("e-history-result", HistoryResultEl, { extends: "li" });
+customElements.define("e-history-result", HistoryResultEl);

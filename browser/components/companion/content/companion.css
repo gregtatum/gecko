@@ -525,6 +525,18 @@ e-global-nav-debugging h2 {
   background-image: url("chrome://browser/skin/history.svg");
 }
 
+section-panel[name="history"] {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#history-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 #companion-downloads-browser {
   background: unset;
   width: 100vw;
