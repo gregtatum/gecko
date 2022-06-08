@@ -597,7 +597,7 @@ export class CalendarEvent extends MozLitElement {
 
   // Get the "host" of the meeting, or all attendees if the user is the host or
   // the host doesn't appear to be attending.
-  _getRunningLateTargets() {
+  _getEmailTargets() {
     let { attendees, creator, organizer } = this.event;
     let isNonSelfAttendee = user => {
       return (
@@ -627,6 +627,20 @@ export class CalendarEvent extends MozLitElement {
     return attendees.filter(
       a => !this._isSecondaryCalendarEmail(a.email) && !a.isSelf
     );
+  }
+
+  _getEmailLabel() {
+    if (this.status !== "finished") {
+      return "companion-email-late";
+    }
+
+    let hostInfo = this._eventHost();
+
+    if (hostInfo.host && hostInfo.host.isSelf) {
+      return "companion-message-attendees";
+    }
+
+    return "companion-message-host";
   }
 
   // If an event is less than 10 minutes away or has already started,
@@ -690,8 +704,7 @@ export class CalendarEvent extends MozLitElement {
 
   render() {
     let { summary, startDate, endDate, isAllDay, conference } = this.event;
-    let hideShowRunningLateOption =
-      this.listType === "browse" && (isAllDay || this.status === "finished");
+    let hideEmailAction = this.listType === "browse" && isAllDay;
 
     return html`
       <link
@@ -765,11 +778,10 @@ export class CalendarEvent extends MozLitElement {
             ?hidden=${!conference}
           ></panel-item>
           <panel-item
-            class="event-item-running-late-action"
-            data-l10n-id="companion-email-late"
-            @click=${this.openRunningLate}
-            ?hidden=${hideShowRunningLateOption ||
-              !this._getRunningLateTargets().length}
+            class="event-item-email-action"
+            data-l10n-id=${this._getEmailLabel()}
+            @click=${this.openEmail}
+            ?hidden=${hideEmailAction || !this._getEmailTargets().length}
           ></panel-item>
           <panel-item
             class="event-item-open-calendar-action"

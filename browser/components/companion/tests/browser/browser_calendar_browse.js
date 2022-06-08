@@ -261,7 +261,7 @@ add_task(async function testActionItemVisibilityInBrowseView() {
     await checkEventInBrowseView(helper, events);
     await checkMenuActionForBrowseEvent(
       helper,
-      ".event-item-running-late-action",
+      ".event-item-email-action",
       true
     );
     await checkMenuActionForBrowseEvent(
@@ -408,6 +408,116 @@ add_task(async function testExpandableDetailsWithLinks() {
     });
   });
 });
+
+add_task(async function testMessageAttendeesButton() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+    const ATTENDEE_EMAIL = "attendee@example.com";
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      0,
+      30,
+      now.getHours() - 1
+    );
+    let events = [
+      {
+        summary: "My Finished Meeting",
+        startDate: start,
+        endDate: end,
+        attendees: [{ email: ATTENDEE_EMAIL, isSelf: false }],
+        organizer: {
+          email: "test123@gmail.com",
+          isSelf: true,
+        },
+      },
+    ];
+
+    await setBrowseCalendarEvents(helper, events);
+    await validateEmailButtonDetails(
+      helper,
+      "companion-message-attendees",
+      `mailto:${ATTENDEE_EMAIL}`
+    );
+  });
+});
+
+add_task(async function testMessageHostButton() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+    const HOST_EMAIL = "host@example.com";
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      0,
+      30,
+      now.getHours() - 1
+    );
+    let events = [
+      {
+        summary: "Your Finished Meeting",
+        startDate: start,
+        endDate: end,
+        attendees: [{ email: "test123@gmail.com", isSelf: true }],
+        organizer: {
+          email: HOST_EMAIL,
+          isSelf: false,
+        },
+      },
+    ];
+
+    await setBrowseCalendarEvents(helper, events);
+    await validateEmailButtonDetails(
+      helper,
+      "companion-message-host",
+      `mailto:${HOST_EMAIL}`
+    );
+  });
+});
+
+async function validateEmailButtonDetails(helper, expectedId, expectedUrl) {
+  let openedUrl = helper.catchNextOpenedUrl();
+  await helper.runCompanionTask(
+    async l10nId => {
+      let browseEventList = content.document.getElementById(
+        "browse-event-list"
+      );
+      let visibleEvents = browseEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      let event = visibleEvents[0];
+
+      info("Open meatball menu");
+      let openMenuButton = event.shadowRoot.querySelector(
+        ".event-options-button"
+      );
+      let panelMenu = event.shadowRoot.querySelector("panel-list");
+      const EventUtils = ContentTaskUtils.getEventUtils(content);
+      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
+      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
+
+      let emailButton = event.shadowRoot.querySelector(
+        ".event-item-email-action"
+      );
+      ok(!emailButton.hidden, "Email button is visible");
+      is(
+        emailButton.getAttribute("data-l10n-id"),
+        l10nId,
+        "The expected label is used"
+      );
+      emailButton.click();
+    },
+    [expectedId]
+  );
+  let url = await openedUrl;
+  is(url, expectedUrl, "Expected email URL was opened");
+}
 
 async function checkEmptyCalendarMessage(helper, messageId) {
   await helper.runCompanionTask(

@@ -65,18 +65,28 @@ add_task(async function testRunningLate() {
         "calendar-event"
       );
       is(visibleEvents.length, 2, "There are now 2 events");
+
+      let event = visibleEvents[0];
+      let runningLateButton = event.shadowRoot.querySelector(
+        ".event-item-email-action"
+      );
+      is(
+        runningLateButton.getAttribute("data-l10n-id"),
+        "companion-email-late",
+        "The 'Running late' label is used"
+      );
     });
 
     await checkOpenedUrl(
       helper,
       "mailto:attendee@example.com?subject=Running late to meeting My test event",
-      ".event-item-running-late-action"
+      ".event-item-email-action"
     );
 
     await checkOpenedUrl(
       helper,
       "mailto:organizer@example.com?subject=Running late to meeting Your test event",
-      ".event-item-running-late-action",
+      ".event-item-email-action",
       1
     );
   });
@@ -107,7 +117,7 @@ add_task(async function testRunningLateXss() {
     await checkOpenedUrl(
       helper,
       `mailto:uhoh@example.com?subject=Running late to meeting My XSS event" onclick="alert('hi')""`,
-      ".event-item-running-late-action"
+      ".event-item-email-action"
     );
   });
 });
@@ -132,7 +142,7 @@ add_task(async function testRunningLateNoAttendees() {
       is(visibleEvents.length, 1, "There's an event");
       let event = visibleEvents[0];
       let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-running-late-action"
+        ".event-item-email-action"
       );
       ok(runningLateButton.hidden, "The running late button is hidden");
     });
@@ -185,7 +195,7 @@ add_task(async function testRunningLateSecondaryPersonal() {
       is(visibleEvents.length, 1, "There's an event");
       let event = visibleEvents[0];
       let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-running-late-action"
+        ".event-item-email-action"
       );
       ok(runningLateButton.hidden, "The running late button is hidden");
     });

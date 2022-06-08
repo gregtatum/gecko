@@ -513,15 +513,17 @@ class CalendarEventWrapper extends CalendarEvent {
     window.openUrl(url);
   }
 
-  openRunningLate(e) {
-    let emailTargets = this._getRunningLateTargets();
+  openEmail(e) {
+    let emailTargets = this._getEmailTargets();
     if (!emailTargets.length) {
       return;
     }
     let emailTo = emailTargets.map(a => a.email).join(",");
-    window.openUrl(
-      `mailto:${emailTo}?subject=Running late to meeting ${this.event.summary}`
-    );
+    let subject =
+      this.status !== "finished"
+        ? `?subject=Running late to meeting ${this.event.summary}`
+        : "";
+    window.openUrl(`mailto:${emailTo}${subject}`);
   }
 
   hideEvent() {
