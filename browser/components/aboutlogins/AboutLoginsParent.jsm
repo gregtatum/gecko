@@ -306,7 +306,7 @@ class AboutLoginsParent extends JSWindowActorParent {
       this.browsingContext.embedderElement
         ? this.browsingContext.embedderElement
         : this.browsingContext.top.embedderElement,
-      OS_AUTH_ENABLED,
+      lazy.OS_AUTH_ENABLED,
       AboutLogins._authExpirationTime,
       messageText.value,
       captionText.value

@@ -460,7 +460,7 @@ var MigratorPrototype = {
             "chrome://browser/content/default-bookmarks.html",
             {
               replace: true,
-              source: PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,
+              source: lazy.PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,
             }
           ).catch(Cu.reportError);
         }
