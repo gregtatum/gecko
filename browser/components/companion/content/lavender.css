@@ -234,6 +234,7 @@
     --favicon-circle-border-color: var(--colors-lavender-10);
     --favicon-circle-bgcolor: var(--colors-white);
 
+    --history-viewer-separator-color: var(--colors-cafe-70);
     --history-result-button-border-color: transparent;
     --history-result-button-bgcolor: transparent;
     --history-result-button-hover-focus-bgcolor: var(--colors-cafe-10);

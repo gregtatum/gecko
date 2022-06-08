@@ -49,6 +49,9 @@ window.gHistorySearch = {
  * there no limit to the search.
  */
 export class HistoryViewerEl extends HTMLElement {
+  /** @type {IntersectionObserver|null} */
+  #observer = null;
+
   constructor() {
     super();
     let shadowRoot = this.attachShadow({ mode: "open" });
@@ -57,6 +60,35 @@ export class HistoryViewerEl extends HTMLElement {
     document.l10n.connectRoot(this.shadowRoot);
     shadowRoot.appendChild(fragment);
     this.addEventListener("click", this);
+
+    let fn = this.onFirstListItemIntersection.bind(this);
+    this.#observer = new IntersectionObserver(fn, {
+      root: null,
+      rootMargin: "0px",
+      threshold: [HistoryViewerEl.INTERSECTION_THRESHOLD],
+    });
+  }
+
+  /**
+   * Called by the HistoryViewerEl IntersectionObserver when the first
+   * or last <li> in the list gets scrolled out by at least 5%.
+   *
+   * @param {IntersectionObserverEntry[]}
+   */
+  onFirstListItemIntersection(entries) {
+    let separator = this.shadowRoot.querySelector(".separator");
+    let resultList = this.shadowRoot.querySelector(".history-result-list");
+    for (let entry of entries) {
+      if (entry.target == resultList.firstElementChild) {
+        separator.toggleAttribute(
+          "invisible",
+          entry.isIntersecting &&
+            entry.intersectionRatio >= HistoryViewerEl.INTERSECTION_THRESHOLD
+        );
+      } else {
+        resultList.toggleAttribute("show-fade", !entry.isIntersecting);
+      }
+    }
   }
 
   handleEvent(event) {
@@ -82,6 +114,8 @@ export class HistoryViewerEl extends HTMLElement {
    *   send.
    */
   showResults(results, queryString, limit) {
+    this.#observer.disconnect();
+
     let query = this.shadowRoot.querySelector(".query");
     query.hidden = !queryString.trim();
     query.textContent = queryString;
@@ -102,6 +136,17 @@ export class HistoryViewerEl extends HTMLElement {
       frag.appendChild(li);
     }
     resultList.replaceChildren(frag);
+
+    this.#observer.observe(resultList.firstElementChild);
+    this.#observer.observe(resultList.lastElementChild);
+  }
+
+  /**
+   * The intersection threshold that the first list item must cross
+   * before the separator above the list becomes invisible.
+   */
+  static get INTERSECTION_THRESHOLD() {
+    return 0.95;
   }
 }
 
