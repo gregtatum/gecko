@@ -656,6 +656,24 @@ header h2 {
 }
 
 @media (prefers-contrast) {
+  #companion-deck-button-browse[aria-selected="true"],
+  #companion-deck-button-now[aria-selected="true"] {
+    background-color: SelectedItem;
+    color: SelectedItemText;
+  }
+
+  #companion-deck-button-browse[aria-selected="true"] img,
+  #companion-deck-button-now[aria-selected="true"] img {
+    fill: SelectedItemText;
+    -moz-context-properties: fill;
+  }
+
+  #companion-deck-button-browse:hover,
+  #companion-deck-button-now:hover {
+    background-color: var(--in-content-button-background-hover);
+    color: var(--in-content-button-text-color-hover);
+  }
+
   #companion-deck-button-browse:hover img,
   #companion-deck-button-now:hover img {
     fill: var(--in-content-button-text-color-hover);
