@@ -3,7 +3,14 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 window.gHistorySearch = {
-  doQuery(queryString) {
-    console.log("Performing query: ", queryString);
+  async doQuery(queryString) {
+    let { results, limit } = await window.CompanionUtils.sendQuery(
+      "Companion:BeginHistorySearch",
+      {
+        query: { input: queryString },
+      }
+    );
+
+    console.log(limit, results);
   },
 };

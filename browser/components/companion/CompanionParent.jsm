@@ -874,6 +874,9 @@ class CompanionParent extends JSWindowActorParent {
         this._onCalendarPainted(message);
         break;
       }
+      case "Companion:BeginHistorySearch": {
+        return this._onBeginHistorySearch(message);
+      }
     }
     return null;
   }
@@ -1217,6 +1220,51 @@ class CompanionParent extends JSWindowActorParent {
     let delta = time - processStart;
     Glean.pinebuild.calendarPainted.setRaw(delta);
     Glean.pinebuild.calendarEventCount.add(extraData.numberOfEvents);
+  }
+
+  async _onBeginHistorySearch(message) {
+    const RESULT_LIMIT = 50;
+    let db = await PlacesUtils.promiseDBConnection();
+
+    const MATCH_ANYWHERE_UNMODIFIED =
+      Ci.mozIPlacesAutoComplete.MATCH_ANYWHERE_UNMODIFIED;
+    const BEHAVIOR_HISTORY = Ci.mozIPlacesAutoComplete.BEHAVIOR_HISTORY;
+
+    let query = message.data.query;
+    let queryString = "";
+    let queryParams = {};
+    if (query.input) {
+      queryString +=
+        "AND AUTOCOMPLETE_MATCH(:input, p.url, s.title, NULL, 1, 1, 1, 1, :matchBehavior, :searchBehavior, p.title) ";
+
+      queryParams.input = query.input;
+      queryParams.matchBehavior = MATCH_ANYWHERE_UNMODIFIED;
+      queryParams.searchBehavior = BEHAVIOR_HISTORY;
+    }
+    let sqlQuery = `SELECT p.url AS url, IFNULL(s.title, p.title) as title, p.last_visit_date / 1000 AS last_visit_date
+       FROM moz_places p
+       LEFT JOIN moz_places_metadata_snapshots s ON s.place_id = p.id
+       WHERE last_visit_date IS NOT NULL
+       ${queryString}
+       ORDER BY p.last_visit_date DESC
+       LIMIT :limit
+      `;
+    queryParams.limit = RESULT_LIMIT;
+
+    let rows = await db.executeCached(sqlQuery, queryParams);
+
+    let results = rows.map(row => {
+      return {
+        url: row.getResultByName("url"),
+        title: row.getResultByName("title"),
+        lastVisitDate: new Date(row.getResultByName("last_visit_date")),
+      };
+    });
+
+    return {
+      results,
+      limit: RESULT_LIMIT,
+    };
   }
 
   QueryInterface = ChromeUtils.generateQI([
