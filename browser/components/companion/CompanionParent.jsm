@@ -1246,6 +1246,7 @@ class CompanionParent extends JSWindowActorParent {
     let countQuery = `SELECT COUNT(p.id) as total
        FROM moz_places p
        LEFT JOIN moz_places_metadata_snapshots s ON s.place_id = p.id
+       WHERE last_visit_date IS NOT NULL
        ${queryString}
       `;
     let rows = await db.executeCached(countQuery, queryParams);
