@@ -78,7 +78,7 @@ add_task(async function test_dismiss() {
     await helper.runCompanionTask(
       async urls => {
         let suggestedSnapshots = content.document.querySelector(
-          "e-suggested-snapshot-list"
+          "suggested-snapshot-list"
         );
         await ContentTaskUtils.waitForCondition(() => {
           let snapshots = Array.from(
