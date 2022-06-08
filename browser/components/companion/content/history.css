@@ -114,3 +114,28 @@ button.history-result-button:hover:active {
   text-overflow: ellipsis;
   width: 100%;
 }
+
+.history-result-list > li.footer {
+  display: block;
+  margin-block: 16px 32px;
+}
+
+footer > div {
+  text-align: center;
+}
+
+.bottom-separator {
+  display: flex;
+  align-items: center;
+  margin-inline: 16px;
+}
+
+.bottom-separator > .line {
+  height: 1px;
+  flex: 1;
+  background-color: var(--history-viewer-bottom-separator-color, WindowText);
+}
+
+.bottom-separator > .limit-out-of-total {
+  padding: 0 8px;
+}

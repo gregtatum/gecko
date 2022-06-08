@@ -134,7 +134,25 @@ export class HistoryViewerEl extends HTMLElement {
       li.appendChild(new HistoryResultEl(result));
       frag.appendChild(li);
     }
+
     resultList.replaceChildren(frag);
+
+    if (results.length == limit) {
+      let template = document.getElementById("template-history-viewer-footer");
+      let footer = template.content.cloneNode(true);
+      let footerLi = document.createElement("li");
+      footerLi.classList.add("footer");
+      footerLi.appendChild(footer);
+      resultList.appendChild(footerLi);
+
+      let limitOutOfTotal = this.shadowRoot.querySelector(
+        ".limit-out-of-total"
+      );
+      limitOutOfTotal.dataset.l10nArgs = JSON.stringify({
+        total: results.length,
+        totalBeforeLimit: total,
+      });
+    }
 
     this.#observer.observe(resultList.firstElementChild);
     this.#observer.observe(resultList.lastElementChild);

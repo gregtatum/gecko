@@ -222,3 +222,9 @@ history-recently-viewed = RECENTLY VIEWED
 #   $totalBeforeLimit (Number) - The total number of results from a history
 #                                query before limiting is applied.
 history-results-total-before-limit = { $totalBeforeLimit } results
+# Variables:
+#   $total (Number) - The total number of results displayed with limiting applied.
+#   $totalBeforeLimit (Number) - The total number of results from a history
+#                                query before limiting is applied.
+history-results-limit-out-of-total = Viewing 1-{ $total } out of { $totalBeforeLimit } results
+history-results-refine-query = Refine your search
