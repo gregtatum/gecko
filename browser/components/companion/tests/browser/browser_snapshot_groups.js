@@ -107,7 +107,7 @@ add_task(async function test_snapshot_groups_displayed() {
       );
       return length;
     };
-    TestUtils.waitForCondition(async () => snapshotGroupsLength());
+    await TestUtils.waitForCondition(snapshotGroupsLength);
     Assert.equal(await snapshotGroupsLength(), 1, "Showing snapshot groups");
   }, win);
 });
