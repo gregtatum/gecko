@@ -11,12 +11,6 @@ class SectionPanel extends MozLitElement {
   };
   static get styles() {
     return css`
-      :host() {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-      }
-
       .section-panel-header {
         display: flex;
         padding: 24px 0 16px;
@@ -42,7 +36,7 @@ class SectionPanel extends MozLitElement {
       }
 
       .section-panel-content {
-        flex-grow: 1;
+        min-height: 0;
       }
     `;
   }

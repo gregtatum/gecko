@@ -962,6 +962,10 @@ body[flow-reset] companion-manager {
   border: 0.5px solid rgba(250, 247, 242, 0.8);
 }
 
+#companion-browser {
+  border-radius: 16px;
+}
+
 .sidebar-splitter {
   border: none;
 }
