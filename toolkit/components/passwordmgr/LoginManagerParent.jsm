@@ -32,6 +32,7 @@ XPCOMUtils.defineLazyGetter(lazy, "PasswordRulesManager", () => {
 });
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
+  AppConstants: "resource://gre/modules/AppConstants.jsm",
   ChromeMigrationUtils: "resource:///modules/ChromeMigrationUtils.jsm",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   LoginHelper: "resource://gre/modules/LoginHelper.jsm",
@@ -408,10 +409,18 @@ class LoginManagerParent extends JSWindowActorParent {
 
       case "PasswordManager:OpenPreferences": {
         let window = this.getRootBrowser().ownerGlobal;
-        lazy.LoginHelper.openPasswordManager(window, {
-          filterString: data.hostname,
-          entryPoint: data.entryPoint,
-        });
+
+        if (lazy.AppConstants.PINEBUILD) {
+          Services.obs.notifyObservers(
+            window,
+            "companion-show-passwords-panel"
+          );
+        } else {
+          lazy.LoginHelper.openPasswordManager(window, {
+            filterString: data.hostname,
+            entryPoint: data.entryPoint,
+          });
+        }
         break;
       }
 

@@ -103,6 +103,7 @@ class CompanionParent extends JSWindowActorParent {
       "browser-window-tracker-tab-removed"
     );
 
+    Services.obs.addObserver(this._observer, "companion-show-passwords-panel");
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
@@ -195,7 +196,10 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-
+    Services.obs.removeObserver(
+      this._observer,
+      "companion-show-passwords-panel"
+    );
     Services.obs.removeObserver(this._observer, "companion-signin");
     Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
@@ -576,6 +580,10 @@ class CompanionParent extends JSWindowActorParent {
       case "browser-window-tracker-tab-removed": {
         this.unregisterTab(subj);
         this.sendAsyncMessage("Companion:TabRemoved", this.getTabData(subj));
+        break;
+      }
+      case "companion-show-passwords-panel": {
+        this.sendAsyncMessage("Companion:ShowPasswordsPanel");
         break;
       }
       case "companion-signin":

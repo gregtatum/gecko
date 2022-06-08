@@ -19,6 +19,10 @@ const { FakeEventFactory } = ChromeUtils.import(
   "resource:///modules/WorkshopFakeEvents.jsm"
 );
 
+let { LoginTestUtils } = ChromeUtils.import(
+  "resource://testing-common/LoginTestUtils.jsm"
+);
+
 const { LoginHelper } = ChromeUtils.import(
   "resource://gre/modules/LoginHelper.jsm"
 );
@@ -69,6 +73,9 @@ registerCleanupFunction(async () => {
 
   // Move the cursor out of the companion area to avoid messing with other tests.
   EventUtils.synthesizeMouse(gNavToolbox, 0, 0, { type: "mousemove" });
+
+  // Remove any logins that may have been added
+  LoginTestUtils.clearData();
 });
 
 const redirectHosts = [

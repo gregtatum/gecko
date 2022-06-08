@@ -50,6 +50,9 @@ function maybeInitializeUI() {
   window.addEventListener("Companion:ResetFlowExited", () => {
     document.body.removeAttribute("flow-reset");
   });
+  window.addEventListener("Companion:ShowPasswordsPanel", () => {
+    document.getElementById("companion-deck").selectedViewName = "passwords";
+  });
 
   let goBack = () => {
     document.dispatchEvent(new Event("browse-panel-hidden"));
