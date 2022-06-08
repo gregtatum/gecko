@@ -333,7 +333,7 @@ MethodStatus BaselineCompiler::compile() {
   script->jitScript()->setBaselineScript(script, baselineScript.release());
 
 #ifdef JS_ION_PERF
-  writePerfSpewerBaselineProfile(script, code);
+  perfSpewer_.writeProfile(script, code);
 #endif
 
 #ifdef MOZ_VTUNE
@@ -5293,6 +5293,16 @@ bool BaselineCodeGen<Handler>::emit_EndIter() {
 }
 
 template <typename Handler>
+bool BaselineCodeGen<Handler>::emit_CloseIter() {
+  frame.popRegsAndSync(1);
+
+  Register iter = R0.scratchReg();
+  masm.unboxObject(R0, iter);
+
+  return emitNextIC();
+}
+
+template <typename Handler>
 bool BaselineCodeGen<Handler>::emit_IsGenClosing() {
   return emitIsMagicValue();
 }
@@ -6497,6 +6507,10 @@ MethodStatus BaselineCompiler::emitBody() {
     if (MOZ_UNLIKELY(compileDebugInstrumentation()) && !emitDebugTrap()) {
       return Method_Error;
     }
+
+#ifdef JS_ION_PERF
+    perfSpewer_.recordInstruction(masm, op);
+#endif
 
 #define EMIT_OP(OP, ...)                                       \
   case JSOp::OP: {                                             \

@@ -318,6 +318,8 @@ class MOZ_STATIC_CLASS OpToFallbackKindTable {
             BaselineICFallbackKind::OptimizeSpreadCall);
 
     setKind(JSOp::Rest, BaselineICFallbackKind::Rest);
+
+    setKind(JSOp::CloseIter, BaselineICFallbackKind::CloseIter);
   }
 };
 
@@ -434,8 +436,9 @@ static void TryAttachStub(const char* name, JSContext* cx, BaselineFrame* frame,
     IRGenerator gen(cx, script, pc, stub->state(), std::forward<Args>(args)...);
     switch (gen.tryAttachStub()) {
       case AttachDecision::Attach: {
-        ICAttachResult result = AttachBaselineCacheIRStub(
-            cx, gen.writerRef(), gen.cacheKind(), script, icScript, stub);
+        ICAttachResult result =
+            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
+                                      script, icScript, stub, gen.stubName());
         if (result == ICAttachResult::Attached) {
           attached = true;
           JitSpew(JitSpew_BaselineIC, "  Attached %s CacheIR stub", name);
@@ -793,9 +796,9 @@ bool DoSetElemFallback(JSContext* cx, BaselineFrame* frame,
                            objv, index, rhs);
     switch (gen.tryAttachStub()) {
       case AttachDecision::Attach: {
-        ICAttachResult result =
-            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
-                                      frame->script(), icScript, stub);
+        ICAttachResult result = AttachBaselineCacheIRStub(
+            cx, gen.writerRef(), gen.cacheKind(), frame->script(), icScript,
+            stub, gen.stubName());
         if (result == ICAttachResult::Attached) {
           attached = true;
           JitSpew(JitSpew_BaselineIC, "  Attached SetElem CacheIR stub");
@@ -854,9 +857,9 @@ bool DoSetElemFallback(JSContext* cx, BaselineFrame* frame,
     switch (decision) {
       case AttachDecision::Attach: {
         ICScript* icScript = frame->icScript();
-        ICAttachResult result =
-            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
-                                      frame->script(), icScript, stub);
+        ICAttachResult result = AttachBaselineCacheIRStub(
+            cx, gen.writerRef(), gen.cacheKind(), frame->script(), icScript,
+            stub, gen.stubName());
         if (result == ICAttachResult::Attached) {
           attached = true;
           JitSpew(JitSpew_BaselineIC, "  Attached SetElem CacheIR stub");
@@ -1356,9 +1359,9 @@ bool DoSetPropFallback(JSContext* cx, BaselineFrame* frame,
     switch (gen.tryAttachStub()) {
       case AttachDecision::Attach: {
         ICScript* icScript = frame->icScript();
-        ICAttachResult result =
-            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
-                                      frame->script(), icScript, stub);
+        ICAttachResult result = AttachBaselineCacheIRStub(
+            cx, gen.writerRef(), gen.cacheKind(), frame->script(), icScript,
+            stub, gen.stubName());
         if (result == ICAttachResult::Attached) {
           attached = true;
           JitSpew(JitSpew_BaselineIC, "  Attached SetProp CacheIR stub");
@@ -1430,9 +1433,9 @@ bool DoSetPropFallback(JSContext* cx, BaselineFrame* frame,
     switch (decision) {
       case AttachDecision::Attach: {
         ICScript* icScript = frame->icScript();
-        ICAttachResult result =
-            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
-                                      frame->script(), icScript, stub);
+        ICAttachResult result = AttachBaselineCacheIRStub(
+            cx, gen.writerRef(), gen.cacheKind(), frame->script(), icScript,
+            stub, gen.stubName());
         if (result == ICAttachResult::Attached) {
           attached = true;
           JitSpew(JitSpew_BaselineIC, "  Attached SetElem CacheIR stub");
@@ -1541,8 +1544,9 @@ bool DoCallFallback(JSContext* cx, BaselineFrame* frame, ICFallbackStub* stub,
         break;
       case AttachDecision::Attach: {
         ICScript* icScript = frame->icScript();
-        ICAttachResult result = AttachBaselineCacheIRStub(
-            cx, gen.writerRef(), gen.cacheKind(), script, icScript, stub);
+        ICAttachResult result =
+            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
+                                      script, icScript, stub, gen.stubName());
         if (result == ICAttachResult::Attached) {
           handled = true;
           JitSpew(JitSpew_BaselineIC, "  Attached Call CacheIR stub");
@@ -1629,8 +1633,9 @@ bool DoSpreadCallFallback(JSContext* cx, BaselineFrame* frame,
         break;
       case AttachDecision::Attach: {
         ICScript* icScript = frame->icScript();
-        ICAttachResult result = AttachBaselineCacheIRStub(
-            cx, gen.writerRef(), gen.cacheKind(), script, icScript, stub);
+        ICAttachResult result =
+            AttachBaselineCacheIRStub(cx, gen.writerRef(), gen.cacheKind(),
+                                      script, icScript, stub, gen.stubName());
 
         if (result == ICAttachResult::Attached) {
           handled = true;
@@ -2412,6 +2417,36 @@ bool FallbackICCodeCompiler::emit_NewObject() {
   using Fn =
       bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, MutableHandleValue);
   return tailCallVM<Fn, DoNewObjectFallback>(masm);
+}
+
+//
+// CloseIter_Fallback
+//
+
+bool DoCloseIterFallback(JSContext* cx, BaselineFrame* frame,
+                         ICFallbackStub* stub, HandleObject iter) {
+  stub->incrementEnteredCount();
+  MaybeNotifyWarp(frame->outerScript(), stub);
+  FallbackICSpew(cx, stub, "CloseIter");
+
+  jsbytecode* pc = StubOffsetToPc(stub, frame->script());
+  CompletionKind kind = CompletionKind(GET_UINT8(pc));
+
+  TryAttachStub<CloseIterIRGenerator>("CloseIter", cx, frame, stub, iter, kind);
+
+  return CloseIterOperation(cx, iter, kind);
+}
+
+bool FallbackICCodeCompiler::emit_CloseIter() {
+  EmitRestoreTailCallReg(masm);
+
+  masm.push(R0.scratchReg());
+  masm.push(ICStubReg);
+  pushStubPayload(masm, R0.scratchReg());
+
+  using Fn =
+      bool (*)(JSContext*, BaselineFrame*, ICFallbackStub*, HandleObject);
+  return tailCallVM<Fn, DoCloseIterFallback>(masm);
 }
 
 bool JitRuntime::generateBaselineICFallbackCode(JSContext* cx) {
