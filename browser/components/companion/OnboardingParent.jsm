@@ -20,8 +20,15 @@ class OnboardingParent extends JSWindowActorParent {
       });
 
       // Enable commands that were disabled during onboarding.
-      let cmd = window.document.getElementById("Browser:OpenFile");
+      let doc = window.document;
+      let cmd = doc.getElementById("Browser:OpenFile");
       cmd.setAttribute("disabled", false);
+
+      cmd = doc.getElementById("Browser:ShowAllHistory");
+      cmd.removeAttribute("disabled");
+
+      let menu = doc.getElementById("history-menu");
+      menu.hidden = false;
     }
   }
 }

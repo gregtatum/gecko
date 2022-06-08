@@ -39,13 +39,18 @@ var PineBuildUIUtils = {
       cmd.hidden = true;
     }
 
-    // If the user is in on-boarding, disable UI that enables them to create new windows.
+    // If the user is in on-boarding, disable UI touchpoints that enabled them to browse.
     if (!Services.prefs.getBoolPref("browser.pinebuild.onboarding.complete")) {
       cmd = document.getElementById("cmd_newNavigator");
       cmd.setAttribute("disabled", true);
 
       cmd = document.getElementById("Browser:OpenFile");
       cmd.setAttribute("disabled", true);
+
+      cmd = document.getElementById("Browser:ShowAllHistory");
+      cmd.setAttribute("disabled", true);
+      let menu = document.getElementById("history-menu");
+      menu.hidden = true;
     }
   },
 
