@@ -1091,7 +1091,9 @@ DownloadsViewUI.DownloadElementShell.prototype = {
   },
 
   onButton() {
-    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+    if (
+      lazy.Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
+    ) {
       let window = this.browserWindow || this.element.ownerGlobal;
       window.dispatchEvent(
         new CustomEvent("DownloadDoCommand", {
