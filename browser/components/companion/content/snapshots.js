@@ -142,6 +142,14 @@ export class Snapshot extends HTMLElement {
               }
             );
             break;
+          case "personal":
+            window.CompanionUtils.sendAsyncMessage(
+              "Companion:PersonalSnapshot",
+              {
+                url: this.data.url,
+              }
+            );
+            break;
           default:
             this.cardClicked();
         }

@@ -821,6 +821,13 @@ class CompanionParent extends JSWindowActorParent {
         );
         break;
       }
+      case "Companion:PersonalSnapshot": {
+        await this._onDismissSnapshot(
+          message,
+          Snapshots.REMOVED_REASON.PERSONAL
+        );
+        break;
+      }
       case "Companion:FetchSnapshotGroups": {
         this.getSnapshotGroups().catch(console.error);
         break;

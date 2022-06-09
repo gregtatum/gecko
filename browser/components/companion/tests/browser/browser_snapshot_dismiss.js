@@ -6,6 +6,7 @@
 const TEST_URLS = [
   { uri: "https://invalid.com/", title: "Page 0" },
   { uri: "https://mochi.test/", title: "Page 1" },
+  { uri: "https://example.org/", title: "Page 2" },
 ];
 
 XPCOMUtils.defineLazyModuleGetters(this, {
@@ -36,14 +37,12 @@ add_setup(async function() {
   }
   await Interactions.store.flush();
 
-  await Snapshots.add({
-    url: TEST_URLS[0].uri,
-    userPersisted: Snapshots.USER_PERSISTED.MANUAL,
-  });
-  await Snapshots.add({
-    url: TEST_URLS[1].uri,
-    userPersisted: Snapshots.USER_PERSISTED.MANUAL,
-  });
+  for (let test of TEST_URLS) {
+    await Snapshots.add({
+      url: test.uri,
+      userPersisted: Snapshots.USER_PERSISTED.MANUAL,
+    });
+  }
 
   // Run test in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
@@ -87,47 +86,45 @@ add_task(async function test_dismiss() {
           return snapshots.length == urls.length;
         }, "Should be the correct number of links displayed");
 
-        info("Dismiss the first snapshot with dismiss");
-        let snapshot = suggestedSnapshots.querySelectorAll("e-snapshot")[0];
-        let dismiss = snapshot.lastElementChild.querySelector(
-          "panel-item[data-action=dismiss"
-        );
-        Assert.ok(dismiss, "Found dismiss option");
-        dismiss.button.click();
-        await ContentTaskUtils.waitForCondition(() => {
-          let snapshots = Array.from(
-            suggestedSnapshots.querySelectorAll("e-snapshot")
+        for (let [i, action] of [
+          "dismiss",
+          "not-relevant",
+          "personal",
+        ].entries()) {
+          info(`Dismiss the snapshot with ${action}`);
+          let snapshot = suggestedSnapshots.querySelectorAll("e-snapshot")[0];
+          let actionButton = snapshot.lastElementChild.querySelector(
+            `panel-item[data-action=${action}`
           );
-          return snapshots.length == urls.length - 1;
-        }, "Should be the correct number of links displayed");
-
-        info("Dismiss the second snapshot with not-relevant");
-        snapshot = suggestedSnapshots.querySelectorAll("e-snapshot")[0];
-        let notRelevant = snapshot.lastElementChild.querySelector(
-          "panel-item[data-action=not-relevant"
-        );
-        Assert.ok(notRelevant, "Found notRelevant option");
-        notRelevant.button.click();
-        await ContentTaskUtils.waitForCondition(() => {
-          let snapshots = Array.from(
-            suggestedSnapshots.querySelectorAll("e-snapshot")
-          );
-          return snapshots.length == urls.length - 2;
-        }, "Should be the correct number of links displayed");
+          Assert.ok(actionButton, "Found the option");
+          actionButton.button.click();
+          await ContentTaskUtils.waitForCondition(() => {
+            let snapshots = Array.from(
+              suggestedSnapshots.querySelectorAll("e-snapshot")
+            );
+            return snapshots.length == urls.length - i - 1;
+          }, "Should be the correct number of links displayed");
+        }
       },
       [TEST_URLS]
     );
   }, win);
 
-  // Check database values.
-  let dismissedSnapshot = await Snapshots.get(TEST_URLS[1].uri, true);
+  // Check database values. Note the urls are accessed in reverse order as
+  // snapshots are displayed in most recent order.
+  let dismissedSnapshot = await Snapshots.get(TEST_URLS[2].uri, true);
   Assert.equal(
     dismissedSnapshot.removedReason,
     Snapshots.REMOVED_REASON.DISMISS
   );
-  let notRelevantSnapshot = await Snapshots.get(TEST_URLS[0].uri, true);
+  let notRelevantSnapshot = await Snapshots.get(TEST_URLS[1].uri, true);
   Assert.equal(
     notRelevantSnapshot.removedReason,
     Snapshots.REMOVED_REASON.NOT_RELEVANT
+  );
+  let personalSnapshot = await Snapshots.get(TEST_URLS[0].uri, true);
+  Assert.equal(
+    personalSnapshot.removedReason,
+    Snapshots.REMOVED_REASON.PERSONAL
   );
 });

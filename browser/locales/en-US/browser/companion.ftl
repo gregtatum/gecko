@@ -153,6 +153,7 @@ addons-unsupported = { -brand-short-name } does not support this extension.
 # These are menu items shown on snapshot cards in the companion.
 snapshot-dismiss = Dismiss
 snapshot-not-relevant = Not relevant
+snapshot-personal = This is personal
 snapshot-options =
   .aria-label = Options
 
