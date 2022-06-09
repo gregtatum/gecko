@@ -3641,7 +3641,7 @@ BrowserGlue.prototype = {
     if (currentVersion < 1) {
       // MR2-306: Force light theme until dark theme is supported
       try {
-        AddonManager.getAddonsByTypes(["theme"]).then(async themes => {
+        lazy.AddonManager.getAddonsByTypes(["theme"]).then(async themes => {
           let theme = themes.find(
             t => t.id == "firefox-compact-light@mozilla.org"
           );
