@@ -890,7 +890,7 @@ body[flow-reset] #urlbar[breakout] > #urlbar-input-container {
 }
 
 body[flow-reset] #urlbar-background {
-  background: rgba(255,255,255,0.74);
+  background: var(--urlbar-default-background);
   border-radius: calc(var(--urlbar-border-radius) * 2);
 }
 

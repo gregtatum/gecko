@@ -85,4 +85,5 @@
   --avm-view-group-element-breadcrumb-active-fill-color: SelectedItem;
 
   --urlbar-default-border: 1px solid var(--toolbarbutton-icon-fill);
+  --urlbar-default-background: ButtonFace;
 }
