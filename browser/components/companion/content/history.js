@@ -5,6 +5,15 @@
 import { timeSince } from "./time-since.js";
 
 window.gHistorySearch = {
+  init() {
+    window.addEventListener("History:SetQuery", this);
+  },
+
+  handleEvent(event) {
+    if (event.type == "History:SetQuery") {
+      this.doQuery(event.detail.queryString);
+    }
+  },
   /**
    * Makes a History query request to the parent process for a given
    * query string, and then displays the results using the
@@ -29,6 +38,8 @@ window.gHistorySearch = {
     viewer.showResults(results, queryString, limit, total);
   },
 };
+
+window.gHistorySearch.init();
 
 /**
  * @typedef {Object} HistoryResult
@@ -61,6 +72,9 @@ export class HistoryViewerEl extends HTMLElement {
     shadowRoot.appendChild(fragment);
     this.addEventListener("click", this);
 
+    let searchInput = shadowRoot.querySelector(".history-search-input");
+    searchInput.addEventListener("command", this);
+
     let fn = this.onFirstListItemIntersection.bind(this);
     this.#observer = new IntersectionObserver(fn, {
       root: null,
@@ -92,11 +106,25 @@ export class HistoryViewerEl extends HTMLElement {
   }
 
   handleEvent(event) {
-    let node = event.composedTarget;
-    let host = node.getRootNode().host;
-    if (host instanceof HistoryResultEl) {
-      let url = host.getAttribute("url");
-      window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
+    switch (event.type) {
+      case "command": {
+        let e = new CustomEvent("History:SetQuery", {
+          bubbles: true,
+          composed: true,
+          detail: { queryString: event.target.value },
+        });
+        this.dispatchEvent(e);
+        break;
+      }
+      case "click": {
+        let node = event.composedTarget;
+        let host = node.getRootNode().host;
+        if (host instanceof HistoryResultEl) {
+          let url = host.getAttribute("url");
+          window.CompanionUtils.sendAsyncMessage("Companion:OpenURL", { url });
+        }
+        break;
+      }
     }
   }
 
@@ -119,13 +147,17 @@ export class HistoryViewerEl extends HTMLElement {
   showResults(results, queryString, limit, total) {
     this.#observer.disconnect();
 
-    let query = this.shadowRoot.querySelector(".query");
-    query.hidden = !queryString.trim();
-    query.textContent = queryString;
+    let searchInput = this.shadowRoot.querySelector(".history-search-input");
+    searchInput.value = queryString;
     let totalBeforeLimit = this.shadowRoot.querySelector(".total-before-limit");
-    totalBeforeLimit.dataset.l10nArgs = JSON.stringify({
-      totalBeforeLimit: total,
-    });
+    document.l10n.setAttributes(
+      totalBeforeLimit,
+      "history-results-total-before-limit",
+      {
+        totalBeforeLimit: total,
+      }
+    );
+    totalBeforeLimit.toggleAttribute("empty-query", queryString.trim() == "");
 
     let resultList = this.shadowRoot.querySelector(".history-result-list");
     let frag = document.createDocumentFragment();

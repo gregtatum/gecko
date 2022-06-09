@@ -231,3 +231,5 @@ history-results-total-before-limit = { $totalBeforeLimit } results
 #                                query before limiting is applied.
 history-results-limit-out-of-total = Viewing 1-{ $total } out of { $totalBeforeLimit } results
 history-results-refine-query = Refine your search
+history-results-search-input =
+  .placeholder = Search in History…

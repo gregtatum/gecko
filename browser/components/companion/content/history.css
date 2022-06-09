@@ -19,6 +19,18 @@ h2 {
   mask-image: linear-gradient(to bottom, rgb(0, 0, 0) calc(100% - 16px), transparent 100%);
 }
 
+.history-search-input {
+  border-radius: 500px;
+  margin-inline: 16px;
+}
+
+@media not (prefers-contrast) {
+  .history-search-input:hover,
+  .history-search-input:active {
+    box-shadow:  -1px 2px 6px rgba(132, 106, 65, 0.13);
+  }
+}
+
 .separator {
   margin-inline: 16px;
   margin-block: 8px 0;
@@ -45,9 +57,12 @@ h2 {
   width: 100%;
 }
 
-.query,
 .total-before-limit {
   margin-block: 0 24px;
+}
+
+.total-before-limit[empty-query] {
+  visibility: hidden;
 }
 
 .recently-viewed {

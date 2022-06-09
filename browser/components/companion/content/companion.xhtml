@@ -38,7 +38,7 @@
   <script type="module" src="relative-time.js" />
   <script type="module" src="history.js" />
 
-  <script src="chrome://global/content/elements/named-deck.js" />
+  <script src="chrome://global/content/customElements.js"/>
   <script src="chrome://global/content/elements/panel-list.js"/>
 
   <script type="module" src="chrome://browser/content/companion/widgets/favicon-circle.js"/>
@@ -234,8 +234,8 @@
       href="chrome://browser/content/companion/fonts.css"
     />
     <link rel="stylesheet" href="history.css"/>
-    <h2 class="query text-body-l-med"/>
-    <h2 class="total-before-limit text-body-s" data-l10n-id="history-results-total-before-limit" data-l10n-args='{"totalBeforeLimit": 0}'/>
+    <xul:search-textbox class="history-search-input" timeout="1" data-l10n-id="history-results-search-input" data-l10n-attrs="placeholder"/>
+    <h2 class="total-before-limit text-body-s"/>
     <h2 class="recently-viewed text-heading-s" data-l10n-id="history-recently-viewed"/>
     <div class="separator" role="presentation" invisible="true"/>
     <ol class="history-result-list"/>
