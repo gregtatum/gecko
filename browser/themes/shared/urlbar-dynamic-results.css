@@ -304,6 +304,19 @@
   box-shadow: var(--quickactions-topsites-outset-shadow);
 }
 
+@media (prefers-contrast) {
+  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row,
+  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
+    border: 1px solid var(--page-action-menu-button-border-color);
+  }
+
+  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] .urlbarView-quickaction-row:hover,
+  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon:hover {
+    background-color: var(--button-hover-bgcolor);
+    color: var(--page-action-menu-button-hover-fill);
+  }
+}
+
 #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=quickActions] > .urlbarView-row-inner {
   height: 70px;
 }
