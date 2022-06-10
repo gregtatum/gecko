@@ -48,13 +48,12 @@ export class CalendarEvent extends MozLitElement {
   static get properties() {
     return {
       event: { type: Object },
-      linksCollapsed: { type: Boolean },
-      upcoming: { type: Boolean },
-      detailsCollapsed: { type: Boolean },
       isFakeTime: { type: Boolean },
       serial: { type: Number },
-      status: { type: String },
       listType: { type: String }, // "now" | "browse"
+      status: { type: String, state: true },
+      linksCollapsed: { type: Boolean, state: true },
+      detailsCollapsed: { type: Boolean, state: true },
     };
   }
 

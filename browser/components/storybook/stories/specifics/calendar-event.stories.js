@@ -7,8 +7,19 @@ import { html } from "lit";
 
 customElements.define("calendar-event", CalendarEvent);
 
+const LIST_TYPES = {
+  now: "now",
+  browse: "browse",
+};
+
 export default {
   title: "Specifics/Companion/Calendar Event",
+  argTypes: {
+    listType: {
+      options: [LIST_TYPES.now, LIST_TYPES.browse],
+      control: { type: "radio" },
+    },
+  },
 };
 
 function makeDate({ addMinutes }) {
@@ -17,11 +28,12 @@ function makeDate({ addMinutes }) {
   return now;
 }
 
-const Template = ({ event }) =>
+const Template = ({ event, listType = LIST_TYPES.now }) =>
   html`
     <div class="card card-no-hover" style="padding: 0; max-width: 325px;">
       <calendar-event
         .event=${event}
+        .listType=${listType}
         .setExtendedTimeout=${(...args) => setTimeout(...args)}
         .getLinkProperties=${link => ({ title: link.title || link.text })}
         .getDocumentIcon=${() =>
@@ -32,6 +44,7 @@ const Template = ({ event }) =>
 
 export const Default = Template.bind({});
 Default.args = {
+  listType: LIST_TYPES.now,
   event: {
     id: "some-id",
     serviceId: 1,
@@ -92,6 +105,7 @@ Default.args = {
 
 export const Future = Template.bind({});
 Future.args = {
+  ...Default.args,
   event: {
     ...Default.args.event,
     startDate: makeDate({ addMinutes: 120 }),
@@ -101,6 +115,7 @@ Future.args = {
 
 export const InProgress = Template.bind({});
 InProgress.args = {
+  ...Default.args,
   event: {
     ...Default.args.event,
     startDate: makeDate({ addMinutes: -10 }),
@@ -109,15 +124,18 @@ InProgress.args = {
 
 export const Finished = Template.bind({});
 Finished.args = {
+  ...Default.args,
   event: {
     ...Default.args.event,
     startDate: makeDate({ addMinutes: -75 }),
     endDate: makeDate({ addMinutes: -10 }),
   },
+  listType: LIST_TYPES.browse,
 };
 
 export const TwoLinks = Template.bind({});
 TwoLinks.args = {
+  ...Default.args,
   event: {
     ...Default.args.event,
     links: Default.args.event.links.slice(0, 2),
@@ -134,8 +152,15 @@ OneLink.args = {
 
 export const NoLinks = Template.bind({});
 NoLinks.args = {
+  ...Default.args,
   event: {
     ...Default.args.event,
     links: [],
   },
+};
+
+export const Browse = Template.bind({});
+Browse.args = {
+  listType: LIST_TYPES.browse,
+  event: Default.args.event,
 };
