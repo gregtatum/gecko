@@ -188,7 +188,10 @@ class CompanionChild extends JSWindowActorChild {
       }
       case "Companion:DoHistorySearch": {
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-        waivedContent.gHistorySearch.doQuery(message.data.queryString);
+        waivedContent.gHistorySearch.doQuery(
+          message.data.queryString,
+          true /* fromNavigationBar */
+        );
         break;
       }
     }

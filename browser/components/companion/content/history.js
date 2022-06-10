@@ -22,11 +22,14 @@ window.gHistorySearch = {
    * @param {String} queryString
    *   The string to do a query for. A false-y value or a string that
    *   trims to the empty string requests all recent history.
+   * @param {boolean} [fromNavigationBar=false]
+   *   True if the query is the result of a handoff from the navigation
+   *   bar.
    * @returns Promise
    * @resolves undefined
    *   Resolves once the results have been displayed.
    */
-  async doQuery(queryString) {
+  async doQuery(queryString, fromNavigationBar = false) {
     let { results, limit, total } = await window.CompanionUtils.sendQuery(
       "Companion:BeginHistorySearch",
       {
@@ -35,7 +38,7 @@ window.gHistorySearch = {
     );
 
     let viewer = document.getElementById("history-viewer");
-    viewer.showResults(results, queryString, limit, total);
+    viewer.showResults(results, queryString, limit, total, fromNavigationBar);
   },
 };
 
@@ -143,12 +146,18 @@ export class HistoryViewerEl extends HTMLElement {
    * @param {Number} total
    *   The total number of results that exist in the database, without
    *   the limit applied.
+   * @param {boolean} fromNavigationBar
+   *   True if the results are for a query initiated by a handoff from the
+   *   navigation bar.
    */
-  showResults(results, queryString, limit, total) {
+  showResults(results, queryString, limit, total, fromNavigationBar) {
     this.#observer.disconnect();
 
-    let searchInput = this.shadowRoot.querySelector(".history-search-input");
-    searchInput.value = queryString;
+    if (fromNavigationBar) {
+      let searchInput = this.shadowRoot.querySelector(".history-search-input");
+      searchInput.value = queryString;
+    }
+
     let totalBeforeLimit = this.shadowRoot.querySelector(".total-before-limit");
     document.l10n.setAttributes(
       totalBeforeLimit,
