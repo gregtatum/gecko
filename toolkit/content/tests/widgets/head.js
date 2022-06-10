@@ -34,6 +34,15 @@ function getElementWithinVideo(video, aValue) {
   return shadowRoot.getElementById(aValue);
 }
 
+function shadowRootQuerySelector(element, selector) {
+  const shadowRoot = SpecialPowers.wrap(element).openOrClosedShadowRoot;
+  return shadowRoot?.querySelector(selector);
+}
+function shadowRootQuerySelectorAll(element, selector) {
+  const shadowRoot = SpecialPowers.wrap(element).openOrClosedShadowRoot;
+  return shadowRoot?.querySelectorAll(selector);
+}
+
 function executeTests() {
   return tests
     .map(fn => () => new Promise(fn))
