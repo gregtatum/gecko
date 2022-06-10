@@ -2692,8 +2692,8 @@ pref("browser.places.snapshots.expiration.days", 210);
 pref("browser.places.snapshots.expiration.userManaged.days", 420);
 
 #ifdef PINEBUILD
-  pref("browser.contentblocking.category", "strict", locked);
-  pref("privacy.trackingprotection.enabled", true, locked);
+  pref("browser.contentblocking.category", "strict");
+  pref("privacy.trackingprotection.enabled", true);
   pref("privacy.trackingprotection.socialtracking.enabled", true, locked);
   pref("browser.places.interactions.enabled", true, locked);
   // Enable Places storage for previews images. This is not locked, to allow it
