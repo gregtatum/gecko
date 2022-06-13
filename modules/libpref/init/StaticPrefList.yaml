@@ -1122,6 +1122,20 @@
   value: "#FBFBFE"
   mirror: never
 
+# Determines the behavior of OS zoom settings.
+#
+#   0: doesn't affect rendering at all
+#   1: affects full zoom (dpi, effectively).
+#   2: affects text zoom.
+#
+# Default is (1): Historical behavior on Linux, matches other browsers on
+# Windows, and generally creates more consistent rendering.
+- name: browser.display.os-zoom-behavior
+  type: RelaxedAtomicInt32
+  value: 1
+  mirror: always
+  rust: true
+
 # Whether focus rings are always shown by default.
 #
 # This is the initial value of nsWindowRoot::mShowFocusRings, but it can be
@@ -1979,6 +1993,8 @@
   value: true
   mirror: always
 
+# Exposes window.caches and skips SecureContext check.
+# dom.serviceWorkers.testing.enabled also includes the same effect.
 - name: dom.caches.testing.enabled
   type: RelaxedAtomicBool
   value: false
@@ -4527,7 +4543,7 @@
 # none of its methods available).
 - name: extensions.InstallTriggerImpl.enabled
   type: bool
-  value: true
+  value: false
   mirror: always
 
 # Whether the InstallTrigger implementation should be enabled (or completely
@@ -8804,6 +8820,8 @@
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
   value: true
+#elif defined(XP_FREEBSD)
+  value: true
 #elif defined(XP_OPENBSD)
   value: true
 #else
@@ -8844,6 +8862,8 @@
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
   value: true
+#elif defined(XP_FREEBSD)
+  value: true
 #elif defined(XP_OPENBSD)
   value: true
 #else
@@ -8874,6 +8894,8 @@
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
   value: true
+#elif defined(XP_FREEBSD)
+  value: true
 #elif defined(XP_OPENBSD)
   value: true
 #else
@@ -8888,6 +8910,8 @@
 #elif defined(XP_MACOSX)
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
+  value: true
+#elif defined(XP_FREEBSD)
   value: true
 #elif defined(XP_OPENBSD)
   value: true
@@ -8904,6 +8928,8 @@
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
   value: true
+#elif defined(XP_FREEBSD)
+  value: true
 #elif defined(XP_OPENBSD)
   value: true
 #else
@@ -8919,6 +8945,8 @@
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
   value: true
+#elif defined(XP_FREEBSD)
+  value: true
 #elif defined(XP_OPENBSD)
   value: true
 #else
@@ -8933,6 +8961,8 @@
 #elif defined(XP_MACOSX)
   value: true
 #elif defined(XP_LINUX) && !defined(ANDROID)
+  value: true
+#elif defined(XP_FREEBSD)
   value: true
 #elif defined(XP_OPENBSD)
   value: true
@@ -9397,6 +9427,11 @@
 - name: media.av1.new-thread-count-strategy
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+- name: media.av1.force-thread-count
+  type: RelaxedAtomicInt32
+  value: 0
   mirror: always
 
 - name: media.flac.enabled
@@ -11182,6 +11217,11 @@
   value: 1
   mirror: always
 
+- name: network.allow_raw_sockets_in_content_processes
+  type: bool
+  value: false
+  mirror: once
+
 #---------------------------------------------------------------------------
 # Prefs starting with "nglayout."
 #---------------------------------------------------------------------------
@@ -12167,6 +12207,7 @@
 #endif
   mirror: always
 
+
 # Whether or not OCSP is required.
 # true => hard-fail (if an OCSP request times out, stop the connection)
 # false => soft-fail (if an OCSP request times out, continue the connection)
@@ -12312,6 +12353,29 @@
 - name: security.tls.enable_post_handshake_auth
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+# Probability of GREASEing a TLS connection with ECH (0-100)
+# 0 means never GREASE, 100 means always GREASE
+- name: security.tls.ech.grease_probability
+  type: RelaxedAtomicUint32
+#ifdef IS_NIGHTLY_BUILD
+  value: 10
+#else
+  value: 0
+#endif 
+  mirror: always
+
+# Whether to retry connections without ECH Grease
+- name: security.tls.ech.disable_grease_on_fallback
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
+# ECH GREASE Padding target (1-255)
+- name: security.tls.ech.grease_size
+  type: RelaxedAtomicUint32
+  value: 100
   mirror: always
 
 - name: security.tls.hello_downgrade_check
@@ -13630,6 +13694,15 @@
 #  - 1: always
 #  - 2: auto
 - name: widget.use-xdg-desktop-portal.location
+  type: int32_t
+  value: 2
+  mirror: always
+# Whether to use XDG portal for opening to a file.
+# https://flatpak.github.io/xdg-desktop-portal/#gdbus-org.freedesktop.portal.OpenURI
+#  - 0: never
+#  - 1: always
+#  - 2: auto (true for flatpak or GTK_USE_PORTAL=1, false otherwise)
+- name: widget.use-xdg-desktop-portal.open-uri
   type: int32_t
   value: 2
   mirror: always

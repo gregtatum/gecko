@@ -1485,7 +1485,8 @@ nsresult nsXREDirProvider::GetUserDataDirectory(nsIFile** aFile, bool aLocal) {
   return NS_OK;
 }
 
-nsresult nsXREDirProvider::GetDefaultUserDataDirectory(nsIFile** aFile, bool aLocal) {
+nsresult nsXREDirProvider::GetDefaultUserDataDirectory(nsIFile** aFile,
+                                                       bool aLocal) {
   nsCOMPtr<nsIFile> localDir;
 
   nsresult rv = GetUserDataDirectoryHome(getter_AddRefs(localDir), aLocal);
@@ -1538,7 +1539,9 @@ nsresult nsXREDirProvider::AppendSysUserExtensionPath(nsIFile* aFile) {
   return NS_OK;
 }
 
-nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, const char* aProfilePath, bool aLocal) {
+nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile,
+                                             const char* aProfilePath,
+                                             bool aLocal) {
   NS_ASSERTION(aFile, "Null pointer!");
 
   nsAutoCString appName;

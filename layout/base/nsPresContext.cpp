@@ -929,8 +929,9 @@ void nsPresContext::RecomputeBrowsingContextDependentData() {
     // matter... Medium also doesn't affect those.
     return;
   }
-  SetFullZoom(browsingContext->FullZoom());
-  SetTextZoom(browsingContext->TextZoom());
+  auto systemZoom = LookAndFeel::SystemZoomSettings();
+  SetFullZoom(browsingContext->FullZoom() * systemZoom.mFullZoom);
+  SetTextZoom(browsingContext->TextZoom() * systemZoom.mTextZoom);
   SetOverrideDPPX(browsingContext->OverrideDPPX());
 
   auto* top = browsingContext->Top();
@@ -1580,6 +1581,9 @@ void nsPresContext::ThemeChangedInternal() {
   mPendingThemeChangeKind = 0;
 
   LookAndFeel::HandleGlobalThemeChange();
+
+  // Full zoom might have changed as a result of the text scale factor.
+  RecomputeBrowsingContextDependentData();
 
   // Changes to system metrics and other look and feel values can change media
   // queries on them.

@@ -105,7 +105,7 @@ class MOZ_RAII FallbackICCodeCompiler final {
   // to pc mapping to work.
   void enterStubFrame(MacroAssembler& masm, Register scratch);
   void assumeStubFrame();
-  void leaveStubFrame(MacroAssembler& masm, bool calledIntoIon = false);
+  void leaveStubFrame(MacroAssembler& masm);
 };
 
 AllocatableGeneralRegisterSet BaselineICAvailableGeneralRegs(size_t numInputs) {
@@ -560,23 +560,19 @@ void FallbackICCodeCompiler::assumeStubFrame() {
   entersStubFrame_ = true;
 
   // |framePushed| isn't tracked precisely in ICStubs, so simply assume it to
-  // be STUB_FRAME_SIZE so that assertions don't fail in leaveStubFrame.
-  framePushedAtEnterStubFrame_ = STUB_FRAME_SIZE;
+  // be StubFrameSize so that assertions don't fail in leaveStubFrame.
+  framePushedAtEnterStubFrame_ = StubFrameSize;
 #endif
 }
 
-void FallbackICCodeCompiler::leaveStubFrame(MacroAssembler& masm,
-                                            bool calledIntoIon) {
+void FallbackICCodeCompiler::leaveStubFrame(MacroAssembler& masm) {
   MOZ_ASSERT(entersStubFrame_ && inStubFrame_);
   inStubFrame_ = false;
 
 #ifdef DEBUG
   masm.setFramePushed(framePushedAtEnterStubFrame_);
-  if (calledIntoIon) {
-    masm.adjustFrame(sizeof(intptr_t));  // Calls into ion have this extra.
-  }
 #endif
-  EmitBaselineLeaveStubFrame(masm, calledIntoIon);
+  EmitBaselineLeaveStubFrame(masm);
 }
 
 void FallbackICCodeCompiler::pushStubPayload(MacroAssembler& masm,
@@ -744,7 +740,7 @@ bool FallbackICCodeCompiler::emitGetElem(bool hasReceiver) {
                                  masm.currentOffset());
   }
 
-  leaveStubFrame(masm, true);
+  leaveStubFrame(masm);
 
   EmitReturnFromIC(masm);
   return true;
@@ -783,7 +779,7 @@ bool DoSetElemFallback(JSContext* cx, BaselineFrame* frame,
     return false;
   }
 
-  RootedShape oldShape(cx, obj->shape());
+  Rooted<Shape*> oldShape(cx, obj->shape());
 
   DeferType deferType = DeferType::None;
   bool attached = false;
@@ -1069,7 +1065,7 @@ bool DoGetNameFallback(JSContext* cx, BaselineFrame* frame,
 
   MOZ_ASSERT(op == JSOp::GetName || op == JSOp::GetGName);
 
-  RootedPropertyName name(cx, script->getName(pc));
+  Rooted<PropertyName*> name(cx, script->getName(pc));
 
   TryAttachStub<GetNameIRGenerator>("GetName", cx, frame, stub, envChain, name);
 
@@ -1118,7 +1114,7 @@ bool DoBindNameFallback(JSContext* cx, BaselineFrame* frame,
 
   MOZ_ASSERT(op == JSOp::BindName || op == JSOp::BindGName);
 
-  RootedPropertyName name(cx, frame->script()->getName(pc));
+  Rooted<PropertyName*> name(cx, frame->script()->getName(pc));
 
   TryAttachStub<BindNameIRGenerator>("BindName", cx, frame, stub, envChain,
                                      name);
@@ -1199,7 +1195,7 @@ bool DoGetPropFallback(JSContext* cx, BaselineFrame* frame,
 
   MOZ_ASSERT(op == JSOp::GetProp || op == JSOp::GetBoundName);
 
-  RootedPropertyName name(cx, script->getName(pc));
+  Rooted<PropertyName*> name(cx, script->getName(pc));
   RootedValue idVal(cx, StringValue(name));
 
   TryAttachStub<GetPropIRGenerator>("GetProp", cx, frame, stub,
@@ -1231,7 +1227,7 @@ bool DoGetPropSuperFallback(JSContext* cx, BaselineFrame* frame,
 
   MOZ_ASSERT(JSOp(*pc) == JSOp::GetPropSuper);
 
-  RootedPropertyName name(cx, script->getName(pc));
+  Rooted<PropertyName*> name(cx, script->getName(pc));
   RootedValue idVal(cx, StringValue(name));
 
   // |val| is [[HomeObject]].[[Prototype]] which must be an Object or null.
@@ -1300,7 +1296,7 @@ bool FallbackICCodeCompiler::emitGetProp(bool hasReceiver) {
                                  masm.currentOffset());
   }
 
-  leaveStubFrame(masm, true);
+  leaveStubFrame(masm);
 
   EmitReturnFromIC(masm);
   return true;
@@ -1337,7 +1333,7 @@ bool DoSetPropFallback(JSContext* cx, BaselineFrame* frame,
              op == JSOp::InitProp || op == JSOp::InitLockedProp ||
              op == JSOp::InitHiddenProp || op == JSOp::InitGLexical);
 
-  RootedPropertyName name(cx, script->getName(pc));
+  Rooted<PropertyName*> name(cx, script->getName(pc));
   RootedId id(cx, NameToId(name));
 
   int lhsIndex = -2;
@@ -1346,7 +1342,7 @@ bool DoSetPropFallback(JSContext* cx, BaselineFrame* frame,
   if (!obj) {
     return false;
   }
-  RootedShape oldShape(cx, obj->shape());
+  Rooted<Shape*> oldShape(cx, obj->shape());
 
   DeferType deferType = DeferType::None;
   bool attached = false;
@@ -1494,7 +1490,7 @@ bool FallbackICCodeCompiler::emit_SetProp() {
   code.initBailoutReturnOffset(BailoutReturnKind::SetProp,
                                masm.currentOffset());
 
-  leaveStubFrame(masm, true);
+  leaveStubFrame(masm);
   EmitReturnFromIC(masm);
 
   return true;
@@ -1621,7 +1617,7 @@ bool DoSpreadCallFallback(JSContext* cx, BaselineFrame* frame,
   if (op != JSOp::SpreadEval && op != JSOp::StrictSpreadEval &&
       stub->state().canAttachStub()) {
     // Try CacheIR first:
-    RootedArrayObject aobj(cx, &arr.toObject().as<ArrayObject>());
+    Rooted<ArrayObject*> aobj(cx, &arr.toObject().as<ArrayObject>());
     MOZ_ASSERT(aobj->length() == aobj->getDenseInitializedLength());
 
     HandleValueArray args = HandleValueArray::fromMarkedLocation(
@@ -1669,7 +1665,7 @@ void FallbackICCodeCompiler::pushCallArguments(
 
   // Skip 4 pointers pushed on top of the arguments: the frame descriptor,
   // return address, old frame pointer and stub reg.
-  size_t valueOffset = STUB_FRAME_SIZE;
+  size_t valueOffset = StubFrameSize;
 
   // We have to push |this|, callee, new.target (if constructing) and argc
   // arguments. Handle the number of Values we know statically first.
@@ -1719,23 +1715,23 @@ bool FallbackICCodeCompiler::emitCall(bool isSpread, bool isConstructing) {
     // newTarget
     uint32_t valueOffset = 0;
     if (isConstructing) {
-      masm.pushValue(Address(FramePointer, STUB_FRAME_SIZE));
+      masm.pushValue(Address(FramePointer, StubFrameSizeFromFP));
       valueOffset++;
     }
 
     // array
-    masm.pushValue(
-        Address(FramePointer, valueOffset * sizeof(Value) + STUB_FRAME_SIZE));
+    masm.pushValue(Address(FramePointer,
+                           valueOffset * sizeof(Value) + StubFrameSizeFromFP));
     valueOffset++;
 
     // this
-    masm.pushValue(
-        Address(FramePointer, valueOffset * sizeof(Value) + STUB_FRAME_SIZE));
+    masm.pushValue(Address(FramePointer,
+                           valueOffset * sizeof(Value) + StubFrameSizeFromFP));
     valueOffset++;
 
     // callee
-    masm.pushValue(
-        Address(FramePointer, valueOffset * sizeof(Value) + STUB_FRAME_SIZE));
+    masm.pushValue(Address(FramePointer,
+                           valueOffset * sizeof(Value) + StubFrameSizeFromFP));
     valueOffset++;
 
     masm.push(masm.getStackPointer());
@@ -1797,7 +1793,7 @@ bool FallbackICCodeCompiler::emitCall(bool isSpread, bool isConstructing) {
   // Current stack:  [...., ThisV, ActualArgc, CalleeToken, Descriptor ]
   masm.loadValue(Address(masm.getStackPointer(), 3 * sizeof(size_t)), R1);
 
-  leaveStubFrame(masm, true);
+  leaveStubFrame(masm);
 
   // If this is a |constructing| call, if the callee returns a non-object, we
   // replace it with the |this| object passed in.
@@ -2361,7 +2357,7 @@ bool DoNewArrayFallback(JSContext* cx, BaselineFrame* frame,
              "the bytecode emitter must fail to compile code that would "
              "produce a length exceeding int32_t range");
 
-  RootedArrayObject array(cx, NewArrayOperation(cx, length));
+  Rooted<ArrayObject*> array(cx, NewArrayOperation(cx, length));
   if (!array) {
     return false;
   }

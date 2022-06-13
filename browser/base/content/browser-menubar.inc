@@ -169,8 +169,7 @@
                 </menu>
 #endif
                 <menuseparator/>
-                <menu id="viewFullZoomMenu"
-                      onpopupshowing="FullZoom.updateMenu();" data-l10n-id="menu-view-full-zoom">
+                <menu id="viewFullZoomMenu" data-l10n-id="menu-view-full-zoom">
                   <menupopup>
                     <menuitem id="menu_zoomEnlarge"
                               key="key_fullZoomEnlarge"

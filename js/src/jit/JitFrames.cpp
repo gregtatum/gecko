@@ -216,7 +216,8 @@ static void OnLeaveIonFrame(JSContext* cx, const InlineFrameIterator& frame,
   MOZ_RELEASE_ASSERT(!rval.isMagic());
 
   rfe->kind = ExceptionResumeKind::ForcedReturnIon;
-  rfe->framePointer = frame.frame().fp();
+  rfe->framePointer = frame.frame().jsFrame()->callerFramePtr();
+  rfe->stackPointer = frame.frame().fp();
   rfe->exception = rval;
 
   act->removeIonFrameRecovery(frame.frame().jsFrame());
@@ -862,7 +863,7 @@ CalleeToken TraceCalleeToken(JSTracer* trc, CalleeToken token) {
 
 uintptr_t* JitFrameLayout::slotRef(SafepointSlotEntry where) {
   if (where.stack) {
-    return (uintptr_t*)((uint8_t*)this - where.slot);
+    return (uintptr_t*)((uint8_t*)this - IonFirstSlotOffset - where.slot);
   }
   return (uintptr_t*)((uint8_t*)argv() + where.slot);
 }
@@ -1093,7 +1094,7 @@ static void TraceBaselineStubFrame(JSTracer* trc, const JSJitFrameIter& frame) {
   // so that we don't destroy the stub code after unlinking the stub.
 
   MOZ_ASSERT(frame.type() == FrameType::BaselineStub);
-  JitStubFrameLayout* layout = (JitStubFrameLayout*)frame.fp();
+  BaselineStubFrameLayout* layout = (BaselineStubFrameLayout*)frame.fp();
 
   if (ICStub* stub = layout->maybeStubPtr()) {
     if (stub->isFallback()) {
