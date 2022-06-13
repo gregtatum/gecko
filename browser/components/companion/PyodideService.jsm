@@ -19,16 +19,18 @@ if (!AppConstants.PINEBUILD) {
   );
 }
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   HiddenFrame: "resource://gre/modules/HiddenFrame.jsm",
   Services: "resource://gre/modules/Services.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "PyodideService",
-    maxLogLevel: Services.prefs.getBoolPref(
+    maxLogLevel: lazy.Services.prefs.getBoolPref(
       "browser.companion.pyodide.log",
       false
     )
@@ -43,24 +45,24 @@ XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
 function loadContentWindow(browser, url) {
   let uri;
   try {
-    uri = Services.io.newURI(url);
+    uri = lazy.Services.io.newURI(url);
   } catch (e) {
     let msg = `Invalid URL passed to loadContentWindow(): ${url}`;
     Cu.reportError(msg);
     throw new Error(msg);
   }
 
-  const principal = Services.scriptSecurityManager.getSystemPrincipal();
-  let oa = E10SUtils.predictOriginAttributes({
+  const principal = lazy.Services.scriptSecurityManager.getSystemPrincipal();
+  let oa = lazy.E10SUtils.predictOriginAttributes({
     browser,
   });
   let loadURIOptions = {
     triggeringPrincipal: principal,
-    remoteType: E10SUtils.getRemoteTypeForURI(
+    remoteType: lazy.E10SUtils.getRemoteTypeForURI(
       url,
       true,
       false,
-      E10SUtils.DEFAULT_REMOTE_TYPE,
+      lazy.E10SUtils.DEFAULT_REMOTE_TYPE,
       null,
       oa
     ),
@@ -84,7 +86,7 @@ const PyodideService = {
    * Register the actors, add observers.
    */
   init() {
-    if (!Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
+    if (!lazy.Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
       return;
     }
 
@@ -101,8 +103,8 @@ const PyodideService = {
       matches: ["resource://pyodide/pyodide.html"],
     });
 
-    Services.obs.addObserver(this, "interactions-exported");
-    logConsole.debug("PyodideService init");
+    lazy.Services.obs.addObserver(this, "interactions-exported");
+    lazy.logConsole.debug("PyodideService init");
   },
 
   /**
@@ -111,7 +113,7 @@ const PyodideService = {
    * and this is thus not permitted nor safe to run in the chrome process.
    */
   async loadContent() {
-    let frame = new HiddenFrame();
+    let frame = new lazy.HiddenFrame();
     let windowlessBrowser = await frame.get();
     let doc = windowlessBrowser.document;
 
@@ -161,7 +163,7 @@ const PyodideService = {
   async observe(aSubject, aTopic, aData) {
     switch (aTopic) {
       case "interactions-exported":
-        logConsole.debug("Received 'interactions-exported'");
+        lazy.logConsole.debug("Received 'interactions-exported'");
 
         if (!this._browser) {
           await this.loadContent();
@@ -191,10 +193,10 @@ const PyodideService = {
           );
 
           if (results) {
-            logConsole.info("Pyodide interactions results ", results);
+            lazy.logConsole.info("Pyodide interactions results ", results);
           }
           if (error) {
-            logConsole.info("Pyodide interactions error: ", error);
+            lazy.logConsole.info("Pyodide interactions error: ", error);
           }
         }
     }
@@ -216,10 +218,10 @@ const PyodideService = {
     );
 
     if (results) {
-      logConsole.info("testLoadPyodide Pyodide results ", results);
+      lazy.logConsole.info("testLoadPyodide Pyodide results ", results);
     }
     if (error) {
-      logConsole.info("testLoadPyodide Pyodide error: ", error);
+      lazy.logConsole.info("testLoadPyodide Pyodide error: ", error);
     }
   },
 
@@ -227,10 +229,10 @@ const PyodideService = {
    *  Release the browser, remove observers.
    */
   uninit() {
-    if (!Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
+    if (!lazy.Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
       return;
     }
     this._browser = null;
-    Services.obs.removeObserver(this, "interactions-exported");
+    lazy.Services.obs.removeObserver(this, "interactions-exported");
   },
 };

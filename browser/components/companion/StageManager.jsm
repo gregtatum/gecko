@@ -11,7 +11,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
@@ -21,17 +23,17 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "SessionStore",
   "resource:///modules/sessionstore/SessionStore.jsm"
 );
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "SessionHistory",
   "resource://gre/modules/sessionstore/SessionHistory.jsm"
 );
 
-XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "StageManager",
     maxLogLevelPref: "browser.companion.stagemanagerdebugging.logLevel",
@@ -39,42 +41,42 @@ XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "DEBUG",
   "browser.companion.stagemanagerdebugging",
   false
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "INTERSTITIAL_VIEW_OVERWRITING",
   "browser.pinebuild.interstitial-view-overwriting.enabled",
   false
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS",
   "browser.pinebuild.interstitial-view-overwriting.threshold_ms",
   5000
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "LOGIN_VIEW_OVERWRITING",
   "browser.pinebuild.login-view-overwriting.enabled",
   false
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "MAX_RIVER_GROUPS",
   "browser.river.maxGroups",
   5
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK",
   "browser.pinebuild.targetTopLevelLinkClicksToBlank",
   false
@@ -609,7 +611,7 @@ class ViewGroup {
     let { groups, overflowed } = ViewGroup.#groupFromEnd(
       window,
       unpinnedViews,
-      { limit: MAX_RIVER_GROUPS }
+      { limit: lazy.MAX_RIVER_GROUPS }
     );
     let { groups: pinned } = ViewGroup.#groupFromEnd(window, pinnedViews, {
       pinning: true,
@@ -739,7 +741,7 @@ class InternalView {
       : workspaceId;
     this.#view = new View(this);
     this.#pinnedState = PINNED_STATE.NOT_PINNED;
-    this.#contentPrincipal = Services.scriptSecurityManager.createNullPrincipal(
+    this.#contentPrincipal = lazy.Services.scriptSecurityManager.createNullPrincipal(
       {}
     );
     this.#creationTime = Cu.now();
@@ -748,13 +750,13 @@ class InternalView {
     InternalView.viewMap.set(this.#view, this);
 
     if (historyEntry instanceof Ci.nsISHEntry) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Created InternalView ${this.#id} with SHEntry ID: ${historyEntry.ID}`
       );
 
       this.update(browser, historyEntry);
     } else {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Created InternalView ${this.#id} with ${
           browser ? "lazy" : "cached"
         } SHEntry ID: ` + historyEntry.ID
@@ -765,12 +767,12 @@ class InternalView {
       this.historyId = historyEntry.ID;
       this.cachedEntry = historyEntry;
 
-      this.url = Services.io.newURI(historyEntry.url);
-      let originAttributes = E10SUtils.predictOriginAttributes({
+      this.url = lazy.Services.io.newURI(historyEntry.url);
+      let originAttributes = lazy.E10SUtils.predictOriginAttributes({
         window,
         userContextId: workspaceId,
       });
-      this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
+      this.#contentPrincipal = lazy.Services.scriptSecurityManager.createContentPrincipal(
         this.url,
         originAttributes
       );
@@ -800,7 +802,7 @@ class InternalView {
         return browser;
       }
 
-      logConsole.warn(
+      lazy.logConsole.warn(
         `Browser(${this.browserId}) does not exist in this window.`
       );
     }
@@ -811,10 +813,10 @@ class InternalView {
       }
     }
 
-    logConsole.warn(
+    lazy.logConsole.warn(
       "Failed to find the browser element for still active view."
     );
-    logConsole.debug(this.toString());
+    lazy.logConsole.debug(this.toString());
     return null;
   }
 
@@ -863,11 +865,11 @@ class InternalView {
       .getTabForBrowser(browser)
       ?.hasAttribute("busy");
     this.securityState = browser.securityUI.state;
-    let originAttributes = E10SUtils.predictOriginAttributes({
+    let originAttributes = lazy.E10SUtils.predictOriginAttributes({
       window: this.#window,
       userContextId: this.#workspaceId,
     });
-    this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
+    this.#contentPrincipal = lazy.Services.scriptSecurityManager.createContentPrincipal(
       this.url,
       originAttributes
     );
@@ -881,9 +883,9 @@ class InternalView {
       this.#creationTime = Cu.now();
     }
 
-    logConsole.debug(`Updated InternalView ${this.toString()}`);
+    lazy.logConsole.debug(`Updated InternalView ${this.toString()}`);
 
-    if (DEBUG) {
+    if (lazy.DEBUG) {
       this.historyState = {
         id: this.#id,
         pinnedState: this.#pinnedState,
@@ -910,7 +912,7 @@ class InternalView {
   discard(entry) {
     this.cachedEntry = entry;
     this.browserId = undefined;
-    logConsole.assert(this.browserKey);
+    lazy.logConsole.assert(this.browserKey);
   }
 
   /**
@@ -932,7 +934,7 @@ class InternalView {
 
   setUserTitle(title) {
     let trimmedTitle = title.trim();
-    Snapshots.add({ url: this.url.spec, title: trimmedTitle });
+    lazy.Snapshots.add({ url: this.url.spec, title: trimmedTitle });
     this.#userTitle = trimmedTitle;
   }
 
@@ -948,7 +950,7 @@ class InternalView {
     if (!val) {
       // submittedPassword can only ever be set to true from the initial false state,
       // and not the other way around.
-      logConsole.error(
+      lazy.logConsole.error(
         `Cannot set submittedPassword to false for ${this.toString()}`
       );
       return;
@@ -1001,7 +1003,7 @@ class InternalView {
 
     // If StageManager debugging is enabled, then we want to also update
     // the historyState object that gets shown in the sidebar.
-    if (DEBUG) {
+    if (lazy.DEBUG) {
       let browser = this.getBrowser();
       let historyIndex = browser
         ? getHistoryIndex(browser, this.historyId)
@@ -1100,7 +1102,10 @@ class StageManagerEvent extends Event {
     this.#detail = detail;
 
     if (view && !(view instanceof View)) {
-      logConsole.error("Emitting a StageManagerEvent with a non-view", view);
+      lazy.logConsole.error(
+        "Emitting a StageManagerEvent with a non-view",
+        view
+      );
     }
   }
 
@@ -1167,7 +1172,7 @@ class BrowserListener {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryNewEntry: ` +
         `${newURI.spec}`
     );
@@ -1187,7 +1192,7 @@ class BrowserListener {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryReload`
     );
 
@@ -1204,7 +1209,7 @@ class BrowserListener {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryGotoIndex`
     );
 
@@ -1223,14 +1228,14 @@ class BrowserListener {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryPurge: ` +
         numEntries
     );
     // History entries are going to be purged, grab them and their tab state and stash them as
     // as closed tab.
     let { entries } = JSON.parse(
-      SessionStore.getTabState(
+      lazy.SessionStore.getTabState(
         this.#browser.getTabBrowser().getTabForBrowser(this.#browser)
       )
     );
@@ -1249,7 +1254,7 @@ class BrowserListener {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryTruncate: ` +
         numEntries
     );
@@ -1257,7 +1262,7 @@ class BrowserListener {
     // History entries are going to be truncated, grab them and their tab state and stash them as
     // as closed tab.
     let { entries } = JSON.parse(
-      SessionStore.getTabState(
+      lazy.SessionStore.getTabState(
         this.#browser.getTabBrowser().getTabForBrowser(this.#browser)
       )
     );
@@ -1276,7 +1281,7 @@ class BrowserListener {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Browser(${this.#browser.browsingContext.id}) - OnHistoryReplaceEntry`
     );
     let { sessionHistory } = this.#browser.browsingContext;
@@ -1364,7 +1369,7 @@ class WorkspaceHistory extends EventTarget {
   constructor(workspaceId, window) {
     super();
     if (!(Number.isInteger(workspaceId) && workspaceId >= 0)) {
-      logConsole.error(
+      lazy.logConsole.error(
         `Could not create workspace history object. Invalid workspace id.`
       );
       return;
@@ -1397,7 +1402,7 @@ class WorkspaceHistory extends EventTarget {
    */
   handleTabEvent(type, tab, changedAttr = "") {
     if (tab.userContextId != this.#workspaceId) {
-      logConsole.error(
+      lazy.logConsole.error(
         "A tab event was routed to the wrong workspace to handle"
       );
       return;
@@ -1410,7 +1415,7 @@ class WorkspaceHistory extends EventTarget {
           return;
         }
 
-        logConsole.debug(`Browser(${browser.browsingContext.id}) staged.`);
+        lazy.logConsole.debug(`Browser(${browser.browsingContext.id}) staged.`);
         this._onBrowserNavigate(browser, getCurrentEntry(browser), true);
         break;
       case "TabOpen":
@@ -1422,7 +1427,9 @@ class WorkspaceHistory extends EventTarget {
           this.#window.gHistoryCarousel.showHistoryCarousel(false);
         }
 
-        logConsole.debug(`Browser(${browser.browsingContext.id}) created.`);
+        lazy.logConsole.debug(
+          `Browser(${browser.browsingContext.id}) created.`
+        );
         this.#watchBrowser(browser);
         this._onBrowserNavigate(browser);
         break;
@@ -1454,10 +1461,10 @@ class WorkspaceHistory extends EventTarget {
         }
         break;
       case "TabBrowserDiscarding":
-        logConsole.debug("Saw a tab discarded");
-        TabStateFlusher.flush(browser).then(() => {
+        lazy.logConsole.debug("Saw a tab discarded");
+        lazy.TabStateFlusher.flush(browser).then(() => {
           // At this point the browser has already lost its history state so update from session store.
-          let state = JSON.parse(SessionStore.getTabState(tab));
+          let state = JSON.parse(lazy.SessionStore.getTabState(tab));
           for (let entry of state.entries) {
             let internalView = this.historyViews.get(entry.ID);
             if (internalView) {
@@ -1467,12 +1474,12 @@ class WorkspaceHistory extends EventTarget {
         });
         break;
       case "SSTabRestoring":
-        logConsole.debug("Saw a tab restored");
+        lazy.logConsole.debug("Saw a tab restored");
 
         let { sessionHistory } = browser.browsingContext;
         for (let i = 0; i < sessionHistory.count; i++) {
           let entry = sessionHistory.getEntryAtIndex(i);
-          let entryId = SessionHistory.getPreviousID(entry) ?? entry.ID;
+          let entryId = lazy.SessionHistory.getPreviousID(entry) ?? entry.ID;
 
           let internalView = this.historyViews.get(entryId);
           if (internalView) {
@@ -1497,7 +1504,7 @@ class WorkspaceHistory extends EventTarget {
    */
   #watchBrowser(browser) {
     if (this.#browsers.has(browser)) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Browser(${browser.browserId}) does not exist in this workspace`
       );
       return;
@@ -1509,10 +1516,10 @@ class WorkspaceHistory extends EventTarget {
     try {
       browser.browsingContext.sessionHistory.addSHistoryListener(listener);
     } catch (e) {
-      logConsole.error("Failed to add listener", e);
+      lazy.logConsole.error("Failed to add listener", e);
     }
 
-    if (TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK) {
+    if (lazy.TARGET_TOP_LEVEL_LINK_CLICKS_TO_BLANK) {
       browser.browsingContext.targetTopLevelLinkClicksToBlank = true;
     }
   }
@@ -1531,7 +1538,7 @@ class WorkspaceHistory extends EventTarget {
    */
   activateView(internalView) {
     if (!this.viewStack.includes(internalView)) {
-      logConsole.error(
+      lazy.logConsole.error(
         `View cannot be activated. It does not exist in this workspace.`
       );
       return false;
@@ -1539,7 +1546,7 @@ class WorkspaceHistory extends EventTarget {
 
     let lastIndex = this.viewStack.length - 1;
     if (internalView == this.viewStack[lastIndex]) {
-      logConsole.debug(`View is already active`);
+      lazy.logConsole.debug(`View is already active`);
       return false;
     }
 
@@ -1562,7 +1569,7 @@ class WorkspaceHistory extends EventTarget {
             listener
           );
         } catch (e) {
-          logConsole.error("Failed to remove listener", e);
+          lazy.logConsole.error("Failed to remove listener", e);
         }
       }
     });
@@ -1661,7 +1668,7 @@ class WorkspaceHistory extends EventTarget {
       return;
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Saw password form submission for ${internalView.toString()}`
     );
 
@@ -1676,13 +1683,13 @@ class WorkspaceHistory extends EventTarget {
    * @param {nsISHEntry} newEntry
    */
   _onBrowserReplace(browser, previousEntry, newEntry) {
-    logConsole.debug(
+    lazy.logConsole.debug(
       `_onBrowserReplace for browser(${browser.browsingContext.id}), ` +
         `previous SHEntry(${previousEntry.ID}), new SHEntry(${newEntry.ID})`
     );
     let previousView = this.historyViews.get(previousEntry.ID);
     if (previousView) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Found previous InternalView: ${previousView.toString()}`
       );
       this.historyViews.delete(previousEntry.ID);
@@ -1690,7 +1697,7 @@ class WorkspaceHistory extends EventTarget {
       let pos = this.viewStack.indexOf(previousView);
       if (pos >= 0) {
         if (this.#window.isInitialPage(newEntry.URI)) {
-          logConsole.debug(
+          lazy.logConsole.debug(
             `Previous InternalView was an internal page - discarding.`
           );
           // Don't store initial pages in the river.
@@ -1699,7 +1706,7 @@ class WorkspaceHistory extends EventTarget {
             this.#stageManager.currentView
           );
           if (previousView == currentInternalView) {
-            logConsole.trace(`Setting currentInternalView to NULL`);
+            lazy.logConsole.trace(`Setting currentInternalView to NULL`);
             let event = new CustomEvent("SetCurrentInternalView", {
               detail: { internalView: null },
             });
@@ -1726,14 +1733,14 @@ class WorkspaceHistory extends EventTarget {
         this.#stageManager.updateSessionStore();
         return;
       }
-      logConsole.error(
+      lazy.logConsole.error(
         `Could not find InternalView ${previousView.toString()} in ` +
           `the viewStack.`
       );
     }
 
     // Fallback in the event that the previous entry is not present in the stack.
-    logConsole.debug("Falling back to _onBrowserNavigate.");
+    lazy.logConsole.debug("Falling back to _onBrowserNavigate.");
     this._onBrowserNavigate(browser, newEntry);
   }
 
@@ -1750,32 +1757,32 @@ class WorkspaceHistory extends EventTarget {
     newEntry = getCurrentEntry(browser),
     viaTabSwitch = false
   ) {
-    logConsole.group(
+    lazy.logConsole.group(
       `_onBrowserNavigate for browser(${browser.browsingContext.id}), ` +
         `SHEntry(${newEntry?.ID})`
     );
     if (!newEntry) {
-      logConsole.debug("No newEntry");
-      logConsole.groupEnd();
+      lazy.logConsole.debug("No newEntry");
+      lazy.logConsole.groupEnd();
       // Happens before anything has been loaded into the browser.
       return;
     }
 
     if (this.#window.gBrowser.selectedBrowser !== browser) {
       // Only care about the currently visible browser. We will re-visit if the tab is selected.
-      logConsole.debug("Browser is not selected.");
-      logConsole.groupEnd();
+      lazy.logConsole.debug("Browser is not selected.");
+      lazy.logConsole.groupEnd();
       return;
     }
 
     if (this.#window.isInitialPage(newEntry.URI)) {
       // Don't store initial pages in the river.
-      logConsole.debug(
+      lazy.logConsole.debug(
         "SHEntry is pointed at an initial or ignored page: ",
         newEntry.URI.spec
       );
-      logConsole.groupEnd();
-      logConsole.trace(`Setting #currentInternalView to NULL`);
+      lazy.logConsole.groupEnd();
+      lazy.logConsole.trace(`Setting #currentInternalView to NULL`);
       let event = new CustomEvent("SetCurrentInternalView", {
         detail: { internalView: null },
       });
@@ -1794,25 +1801,25 @@ class WorkspaceHistory extends EventTarget {
       // While we've fixed a good number of these cases, to make it easier to
       // detect if more cases exist, we make a little bit of noise when debugging
       // when that duplication arises.
-      if (DEBUG) {
+      if (lazy.DEBUG) {
         let preexisting = this.viewStack.find(v => v.historyId == newEntry.ID);
-        logConsole.assert(
+        lazy.logConsole.assert(
           !preexisting,
           `Should not find a pre-existing InternalView with SHEntry ID ${newEntry.ID}`
         );
         if (preexisting) {
-          logConsole.debug(JSON.parse(JSON.stringify(this.viewStack)));
-          logConsole.debug(
+          lazy.logConsole.debug(JSON.parse(JSON.stringify(this.viewStack)));
+          lazy.logConsole.debug(
             JSON.parse(JSON.stringify([...this.historyViews.entries()]))
           );
         }
       }
 
-      logConsole.debug(`Creating a new InternalView.`);
+      lazy.logConsole.debug(`Creating a new InternalView.`);
 
       // This is a new view.
       internalView = new InternalView(this.#window, browser, newEntry);
-      logConsole.trace(
+      lazy.logConsole.trace(
         `Setting #currentInternalView to NEW ${internalView.toString()}`
       );
       let event = new CustomEvent("SetCurrentInternalView", {
@@ -1821,13 +1828,15 @@ class WorkspaceHistory extends EventTarget {
       this.dispatchEvent(event);
       this.#insertNewView(internalView, newEntry, browser);
 
-      SessionManager.register(this.#window, internalView.url).catch(
-        logConsole.error
+      lazy.SessionManager.register(this.#window, internalView.url).catch(
+        lazy.logConsole.error
       );
 
       this.#stageManager.notifyEvent("ViewAdded", internalView);
     } else {
-      logConsole.debug(`Updating InternalView ${internalView.toString()}.`);
+      lazy.logConsole.debug(
+        `Updating InternalView ${internalView.toString()}.`
+      );
       // This is a navigation to an existing view.
       internalView.update(browser, newEntry, {
         resetCreationTime: overwriting,
@@ -1837,13 +1846,13 @@ class WorkspaceHistory extends EventTarget {
         this.#stageManager.currentView
       );
       if (internalView == currentInternalView) {
-        logConsole.trace(`Updated InternalView is the current index.`);
-        logConsole.groupEnd();
+        lazy.logConsole.trace(`Updated InternalView is the current index.`);
+        lazy.logConsole.groupEnd();
         this.#stageManager.notifyEvent("ViewUpdated", internalView);
         return;
       }
 
-      logConsole.trace(
+      lazy.logConsole.trace(
         `Setting #currentInternalView to EXISTING ${internalView.toString()}`
       );
       let event = new CustomEvent("SetCurrentInternalView", {
@@ -1852,7 +1861,7 @@ class WorkspaceHistory extends EventTarget {
       this.dispatchEvent(event);
       let pos = this.viewStack.indexOf(internalView);
       if (pos < 0) {
-        logConsole.warn("Navigated to a view not in the existing stack.");
+        lazy.logConsole.warn("Navigated to a view not in the existing stack.");
         this.viewStack.push(internalView);
 
         this.#stageManager.notifyEvent("ViewAdded", internalView);
@@ -1866,7 +1875,7 @@ class WorkspaceHistory extends EventTarget {
       browser,
     });
 
-    logConsole.groupEnd();
+    lazy.logConsole.groupEnd();
   }
 
   /**
@@ -1896,7 +1905,7 @@ class WorkspaceHistory extends EventTarget {
       return { internalView, overwriting: false };
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Did not initially find InternalView with ID: ${newEntry.ID}.`
     );
     // It's possible that a session restoration has resulted in a new
@@ -1904,12 +1913,12 @@ class WorkspaceHistory extends EventTarget {
     // we're looking for. Thankfully, SessionHistory keeps track of this,
     // so we can try to map the new nsISHEntry's ID to the previous ID,
     // and then update our references to use the new ID.
-    let previousID = SessionHistory.getPreviousID(newEntry);
+    let previousID = lazy.SessionHistory.getPreviousID(newEntry);
     if (previousID) {
-      logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
+      lazy.logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
       internalView = this.historyViews.get(previousID);
       if (internalView) {
-        logConsole.debug(`Found InternalView ${internalView.toString()}`);
+        lazy.logConsole.debug(`Found InternalView ${internalView.toString()}`);
         this.historyViews.delete(previousID);
         this.historyViews.set(newEntry.ID, internalView);
         return { internalView, overwriting: false };
@@ -1917,7 +1926,7 @@ class WorkspaceHistory extends EventTarget {
     }
 
     if (this.#stageManager.pendingView?.url.spec == newEntry.URI.spec) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Found pending View ${this.#stageManager.pendingView.toString()}.`
       );
       internalView = InternalView.viewMap.get(this.#stageManager.pendingView);
@@ -1928,7 +1937,7 @@ class WorkspaceHistory extends EventTarget {
       return { internalView, overwriting: false };
     }
 
-    if (INTERSTITIAL_VIEW_OVERWRITING || LOGIN_VIEW_OVERWRITING) {
+    if (lazy.INTERSTITIAL_VIEW_OVERWRITING || lazy.LOGIN_VIEW_OVERWRITING) {
       let makeOverwritingObject = (previousView, overwritingEntry) => {
         this.historyViews.delete(previousView.historyId);
         this.historyViews.set(overwritingEntry.ID, previousView);
@@ -1946,7 +1955,7 @@ class WorkspaceHistory extends EventTarget {
         if (previousEntry) {
           let previousView = this.historyViews.get(previousEntry.ID);
           if (previousView) {
-            if (INTERSTITIAL_VIEW_OVERWRITING) {
+            if (lazy.INTERSTITIAL_VIEW_OVERWRITING) {
               // For quick navigations (for example, bounces through an OAuth
               // provider), we want to avoid creating extra InternalViews
               // unnecessarily, as the user is unlikely to want to return to
@@ -1957,22 +1966,23 @@ class WorkspaceHistory extends EventTarget {
               if (
                 !currentWindowGlobal.isInitialDocument &&
                 !previousEntry.hasUserInteraction &&
-                timeSinceCreation < INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
+                timeSinceCreation <
+                  lazy.INTERSTITIAL_VIEW_OVERWRITING_THRESHOLD_MS
               ) {
-                logConsole.debug(
+                lazy.logConsole.debug(
                   `Overwriting InternalView ${previousView.toString()} due to quick ` +
                     `navigation`
                 );
                 return makeOverwritingObject(previousView, newEntry);
               }
             }
-            if (LOGIN_VIEW_OVERWRITING && previousView.submittedPassword) {
+            if (lazy.LOGIN_VIEW_OVERWRITING && previousView.submittedPassword) {
               // For navigations away from pages where the user has submitted a
               // password through a form, we'll assume that the user has gone through
               // some kind of login flow and overwrite that view, since it's unlikely
               // the user will want to go back to the login page (or that the login
               // page will let them login again without first logging out).
-              logConsole.debug(
+              lazy.logConsole.debug(
                 `Overwriting InternalView ${previousView.toString()} due to the ` +
                   `previous view having submitted a password form`
               );
@@ -2116,9 +2126,9 @@ class WorkspaceHistory extends EventTarget {
       for (let view of views) {
         view.pinnedState = pinnedState;
         if (shouldPin) {
-          Snapshots.add({
+          lazy.Snapshots.add({
             url: view.url.spec,
-            userPersisted: Snapshots.USER_PERSISTED.PINNED,
+            userPersisted: lazy.Snapshots.USER_PERSISTED.PINNED,
           });
         }
       }
@@ -2145,9 +2155,9 @@ class WorkspaceHistory extends EventTarget {
 
       if (shouldPin) {
         this.viewStack.splice(index, 0, internalView);
-        Snapshots.add({
+        lazy.Snapshots.add({
           url: internalView.url.spec,
-          userPersisted: Snapshots.USER_PERSISTED.PINNED,
+          userPersisted: lazy.Snapshots.USER_PERSISTED.PINNED,
         });
       } else {
         this.viewStack.push(internalView);
@@ -2270,7 +2280,7 @@ class StageManager extends EventTarget {
     super();
     this.#window = window;
 
-    if (!Services.appinfo.sessionHistoryInParent) {
+    if (!lazy.Services.appinfo.sessionHistoryInParent) {
       throw new Error(
         "Cannot function unless session history is in the parent."
       );
@@ -2330,7 +2340,7 @@ class StageManager extends EventTarget {
         let tab = event.target;
         workspace = this.#workspaces.get(tab.userContextId);
         if (!workspace) {
-          logConsole.error("Tab is not associated with a workspace.");
+          lazy.logConsole.error("Tab is not associated with a workspace.");
           return;
         }
         workspace.handleTabEvent(
@@ -2360,7 +2370,7 @@ class StageManager extends EventTarget {
             this.#currentHistoryCarouselInternalView = internalView;
           }
         } else {
-          logConsole.error(
+          lazy.logConsole.error(
             "Tried setting an invalid value into #currentInternalView"
           );
         }
@@ -2494,7 +2504,7 @@ class StageManager extends EventTarget {
       workspace.viewStack = [];
       workspace.regroup();
     }
-    logConsole.trace(`Setting #currentInternalView to NULL`);
+    lazy.logConsole.trace(`Setting #currentInternalView to NULL`);
     this.#currentInternalView = null;
     this.notifyEvent("RiverRebuilt");
     return loadPromise;
@@ -2520,7 +2530,7 @@ class StageManager extends EventTarget {
   }
 
   #sessionRestoreStarted() {
-    logConsole.debug("Session restore started.");
+    lazy.logConsole.debug("Session restore started.");
 
     // Window is starting restoration, stop listening to everything.
     this.#windowRestoring = true;
@@ -2543,18 +2553,18 @@ class StageManager extends EventTarget {
   }
 
   #sessionRestoreEnded() {
-    logConsole.debug("Session restore ended.");
+    lazy.logConsole.debug("Session restore ended.");
     // Session restore is done, rebuild everything from the new state.
     this.#windowRestoring = false;
 
-    let stateStr = SessionStore.getCustomWindowValue(
+    let stateStr = lazy.SessionStore.getCustomWindowValue(
       this.#window,
       SESSIONSTORE_STATE_KEY
     );
 
     let version =
       parseInt(
-        SessionStore.getCustomWindowValue(
+        lazy.SessionStore.getCustomWindowValue(
           this.#window,
           SESSIONSTORE_STATE_VERSION_KEY
         ),
@@ -2572,23 +2582,23 @@ class StageManager extends EventTarget {
       try {
         state = JSON.parse(stateStr);
       } catch (e) {
-        logConsole.warn("Failed to deserialize StageManager state.", e);
+        lazy.logConsole.warn("Failed to deserialize StageManager state.", e);
       }
     }
 
     if (!state.length) {
-      logConsole.error("No state to rebuild from.");
+      lazy.logConsole.error("No state to rebuild from.");
     }
 
     if (version < SESSIONSTORE_STATE_CURRENT_VERSION) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Migrating state from ${version} to ` +
           SESSIONSTORE_STATE_CURRENT_VERSION
       );
       this.migrateSessionState(state, version);
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       "Attempting to restore views for history entries",
       state.map(entry => entry.id)
     );
@@ -2611,7 +2621,7 @@ class StageManager extends EventTarget {
     }
 
     if (previousIdMap.size) {
-      logConsole.debug("Found cached history entries", [
+      lazy.logConsole.debug("Found cached history entries", [
         ...previousIdMap.keys(),
       ]);
     }
@@ -2625,7 +2635,7 @@ class StageManager extends EventTarget {
         let { sessionHistory } = tab.linkedBrowser.browsingContext;
         for (let i = 0; i < sessionHistory.count; i++) {
           let entry = sessionHistory.getEntryAtIndex(i);
-          let entryId = SessionHistory.getPreviousID(entry) ?? entry.ID;
+          let entryId = lazy.SessionHistory.getPreviousID(entry) ?? entry.ID;
 
           if (missingIds.has(entryId)) {
             let internalView = new InternalView(
@@ -2647,7 +2657,7 @@ class StageManager extends EventTarget {
         // cachedEntry - this avoids needing to create new <browser> elements
         // for each cached-state InternalView that originally belonged to a
         // lazy browser.
-        let tabState = JSON.parse(SessionStore.getTabState(tab));
+        let tabState = JSON.parse(lazy.SessionStore.getTabState(tab));
         for (let entry of tabState.entries) {
           let internalView = new InternalView(
             this.#window,
@@ -2665,20 +2675,28 @@ class StageManager extends EventTarget {
     }
 
     if (restoredIds.size) {
-      logConsole.debug("Found already restored history entries", restoredIds);
+      lazy.logConsole.debug(
+        "Found already restored history entries",
+        restoredIds
+      );
     }
     if (pendingIds.size) {
-      logConsole.debug("Found history entries in pending tabs", pendingIds);
+      lazy.logConsole.debug(
+        "Found history entries in pending tabs",
+        pendingIds
+      );
     }
     if (missingIds.size) {
-      logConsole.debug("Failed to find history state for ids", [...missingIds]);
+      lazy.logConsole.debug("Failed to find history state for ids", [
+        ...missingIds,
+      ]);
     }
 
     // Push those views onto the stack and to the river.
     for (let { id, workspaceId, pinnedState } of state) {
       let internalView = previousIdMap.get(id);
       if (!internalView) {
-        logConsole.warn("Missing history entry for river entry.");
+        lazy.logConsole.warn("Missing history entry for river entry.");
         continue;
       }
       let workspace = this.#workspaces.get(workspaceId);
@@ -2702,7 +2720,7 @@ class StageManager extends EventTarget {
     let selectedView = selectedWorkspace.historyViews.get(selectedEntry.ID);
 
     if (!selectedView) {
-      logConsole.warn("Selected entry was not in state.");
+      lazy.logConsole.warn("Selected entry was not in state.");
       selectedView = new InternalView(
         this.#window,
         selectedBrowser,
@@ -2713,7 +2731,7 @@ class StageManager extends EventTarget {
       selectedWorkspace.viewStack.push(selectedView);
     }
 
-    logConsole.trace(
+    lazy.logConsole.trace(
       `Setting #currentInternalView to ${selectedView.toString()}`
     );
     this.#currentInternalView = selectedView;
@@ -2760,12 +2778,12 @@ class StageManager extends EventTarget {
       }
     }
 
-    SessionStore.setCustomWindowValue(
+    lazy.SessionStore.setCustomWindowValue(
       this.#window,
       SESSIONSTORE_STATE_KEY,
       JSON.stringify(state)
     );
-    SessionStore.setCustomWindowValue(
+    lazy.SessionStore.setCustomWindowValue(
       this.#window,
       SESSIONSTORE_STATE_VERSION_KEY,
       SESSIONSTORE_STATE_CURRENT_VERSION.toString()
@@ -2813,7 +2831,7 @@ class StageManager extends EventTarget {
       return;
     }
 
-    logConsole.debug(`Starting activation timer.`);
+    lazy.logConsole.debug(`Starting activation timer.`);
     this.#activationTimer = this.#window.setTimeout(() => {
       this.activateCurrentView();
     }, timeout);
@@ -2823,28 +2841,30 @@ class StageManager extends EventTarget {
    * This function moves the current/staged view to the top of the river.
    */
   activateCurrentView() {
-    logConsole.debug(`Activating current InternalView.`);
+    lazy.logConsole.debug(`Activating current InternalView.`);
     this.#activationTimer = null;
 
     if (this.#historyCarouselMode) {
-      logConsole.debug(`Not activating views since we're in mega back mode`);
+      lazy.logConsole.debug(
+        `Not activating views since we're in mega back mode`
+      );
       return;
     }
 
     if (!this.#currentInternalView) {
-      logConsole.debug(`We don't have a view to activate`);
+      lazy.logConsole.debug(`We don't have a view to activate`);
       return;
     }
 
     if (this.#currentInternalView.pinned) {
-      logConsole.debug(`Cannot activate a pinned view.`);
+      lazy.logConsole.debug(`Cannot activate a pinned view.`);
       return;
     }
 
     if (this.currentWorkspace.activateView(this.#currentInternalView)) {
       this.notifyEvent("ViewMoved", this.#currentInternalView);
       this.updateSessionStore();
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Activated InternalView ${this.#currentInternalView.toString()}`
       );
     }
@@ -2878,7 +2898,7 @@ class StageManager extends EventTarget {
    * @type {InternalView[]}
    */
   get internalViewsDebuggingOnly() {
-    if (!DEBUG) {
+    if (!lazy.DEBUG) {
       return null;
     }
 
@@ -2997,7 +3017,7 @@ class StageManager extends EventTarget {
       // will _eventually_ be loaded.
       let gBrowser = browser.getTabBrowser();
       let tab = gBrowser.getTabForBrowser(browser);
-      let state = JSON.parse(SessionStore.getTabState(tab));
+      let state = JSON.parse(lazy.SessionStore.getTabState(tab));
       // The SessionHistory index is 1-index'd, so we have to subtract 1 to
       // get at the right index.
       SHEntryID = state.entries[state.index - 1].ID;
@@ -3028,13 +3048,13 @@ class StageManager extends EventTarget {
    *   The view to navigate to.
    */
   setView(view) {
-    logConsole.debug("Setting a new View as current.");
+    lazy.logConsole.debug("Setting a new View as current.");
     let internalView = InternalView.viewMap.get(view);
     if (!internalView) {
       throw new Error("Unknown view.");
     }
 
-    logConsole.debug(
+    lazy.logConsole.debug(
       `Setting current InternalView to ${internalView.toString()}`
     );
 
@@ -3088,7 +3108,7 @@ class StageManager extends EventTarget {
     }
 
     if (this.#currentInternalView == internalView) {
-      logConsole.debug("View is already the current view.");
+      lazy.logConsole.debug("View is already the current view.");
       return;
     }
 
@@ -3096,19 +3116,19 @@ class StageManager extends EventTarget {
       if (!browser.browsingContext) {
         // This is a lazy browser, trigger restoration.
         let tab = this.#window.gBrowser.getTabForBrowser(browser);
-        let state = JSON.parse(SessionStore.getTabState(tab));
+        let state = JSON.parse(lazy.SessionStore.getTabState(tab));
 
         for (let i = 0; i < state.entries.length; i++) {
           if (state.entries[i].ID == internalView.historyId) {
             // Update state before triggering restoration so the correct page loads immediately.
             if (state.index != i + 1) {
               state.index = i + 1;
-              SessionStore.setTabState(tab, state);
+              lazy.SessionStore.setTabState(tab, state);
             }
 
             // Selecting the browser will trigger session restoration and page load with will be
             // detected and send out the ViewChanged notification elsewhere.
-            logConsole.debug(`Putting lazy browser on the stage.`);
+            lazy.logConsole.debug(`Putting lazy browser on the stage.`);
             this.#window.gBrowser.selectedTab = tab;
             return;
           }
@@ -3117,7 +3137,7 @@ class StageManager extends EventTarget {
         let historyIndex = getHistoryIndex(browser, internalView.historyId);
 
         if (historyIndex !== null) {
-          logConsole.debug(
+          lazy.logConsole.debug(
             `Found historyIndex ${historyIndex} for InternalView.`
           );
 
@@ -3127,17 +3147,17 @@ class StageManager extends EventTarget {
           );
 
           if (currentIndex != historyIndex) {
-            logConsole.debug(
+            lazy.logConsole.debug(
               `Navigating browser ${browser.browsingContext.id} to SHistory ` +
                 `index ${historyIndex}, ID ${internalView.historyId}.`
             );
             let sh = browser.browsingContext.sessionHistory;
-            logConsole.debug(
+            lazy.logConsole.debug(
               `INDEX: ${sh.index}, REQUESTED INDEX: ${sh.requestedIndex}`
             );
             browser.gotoIndex(historyIndex);
           } else {
-            logConsole.debug(
+            lazy.logConsole.debug(
               `NOT navigating browser ${browser.browsingContext.id} to SHistory ` +
                 `index ${historyIndex}, ID ${internalView.historyId} - it's already there!`
             );
@@ -3145,7 +3165,7 @@ class StageManager extends EventTarget {
 
           // Tab switch if necessary.
           if (this.#window.gBrowser.selectedBrowser !== browser) {
-            logConsole.debug(
+            lazy.logConsole.debug(
               `Putting browser ${browser.browsingContext.id} on the stage.`
             );
             let tab = this.#window.gBrowser.getTabForBrowser(browser);
@@ -3162,14 +3182,14 @@ class StageManager extends EventTarget {
         }
       }
 
-      logConsole.warn(
+      lazy.logConsole.warn(
         `Failed to recover history for a view ${internalView.toString()}`
       );
     }
 
     let { cachedEntry } = internalView;
     if (cachedEntry) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Found cached SHEntry ${cachedEntry.ID} for InternalView. ` +
           `Creating and staging a new browser for it.`
       );
@@ -3183,7 +3203,7 @@ class StageManager extends EventTarget {
         workspace.pinnedAppBrowsers.add(newBrowser);
       }
 
-      SessionHistory.restoreFromParent(
+      lazy.SessionHistory.restoreFromParent(
         newBrowser.browsingContext.sessionHistory,
         {
           entries: [cachedEntry],
@@ -3192,7 +3212,7 @@ class StageManager extends EventTarget {
 
       newBrowser.gotoIndex(0);
 
-      logConsole.debug(
+      lazy.logConsole.debug(
         `Created and staged browser ${newBrowser.browsingContext.id}.`
       );
       this.#window.gBrowser.selectedTab = tab;
@@ -3201,7 +3221,7 @@ class StageManager extends EventTarget {
 
     // Either the browser is gone or the history entry is gone and for some reason we have no cache
     // of the session.
-    logConsole.warn("Recreating a view with no cached entry.");
+    lazy.logConsole.warn("Recreating a view with no cached entry.");
     this.#pendingView = internalView;
     this.#window.gBrowser.selectedTab = this.#window.gBrowser.addWebTab(
       internalView.url.spec
@@ -3223,7 +3243,7 @@ class StageManager extends EventTarget {
       throw new Error("Unknown view.");
     }
 
-    logConsole.log("Pinning view ", internalView.toString());
+    lazy.logConsole.log("Pinning view ", internalView.toString());
 
     let workspace = this.#workspaces.get(internalView.workspaceId);
     workspace.setInternalViewPinnedState(
@@ -3489,14 +3509,14 @@ class StageManager extends EventTarget {
   }
 
   async #historyCarouselExit({ finalIndex }) {
-    logConsole.debug(
+    lazy.logConsole.debug(
       "Exiting history carousel mode, selecting index ",
       finalIndex
     );
     this.#historyCarouselMode = false;
     this.#currentHistoryCarouselInternalView = null;
     let internalView = this.currentWorkspace.viewStack[finalIndex];
-    logConsole.debug(`Selecting view: ${internalView.toString()}`);
+    lazy.logConsole.debug(`Selecting view: ${internalView.toString()}`);
     this.setView(internalView.view);
 
     let flushed = this.#window.promiseDocumentFlushed(() => {});
@@ -3594,7 +3614,7 @@ class StageManager extends EventTarget {
       if (index == this.currentIndex) {
         await this.#window.promiseDocumentFlushed(() => {});
         let currentBrowser = this.#currentInternalView.getBrowser();
-        preview.image = await PageThumbs.captureToBlob(currentBrowser, {
+        preview.image = await lazy.PageThumbs.captureToBlob(currentBrowser, {
           fullScale: true,
           fullViewport: true,
         });
@@ -3633,7 +3653,7 @@ class StageManager extends EventTarget {
     let browser = internalView.getBrowser();
 
     if (internalView.state == "open") {
-      let blob = await PageThumbs.captureToBlob(browser, {
+      let blob = await lazy.PageThumbs.captureToBlob(browser, {
         fullScale: true,
         fullViewport: true,
       });

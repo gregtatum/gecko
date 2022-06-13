@@ -10,7 +10,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
@@ -64,12 +66,12 @@ const VIEW_TEMPLATE = {
  * A provider that returns an option for using the search engine provided
  * by the active view if it utilizes OpenSearch.
  */
-class ProviderContextualSearch extends UrlbarProvider {
+class ProviderContextualSearch extends lazy.UrlbarProvider {
   constructor() {
     super();
     this.engines = new Map();
-    UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
-    UrlbarView.addDynamicViewTemplate(DYNAMIC_RESULT_TYPE, VIEW_TEMPLATE);
+    lazy.UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
+    lazy.UrlbarView.addDynamicViewTemplate(DYNAMIC_RESULT_TYPE, VIEW_TEMPLATE);
   }
 
   /**
@@ -84,7 +86,7 @@ class ProviderContextualSearch extends UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -98,7 +100,7 @@ class ProviderContextualSearch extends UrlbarProvider {
     return (
       queryContext.trimmedSearchString &&
       !queryContext.searchMode &&
-      UrlbarPrefs.get(ENABLED_PREF)
+      lazy.UrlbarPrefs.get(ENABLED_PREF)
     );
   }
 
@@ -126,11 +128,11 @@ class ProviderContextualSearch extends UrlbarProvider {
       engine = this.engines.get(hostname);
     } else {
       // Strip www. to allow for partial matches when looking for an engine.
-      const [host] = UrlbarUtils.stripPrefixAndTrim(hostname, {
+      const [host] = lazy.UrlbarUtils.stripPrefixAndTrim(hostname, {
         stripWww: true,
       });
       engine = (
-        await UrlbarSearchUtils.enginesForDomainPrefix(host, {
+        await lazy.UrlbarSearchUtils.enginesForDomainPrefix(host, {
           matchAllDomainLevels: true,
           onlyEnabled: false,
         })
@@ -142,11 +144,11 @@ class ProviderContextualSearch extends UrlbarProvider {
       // Check to see if the engine that was found is the default engine.
       // The default engine will often be used to populate the heuristic result,
       // and we want to avoid ending up with two nearly identical search results.
-      const defaultEngine = UrlbarSearchUtils.getDefaultEngine();
+      const defaultEngine = lazy.UrlbarSearchUtils.getDefaultEngine();
       if (engine.name === defaultEngine.name) {
         return;
       }
-      const [url] = UrlbarUtils.getSearchQueryUrl(
+      const [url] = lazy.UrlbarUtils.getSearchQueryUrl(
         engine,
         queryContext.searchString
       );
@@ -163,7 +165,7 @@ class ProviderContextualSearch extends UrlbarProvider {
 
     // If the current view has engines that haven't been added, return a result
     // that will first add an engine, then use it to search.
-    const window = BrowserWindowTracker.getTopWindow();
+    const window = lazy.BrowserWindowTracker.getTopWindow();
     const engineToAdd = window?.gBrowser.selectedBrowser?.engines?.[0];
 
     if (engineToAdd) {
@@ -188,9 +190,9 @@ class ProviderContextualSearch extends UrlbarProvider {
     shouldNavigate = false,
     shouldAddEngine = false,
   }) {
-    const result = new UrlbarResult(
-      UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+    const result = new lazy.UrlbarResult(
+      lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      lazy.UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
         engine,
         icon,
@@ -221,7 +223,7 @@ class ProviderContextualSearch extends UrlbarProvider {
     return {
       icon: {
         attributes: {
-          src: result.payload.icon || UrlbarUtils.ICON.SEARCH_GLASS,
+          src: result.payload.icon || lazy.UrlbarUtils.ICON.SEARCH_GLASS,
         },
       },
       search: {
@@ -255,7 +257,7 @@ class ProviderContextualSearch extends UrlbarProvider {
     // In cases where we don't have to create a new engine, navigation is
     // handled automatically by providing `shouldNavigate: true` in the result.
     if (result.payload.shouldAddEngine) {
-      let newEngine = new OpenSearchEngine({ shouldPersist: false });
+      let newEngine = new lazy.OpenSearchEngine({ shouldPersist: false });
       newEngine._setIcon(result.payload.icon, false);
       await new Promise(resolve => {
         newEngine._install(result.payload.url, errorCode => {
@@ -263,11 +265,11 @@ class ProviderContextualSearch extends UrlbarProvider {
         });
       });
       this.engines.set(result.payload.hostname, newEngine);
-      const [url] = UrlbarUtils.getSearchQueryUrl(
+      const [url] = lazy.UrlbarUtils.getSearchQueryUrl(
         newEngine,
         result.payload.input
       );
-      UrlbarUtils.openUrl(url);
+      lazy.UrlbarUtils.openUrl(url);
     }
   }
 }

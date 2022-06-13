@@ -14,7 +14,9 @@ const { FormHistory } = ChromeUtils.import(
   "resource://gre/modules/FormHistory.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
   UrlbarSearchUtils: "resource:///modules/UrlbarSearchUtils.jsm",
@@ -28,7 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 /**
  * A provider that returns the Top Sites shown on about:newtab.
  */
-class ProviderRecentSearches extends UrlbarProvider {
+class ProviderRecentSearches extends lazy.UrlbarProvider {
   constructor() {
     super();
   }
@@ -49,7 +51,7 @@ class ProviderRecentSearches extends UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -85,7 +87,9 @@ class ProviderRecentSearches extends UrlbarProvider {
    *       is done searching AND returning results.
    */
   async startQuery(queryContext, addCallback) {
-    let engine = UrlbarSearchUtils.getDefaultEngine(queryContext.isPrivate);
+    let engine = lazy.UrlbarSearchUtils.getDefaultEngine(
+      queryContext.isPrivate
+    );
     let results = await FormHistory.search(
       ["value", "lastUsed"],
       { fieldname: "searchbar-history", source: engine.name },
@@ -93,12 +97,12 @@ class ProviderRecentSearches extends UrlbarProvider {
       { limit: 5, order: "lastUsed DESC" }
     );
     for (let result of results) {
-      let res = new UrlbarResult(
-        UrlbarUtils.RESULT_TYPE.SEARCH,
-        UrlbarUtils.RESULT_SOURCE.HISTORY,
-        ...UrlbarResult.payloadAndSimpleHighlights(queryContext.tokens, {
-          engine: [engine.name, UrlbarUtils.HIGHLIGHT.TYPED],
-          suggestion: [result.value, UrlbarUtils.HIGHLIGHT.NONE],
+      let res = new lazy.UrlbarResult(
+        lazy.UrlbarUtils.RESULT_TYPE.SEARCH,
+        lazy.UrlbarUtils.RESULT_SOURCE.HISTORY,
+        ...lazy.UrlbarResult.payloadAndSimpleHighlights(queryContext.tokens, {
+          engine: [engine.name, lazy.UrlbarUtils.HIGHLIGHT.TYPED],
+          suggestion: [result.value, lazy.UrlbarUtils.HIGHLIGHT.NONE],
         })
       );
       addCallback(this, res);

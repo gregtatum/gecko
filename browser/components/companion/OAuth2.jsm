@@ -14,14 +14,16 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
 });
 
 const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
   "TopLevelNavigationDelegate:IgnoreList";
 
-XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
+XPCOMUtils.defineLazyGlobalGetters(lazy, ["XMLHttpRequest"]);
 
 // This is used for Microsoft OAuth integration. Microsoft requires the Origin
 // header to be correct, or to be missing. There's no way to disable the Origin
@@ -29,7 +31,7 @@ XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
 // use XHR instead.
 function promiseXHR(data) {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest({ mozAnon: true, mozSystem: true });
+    const xhr = new lazy.XMLHttpRequest({ mozAnon: true, mozSystem: true });
     xhr.responseType = "json";
 
     const method = data.method || "GET";
@@ -55,7 +57,7 @@ const OAuthConnect = {
 
   connect(oauth) {
     return new Promise((resolve, reject) => {
-      let win = BrowserWindowTracker.getTopWindow();
+      let win = lazy.BrowserWindowTracker.getTopWindow();
       if (!win) {
         throw new Error("No current browser window");
       }

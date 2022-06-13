@@ -20,7 +20,9 @@ const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
   Ci.nsIParserUtils
 );
 
-XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
+const lazy = {};
+
+XPCOMUtils.defineLazyGlobalGetters(lazy, ["XMLHttpRequest"]);
 
 /**
  * Fetch html data for a href.
@@ -29,7 +31,7 @@ XPCOMUtils.defineLazyGlobalGetters(this, ["XMLHttpRequest"]);
  */
 function fetchData(aUrl) {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+    const xhr = new lazy.XMLHttpRequest();
     xhr.onload = () => {
       resolve(xhr.responseXML);
     };

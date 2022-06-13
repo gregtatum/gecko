@@ -10,7 +10,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   CompanionParent: "resource:///actors/CompanionParent.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
 });
@@ -20,10 +22,10 @@ class FlowResetParent extends JSWindowActorParent {
     let window = this.browsingContext.topChromeWindow;
     switch (message.name) {
       case "ViewCompanionBrowseTab":
-        CompanionParent.openCompanionTab("browse");
+        lazy.CompanionParent.openCompanionTab("browse");
         break;
       case "RestoreLastSession":
-        SessionManager.restoreLastSession(window);
+        lazy.SessionManager.restoreLastSession(window);
         break;
       case "FlowResetLoaded":
         if (window && !window.closed) {
@@ -33,7 +35,7 @@ class FlowResetParent extends JSWindowActorParent {
       case "HasSession":
         // This query includes page data as that has additional checks to
         // ensure the session has at least one page recorded.
-        return SessionManager.query({ limit: 1, includePages: true }).then(
+        return lazy.SessionManager.query({ limit: 1, includePages: true }).then(
           sessions => !!sessions.length
         );
     }

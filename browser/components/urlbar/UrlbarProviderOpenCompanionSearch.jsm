@@ -10,7 +10,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   CompanionParent: "resource:///actors/CompanionParent.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
@@ -45,11 +47,11 @@ const VIEW_TEMPLATE = {
 /**
  * A provider that returns the Top Sites shown on about:newtab.
  */
-class ProviderOpenCompanionSearch extends UrlbarProvider {
+class ProviderOpenCompanionSearch extends lazy.UrlbarProvider {
   constructor() {
     super();
-    UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
-    UrlbarView.addDynamicViewTemplate(DYNAMIC_RESULT_TYPE, VIEW_TEMPLATE);
+    lazy.UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
+    lazy.UrlbarView.addDynamicViewTemplate(DYNAMIC_RESULT_TYPE, VIEW_TEMPLATE);
   }
 
   /**
@@ -64,7 +66,7 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -75,7 +77,7 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
    * @returns {boolean} Whether this provider should be invoked for the search.
    */
   isActive(queryContext) {
-    return UrlbarPrefs.get(ENABLED_PREF) && queryContext.searchString;
+    return lazy.UrlbarPrefs.get(ENABLED_PREF) && queryContext.searchString;
   }
 
   /**
@@ -87,9 +89,9 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
    *       is done searching AND returning results.
    */
   async startQuery(queryContext, addCallback) {
-    const result = new UrlbarResult(
-      UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+    const result = new lazy.UrlbarResult(
+      lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      lazy.UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
         input: queryContext.searchString,
         dynamicType: DYNAMIC_RESULT_TYPE,
@@ -115,7 +117,7 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
   }
 
   pickResult(result) {
-    let actor = CompanionParent.openCompanionTab("history");
+    let actor = lazy.CompanionParent.openCompanionTab("history");
     actor.sendAsyncMessage("Companion:DoHistorySearch", {
       queryString: result.payload.input,
     });

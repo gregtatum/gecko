@@ -10,7 +10,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
   InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
@@ -29,12 +31,12 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "selectByType",
   "browser.companion.snapshots.selectByType",
   false
 );
-const workshopEnabled = Services.prefs.getBoolPref(
+const workshopEnabled = lazy.Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled",
   false
 );
@@ -49,7 +51,7 @@ const PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX = 16;
 // Defines pages that we force to show a certain snapshot type. The regular
 // expresions are applied to the entire url.
 const DOMAIN_TYPES = {
-  [PageDataSchema.DATA_TYPE.PRODUCT]: [
+  [lazy.PageDataSchema.DATA_TYPE.PRODUCT]: [
     /^https:\/\/www\.walmart\.com\//,
     /^https:\/\/www\.target\.com\//,
 
@@ -86,41 +88,59 @@ class CompanionParent extends JSWindowActorParent {
     this._cacheCleanupTimeout = null;
     this._cleanupCaches = this.cleanupCaches.bind(this);
 
-    Services.obs.addObserver(
+    lazy.Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-add-window"
     );
-    Services.obs.addObserver(
+    lazy.Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-remove-window"
     );
-    Services.obs.addObserver(
+    lazy.Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-tab-added"
     );
-    Services.obs.addObserver(
+    lazy.Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-tab-removed"
     );
 
-    Services.obs.addObserver(this._observer, "companion-show-passwords-panel");
-    Services.obs.addObserver(this._observer, "companion-signin");
-    Services.obs.addObserver(this._observer, "companion-signout");
-    Services.obs.addObserver(this._observer, "companion-services-refresh");
-    Services.obs.addObserver(this._observer, "companion-submenu-change");
-    Services.obs.addObserver(this._observer, "oauth-refresh-token-received");
-    Services.obs.addObserver(this._observer, "oauth-access-token-received");
-    Services.obs.addObserver(this._observer, "oauth-access-token-error");
-    Services.obs.addObserver(this._observer, "places-snapshot-group-added");
-    Services.obs.addObserver(this._observer, "places-snapshot-group-updated");
-    Services.obs.addObserver(this._observer, "places-snapshot-group-deleted");
+    lazy.Services.obs.addObserver(
+      this._observer,
+      "companion-show-passwords-panel"
+    );
+    lazy.Services.obs.addObserver(this._observer, "companion-signin");
+    lazy.Services.obs.addObserver(this._observer, "companion-signout");
+    lazy.Services.obs.addObserver(this._observer, "companion-services-refresh");
+    lazy.Services.obs.addObserver(this._observer, "companion-submenu-change");
+    lazy.Services.obs.addObserver(
+      this._observer,
+      "oauth-refresh-token-received"
+    );
+    lazy.Services.obs.addObserver(
+      this._observer,
+      "oauth-access-token-received"
+    );
+    lazy.Services.obs.addObserver(this._observer, "oauth-access-token-error");
+    lazy.Services.obs.addObserver(
+      this._observer,
+      "places-snapshot-group-added"
+    );
+    lazy.Services.obs.addObserver(
+      this._observer,
+      "places-snapshot-group-updated"
+    );
+    lazy.Services.obs.addObserver(
+      this._observer,
+      "places-snapshot-group-deleted"
+    );
 
-    Services.prefs.addObserver(
+    lazy.Services.prefs.addObserver(
       "browser.companion.stagemanagerdebugging",
       this._setupStageManagerPrefObservers
     );
 
-    for (let win of BrowserWindowTracker.orderedWindows) {
+    for (let win of lazy.BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
         this.registerTab(tab);
       }
@@ -132,16 +152,18 @@ class CompanionParent extends JSWindowActorParent {
   actorCreated() {
     this.setUpStageManagerDebuggingObservers();
     this._destroyed = false;
-    SessionManager.on("session-replaced", this._handleSessionUpdate);
-    SessionManager.on("session-set-aside", this._handleSessionUpdate);
-    SessionManager.on("sessions-updated", this._handleSessionUpdate);
+    lazy.SessionManager.on("session-replaced", this._handleSessionUpdate);
+    lazy.SessionManager.on("session-set-aside", this._handleSessionUpdate);
+    lazy.SessionManager.on("sessions-updated", this._handleSessionUpdate);
     // Initialise the display of the last session UI.
     this.retrieveAndSendSessionData();
     this.sessionSetAside();
   }
 
   setUpStageManagerDebuggingObservers() {
-    if (Services.prefs.getBoolPref("browser.companion.stagemanagerdebugging")) {
+    if (
+      lazy.Services.prefs.getBoolPref("browser.companion.stagemanagerdebugging")
+    ) {
       let hist = this.browsingContext.topChromeWindow.gStageManager;
       for (let event of [
         "ViewChanged",
@@ -177,54 +199,72 @@ class CompanionParent extends JSWindowActorParent {
     this._destroyed = true;
 
     if (this._cacheCleanupTimeout) {
-      clearTimeout(this._cacheCleanupTimeout);
+      lazy.clearTimeout(this._cacheCleanupTimeout);
       this._cacheCleanupTimeout = null;
     }
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-add-window"
     );
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-remove-window"
     );
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-tab-added"
     );
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(
       this._observer,
       "companion-show-passwords-panel"
     );
-    Services.obs.removeObserver(this._observer, "companion-signin");
-    Services.obs.removeObserver(this._observer, "companion-signout");
-    Services.obs.removeObserver(this._observer, "companion-services-refresh");
-    Services.obs.removeObserver(this._observer, "companion-submenu-change");
-    Services.obs.removeObserver(this._observer, "oauth-refresh-token-received");
-    Services.obs.removeObserver(this._observer, "oauth-access-token-received");
-    Services.obs.removeObserver(this._observer, "oauth-access-token-error");
-    Services.obs.removeObserver(this._observer, "places-snapshot-group-added");
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(this._observer, "companion-signin");
+    lazy.Services.obs.removeObserver(this._observer, "companion-signout");
+    lazy.Services.obs.removeObserver(
+      this._observer,
+      "companion-services-refresh"
+    );
+    lazy.Services.obs.removeObserver(
+      this._observer,
+      "companion-submenu-change"
+    );
+    lazy.Services.obs.removeObserver(
+      this._observer,
+      "oauth-refresh-token-received"
+    );
+    lazy.Services.obs.removeObserver(
+      this._observer,
+      "oauth-access-token-received"
+    );
+    lazy.Services.obs.removeObserver(
+      this._observer,
+      "oauth-access-token-error"
+    );
+    lazy.Services.obs.removeObserver(
+      this._observer,
+      "places-snapshot-group-added"
+    );
+    lazy.Services.obs.removeObserver(
       this._observer,
       "places-snapshot-group-updated"
     );
-    Services.obs.removeObserver(
+    lazy.Services.obs.removeObserver(
       this._observer,
       "places-snapshot-group-deleted"
     );
 
-    Services.prefs.removeObserver(
+    lazy.Services.prefs.removeObserver(
       "browser.companion.stagemanagerdebugging",
       this._setupStageManagerPrefObservers
     );
 
     this.removeStageManagerDebuggingObservers();
 
-    for (let win of BrowserWindowTracker.orderedWindows) {
+    for (let win of lazy.BrowserWindowTracker.orderedWindows) {
       for (let tab of win.gBrowser.tabs) {
         this.unregisterTab(tab);
       }
@@ -234,19 +274,19 @@ class CompanionParent extends JSWindowActorParent {
 
     if (this.snapshotSelector) {
       this.snapshotSelector.destroy();
-      PageDataService.off("page-data", this._pageDataFound);
+      lazy.PageDataService.off("page-data", this._pageDataFound);
       this.snapshotSelector = null;
     }
-    SessionManager.off("session-replaced", this._handleSessionUpdate);
-    SessionManager.off("session-set-aside", this._handleSessionUpdate);
-    SessionManager.off("sessions-updated", this._handleSessionUpdate);
+    lazy.SessionManager.off("session-replaced", this._handleSessionUpdate);
+    lazy.SessionManager.off("session-set-aside", this._handleSessionUpdate);
+    lazy.SessionManager.off("sessions-updated", this._handleSessionUpdate);
 
     this._browserIdsToTabs.clear();
   }
 
   ensureCacheCleanupRunning() {
     if (!this._cacheCleanupTimeout) {
-      this._cacheCleanupTimeout = setTimeout(
+      this._cacheCleanupTimeout = lazy.setTimeout(
         this._cleanupCaches,
         PLACES_EVICTION_TIMEOUT
       );
@@ -258,7 +298,7 @@ class CompanionParent extends JSWindowActorParent {
     // doing this during critical work, and B) we're not running if there's
     // nothing even in the cache. This lets us prevent waking up the thread
     // intermittently when we would otherwise just be able to sleep.
-    requestIdleCallback(() => {
+    lazy.requestIdleCallback(() => {
       let nextExpiration = null;
       let now = Date.now();
       try {
@@ -279,7 +319,7 @@ class CompanionParent extends JSWindowActorParent {
         // we clear out _cacheCleanupTimeout so that cleanup can be scheduled
         // the next time something is added to the cache.
         if (nextExpiration) {
-          this._cacheCleanupTimeout = setTimeout(
+          this._cacheCleanupTimeout = lazy.setTimeout(
             this._cleanupCaches,
             nextExpiration - now
           );
@@ -362,7 +402,7 @@ class CompanionParent extends JSWindowActorParent {
     );
     return new Promise(resolve => {
       service.getFaviconDataForPage(
-        Services.io.newURI(page),
+        lazy.Services.io.newURI(page),
         (uri, dataLength, data, mimeType) => {
           resolve({
             url: page,
@@ -389,7 +429,7 @@ class CompanionParent extends JSWindowActorParent {
       // The browser element has gone away, so skip the rest.
       return null;
     }
-    let results = await SessionManager.query({ includePages: true });
+    let results = await lazy.SessionManager.query({ includePages: true });
     results = results.filter(session => session.pages.length);
 
     if (results) {
@@ -425,12 +465,12 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async getSnapshotGroups() {
-    let groups = await SnapshotGroups.query({ includeMetadata: true });
+    let groups = await lazy.SnapshotGroups.query({ includeMetadata: true });
 
     // TODO: filed https://mozilla-hub.atlassian.net/browse/MR2-1869 to remove when
     // dependency is fulfilled.
     for (let group of groups) {
-      let firstResult = await SnapshotGroups.getSnapshots({
+      let firstResult = await lazy.SnapshotGroups.getSnapshots({
         id: group.id,
         count: 1,
       });
@@ -441,7 +481,9 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async getSnapshotGroupData(message) {
-    let result = await SnapshotGroups.getSnapshots({ id: message.data.id });
+    let result = await lazy.SnapshotGroups.getSnapshots({
+      id: message.data.id,
+    });
     this.sendAsyncMessage("Companion:SnapshotGroupsDetails", result);
   }
 
@@ -479,7 +521,7 @@ class CompanionParent extends JSWindowActorParent {
       if (!filtered.length) {
         return resultMap;
       }
-      let pages = await PlacesUtils.history.fetchMany(filtered);
+      let pages = await lazy.PlacesUtils.history.fetchMany(filtered);
       for (let page of pages.values()) {
         this._cachedPlacesTitles.set(page.url.href, page.title);
         resultMap.set(page.url.href, page.title);
@@ -543,7 +585,7 @@ class CompanionParent extends JSWindowActorParent {
     if (workshopEnabled) {
       return [];
     }
-    let events = OnlineServices.getEventsFromCache();
+    let events = lazy.OnlineServices.getEventsFromCache();
     await this.populateAdditionalEventData(events);
     return events;
   }
@@ -593,14 +635,14 @@ class CompanionParent extends JSWindowActorParent {
             service: data,
             connectedServices: workshopEnabled
               ? null
-              : OnlineServices.connectedServiceTypes,
+              : lazy.OnlineServices.connectedServiceTypes,
           });
         } else if (topic == "companion-signout") {
           this.sendAsyncMessage("Companion:SignOut", {
             service: data,
             connectedServices: workshopEnabled
               ? null
-              : OnlineServices.connectedServiceTypes,
+              : lazy.OnlineServices.connectedServiceTypes,
           });
         }
         break;
@@ -644,7 +686,7 @@ class CompanionParent extends JSWindowActorParent {
    *   The name of the tab to switch to.
    */
   static openCompanionTab(tab) {
-    let window = BrowserWindowTracker.getTopWindow();
+    let window = lazy.BrowserWindowTracker.getTopWindow();
     let browser = window.document.getElementById("companion-browser");
     let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
       "Companion"
@@ -741,7 +783,7 @@ class CompanionParent extends JSWindowActorParent {
 
   maybeGetStageManager() {
     if (
-      !Services.prefs.getBoolPref(
+      !lazy.Services.prefs.getBoolPref(
         "browser.companion.stagemanagerdebugging",
         false
       )
@@ -768,7 +810,7 @@ class CompanionParent extends JSWindowActorParent {
     let { gBrowser } = this.browsingContext.top.embedderElement.ownerGlobal;
     let type = Object.keys(pageData.data)[0];
     if (
-      selectByType &&
+      lazy.selectByType &&
       !this._pageType &&
       this.snapshotSelector &&
       pageData.url == gBrowser.currentURI.spec
@@ -810,21 +852,21 @@ class CompanionParent extends JSWindowActorParent {
       case "Companion:DismissSnapshot": {
         await this._onDismissSnapshot(
           message,
-          Snapshots.REMOVED_REASON.DISMISS
+          lazy.Snapshots.REMOVED_REASON.DISMISS
         );
         break;
       }
       case "Companion:NotRelevantSnapshot": {
         await this._onDismissSnapshot(
           message,
-          Snapshots.REMOVED_REASON.NOT_RELEVANT
+          lazy.Snapshots.REMOVED_REASON.NOT_RELEVANT
         );
         break;
       }
       case "Companion:PersonalSnapshot": {
         await this._onDismissSnapshot(
           message,
-          Snapshots.REMOVED_REASON.PERSONAL
+          lazy.Snapshots.REMOVED_REASON.PERSONAL
         );
         break;
       }
@@ -925,7 +967,7 @@ class CompanionParent extends JSWindowActorParent {
       oauthFlowService: tab?.getAttribute("pinebuild-oauth-flow"),
     });
 
-    if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
+    if (!lazy.InteractionsBlocklist.canRecordUrl(aLocationURI)) {
       // Reset the current URL for the snapshot selector, as this is a
       // non-web page, and we want to allow all snapshots to be displayed.
       this.snapshotSelector.updateDetailsAndRebuild({
@@ -940,7 +982,7 @@ class CompanionParent extends JSWindowActorParent {
       time: Date.now(),
     });
 
-    if (!selectByType) {
+    if (!lazy.selectByType) {
       return;
     }
 
@@ -972,14 +1014,14 @@ class CompanionParent extends JSWindowActorParent {
       return;
     }
 
-    let tabs = BrowserWindowTracker.orderedWindows.flatMap(w =>
+    let tabs = lazy.BrowserWindowTracker.orderedWindows.flatMap(w =>
       w.gBrowser.tabs.map(t => this.getTabData(t))
     );
     let newFavicons = this.consumeCachedFaviconsToSend();
     let stageManager = this.maybeGetStageManager();
     this.sendAsyncMessage("Companion:Setup", {
       tabs,
-      connectedServices: OnlineServices.connectedServiceTypes,
+      connectedServices: lazy.OnlineServices.connectedServiceTypes,
       newFavicons,
       stageManager,
       sessions,
@@ -989,7 +1031,7 @@ class CompanionParent extends JSWindowActorParent {
       gBrowser,
       gStageManager,
     } = this.browsingContext.top.embedderElement.ownerGlobal;
-    this.snapshotSelector = new SnapshotSelector({
+    this.snapshotSelector = new lazy.SnapshotSelector({
       count: 5,
       filterAdult: true,
       getCurrentSessionUrls: () =>
@@ -1003,14 +1045,14 @@ class CompanionParent extends JSWindowActorParent {
 
     gBrowser.addProgressListener(this);
 
-    PageDataService.on("page-data", this._pageDataFound);
+    lazy.PageDataService.on("page-data", this._pageDataFound);
 
     this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
       await this.ensureFaviconsCached(snapshots.map(s => s.url));
       let snapshotList = await Promise.all(
         snapshots.map(async s => ({
           snapshot: s,
-          preview: await Snapshots.getSnapshotImageURL(s),
+          preview: await lazy.Snapshots.getSnapshotImageURL(s),
         }))
       );
 
@@ -1029,7 +1071,7 @@ class CompanionParent extends JSWindowActorParent {
       newFavicons: this.consumeCachedFaviconsToSend(),
     });
 
-    Services.obs.notifyObservers(
+    lazy.Services.obs.notifyObservers(
       this.browsingContext.top.embedderElement.ownerGlobal,
       "companion-open"
     );
@@ -1099,7 +1141,7 @@ class CompanionParent extends JSWindowActorParent {
 
   _onOpenURL(message) {
     let { url } = message.data;
-    let uri = Services.io.newURI(url);
+    let uri = lazy.Services.io.newURI(url);
     if (!uri.scheme.startsWith("http")) {
       let extProtocolSvc = Cc[
         "@mozilla.org/uriloader/external-protocol-service;1"
@@ -1120,12 +1162,15 @@ class CompanionParent extends JSWindowActorParent {
 
   async _onDismissSnapshot(message, reason) {
     let { url } = message.data;
-    await Snapshots.delete(url, reason);
+    await lazy.Snapshots.delete(url, reason);
   }
 
   _onRestoreSession(message) {
     let { guid } = message.data;
-    SessionManager.replaceSession(this.browsingContext.topChromeWindow, guid);
+    lazy.SessionManager.replaceSession(
+      this.browsingContext.topChromeWindow,
+      guid
+    );
   }
 
   _onSetCharPref(message) {
@@ -1133,7 +1178,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.validateCompanionPref(name)) {
       return;
     }
-    Services.prefs.setCharPref(name, value);
+    lazy.Services.prefs.setCharPref(name, value);
   }
 
   _onSetBoolPref(message) {
@@ -1141,7 +1186,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.validateCompanionPref(name)) {
       return;
     }
-    Services.prefs.setBoolPref(name, value);
+    lazy.Services.prefs.setBoolPref(name, value);
   }
 
   _onSetIntPref(message) {
@@ -1149,7 +1194,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.validateCompanionPref(name)) {
       return;
     }
-    Services.prefs.setIntPref(name, value);
+    lazy.Services.prefs.setIntPref(name, value);
   }
 
   _onSetStageManagerViewIndex(message) {
@@ -1160,12 +1205,12 @@ class CompanionParent extends JSWindowActorParent {
 
   _onGetDocumentTitle(message) {
     let { url } = message.data;
-    return OnlineServices.getDocumentTitle(url);
+    return lazy.OnlineServices.getDocumentTitle(url);
   }
 
   _onConnectService(message) {
     let { type } = message.data;
-    OnlineServices.createService(type);
+    lazy.OnlineServices.createService(type);
   }
 
   async _onGetOAuth2Tokens(message) {
@@ -1177,7 +1222,7 @@ class CompanionParent extends JSWindowActorParent {
       clientSecret,
       type,
     } = message.data;
-    const authorizer = new OAuth2(
+    const authorizer = new lazy.OAuth2(
       endpoint,
       tokenEndpoint,
       scopes,
@@ -1191,11 +1236,19 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   _onAccountCreated(message) {
-    Services.obs.notifyObservers(null, "companion-signin", message.data.type);
+    lazy.Services.obs.notifyObservers(
+      null,
+      "companion-signin",
+      message.data.type
+    );
   }
 
   _onAccountDeleted(message) {
-    Services.obs.notifyObservers(null, "companion-signout", message.data.type);
+    lazy.Services.obs.notifyObservers(
+      null,
+      "companion-signout",
+      message.data.type
+    );
   }
 
   _onOpen() {
@@ -1208,7 +1261,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   _onIsActiveWindow() {
-    return !!Services.focus.activeWindow;
+    return !!lazy.Services.focus.activeWindow;
   }
 
   _onSuggestedSnapshotsPainted(message) {
@@ -1218,7 +1271,7 @@ class CompanionParent extends JSWindowActorParent {
     gTimestampsRecorded.add(message.name);
 
     let { time, extraData } = message.data;
-    let processStart = Services.startup.getStartupInfo().process.getTime();
+    let processStart = lazy.Services.startup.getStartupInfo().process.getTime();
     let delta = time - processStart;
     Glean.pinebuild.suggestedSnapshotsPainted.setRaw(delta);
     Glean.pinebuild.suggestedSnapshotsCount.add(extraData.numberOfSnapshots);
@@ -1231,7 +1284,7 @@ class CompanionParent extends JSWindowActorParent {
     gTimestampsRecorded.add(message.name);
 
     let { time, extraData } = message.data;
-    let processStart = Services.startup.getStartupInfo().process.getTime();
+    let processStart = lazy.Services.startup.getStartupInfo().process.getTime();
     let delta = time - processStart;
     Glean.pinebuild.calendarPainted.setRaw(delta);
     Glean.pinebuild.calendarEventCount.add(extraData.numberOfEvents);
@@ -1239,7 +1292,7 @@ class CompanionParent extends JSWindowActorParent {
 
   async _onBeginHistorySearch(message) {
     const RESULT_LIMIT = 50;
-    let db = await PlacesUtils.promiseDBConnection();
+    let db = await lazy.PlacesUtils.promiseDBConnection();
 
     const MATCH_ANYWHERE_UNMODIFIED =
       Ci.mozIPlacesAutoComplete.MATCH_ANYWHERE_UNMODIFIED;

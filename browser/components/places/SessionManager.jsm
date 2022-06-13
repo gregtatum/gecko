@@ -10,7 +10,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   EventEmitter: "resource://gre/modules/EventEmitter.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
@@ -20,10 +22,10 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "SessionManager",
-    maxLogLevel: Services.prefs.getBoolPref(
+    maxLogLevel: lazy.Services.prefs.getBoolPref(
       "browser.places.perwindowsessions.log",
       false
     )
@@ -33,14 +35,14 @@ XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "perWindowEnabled",
   "browser.places.perwindowsessions.enabled",
   false
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "session_file_expire_time_days",
   "browser.places.session_file_expire_time_days",
   -1
@@ -115,21 +117,21 @@ const DEFAULT_WORKSPACE_ID = 0;
  *    - "CorruptDatabase"
  *        Generic database corruption.
  */
-const SessionManager = new (class SessionManager extends EventEmitter {
+const SessionManager = new (class SessionManager extends lazy.EventEmitter {
   init() {
-    if (!perWindowEnabled) {
+    if (!lazy.perWindowEnabled) {
       return;
     }
-    Services.obs.addObserver(this, SESSION_CLOSED_OBJECTS_CHANGED, true);
-    Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
-    Services.obs.addObserver(this, IDLE_DAILY_TOPIC);
+    lazy.Services.obs.addObserver(this, SESSION_CLOSED_OBJECTS_CHANGED, true);
+    lazy.Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
+    lazy.Services.obs.addObserver(this, IDLE_DAILY_TOPIC);
 
-    PlacesUtils.history.shutdownClient.jsclient.addBlocker(
+    lazy.PlacesUtils.history.shutdownClient.jsclient.addBlocker(
       "SessionManager: flushing sessions",
       () => {
         // Session store will have flushed the state of all windows in quit-application-granted so
         // we can grab it synchronously.
-        let { windows } = SessionStore.getCurrentState();
+        let { windows } = lazy.SessionStore.getCurrentState();
 
         return Promise.all(
           windows.map(windowData => this.#saveSessionData(windowData))
@@ -139,13 +141,13 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   }
 
   uninit() {
-    if (!perWindowEnabled) {
+    if (!lazy.perWindowEnabled) {
       return;
     }
     this.#pendingSaves.clear();
-    Services.obs.removeObserver(this, SESSION_CLOSED_OBJECTS_CHANGED);
-    Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
-    Services.obs.removeObserver(this, IDLE_DAILY_TOPIC);
+    lazy.Services.obs.removeObserver(this, SESSION_CLOSED_OBJECTS_CHANGED);
+    lazy.Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
+    lazy.Services.obs.removeObserver(this, IDLE_DAILY_TOPIC);
   }
 
   /**
@@ -179,7 +181,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *   The url that was loaded to potentially trigger the new session.
    */
   async register(window, url) {
-    if (!perWindowEnabled) {
+    if (!lazy.perWindowEnabled) {
       return;
     }
     if (this.#hasActiveSession(window)) {
@@ -189,23 +191,23 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     if (!url || url.schemeIs("about") || url.schemeIs("chrome")) {
       return;
     }
-    let windowData = SessionStore.getWindowState(window);
+    let windowData = lazy.SessionStore.getWindowState(window);
     if (windowData.windows[0].isPopup) {
       return;
     }
 
     let guid = this.makeGuid();
-    logConsole.debug("Starting new session", guid);
+    lazy.logConsole.debug("Starting new session", guid);
     // Write to the window first, whilst we're still in the synchronous part
     // to avoid re-entrancy issues.
-    SessionStore.setCustomWindowValue(window, "SessionManagerGuid", guid);
+    lazy.SessionStore.setCustomWindowValue(window, "SessionManagerGuid", guid);
 
     try {
       // Save the session in the database, so that we have the guid saved.
       // In the unlikely case that this fails due to the guid being non-unique,
       // then this function will fail early. On the next navigation/start point,
       // we'll try again with a different guid.
-      await PlacesUtils.withConnectionWrapper(
+      await lazy.PlacesUtils.withConnectionWrapper(
         "SessionManager:register",
         async db => {
           await db.executeCached(
@@ -216,10 +218,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         }
       );
     } catch (ex) {
-      logConsole.error("Could not write GUID for session", ex);
+      lazy.logConsole.error("Could not write GUID for session", ex);
       // Since we could not write it, delete the GUID from the window for now.
       // Next time we attempt to register, then we'll try again.
-      SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
+      lazy.SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
       this.emit("session-save-error", annotateDatabaseError(ex));
     }
   }
@@ -250,7 +252,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *   The guid of the session to load into the window.
    */
   async replaceSession(window, restoreSessionGuid) {
-    if (!perWindowEnabled) {
+    if (!lazy.perWindowEnabled) {
       return;
     }
 
@@ -287,8 +289,8 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       // windows before the timer is complete.
       animationCompletePromise,
       (async () => {
-        await TabStateFlusher.flushWindow(window);
-        let windowData = SessionStore.getWindowState(window);
+        await lazy.TabStateFlusher.flushWindow(window);
+        let windowData = lazy.SessionStore.getWindowState(window);
         await this.#saveSessionData(windowData.windows[0]);
       })(),
     ]);
@@ -306,7 +308,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
 
-    SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
+    lazy.SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
     this.emit("session-set-aside", window);
     await window.gStageManager.reset({
       url: "about:flow-reset",
@@ -368,10 +370,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *   A promise that is resolved when the hide animation timer is complete.
    */
   async #restoreInto(window, guid, data, timerCompletePromise) {
-    logConsole.debug("Loading session", guid, "from session store data");
+    lazy.logConsole.debug("Loading session", guid, "from session store data");
 
     // Restoring the session also restores the SessionManagerGuid on the window.
-    SessionStore.setWindowState(window, { windows: [data] }, true);
+    lazy.SessionStore.setWindowState(window, { windows: [data] }, true);
 
     // We really want to make sure that we've changed the session before showing
     // the animation. TabFirstContentfulPaint is a useful proxy, though we
@@ -385,7 +387,9 @@ const SessionManager = new (class SessionManager extends EventEmitter {
           once: true,
         });
       }),
-      new Promise(resolve => setTimeout(resolve, contentfulPaintWaitTimeout)),
+      new Promise(resolve =>
+        lazy.setTimeout(resolve, contentfulPaintWaitTimeout)
+      ),
     ]);
 
     // Ensure we've fully completed the time for the previous animation,
@@ -427,11 +431,11 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     limit = 10,
     beforeDate = null,
   } = {}) {
-    if (!perWindowEnabled) {
+    if (!lazy.perWindowEnabled) {
       return [];
     }
 
-    let db = await PlacesUtils.promiseDBConnection();
+    let db = await lazy.PlacesUtils.promiseDBConnection();
 
     let clauses = [];
 
@@ -529,9 +533,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         this.#savePendingWindowData();
         break;
       case IDLE_DAILY_TOPIC:
-        if (session_file_expire_time_days !== -1) {
+        if (lazy.session_file_expire_time_days !== -1) {
           this.cleanup(
-            Date.now() - session_file_expire_time_days * 24 * 60 * 60 * 1000
+            Date.now() -
+              lazy.session_file_expire_time_days * 24 * 60 * 60 * 1000
           );
         }
         break;
@@ -542,7 +547,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    * Handles saving of sessions in closed windows.
    */
   async #saveClosedWindowData() {
-    let data = SessionStore.getClosedWindowData(false);
+    let data = lazy.SessionStore.getClosedWindowData(false);
     let highestWindowId = -1;
     for (let windowData of data) {
       if (windowData.isPopup) {
@@ -577,7 +582,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     }
 
     for (let window of this.#pendingSaves) {
-      let windowData = SessionStore.getWindowState(window);
+      let windowData = lazy.SessionStore.getWindowState(window);
       await this.#saveSessionData(windowData.windows[0]);
     }
     this.#pendingSaves.clear();
@@ -605,7 +610,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    * @returns {string}
    */
   makeGuid() {
-    return PlacesUtils.history.makeGuid();
+    return lazy.PlacesUtils.history.makeGuid();
   }
 
   /**
@@ -624,11 +629,15 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       data = await IOUtils.readJSON(path, { decompress: true });
     } catch (ex) {
       if (ex.name != "NotFoundError") {
-        logConsole.error("Failed to read session store file for", guid, ex);
+        lazy.logConsole.error(
+          "Failed to read session store file for",
+          guid,
+          ex
+        );
       }
     }
     if (!data) {
-      logConsole.debug(
+      lazy.logConsole.debug(
         "Falling back to loading session",
         guid,
         "from saved places data"
@@ -699,11 +708,11 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   async #saveSessionData(data) {
     let guid = data.extData?.SessionManagerGuid;
     if (!guid) {
-      logConsole.debug("No session to save");
+      lazy.logConsole.debug("No session to save");
       return;
     }
 
-    logConsole.debug("Saving session", guid);
+    lazy.logConsole.debug("Saving session", guid);
 
     this.#removeUnwantedSessionData(data);
 
@@ -724,7 +733,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     });
 
     if (!data.tabs.length) {
-      logConsole.error(
+      lazy.logConsole.error(
         "Unexpected empty session after filtering internal pages"
       );
       return;
@@ -760,7 +769,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     pages = pages.map((url, position) => ({ url, position }));
 
     try {
-      await PlacesUtils.withConnectionWrapper(
+      await lazy.PlacesUtils.withConnectionWrapper(
         "SessionManager:register",
         async db => {
           await db.executeTransaction(async () => {
@@ -780,7 +789,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
               { sessionId }
             );
 
-            for (let chunk of PlacesUtils.chunkArray(
+            for (let chunk of lazy.PlacesUtils.chunkArray(
               pages,
               // We're using 2 variables per row, and 1 extra variable across all rows.
               db.variableLimit / 2 - 1
@@ -866,9 +875,9 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   #getActiveSessions() {
     let activeSessions = [];
     let windowSessionGuid;
-    for (let win of BrowserWindowTracker.orderedWindows) {
+    for (let win of lazy.BrowserWindowTracker.orderedWindows) {
       try {
-        windowSessionGuid = SessionStore.getCustomWindowValue(
+        windowSessionGuid = lazy.SessionStore.getCustomWindowValue(
           win,
           "SessionManagerGuid"
         );
@@ -892,7 +901,10 @@ const SessionManager = new (class SessionManager extends EventEmitter {
    *   True if there is an active session.
    */
   #hasActiveSession(window) {
-    return !!SessionStore.getCustomWindowValue(window, "SessionManagerGuid");
+    return !!lazy.SessionStore.getCustomWindowValue(
+      window,
+      "SessionManagerGuid"
+    );
   }
 
   /**
@@ -911,14 +923,21 @@ const SessionManager = new (class SessionManager extends EventEmitter {
         .filter(f => !!f)
     );
     let expireGuids = (
-      await this.query({ beforeDate: expirationTime, limit: -1 })
+      await this.query({
+        beforeDate: expirationTime,
+        limit: -1,
+      })
     ).map(s => s.guid);
     for (let guid of expireGuids) {
       if (fileGuids.has(guid)) {
         try {
           await this.#deleteSessionFile(guid);
         } catch (ex) {
-          logConsole.error("Failed to delete session store file for", guid, ex);
+          lazy.logConsole.error(
+            "Failed to delete session store file for",
+            guid,
+            ex
+          );
         }
       }
     }

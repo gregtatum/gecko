@@ -19,16 +19,21 @@ if (!AppConstants.PINEBUILD) {
   );
 }
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   HiddenFrame: "resource://gre/modules/HiddenFrame.jsm",
   Services: "resource://gre/modules/Services.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "OnnxRuntimeService",
-    maxLogLevel: Services.prefs.getBoolPref("browser.companion.onnx.log", false)
+    maxLogLevel: lazy.Services.prefs.getBoolPref(
+      "browser.companion.onnx.log",
+      false
+    )
       ? "Debug"
       : "Info",
   });
@@ -40,24 +45,24 @@ XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
 function loadContentWindow(browser, url) {
   let uri;
   try {
-    uri = Services.io.newURI(url);
+    uri = lazy.Services.io.newURI(url);
   } catch (e) {
     let msg = `Invalid URL passed to loadContentWindow(): ${url}`;
     Cu.reportError(msg);
     throw new Error(msg);
   }
 
-  const principal = Services.scriptSecurityManager.getSystemPrincipal();
-  let oa = E10SUtils.predictOriginAttributes({
+  const principal = lazy.Services.scriptSecurityManager.getSystemPrincipal();
+  let oa = lazy.E10SUtils.predictOriginAttributes({
     browser,
   });
   let loadURIOptions = {
     triggeringPrincipal: principal,
-    remoteType: E10SUtils.getRemoteTypeForURI(
+    remoteType: lazy.E10SUtils.getRemoteTypeForURI(
       url,
       true,
       false,
-      E10SUtils.DEFAULT_REMOTE_TYPE,
+      lazy.E10SUtils.DEFAULT_REMOTE_TYPE,
       null,
       oa
     ),
@@ -81,11 +86,11 @@ const OnnxRuntimeService = {
    * Add observers if initializing.
    */
   init() {
-    if (!Services.prefs.getBoolPref("browser.companion.onnx", false)) {
+    if (!lazy.Services.prefs.getBoolPref("browser.companion.onnx", false)) {
       return;
     }
 
-    logConsole.debug("OnnxRuntimeService init");
+    lazy.logConsole.debug("OnnxRuntimeService init");
 
     ChromeUtils.registerWindowActor("ORT", {
       parent: {
@@ -100,7 +105,7 @@ const OnnxRuntimeService = {
       matches: ["resource://ort/ort.html"],
     });
 
-    Services.obs.addObserver(this, "interaction-added");
+    lazy.Services.obs.addObserver(this, "interaction-added");
   },
 
   /**
@@ -109,7 +114,7 @@ const OnnxRuntimeService = {
   async observe(aSubject, aTopic, aData) {
     switch (aTopic) {
       case "interaction-added":
-        logConsole.debug("Received 'interaction-added': " + aData);
+        lazy.logConsole.debug("Received 'interaction-added': " + aData);
 
         if (!this._browser) {
           await this.loadScript();
@@ -126,7 +131,7 @@ const OnnxRuntimeService = {
             values: [1, 2],
           },
         });
-        logConsole.info(
+        lazy.logConsole.info(
           "OnnxRuntimeService likelihood scores: ",
           results.probabilities.data
         );
@@ -137,8 +142,8 @@ const OnnxRuntimeService = {
    * Create the browser and load the onnx script.
    */
   async loadScript() {
-    logConsole.debug("OnnxRuntimeService loadScript");
-    let frame = new HiddenFrame();
+    lazy.logConsole.debug("OnnxRuntimeService loadScript");
+    let frame = new lazy.HiddenFrame();
     let windowlessBrowser = await frame.get();
     let doc = windowlessBrowser.document;
 
@@ -161,11 +166,11 @@ const OnnxRuntimeService = {
    * Release the browser and remove observers.
    */
   uninit() {
-    if (!Services.prefs.getBoolPref("browser.companion.onnx", false)) {
+    if (!lazy.Services.prefs.getBoolPref("browser.companion.onnx", false)) {
       return;
     }
 
     this._browser = null;
-    Services.obs.removeObserver(this, "interaction-added");
+    lazy.Services.obs.removeObserver(this, "interaction-added");
   },
 };

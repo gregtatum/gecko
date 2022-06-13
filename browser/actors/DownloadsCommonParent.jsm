@@ -14,14 +14,15 @@ const { Integration } = ChromeUtils.import(
   "resource://gre/modules/Integration.jsm"
 );
 
-/* global DownloadIntegration */
+const lazy = {};
+
 Integration.downloads.defineModuleGetter(
-  this,
+  lazy,
   "DownloadIntegration",
   "resource://gre/modules/DownloadIntegration.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   DownloadsCommon: "resource:///modules/DownloadsCommon.jsm",
   FileUtils: "resource://gre/modules/FileUtils.jsm",
 });
@@ -44,7 +45,7 @@ class DownloadsCommonParent extends JSWindowActorParent {
 
     switch (aMessage.name) {
       case "Download:GetData": {
-        this.downloadData = DownloadsCommon.getData(
+        this.downloadData = lazy.DownloadsCommon.getData(
           window,
           aMessage.data.history
         );
@@ -52,7 +53,7 @@ class DownloadsCommonParent extends JSWindowActorParent {
         break;
       }
       case "Download:LaunchDownload": {
-        DownloadIntegration.launchDownload(aMessage.data.download, {});
+        lazy.DownloadIntegration.launchDownload(aMessage.data.download, {});
         break;
       }
       case "Download:DoCommand": {
@@ -87,8 +88,8 @@ class DownloadsCommonParent extends JSWindowActorParent {
         break;
       }
       case "downloadsCmd_show": {
-        let file = new FileUtils.File(download.target.path);
-        DownloadsCommon.showDownloadedFile(file);
+        let file = new lazy.FileUtils.File(download.target.path);
+        lazy.DownloadsCommon.showDownloadedFile(file);
         break;
       }
     }

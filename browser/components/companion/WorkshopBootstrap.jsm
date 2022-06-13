@@ -10,7 +10,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   HiddenFrame: "resource://gre/modules/HiddenFrame.jsm",
 });
 
@@ -25,7 +27,7 @@ class WorkshopBootstrap {
 
   static async createHiddenWindow() {
     if (!this.#hiddenFrame && workshopEnabled) {
-      this.#hiddenFrame = new HiddenFrame();
+      this.#hiddenFrame = new lazy.HiddenFrame();
       const frame = await this.#hiddenFrame.get();
       const doc = frame.document;
       const browser = doc.createXULElement("browser");

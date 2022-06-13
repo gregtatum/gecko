@@ -12,28 +12,30 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const lazy = {};
+
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "CLICK_COUNT_TIMEOUT_MS",
   "browser.pinebuild.megaback.click-count-timeout-ms",
   3000
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "CLICK_COUNT_THRESHOLD",
   "browser.pinebuild.megaback.click-count-threshold",
   5
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "PAGETHUMBNAILS_CAPTURING_DISABLED",
   "browser.pagethumbnails.capturing_disabled",
   false
 );
 
-XPCOMUtils.defineLazyGetter(this, "logConsole", function() {
+XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "HistoryCarousel",
     maxLogLevelPref: "browser.pinebuild.megaback.logLevel",
@@ -118,10 +120,10 @@ class HistoryCarousel {
       this.#clickCount = 1;
       this.#timerID = this.#window.setTimeout(() => {
         this.resetCount();
-      }, CLICK_COUNT_TIMEOUT_MS);
+      }, lazy.CLICK_COUNT_TIMEOUT_MS);
     } else {
       this.#clickCount++;
-      if (this.#clickCount >= CLICK_COUNT_THRESHOLD) {
+      if (this.#clickCount >= lazy.CLICK_COUNT_THRESHOLD) {
         this.#window.clearTimeout(this._timerID);
         this.resetCount();
         this.showHistoryCarousel(true);
@@ -188,13 +190,13 @@ class HistoryCarousel {
       return;
     }
 
-    if (PAGETHUMBNAILS_CAPTURING_DISABLED) {
+    if (lazy.PAGETHUMBNAILS_CAPTURING_DISABLED) {
       throw new Error(
         "Cannot enter history carousel if thumbnail generation is disabled."
       );
     }
 
-    logConsole.debug("Show history carousel: ", shouldShow);
+    lazy.logConsole.debug("Show history carousel: ", shouldShow);
 
     if (shouldShow && this.#window.top.gStageManager.views.length <= 1) {
       throw new Error(
@@ -209,7 +211,7 @@ class HistoryCarousel {
 
     if (shouldShow) {
       this.#enabled = shouldShow;
-      logConsole.debug(
+      lazy.logConsole.debug(
         "Navigating history carousel browser to about:historycarousel"
       );
       carouselBrowser.loadURI("about:historycarousel", {
@@ -231,7 +233,7 @@ class HistoryCarousel {
       carouselBrowser.docShellIsActive = false;
       carouselBrowser.renderLayers = true;
 
-      logConsole.debug("Waiting for history carousel browser to be ready");
+      lazy.logConsole.debug("Waiting for history carousel browser to be ready");
 
       // To reduce flicker, we'll wait until the underlying history carousel
       // <browser> has reported that its ready, and that the initial preview
@@ -240,7 +242,7 @@ class HistoryCarousel {
 
       this.#window.document.body.setAttribute("historycarousel", "ready");
 
-      logConsole.debug(
+      lazy.logConsole.debug(
         "History carousel browser is ready. Making visible and focusing."
       );
       carouselBrowser.focus();
@@ -256,7 +258,7 @@ class HistoryCarousel {
         "HistoryCarousel"
       );
       let finalIndex = await actor.sendQuery("Exit");
-      logConsole.debug("Got back final index: ", finalIndex);
+      lazy.logConsole.debug("Got back final index: ", finalIndex);
 
       this.#notify("HistoryCarousel:Exit", { finalIndex });
       this.#enabled = shouldShow;
@@ -279,7 +281,7 @@ class HistoryCarousel {
         );
       });
 
-      logConsole.debug("Destroying history carousel browser.");
+      lazy.logConsole.debug("Destroying history carousel browser.");
       carouselBrowser.remove();
     }
 

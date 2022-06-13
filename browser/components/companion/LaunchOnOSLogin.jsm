@@ -9,19 +9,21 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   AppConstants: "resource://gre/modules/AppConstants.jsm",
   Subprocess: "resource://gre/modules/Subprocess.jsm",
   MacAttribution: "resource:///modules/MacAttribution.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "gBrandBundle", function() {
+XPCOMUtils.defineLazyGetter(lazy, "gBrandBundle", function() {
   return Services.strings.createBundle(
     "chrome://branding/locale/brand.properties"
   );
 });
 
-XPCOMUtils.defineLazyGetter(this, "gIsXPCShell", function() {
+XPCOMUtils.defineLazyGetter(lazy, "gIsXPCShell", function() {
   let env = Cc["@mozilla.org/process/environment;1"].getService(
     Ci.nsIEnvironment
   );
@@ -38,11 +40,11 @@ function getFirefoxExecutableFile() {
 function ensureOSSettingsMatchPref() {
   var prefVal =
     !Cu.isInAutomation &&
-    !gIsXPCShell &&
+    !lazy.gIsXPCShell &&
     Services.prefs.getBoolPref(PREF_LAUNCH_ON_LOGIN, false);
-  if (AppConstants.platform == "win") {
+  if (lazy.AppConstants.platform == "win") {
     reflectPrefToRegistry(prefVal);
-  } else if (AppConstants.platform == "macosx") {
+  } else if (lazy.AppConstants.platform == "macosx") {
     reflectPrefToLaunchDAgent(prefVal);
   }
 }
@@ -56,7 +58,7 @@ async function reflectPrefToLaunchDAgent(prefVal) {
   plistFile.append("LaunchAgents");
   plistFile.append(`${label}.plist`);
 
-  let bootout = await Subprocess.call({
+  let bootout = await lazy.Subprocess.call({
     command: "/bin/launchctl",
     arguments: ["bootout", `gui/${uid}/${label}`],
     stderr: "stdout",
@@ -93,7 +95,7 @@ async function reflectPrefToLaunchDAgent(prefVal) {
   <key>ProgramArguments</key>
   <array>
       <string>/usr/bin/open</string>
-      <string>${xmlEscape(MacAttribution.applicationPath)}</string>
+      <string>${xmlEscape(lazy.MacAttribution.applicationPath)}</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
@@ -102,7 +104,7 @@ async function reflectPrefToLaunchDAgent(prefVal) {
 
     await IOUtils.write(plistFile.path, new TextEncoder().encode(plist));
 
-    let bootstrap = await Subprocess.call({
+    let bootstrap = await lazy.Subprocess.call({
       command: "/bin/launchctl",
       arguments: ["bootstrap", `gui/${uid}`, plistFile.path],
       stderr: "stdout",
@@ -135,7 +137,7 @@ function reflectPrefToRegistry(prefVal) {
   // (\), but any other printable character can be used. Value names and data can
   // include the backslash character."
   // We assume we're not including unprintable characters in our brandShortName.
-  const brandShortName = gBrandBundle
+  const brandShortName = lazy.gBrandBundle
     .GetStringFromName("brandShortName")
     .replaceAll("\\", "");
   if (prefVal) {

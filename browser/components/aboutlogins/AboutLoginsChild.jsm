@@ -17,13 +17,13 @@ const { LayoutUtils } = ChromeUtils.import(
   "resource://gre/modules/LayoutUtils.jsm"
 );
 
+const lazy = {};
+
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "AppConstants",
   "resource://gre/modules/AppConstants.jsm"
 );
-
-const lazy = {};
 
 XPCOMUtils.defineLazyServiceGetter(
   lazy,
@@ -210,7 +210,7 @@ class AboutLoginsChild extends JSWindowActorChild {
   }
 
   #aboutLoginsCopyLoginDetail(detail, target) {
-    if (AppConstants.PINEBUILD) {
+    if (lazy.AppConstants.PINEBUILD) {
       let rect = LayoutUtils.getElementBoundingScreenRect(
         target.closest(".login-list-item")
       );
@@ -361,8 +361,8 @@ class AboutLoginsChild extends JSWindowActorChild {
       "app.support.baseURL"
     );
     let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-    waivedContent.AboutLoginsUtils.platform = AppConstants.platform;
-    waivedContent.AboutLoginsUtils.pineBuild = AppConstants.PINEBUILD;
+    waivedContent.AboutLoginsUtils.platform = lazy.AppConstants.platform;
+    waivedContent.AboutLoginsUtils.pineBuild = lazy.AppConstants.PINEBUILD;
     this.sendToContent("Setup", data);
   }
 

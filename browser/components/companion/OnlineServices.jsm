@@ -16,13 +16,15 @@ const {
 
 const PREF_STORE = "onlineservices.config";
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   OAuth2: "resource:///modules/OAuth2.jsm",
   Services: "resource://gre/modules/Services.jsm",
   setInterval: "resource://gre/modules/Timer.jsm",
 });
 
-XPCOMUtils.defineLazyGetter(this, "log", () => {
+XPCOMUtils.defineLazyGetter(lazy, "log", () => {
   let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
   return new ConsoleAPI({
     prefix: "OnlineServices.jsm",
@@ -58,7 +60,7 @@ class GoogleService {
       "https://www.googleapis.com/auth/drive.readonly",
     ];
 
-    this.auth = new OAuth2(
+    this.auth = new lazy.OAuth2(
       kIssuers[this.app].endpoint,
       kIssuers[this.app].tokenEndpoint,
       scopes.join(" "),
@@ -68,7 +70,7 @@ class GoogleService {
       this.app
     );
     this.getUnreadCountAtom();
-    this.mailCountTimer = setInterval(
+    this.mailCountTimer = lazy.setInterval(
       this.getUnreadCountAtom.bind(this),
       60 * 1000
     );
@@ -170,7 +172,7 @@ class GoogleService {
       });
     } else {
       let results = await response.json();
-      log.debug(JSON.stringify(results));
+      lazy.log.debug(JSON.stringify(results));
       for (let result of results.items) {
         if (result.hidden || !result.selected) {
           continue;
@@ -219,13 +221,13 @@ class GoogleService {
         });
 
         if (!response.ok) {
-          log.debug(response.statusText);
+          lazy.log.debug(response.statusText);
           return;
         }
 
         let results = await response.json();
 
-        log.debug(JSON.stringify(results));
+        lazy.log.debug(JSON.stringify(results));
 
         for (let result of results.items) {
           try {
@@ -255,7 +257,7 @@ class GoogleService {
               allEvents.set(result.id, event);
             }
           } catch (e) {
-            log.error(e);
+            lazy.log.error(e);
           }
         }
       })
@@ -334,7 +336,7 @@ class GoogleService {
       return null;
     }
 
-    log.debug(JSON.stringify(results));
+    lazy.log.debug(JSON.stringify(results));
 
     if (type == "spreadsheets") {
       return results.properties.title;
@@ -367,7 +369,7 @@ class MicrosoftService {
       "https://graph.microsoft.com/Mail.Read",
     ];
 
-    this.auth = new OAuth2(
+    this.auth = new lazy.OAuth2(
       kIssuers[this.app].endpoint,
       kIssuers[this.app].tokenEndpoint,
       scopes.join(" "),
@@ -377,7 +379,7 @@ class MicrosoftService {
       this.app
     );
     this.getUnreadCount();
-    this.mailCountTimer = setInterval(
+    this.mailCountTimer = lazy.setInterval(
       this.getUnreadCount.bind(this),
       60 * 1000
     );
@@ -454,10 +456,10 @@ class MicrosoftService {
     }
 
     let results = await response.json();
-    log.debug(JSON.stringify(results));
+    lazy.log.debug(JSON.stringify(results));
 
     if (results.error) {
-      log.error(results.error.message);
+      lazy.log.error(results.error.message);
       return [];
     }
 
@@ -489,10 +491,10 @@ class MicrosoftService {
         });
 
         results = await response.json();
-        log.debug(JSON.stringify(results));
+        lazy.log.debug(JSON.stringify(results));
 
         if (results.error) {
-          log.error(results.error.message);
+          lazy.log.error(results.error.message);
           return;
         }
 
@@ -509,7 +511,7 @@ class MicrosoftService {
             event.serviceId = this.id;
             allEvents.set(result.id, event);
           } catch (e) {
-            log.error(e);
+            lazy.log.error(e);
           }
         }
       })
@@ -538,10 +540,10 @@ class MicrosoftService {
       });
 
       let results = await response.json();
-      log.debug(JSON.stringify(results));
+      lazy.log.debug(JSON.stringify(results));
 
       if (results.error) {
-        log.error(results.error.message);
+        lazy.log.error(results.error.message);
       }
       if (results.error || !results.value?.length) {
         this.inboxURL = "https://outlook.com";
@@ -569,10 +571,10 @@ class MicrosoftService {
     });
 
     let results = await response.json();
-    log.debug(JSON.stringify(results));
+    lazy.log.debug(JSON.stringify(results));
 
     if (results.error) {
-      log.error(results.error.message);
+      lazy.log.error(results.error.message);
       this.mailCount = 0;
     }
     this.mailCount = results["@odata.count"];
@@ -602,7 +604,7 @@ class TestService {
         </script>
       `.replace(new RegExp("\\n *", "g"), "");
       const url = `https://example.net/document-builder.sjs?html=${html}`;
-      this.auth = new OAuth2(
+      this.auth = new lazy.OAuth2(
         url,
         `data:application/json,${JSON.stringify({
           access_token: "testservice-token",
@@ -621,7 +623,7 @@ class TestService {
     if (this.auth) {
       await this.auth.connect();
       if (
-        Services.prefs.getBoolPref(
+        lazy.Services.prefs.getBoolPref(
           "pinebuild.testing.OAuthErrorAccessToken",
           false
         )
@@ -664,7 +666,7 @@ function load() {
   }
   loaded = true;
 
-  let config = JSON.parse(Services.prefs.getCharPref(PREF_STORE, "[]"));
+  let config = JSON.parse(lazy.Services.prefs.getCharPref(PREF_STORE, "[]"));
 
   for (let service of config) {
     // In the past, services could have null auth due to a bug.
@@ -673,7 +675,7 @@ function load() {
     }
     // For now, we don't allow more than one of the same service
     if ([...ServiceInstances].filter(item => item.app == service.type).length) {
-      log.error(`Service ${service.type} already exists`);
+      lazy.log.error(`Service ${service.type} already exists`);
       continue;
     }
 
@@ -728,7 +730,7 @@ const OnlineServices = {
 
     // For now, we don't allow more than one of the same service
     if ([...ServiceInstances].filter(item => item.app == type).length) {
-      log.error(`Service ${type} already exists`);
+      lazy.log.error(`Service ${type} already exists`);
       return null;
     }
 
@@ -752,7 +754,7 @@ const OnlineServices = {
     // while and an account may have been created for this type already. If
     // there was another account created before this returned then abort.
     if ([...ServiceInstances].filter(item => item.app == type).length) {
-      log.error(`Service ${type} already exists`);
+      lazy.setInterval.error(`Service ${type} already exists`);
       return null;
     }
 
@@ -761,8 +763,8 @@ const OnlineServices = {
     // grab events for this service and put them in the cache
     let meetingResults = await service.getNextMeetings();
     this.data = this.data.concat(meetingResults);
-    Services.obs.notifyObservers(this.data, "companion-services-refresh");
-    Services.obs.notifyObservers(null, "companion-signin", service.app);
+    lazy.Services.obs.notifyObservers(this.data, "companion-services-refresh");
+    lazy.Services.obs.notifyObservers(null, "companion-signin", service.app);
     return service;
   },
 
@@ -787,8 +789,8 @@ const OnlineServices = {
     }
     ServiceInstances.delete(service);
     this.persist();
-    Services.obs.notifyObservers(this.data, "companion-services-refresh");
-    Services.obs.notifyObservers(null, "companion-signout", service.app);
+    lazy.Services.obs.notifyObservers(this.data, "companion-services-refresh");
+    lazy.Services.obs.notifyObservers(null, "companion-signout", service.app);
   },
 
   getServices(type) {
@@ -842,7 +844,7 @@ const OnlineServices = {
 
   persist() {
     let config = JSON.stringify(Array.from(ServiceInstances));
-    Services.prefs.setCharPref(PREF_STORE, config);
+    lazy.Services.prefs.setCharPref(PREF_STORE, config);
   },
 
   setCache(data) {
@@ -899,7 +901,7 @@ const OnlineServices = {
     if (eventResults.some(r => r.value != null)) {
       let events = eventResults.flatMap(r => r.value || []);
       this.setCache(events);
-      Services.obs.notifyObservers(events, "companion-services-refresh");
+      lazy.Services.obs.notifyObservers(events, "companion-services-refresh");
     }
 
     // Reset the auto refresh task to its full refresh time. This will also

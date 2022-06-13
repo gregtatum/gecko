@@ -6,8 +6,10 @@
 
 var EXPORTED_SYMBOLS = ["ViewActivationChild"];
 
+const lazy = {};
+
 ChromeUtils.defineModuleGetter(
-  this,
+  lazy,
   "DeferredTask",
   "resource://gre/modules/DeferredTask.jsm"
 );
@@ -22,7 +24,7 @@ class ViewActivationChild extends JSWindowActorChild {
 
   constructor() {
     super();
-    this.#deferredEventTask = new DeferredTask(
+    this.#deferredEventTask = new lazy.DeferredTask(
       () => this.requestActivation(),
       DEFERRED_TASK_DELAY_MS
     );

@@ -19,7 +19,9 @@ const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   DevToolsShim: "chrome://devtools-startup/content/DevToolsShim.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
@@ -32,13 +34,13 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(
-  this,
+  lazy,
   "extraActions",
   "browser.companion.urlbar.extraactions",
   false
 );
 
-const extraActionsEnabled = () => extraActions;
+const extraActionsEnabled = () => lazy.extraActions;
 
 const GOOGLE_ACTION_URLS = {
   email: "https://mail.google.com/mail/u/?authuser={email}",
@@ -75,25 +77,25 @@ const shouldShowEmailResult = (accountType, isDefault) => {
 };
 
 const hasUnreadMessages = accountType => {
-  if (WorkshopParentAccess.workshopEnabled) {
-    return WorkshopParentAccess.getUnreadMessageCount(accountType);
+  if (lazy.WorkshopParentAccess.workshopEnabled) {
+    return lazy.WorkshopParentAccess.getUnreadMessageCount(accountType);
   }
 
   if (Cu.isInAutomation) {
     accountType = "testservice";
   }
-  return OnlineServices.getMailCount(accountType);
+  return lazy.OnlineServices.getMailCount(accountType);
 };
 
 const hasConnectedAccount = accountType => {
-  if (WorkshopParentAccess.workshopEnabled) {
-    return WorkshopParentAccess.hasConnectedAccount(accountType);
+  if (lazy.WorkshopParentAccess.workshopEnabled) {
+    return lazy.WorkshopParentAccess.hasConnectedAccount(accountType);
   }
 
   if (Cu.isInAutomation) {
     accountType = "testservice";
   }
-  return OnlineServices.hasService(accountType);
+  return lazy.OnlineServices.hasService(accountType);
 };
 
 // These prefs are relative to the `browser.urlbar` branch.
@@ -117,7 +119,7 @@ const COMMANDS = {
     },
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("email", "https://gmail.com", email);
-      UrlbarUtils.openUrl(url);
+      lazy.UrlbarUtils.openUrl(url);
     },
   },
   checkoutlook: {
@@ -133,7 +135,7 @@ const COMMANDS = {
       return hasUnreadMessages("microsoft");
     },
     callback: ({ inboxUrl } = {}) => {
-      UrlbarUtils.openUrl(inboxUrl);
+      lazy.UrlbarUtils.openUrl(inboxUrl);
     },
   },
   createmeeting: {
@@ -144,7 +146,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("meeting", "https://meeting.new", email);
-      UrlbarUtils.openUrl(url);
+      lazy.UrlbarUtils.openUrl(url);
     },
   },
   createslides: {
@@ -155,7 +157,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("slides", "https://slides.new", email);
-      UrlbarUtils.openUrl(url);
+      lazy.UrlbarUtils.openUrl(url);
     },
   },
   createsheet: {
@@ -166,7 +168,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("sheets", "https://sheets.new", email);
-      UrlbarUtils.openUrl(url);
+      lazy.UrlbarUtils.openUrl(url);
     },
   },
   createdoc: {
@@ -177,7 +179,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("docs", "https://docs.new", email);
-      UrlbarUtils.openUrl(url);
+      lazy.UrlbarUtils.openUrl(url);
     },
   },
   screenshot: {
@@ -220,9 +222,9 @@ const COMMANDS = {
     label: "View Source",
     hide: extraActionsEnabled,
     callback: () => {
-      let window = BrowserWindowTracker.getTopWindow();
+      let window = lazy.BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
-      UrlbarUtils.openUrl("view-source:" + spec);
+      lazy.UrlbarUtils.openUrl("view-source:" + spec);
     },
     title: "Flowstate",
   },
@@ -233,8 +235,8 @@ const COMMANDS = {
     hide: extraActionsEnabled,
     callback: () => {
       // TODO: This is supposed to be called with an element to start inspecting.
-      DevToolsShim.inspectNode(
-        BrowserWindowTracker.getTopWindow().gBrowser.selectedTab
+      lazy.DevToolsShim.inspectNode(
+        lazy.BrowserWindowTracker.getTopWindow().gBrowser.selectedTab
       );
     },
     title: "Flowstate",
@@ -280,14 +282,14 @@ function restartBrowser() {
  * A provider that returns a suggested url to the user based on what
  * they have currently typed so they can navigate directly.
  */
-class ProviderQuickActionsBase extends UrlbarProvider {
+class ProviderQuickActionsBase extends lazy.UrlbarProvider {
   // A tree that maps keywords to a result.
   _tree = new KeywordTree();
   _serviceData = {};
 
   constructor() {
     super();
-    UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
+    lazy.UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
 
     let children = [...Array(MAX_RESULTS).keys()].map(i => {
       // reorder child nodes for Flowstate
@@ -383,7 +385,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       };
     });
 
-    UrlbarView.addDynamicViewTemplate(DYNAMIC_TYPE_NAME, {
+    lazy.UrlbarView.addDynamicViewTemplate(DYNAMIC_TYPE_NAME, {
       children,
     });
 
@@ -417,7 +419,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   getSuggestedIndex() {
@@ -432,7 +434,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
    * @returns {boolean} Whether this provider should be invoked for the search.
    */
   isActive(queryContext) {
-    return UrlbarPrefs.get(ENABLED_PREF);
+    return lazy.UrlbarPrefs.get(ENABLED_PREF);
   }
 
   /**
@@ -476,9 +478,9 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     results.length =
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
 
-    const result = new UrlbarResult(
-      UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+    const result = new lazy.UrlbarResult(
+      lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      lazy.UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
         results,
         dynamicType: DYNAMIC_TYPE_NAME,
@@ -496,13 +498,13 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     }
 
     let inboxUrl;
-    if (WorkshopParentAccess.workshopEnabled) {
-      inboxUrl = await WorkshopParentAccess.getInboxUrl(accountType);
+    if (lazy.WorkshopParentAccess.workshopEnabled) {
+      inboxUrl = await lazy.WorkshopParentAccess.getInboxUrl(accountType);
       this.setServiceData(accountType, "inboxUrl", inboxUrl);
       return inboxUrl;
     }
 
-    inboxUrl = OnlineServices.getInboxURL(accountType);
+    inboxUrl = lazy.OnlineServices.getInboxURL(accountType);
     this.setServiceData(accountType, "inboxUrl", inboxUrl);
     return inboxUrl;
   }
@@ -513,19 +515,21 @@ class ProviderQuickActionsBase extends UrlbarProvider {
       return serviceData.accountAddress;
     }
 
-    if (WorkshopParentAccess.workshopEnabled) {
-      const account = await WorkshopParentAccess.getAccountByType(accountType);
+    if (lazy.WorkshopParentAccess.workshopEnabled) {
+      const account = await lazy.WorkshopParentAccess.getAccountByType(
+        accountType
+      );
       this.setServiceData(accountType, "accountAddress", account?.name);
       return account?.name || "";
     }
 
     // Force call to load() in OnlineService to retrieve stored service data
-    OnlineServices.getAllServices();
+    lazy.OnlineServices.getAllServices();
     if (Cu.isInAutomation) {
       accountType = "testservice";
     }
-    if (OnlineServices.hasService(accountType)) {
-      const service = OnlineServices.getServices(accountType)[0];
+    if (lazy.OnlineServices.hasService(accountType)) {
+      const service = lazy.OnlineServices.getServices(accountType)[0];
       const email = service.getAccountAddress();
       this.setServiceData(accountType, "accountAddress", email);
       return email || "";
@@ -596,7 +600,7 @@ class ProviderQuickActionsBase extends UrlbarProvider {
     let data = result.payload.results.find(item => item.key === key);
 
     if (command.url) {
-      UrlbarUtils.openUrl(command.url);
+      lazy.UrlbarUtils.openUrl(command.url);
     } else {
       command.callback({
         email: data?.accountAddress,
@@ -628,7 +632,7 @@ class ProviderQuickActionsEmpty extends ProviderQuickActionsBase {
     return 1;
   }
   isActive(queryContext) {
-    return UrlbarPrefs.get(ENABLED_PREF) && !queryContext.searchString;
+    return lazy.UrlbarPrefs.get(ENABLED_PREF) && !queryContext.searchString;
   }
 }
 
