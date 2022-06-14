@@ -184,7 +184,7 @@ export class HistoryViewerEl extends HTMLElement {
 
     resultList.replaceChildren(frag);
 
-    if (results.length == limit) {
+    if (total > limit) {
       let template = document.getElementById("template-history-viewer-footer");
       let footer = template.content.cloneNode(true);
       let footerLi = document.createElement("li");
