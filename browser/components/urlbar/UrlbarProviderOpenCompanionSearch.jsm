@@ -40,6 +40,7 @@ const VIEW_TEMPLATE = {
     {
       name: "openCompanionSearchLink",
       tag: "a",
+      classList: ["urlbarView-title"],
     },
   ],
 };

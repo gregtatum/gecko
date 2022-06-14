@@ -766,6 +766,99 @@ class CompanionHelper {
     const service = OnlineServices.getServices(MOCK_SERVICE)[0];
     return { name: service.getAccountAddress() };
   }
+
+  /**
+   * Returns a Promise that resolves when the next set of History results
+   * gets shown.
+   *
+   * @returns Promise
+   * @resolves undefined
+   *   Once the next set of History results is shown.
+   */
+  waitForHistoryResults() {
+    return this.runCompanionTask(async () => {
+      await ContentTaskUtils.waitForEvent(
+        content,
+        "Companion:HistoryResultsUpdated"
+      );
+    });
+  }
+
+  /**
+   * @typedef {object} HistoryResultDetails
+   *   An object describing an individual history result.
+   * @property {string} iconSrc
+   *   The src attribute for the favicon for the result.
+   * @property {string} title
+   *   The full title of the result.
+   * @property {string} url
+   *   The full URL of the result.
+   * @property {string} lastVisited
+   *   The string representing the last visit time of this result.
+   */
+
+  /**
+   * @typedef {object} HistoryResultsDetails
+   *   An object describing the state of the History section of the Companion.
+   * @property {string} searchInputValue
+   *   The text in the search input.
+   * @property {HistoryResultDetails[]} results
+   *   A description of each returned result.
+   */
+
+  /**
+   * Returns a Promise that resolves with an object describing the History
+   * section of the Companion.
+   *
+   * @returns Promise
+   * @resolves {HistoryResultsDetails}
+   */
+  getHistoryResultsDetails() {
+    return this.runCompanionTask(async () => {
+      let viewer = content.document.getElementById("history-viewer");
+      let searchInputValue = viewer.shadowRoot.querySelector(
+        ".history-search-input"
+      ).value;
+
+      let resultList = viewer.shadowRoot.querySelector(".history-result-list");
+      let results = Array.from(resultList.children).map(listElement => {
+        let resultEl = listElement.firstElementChild;
+        return {
+          iconSrc: resultEl.shadowRoot.querySelector(".history-result-icon")
+            .src,
+          title: resultEl.shadowRoot.querySelector(".history-result-title")
+            .textContent,
+          url: resultEl.shadowRoot.querySelector(".history-result-url")
+            .textContent,
+          lastVisited: resultEl.shadowRoot.querySelector(
+            ".history-result-last-visited"
+          ).textContent,
+        };
+      });
+
+      return {
+        searchInputValue,
+        results,
+      };
+    });
+  }
+
+  /**
+   * Checks that a HistoryResultDetails object matches the description of
+   * a history visit. See PlacesTestUtils.addVisits for documentation on the
+   * structure of a description.
+   *
+   * @param {HistoryResultDetails} result
+   *   The returned result to compare against the description.
+   * @param {Object} description
+   *   The description of a visit passed to PlacesTestUtils.addVisits to match
+   *   the result against.
+   */
+  assertResultMatches(result, description) {
+    Assert.equal(result.title, description.title);
+    Assert.equal(result.iconSrc, `page-icon:${description.uri}`);
+    Assert.equal(result.url, description.uri);
+  }
 }
 
 var PinebuildTestUtils = {

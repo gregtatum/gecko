@@ -39,6 +39,12 @@ window.gHistorySearch = {
 
     let viewer = document.getElementById("history-viewer");
     viewer.showResults(results, queryString, limit, total, fromNavigationBar);
+
+    let e = new CustomEvent("Companion:HistoryResultsUpdated", {
+      bubbles: true,
+      cancelable: false,
+    });
+    window.dispatchEvent(e);
   },
 };
 
