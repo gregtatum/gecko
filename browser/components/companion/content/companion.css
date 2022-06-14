@@ -497,6 +497,13 @@ e-global-nav-debugging h2 {
   background-image: url(chrome://global/skin/icons/arrow-left.svg);
 }
 
+@media (prefers-contrast) {
+  .browse button:hover, .browse button:hover::after {
+    fill: var(--in-content-button-text-color-hover);
+    -moz-context-properties: fill;
+  }
+}
+
 .browse button.groups {
   background-image: url("chrome://global/skin/icons/defaultFavicon.svg");
 }
