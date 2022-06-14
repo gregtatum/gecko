@@ -2793,4 +2793,5 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   pref("browser.companion.snapshot-groups.enabled", false);
   pref("identity.fxaccounts.commands.enabled", false);
   pref("extensions.pocket.enabled", false);
+  pref("browser.urlbar.opencompanionsearch.enabled", true);
 #endif
