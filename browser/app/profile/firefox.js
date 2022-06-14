@@ -2757,7 +2757,7 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   pref("browser.pinebuild.pocket.url", "https://getpocket.cdn.mozilla.net/v3/firefox/global-recs");
   pref("browser.pinebuild.calendar.minBreakTime", 5);
   pref("browser.pinebuild.calendar.maxBreakTime", 15);
-  pref("browser.pinebuild.calendar.browseEnabled", false);
+  pref("browser.pinebuild.calendar.browseEnabled", true);
   pref("browser.pinebuild.companion-service-onboarding.enabled", true);
   pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
   // Don't show the onboarding modal in unofficial (local) builds.
