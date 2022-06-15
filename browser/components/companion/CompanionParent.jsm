@@ -679,26 +679,34 @@ class CompanionParent extends JSWindowActorParent {
     }
   }
 
-  /*
-   * Switch the companion to a specific tab view.
+  /**
+   * Get the CompanionParent actor for a particular window if it can
+   * be found.
    *
-   * @param {String} tab
-   *   The name of the tab to switch to.
+   * @param {Window} win
+   *   The window to get the CompanionParent actor for.
+   * @returns {CompanionParent|null}
    */
-  static openCompanionTab(tab) {
-    let window = lazy.BrowserWindowTracker.getTopWindow();
+  static getCompanionActor(win) {
+    let window = win || lazy.BrowserWindowTracker.getTopWindow();
     let browser = window.document.getElementById("companion-browser");
     let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
       "Companion"
     );
-    if (actor) {
-      actor.viewTab(tab);
-    }
     return actor;
   }
 
   viewTab(tab) {
     this.sendAsyncMessage("Companion:ViewTab", { tab });
+    this.ensureCompanionVisible();
+  }
+
+  viewHistoryTab(queryString) {
+    this.sendAsyncMessage("Companion:ViewHistoryTab", { queryString });
+    this.ensureCompanionVisible();
+  }
+
+  ensureCompanionVisible() {
     let win = this.browsingContext.topChromeWindow;
     let companion = win.document.getElementById("companion-box");
     if (!companion.isOpen) {

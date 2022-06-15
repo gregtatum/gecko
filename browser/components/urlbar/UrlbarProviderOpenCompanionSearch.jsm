@@ -118,10 +118,10 @@ class ProviderOpenCompanionSearch extends lazy.UrlbarProvider {
   }
 
   pickResult(result) {
-    let actor = lazy.CompanionParent.openCompanionTab("history");
-    actor.sendAsyncMessage("Companion:DoHistorySearch", {
-      queryString: result.payload.input,
-    });
+    let actor = lazy.CompanionParent.getCompanionActor();
+    if (actor) {
+      actor.viewHistoryTab(result.payload.input);
+    }
   }
 }
 

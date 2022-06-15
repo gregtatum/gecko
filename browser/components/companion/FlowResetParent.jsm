@@ -22,7 +22,10 @@ class FlowResetParent extends JSWindowActorParent {
     let window = this.browsingContext.topChromeWindow;
     switch (message.name) {
       case "ViewCompanionBrowseTab":
-        lazy.CompanionParent.openCompanionTab("browse");
+        let actor = lazy.CompanionParent.getCompanionActor(window);
+        if (actor) {
+          actor.viewTab("browse");
+        }
         break;
       case "RestoreLastSession":
         lazy.SessionManager.restoreLastSession(window);

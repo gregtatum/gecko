@@ -179,19 +179,22 @@ class CompanionChild extends JSWindowActorChild {
         ).selectedViewName = message.data.tab;
         break;
       }
+      case "Companion:ViewHistoryTab": {
+        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+        waivedContent.document.getElementById(
+          "companion-deck"
+        ).selectedViewName = "history";
+        waivedContent.gHistorySearch.doQuery(
+          message.data.queryString,
+          true /* fromNavigationBar */
+        );
+        break;
+      }
       case "Companion:SignIn":
       case "Companion:SignOut": {
         let { connectedServices } = message.data;
         let waivedContent = Cu.waiveXrays(this.browsingContext.window);
         waivedContent.CompanionUtils.connectedServices = connectedServices;
-        break;
-      }
-      case "Companion:DoHistorySearch": {
-        let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-        waivedContent.gHistorySearch.doQuery(
-          message.data.queryString,
-          true /* fromNavigationBar */
-        );
         break;
       }
     }
