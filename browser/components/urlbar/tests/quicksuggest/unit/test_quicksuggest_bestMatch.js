@@ -223,6 +223,9 @@ add_task(async function tabToSearch() {
   // Disable tab-to-search onboarding results so we get a regular TTS result,
   // which we can test a little more easily with `makeSearchResult()`.
   UrlbarPrefs.set("tabToSearch.onboard.interactionsLeft", 0);
+  // Disable the OpenCompanionSearch provider if it happens to be enabled, since
+  // it's unrelated to this test and might throw off our count.
+  UrlbarPrefs.set("opencompanionsearch.enabled", false);
 
   // Install a test engine. The main part of its domain name needs to match the
   // best match result too so we can trigger both its TTS and the best match.
@@ -275,6 +278,7 @@ add_task(async function tabToSearch() {
   await extension.unload();
 
   UrlbarPrefs.clear("tabToSearch.onboard.interactionsLeft");
+  UrlbarPrefs.clear("opencompanionsearch.enabled");
 });
 
 // When the best match feature gate is disabled, quick suggest results should be
@@ -333,6 +337,9 @@ add_task(async function position() {
   );
 
   UrlbarPrefs.set("quicksuggest.allowPositionInSuggestions", true);
+  // Disable the OpenCompanionSearch provider if it happens to be enabled, since
+  // it's unrelated to this test and will add another unrelated result.
+  UrlbarPrefs.set("opencompanionsearch.enabled", false);
 
   let context = createContext(BEST_MATCH_POSITION_SEARCH_STRING, {
     isPrivate: false,
@@ -371,6 +378,7 @@ add_task(async function position() {
 
   await cleanupPlaces();
   UrlbarPrefs.clear("quicksuggest.allowPositionInSuggestions");
+  UrlbarPrefs.clear("opencompanionsearch.enabled");
 });
 
 // Tests a suggestion that is blocked from being a best match.
