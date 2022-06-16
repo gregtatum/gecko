@@ -136,6 +136,7 @@ class SessionList extends HTMLElement {
       this.sessionUpdated(this.initialSessionData);
     }
     window.addEventListener("Companion:SessionUpdated", this);
+    window.CompanionUtils.sendAsyncMessage("Companion:FetchSessionData");
   }
 
   disconnectedCallback() {

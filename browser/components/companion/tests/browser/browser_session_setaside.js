@@ -84,6 +84,21 @@ add_task(async function test_session_setaside() {
     );
     Assert.ok(true, "URLBar is focused when flow-reset page loads");
 
+    // Test that the session is shown in the companion.
+    await helper.selectCompanionTab("browse");
+    await helper.runCompanionTask(() =>
+      content.document.querySelector("button.sessions").click()
+    );
+    let sessionsLength = async () => {
+      let length = await helper.runCompanionTask(
+        () =>
+          content.document.querySelectorAll("full-session-list .session").length
+      );
+      return length;
+    };
+    await TestUtils.waitForCondition(sessionsLength);
+    Assert.equal(await sessionsLength(), 1, "The session set aside is shown");
+
     // Navigate to an about: page to test that the reset flow state
     // is still exited on navigation.
     await UrlbarTestUtils.promiseAutocompleteResultPopup({

@@ -882,6 +882,10 @@ class CompanionParent extends JSWindowActorParent {
         this.getSnapshotGroups().catch(console.error);
         break;
       }
+      case "Companion:FetchSessionData": {
+        this.retrieveAndSendSessionData().catch(console.error);
+        break;
+      }
       case "Companion:FetchSnapshotGroupDetails": {
         this.getSnapshotGroupData(message).catch(console.error);
         break;
