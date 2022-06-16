@@ -1303,7 +1303,10 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   async _onBeginHistorySearch(message) {
-    const RESULT_LIMIT = 50;
+    const RESULT_LIMIT = lazy.Services.prefs.getIntPref(
+      "browser.pinebuild.companion.history.max-results",
+      50
+    );
     let db = await lazy.PlacesUtils.promiseDBConnection();
 
     const MATCH_ANYWHERE_UNMODIFIED =

@@ -768,6 +768,26 @@ class CompanionHelper {
   }
 
   /**
+   * Selects the "History" section under "browse" and waits for the initial
+   * set of History results to appear.
+   *
+   * @returns Promise
+   * @resolves undefined
+   */
+  async selectHistoryTab() {
+    await this.selectCompanionTab("browse");
+    let initialResultsPromise = this.waitForHistoryResults();
+    await this.runCompanionTask(async () => {
+      let deck = content.document.getElementById("companion-deck");
+      let tabShown = ContentTaskUtils.waitForEvent(deck, "view-changed");
+      let button = content.document.querySelector("button.history");
+      button.click();
+      await tabShown;
+    });
+    await initialResultsPromise;
+  }
+
+  /**
    * Returns a Promise that resolves when the next set of History results
    * gets shown.
    *
@@ -798,12 +818,37 @@ class CompanionHelper {
    */
 
   /**
+   * @typedef {object} HistoryResultsLimitOutOfTotalArgs
+   *   The arguments object attached to the element that renders the
+   *   "Viewing X out of Y results" string in the footer.
+   * @property {Number} total
+   *   The total number of results being displayed after limiting is
+   *   applied.
+   * @property {Number} totalBeforeLimit
+   *   The total number of results available before limiting is applied.
+   */
+
+  /**
+   * @typedef {object} HistoryResultsFooterDetails
+   *   An object describing the footer that might be displayed at the
+   *   end of the History results list if there are more results than can
+   *   be listed.
+   * @property {boolean} visible
+   *   True if the footer is being shown.
+   * @property {HistoryResultsLimitOutOfTotalArgs} limitOutOfTotalArgs
+   *   The arguments for rendering the "Viewing X out of Y results" string
+   *   in the footer.
+   */
+
+  /**
    * @typedef {object} HistoryResultsDetails
    *   An object describing the state of the History section of the Companion.
    * @property {string} searchInputValue
    *   The text in the search input.
    * @property {HistoryResultDetails[]} results
    *   A description of each returned result.
+   * @property {HistoryResultsFooterDetails} footer
+   *   Information about the footer at the end of the History results.
    */
 
   /**
@@ -821,7 +866,9 @@ class CompanionHelper {
       ).value;
 
       let resultList = viewer.shadowRoot.querySelector(".history-result-list");
-      let results = Array.from(resultList.children).map(listElement => {
+      let results = Array.from(
+        resultList.querySelectorAll("li:not(.footer)")
+      ).map(listElement => {
         let resultEl = listElement.firstElementChild;
         return {
           iconSrc: resultEl.shadowRoot.querySelector(".history-result-icon")
@@ -836,9 +883,21 @@ class CompanionHelper {
         };
       });
 
+      let footerEl = resultList.querySelector("li.footer > footer");
+      let limitOutOfTotalArgs = {};
+      if (footerEl) {
+        limitOutOfTotalArgs = JSON.parse(
+          footerEl.querySelector(".limit-out-of-total").dataset.l10nArgs
+        );
+      }
+
       return {
         searchInputValue,
         results,
+        footer: {
+          visible: !!footerEl,
+          limitOutOfTotalArgs,
+        },
       };
     });
   }
@@ -858,6 +917,40 @@ class CompanionHelper {
     Assert.equal(result.title, description.title);
     Assert.equal(result.iconSrc, `page-icon:${description.uri}`);
     Assert.equal(result.url, description.uri);
+  }
+
+  /**
+   * Puts a string into the History search input and waits for the results
+   * to update. Once the results are updated, this asserts that the History
+   * search input still matches the original queryString and then returns
+   * the results and the footer information.
+   *
+   * @param {string} queryString
+   *   The string to put into the search input to refine the results with.
+   * @returns Promise
+   * @resolves {HistoryResultsDetails}
+   */
+  async refineHistoryResults(queryString) {
+    let promiseHistoryResults = this.waitForHistoryResults();
+    await this.runCompanionTask(
+      async qs => {
+        let viewer = content.document.getElementById("history-viewer");
+        let searchInput = viewer.shadowRoot.querySelector(
+          ".history-search-input"
+        );
+        searchInput.value = qs;
+        searchInput.doCommand();
+      },
+      [queryString]
+    );
+    await promiseHistoryResults;
+    let details = await this.getHistoryResultsDetails();
+    Assert.equal(
+      details.searchInputValue,
+      queryString,
+      "Search input properly updated."
+    );
+    return details;
   }
 }
 
