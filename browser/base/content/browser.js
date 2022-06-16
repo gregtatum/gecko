@@ -5498,10 +5498,8 @@ var XULBrowserWindow = {
     // if this is a document navigation then PopupNotifications will be updated
     // via TabsProgressListener.onLocationChange and we do not want it called twice
     //
-    // For PINEBUILD, we don't want to show anything in the URLBar unless
-    // it was typed by the user. So, don't bother showing anything when the
-    // location changes. MR2-1939
-    if (!AppConstants.PINEBUILD) {
+    // For PINEBUILD, we only want to show URLs in the URLBar when new popups appear. MR2-2404
+    if (AppConstants.PINEBUILD && !gBrowser.ownerGlobal.toolbar.visible) {
       gURLBar.setURI(aLocationURI, aIsSimulated, isSessionRestore);
     }
 

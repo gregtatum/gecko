@@ -382,8 +382,8 @@ class UrlbarInput {
     const previousSelectionStart = this.selectionStart;
     const previousSelectionEnd = this.selectionEnd;
 
-    if (AppConstants.PINEBUILD) {
-      // Prevent newly-loaded URLs from being shown in the urlbar. FFX2021OV-106
+    if (AppConstants.PINEBUILD && this.window.toolbar.visible) {
+      // Only allow popups to display newly-loaded URLs in the urlbar. MR2-2404
       this.value = this.window.gBrowser.userTypedValue
         ? this.window.gBrowser.userTypedValue
         : "";

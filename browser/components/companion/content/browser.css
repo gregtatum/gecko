@@ -58,6 +58,35 @@
 :root:not([chromehidden~="toolbar"]) {
   min-width: 1024px;
 }
+/* Styling for popup windows */
+
+:root[chromehidden~="toolbar"] #navigator-toolbox {
+  padding-inline-start: 0;
+}
+
+:root[chromehidden~="toolbar"] #PanelUI-menu-button,
+:root[chromehidden~="toolbar"] #pinebuild-search-icon-box,
+:root[chromehidden~="toolbar"] #pinebuild-mac-buttonbox {
+  display: none;
+}
+
+:root[chromehidden~="toolbar"] #urlbar-container {
+  margin-inline: 16px;
+  max-width: unset;
+}
+
+:root[chromehidden~="toolbar"] #urlbar-background {
+  border: none;
+  background-color: initial;
+}
+
+:root[chromehidden~="toolbar"] #urlbar-input {
+  text-overflow: clip;
+}
+
+:root[chromehidden ~="toolbar"] #urlbar:hover #urlbar-background {
+  box-shadow: none;
+}
 
 /* So, this is a bit awkward. Here's the problem: we have a big image, which
    we want to use as a background, and which could take more than a frame to
