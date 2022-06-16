@@ -502,6 +502,11 @@ e-global-nav-debugging h2 {
     fill: var(--in-content-button-text-color-hover);
     -moz-context-properties: fill;
   }
+
+  .browse button {
+    fill: ButtonText;
+    -moz-context-properties: fill;
+  }
 }
 
 .browse button.groups {
