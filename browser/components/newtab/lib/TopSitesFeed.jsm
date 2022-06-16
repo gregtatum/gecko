@@ -77,8 +77,6 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/Region.jsm"
 );
 
-XPCOMUtils.defineLazyGlobalGetters(lazy, ["fetch"]);
-
 XPCOMUtils.defineLazyGetter(lazy, "log", () => {
   const { Logger } = ChromeUtils.import(
     "resource://messaging-system/lib/Logger.jsm"
@@ -194,7 +192,7 @@ class ContileIntegration {
     }
     try {
       let url = Services.prefs.getStringPref(CONTILE_ENDPOINT_PREF);
-      const response = await lazy.fetch(url, { credentials: "omit" });
+      const response = await fetch(url, { credentials: "omit" });
       if (!response.ok) {
         lazy.log.warn(
           `Contile endpoint returned unexpected status: ${response.status}`

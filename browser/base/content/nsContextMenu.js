@@ -1313,6 +1313,7 @@ class nsContextMenu {
       triggeringPrincipal: this.principal,
       csp: this.csp,
       frameID: this.contentData.frameID,
+      hasValidUserGestureActivation: true,
     };
     for (let p in extra) {
       params[p] = extra[p];
