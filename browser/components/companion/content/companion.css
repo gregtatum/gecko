@@ -544,15 +544,14 @@ section-panel[name="history"] {
   height: 100%;
 }
 
-#companion-downloads-browser {
+#companion-downloads-browser,
+#companion-login-browser {
   background: unset;
   width: 100vw;
-  height: 100%;
+  height: calc(100vh - 140px);
 }
 
 #companion-login-browser {
-  display: inline-block;
-  width: 100vw;
   height: calc(100vh - 70px);
 }
 
@@ -564,23 +563,8 @@ snapshot-group-list-detail {
   width: 100vw;
 }
 
-.content,
-#scroll-browse,
-#downloads,
-.passwords-panel {
-  height: 100%;
-  width: 100vw;
-  display: flex;
-  flex-direction: column;
-}
-
 #companion-deck[selected-view=downloads] {
   overflow-y: hidden;
-}
-
-#scroll,
-#downloads .content {
-  height: calc(100% - 30px);
 }
 
 #flow-reset-placeholder {
