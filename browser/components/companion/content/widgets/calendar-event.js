@@ -10,9 +10,21 @@ export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
 
+const DEFAULT_FUTURE_BEFORE_START_OFFSET = 15 * 60 * 1000;
+const DEFAULT_UP_NEXT_BEFORE_START_OFFSET = 10 * 60 * 1000;
 export class CalendarEvent extends MozLitElement {
-  static FUTURE_BEFORE_START_OFFSET = 15 * 60 * 1000;
-  static UP_NEXT_BEFORE_START_OFFSET = 10 * 60 * 1000;
+  static FUTURE_BEFORE_START_OFFSET = DEFAULT_FUTURE_BEFORE_START_OFFSET;
+  static UP_NEXT_BEFORE_START_OFFSET = DEFAULT_UP_NEXT_BEFORE_START_OFFSET;
+
+  static _mockBeforeStartOffsets(future, upNext) {
+    CalendarEvent.FUTURE_BEFORE_START_OFFSET = future;
+    CalendarEvent.UP_NEXT_BEFORE_START_OFFSET = upNext;
+  }
+
+  static _resetBeforeStartOffsets() {
+    CalendarEvent.FUTURE_BEFORE_START_OFFSET = DEFAULT_FUTURE_BEFORE_START_OFFSET;
+    CalendarEvent.UP_NEXT_BEFORE_START_OFFSET = DEFAULT_UP_NEXT_BEFORE_START_OFFSET;
+  }
 
   dateCreator = { now: () => new Date() };
 
@@ -42,6 +54,8 @@ export class CalendarEvent extends MozLitElement {
     return {
       moreOptionsPanel: "panel-list[action=more-options]",
       firstExpandedLink: ".event-link:nth-child(3)",
+      relativeTime: "relative-time",
+      joinMeetingButton: ".join-meeting-button",
     };
   }
 
@@ -406,7 +420,7 @@ export class CalendarEvent extends MozLitElement {
     }
     return html`
       <a
-        class="button-link primary"
+        class="button-link primary join-meeting-button"
         href=${conference.url}
         data-l10n-id="companion-join-meeting"
         @click=${openMeeting}
@@ -677,6 +691,7 @@ export class CalendarEvent extends MozLitElement {
           // setExtendedTimeout to avoid a delay considered as a 0!
           this._eventUpcomingTimer = this.setExtendedTimeout(() => {
             this.setStatus(start, end);
+            this.dispatchEvent(new Event("status-transition"));
           }, inStatusBeforeTime - now);
         }
 
@@ -684,15 +699,6 @@ export class CalendarEvent extends MozLitElement {
         break;
       }
     }
-  }
-
-  setTimeWarp() {
-    const tenMinutes = 10 * 60 * 1000;
-    const tenSeconds = 10 * 1000;
-    let { startDate } = this.event;
-    let startTime = new Date(Date.parse(startDate));
-    let fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
-    this.dateCreator.TEST_timeWarp({ fakeNow });
   }
 
   willUpdate() {

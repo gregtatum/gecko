@@ -1134,6 +1134,23 @@ var PinebuildTestUtils = {
     return viewChangedPromise;
   },
 
+  generateEventTimesFromNow({ now, startFromNow, duration }) {
+    let startTime = new Date(now);
+    startTime.setHours(startTime.getHours() + (startFromNow.hours ?? 0));
+    startTime.setMinutes(startTime.getMinutes() + (startFromNow.minutes ?? 0));
+    startTime.setSeconds(startTime.getSeconds() + (startFromNow.seconds ?? 0));
+
+    let endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + (duration.hours ?? 0));
+    endTime.setMinutes(startTime.getMinutes() + (duration.minutes ?? 0));
+    endTime.setSeconds(startTime.getSeconds() + (duration.seconds ?? 0));
+
+    return {
+      start: startTime.toISOString(),
+      end: endTime.toISOString(),
+    };
+  },
+
   /**
    * Test helper for generating a start time at 18:00 and an end time. By default,
    * the event's duration is only 30 minutes but can be set using the `eventHourDuration`
@@ -1166,19 +1183,15 @@ var PinebuildTestUtils = {
       startTime.setMinutes(eventStartMinutes);
     }
 
-    // Set end time
-    let endTime = new Date(startTime);
-
-    if (eventDurationHours > 0) {
-      endTime.setHours(startTime.getHours() + eventDurationHours);
-    }
-
-    endTime.setMinutes(startTime.getMinutes() + eventDurationMinutes);
-
-    return {
-      start: startTime.toISOString(),
-      end: endTime.toISOString(),
-    };
+    return PinebuildTestUtils.generateEventTimesFromNow({
+      now: startTime,
+      startFromNow: {},
+      duration: {
+        hours: eventDurationHours,
+        minutes: eventDurationMinutes,
+        seconds: 0,
+      },
+    });
   },
 
   /**

@@ -120,6 +120,12 @@ export class CalendarEventList extends MozLitElement {
     };
   }
 
+  static get queries() {
+    return {
+      calendarEvents: { all: "calendar-event" },
+    };
+  }
+
   static get styles() {
     return css`
       .card {
@@ -609,13 +615,15 @@ class CalendarEventWrapper extends CalendarEvent {
     throw new Error("Couldn't get a better document title");
   }
 
-  setTimeWarp() {
-    const tenMinutes = 10 * 60 * 1000;
-    const tenSeconds = 10 * 1000;
-    let { startDate } = this.event;
-    let startTime = new Date(Date.parse(startDate));
-    let fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
-    workshopAPI.TEST_timeWarp({ fakeNow });
+  setTimeWarp(fakeNow) {
+    if (!fakeNow) {
+      const tenMinutes = 10 * 60 * 1000;
+      const tenSeconds = 10 * 1000;
+      let { startDate } = this.event;
+      let startTime = new Date(Date.parse(startDate));
+      fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
+    }
+    this.dateCreator.TEST_timeWarp({ fakeNow });
   }
 }
 customElements.define("calendar-event", CalendarEventWrapper);
