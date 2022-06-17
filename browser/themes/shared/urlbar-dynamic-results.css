@@ -368,5 +368,20 @@
 .urlbarView-row[dynamicType=contextualSearch]:hover > .urlbarView-row-inner {
   background: var(--autocomplete-popup-hover-background);
 }
+
+.urlbarView-row[dynamicType=companionSearchLink] > .urlbarView-row-inner {
+  border: .5px solid transparent;
+}
+
+.urlbarView-row[dynamicType=companionSearchLink]:hover > .urlbarView-row-inner {
+  background: var(--urlbar-companionlink-hover-bgcolor);
+  border: var(--urlbar-companionlink-hover-border);
+}
+
+.urlbarView-row[dynamicType=companionSearchLink] > .urlbarView-row-inner[selected] {
+  background: var(--urlbar-companionlink-active-bgcolor);
+  border: var(--urlbar-companionlink-active-border);
+  outline: var(--urlbar-companionlink-active-outline);
+}
 }
 /** endif **/

@@ -243,6 +243,12 @@
     --history-result-button-hover-focus-border-color: var(--colors-cafe-100);
     --history-result-button-active-bgcolor: var(--colors-cafe-10);
     --history-result-button-active-border-color: var(--colors-cafe-100);
+
+    --urlbar-companionlink-hover-bgcolor: var(--colors-lavender-20);
+    --urlbar-companionlink-hover-border: .5px solid var(--colors-lavender-70);
+    --urlbar-companionlink-active-bgcolor: var(--colors-lavender-20);
+    --urlbar-companionlink-active-border: .5px solid var(--colors-teal-90);
+    --urlbar-companionlink-active-outline: 1.5px solid var(--colors-teal-90);
   }
 }
 

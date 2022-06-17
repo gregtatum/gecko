@@ -86,4 +86,10 @@
 
   --urlbar-default-border: 1px solid var(--toolbarbutton-icon-fill);
   --urlbar-default-background: ButtonFace;
+
+  --urlbar-companionlink-hover-bgcolor: ButtonFace;
+  --urlbar-companionlink-hover-border: .5px solid var(--toolbarbutton-icon-fill);
+  --urlbar-companionlink-active-bgcolor: ButtonText;
+  --urlbar-companionlink-active-border: .5px solid var(--toolbarbutton-icon-fill);
+  --urlbar-companionlink-active-outline: 1.5px solid var(--toolbarbutton-icon-fill);
 }
