@@ -98,7 +98,7 @@ class ProviderOpenCompanionSearch extends lazy.UrlbarProvider {
         dynamicType: DYNAMIC_RESULT_TYPE,
       }
     );
-    result.suggestedIndex = 99;
+    result.suggestedIndex = -1;
     addCallback(this, result);
   }
 

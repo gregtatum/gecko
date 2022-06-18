@@ -204,7 +204,7 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
         dynamicType: DYNAMIC_RESULT_TYPE,
       }
     );
-    result.suggestedIndex = -1;
+    result.suggestedIndex = -2;
     return result;
   }
 
