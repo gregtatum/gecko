@@ -3606,7 +3606,7 @@ class StageManager extends EventTarget {
         viewID: internalView.id,
         title: internalView.title,
         url: internalView.url.spec,
-        iconURL: internalView.iconURL,
+        iconURL: `page-icon:${internalView.url.spec}`,
         image: null,
         tabpanelID: null,
       };
@@ -3645,7 +3645,7 @@ class StageManager extends EventTarget {
       viewID: internalView.id,
       title: internalView.title,
       url: internalView.url.spec,
-      iconURL: internalView.iconURL,
+      iconURL: `page-icon:${internalView.url.spec}`,
       image: null,
       tabpanelID: null,
     };

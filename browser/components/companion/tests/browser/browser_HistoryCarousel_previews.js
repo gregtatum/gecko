@@ -66,9 +66,9 @@ add_task(async function preview_construction() {
       "The page URL should be the tooltip for the caption."
     );
     Assert.equal(
-      view.iconURL,
+      `page-icon:${view.url.spec}`,
       preview.iconURL,
-      "The page favicon should be set properly."
+      "The page favicon should be set properly and using the page-icon protocol."
     );
     Assert.equal(
       view.pinned,
