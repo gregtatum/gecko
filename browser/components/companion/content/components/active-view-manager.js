@@ -354,6 +354,16 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         panel.addEventListener("popuphiding", this);
         panel.addEventListener("command", this);
         panel.addEventListener("keydown", this);
+
+        if (
+          Services.prefs.getBoolPref(
+            "browser.pinebuild.pinning-apps.enabled",
+            false
+          )
+        ) {
+          let pinAppItem = document.getElementById("page-action-pin-app");
+          pinAppItem.hidden = false;
+        }
       }
 
       this.#pageActionPanel = panel;
