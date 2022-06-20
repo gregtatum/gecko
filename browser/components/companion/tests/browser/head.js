@@ -952,6 +952,34 @@ class CompanionHelper {
     );
     return details;
   }
+
+  /**
+   * Presuming there are some results visible in the History pane, this
+   * function will click the result item at a particular index.
+   *
+   * @param {number} index
+   *   The index of the result to click.
+   * @returns Promise
+   * @resolves undefined
+   */
+  async clickHistoryResultAtIndex(index) {
+    await this.runCompanionTask(
+      async i => {
+        let viewer = content.document.getElementById("history-viewer");
+        let resultListItems = Array.from(
+          viewer.shadowRoot.querySelectorAll(
+            ".history-result-list > li:not(.footer)"
+          )
+        );
+        let targetHistoryResult = resultListItems[i].firstElementChild;
+        let targetButton = targetHistoryResult.shadowRoot.querySelector(
+          ".history-result-button"
+        );
+        targetButton.click();
+      },
+      [index]
+    );
+  }
 }
 
 var PinebuildTestUtils = {
