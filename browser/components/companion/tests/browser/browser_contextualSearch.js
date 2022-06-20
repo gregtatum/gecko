@@ -57,7 +57,7 @@ add_task(async function test_selectContextualSearchResult() {
         window: win,
         value: query,
       });
-      const lastResultIndex = UrlbarTestUtils.getResultCount(win) - 1;
+      const lastResultIndex = UrlbarTestUtils.getResultCount(win) - 2;
       const result = await UrlbarTestUtils.getDetailsOfResultAt(
         win,
         lastResultIndex
@@ -66,7 +66,7 @@ add_task(async function test_selectContextualSearchResult() {
       is(
         result.dynamicType,
         "contextualSearch",
-        "Last result is a contextual search result"
+        "Second last result is a contextual search result"
       );
 
       info("Focus and select the contextual search result");
