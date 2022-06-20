@@ -8759,6 +8759,14 @@ var gPrivateBrowsingUI = {
 };
 
 async function openPinebuildCompanionLink(aURI) {
+  // If the current window's selected <browser> already matches the URI,
+  // there's nothing to do here. Note that we use equalsExceptRef because
+  // the desired behaviour is to match even if the fragment (everything
+  // following #) is different.
+  if (gBrowser.selectedBrowser.currentURI.equalsExceptRef(aURI)) {
+    return;
+  }
+
   let tabbox = gBrowser.tabbox;
   tabbox.setAttribute("disable-history-animations", "true");
   tabbox.setAttribute("companion-link-open", "1");
