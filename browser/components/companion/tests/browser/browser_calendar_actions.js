@@ -14,17 +14,19 @@ const checkOpenedUrl = async (helper, expected, btnSelector, index_ = 0) => {
         "calendar-event"
       );
       let event = visibleEvents[index];
-      let openMenuButton = event.shadowRoot.querySelector(
-        ".event-options-button"
-      );
-      let panelMenu = event.shadowRoot.querySelector("panel-list");
-      const EventUtils = ContentTaskUtils.getEventUtils(content);
-      info("Click the openMenuButton.");
-      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
-      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
-      let panelButton = event.shadowRoot.querySelector(selector);
-      ok(!panelButton.hidden, "Panel button is visible");
-      panelButton.click();
+      if (event.detailsCollapsed) {
+        info("Expand the event so the action buttons are visible");
+        const detailsToggled = ContentTaskUtils.waitForEvent(
+          event,
+          "toggle-details"
+        );
+        EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+        await detailsToggled;
+        await event.updateComplete;
+      }
+      let actionButton = event.shadowRoot.querySelector(selector);
+      ok(actionButton, "Action button is rendered");
+      actionButton.click();
     },
     [index_, btnSelector]
   );
@@ -57,7 +59,7 @@ add_task(async function testRunningLate() {
     ];
     await helper.setCalendarEvents(events);
 
-    await helper.runCompanionTask(() => {
+    await helper.runCompanionTask(async () => {
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
       );
@@ -67,11 +69,20 @@ add_task(async function testRunningLate() {
       is(visibleEvents.length, 2, "There are now 2 events");
 
       let event = visibleEvents[0];
-      let runningLateButton = event.shadowRoot.querySelector(
-        ".event-item-email-action"
+      info("Expand the event so the action buttons are visible");
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
+      await event.updateComplete;
+
+      let runningLateButtonLabel = event.shadowRoot
+        .querySelector(".event-item-email-action")
+        .shadowRoot.querySelector(".action-button-label");
       is(
-        runningLateButton.getAttribute("data-l10n-id"),
+        runningLateButtonLabel.getAttribute("data-l10n-id"),
         "companion-email-late",
         "The 'Running late' label is used"
       );
@@ -144,7 +155,7 @@ add_task(async function testRunningLateNoAttendees() {
       let runningLateButton = event.shadowRoot.querySelector(
         ".event-item-email-action"
       );
-      ok(runningLateButton.hidden, "The running late button is hidden");
+      ok(!runningLateButton, "The running late button is hidden");
     });
   });
 });
@@ -197,7 +208,7 @@ add_task(async function testRunningLateSecondaryPersonal() {
       let runningLateButton = event.shadowRoot.querySelector(
         ".event-item-email-action"
       );
-      ok(runningLateButton.hidden, "The running late button is hidden");
+      ok(!runningLateButton, "The running late button is hidden");
     });
   });
 });
@@ -240,14 +251,14 @@ add_task(async function testHideEvent() {
         ".calendar-break-time"
       );
 
-      info("Open meatball menu");
-      let openMenuButton = event.shadowRoot.querySelector(
-        ".event-options-button"
+      info("Expand the event so the action buttons are visible");
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
-      let panelMenu = event.shadowRoot.querySelector("panel-list");
-      const EventUtils = ContentTaskUtils.getEventUtils(content);
-      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
-      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
+      await event.updateComplete;
 
       info("Confirm event and break time are hidden when action is selected.");
       let hideEventButton = event.shadowRoot.querySelector(
@@ -289,9 +300,7 @@ add_task(async function testHideEvent() {
             .length === 2
         );
       });
-      let browseEvents = browseEventList.shadowRoot.querySelectorAll(
-        "calendar-event"
-      );
+      let browseEvents = browseEventList.calendarEvents;
       let browseBreakTime = browseEventList.shadowRoot.querySelector(
         ".calendar-break-time"
       );
@@ -338,25 +347,26 @@ add_task(async function testCopyInvite() {
       );
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
 
-      info("Open meatball menu");
-      let openMenuButton = event.shadowRoot.querySelector(
-        ".event-options-button"
+      info("Expand the event so the action buttons are visible");
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
-      let panelMenu = event.shadowRoot.querySelector("panel-list");
-      const EventUtils = ContentTaskUtils.getEventUtils(content);
-      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
-      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
+      await event.updateComplete;
 
       info("Confirm event link is copied to clipboard");
       let copyInviteButton = event.shadowRoot.querySelector(
         ".event-item-copy-invite-action"
       );
       ok(!copyInviteButton.hidden, "Copy invite button is visible");
-      copyInviteButton.click();
-      await ContentTaskUtils.waitForEvent(
+      let inviteCopied = ContentTaskUtils.waitForEvent(
         content.document,
         "event-invite-copied"
       );
+      copyInviteButton.click();
+      await inviteCopied;
 
       let copiedLink = await content.navigator.clipboard.readText();
       is(copiedLink, "http://meet.google.com/join", "Invite link was copied");

@@ -32,6 +32,9 @@ add_task(async function testExpandingEventDetails() {
           ".event-detail-header[data-l10n-id=companion-event-host]"
         );
       };
+      let eventActionsExist = () => {
+        return !!event.shadowRoot.querySelector(".event-quick-actions");
+      };
 
       info("Check that headers aren't shown in the first place.");
       ok(
@@ -52,30 +55,31 @@ add_task(async function testExpandingEventDetails() {
       );
       ok(meetingLinksSection, "Meeting links are shown");
       ok(!hostDetailSection, "Host section isn't shown");
+      ok(!eventActionsExist(), "Event actions section isn't shown");
 
       info("Clicking the card should expand the details section.");
-      EventUtils.sendMouseEvent(
-        {
-          type: "mousedown",
-        },
-        eventDetailsSection,
-        content
+      const detailsExpanded = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsExpanded;
       await event.updateComplete;
+
       ok(meetingLinksHeaderExists(), "Meeting links detail header is shown");
       ok(hostHeaderExists(), "Host detail header is shown");
+      ok(eventActionsExist(), "Event actions section is shown");
 
       info("Clicking the expanded card should collapse the details section.");
       eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
         return event.shadowRoot.querySelector(".event-details");
       });
-      EventUtils.sendMouseEvent(
-        {
-          type: "mousedown",
-        },
-        eventDetailsSection,
-        content
+      const detailsClosed = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsClosed;
       await event.updateComplete;
       ok(
         !meetingLinksHeaderExists(),
@@ -85,7 +89,7 @@ add_task(async function testExpandingEventDetails() {
   });
 });
 
-add_task(async function testExpandingLinkDetailsWithKeyboard() {
+add_task(async function testExpandingDetailsWithKeyboard() {
   await CompanionHelper.whenReady(async helper => {
     let events = [
       {
@@ -101,14 +105,10 @@ add_task(async function testExpandingLinkDetailsWithKeyboard() {
 
     await helper.setCalendarEvents(events);
     await helper.runCompanionTask(async () => {
-      const EventUtils = ContentTaskUtils.getEventUtils(content);
       let calendarEventList = content.document.querySelector(
         "calendar-event-list"
       );
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
-      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector(".event-details");
-      });
       let meetingLinksHeaderExists = () => {
         return !!event.shadowRoot.querySelector(
           ".event-detail-header[data-l10n-id=companion-event-document-and-links]"
@@ -120,18 +120,23 @@ add_task(async function testExpandingLinkDetailsWithKeyboard() {
         "Header for meeting links should not be showing in the first place."
       );
 
-      info("Ensure focus is on the details sections.");
+      info("Ensure focus is on the expand button.");
       ok(!event.shadowRoot.activeElement, "Focus not in calendar-event");
-      eventDetailsSection.focus();
+      event.expandButton.focus();
 
       is(
         event.shadowRoot.activeElement,
-        eventDetailsSection,
-        "Event details section is focused"
+        event.expandButton,
+        "Event expand button is focused"
       );
 
       info("Expand the details section.");
-      EventUtils.sendKey("space", content);
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
+      );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
       await event.updateComplete;
 
       ok(
@@ -139,14 +144,11 @@ add_task(async function testExpandingLinkDetailsWithKeyboard() {
         "Header for meeting links should be showing"
       );
 
-      info("Ensure focus is still on the detail section");
-      eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector(".event-details");
-      });
+      info("Ensure focus is still on the expand button");
       is(
         event.shadowRoot.activeElement,
-        eventDetailsSection,
-        "Event details section is still focused"
+        event.expandButton,
+        "Event expand button is still focused"
       );
     });
   });
@@ -270,13 +272,12 @@ add_task(async function testNoHostSecondaryAndSelf() {
       ok(!hostType, "There is no host type");
 
       info("Expand the card");
-      EventUtils.sendMouseEvent(
-        {
-          type: "mousedown",
-        },
-        eventDetailsSection,
-        content
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
       await event.updateComplete;
 
       email = eventDetailsSection.querySelector(".event-host-email");
@@ -513,6 +514,108 @@ add_task(async function testSharedCalendarEventsDeDuplicated() {
         "calendar-event"
       );
       is(calEvents.length, 1, "Only one event is shown.");
+    });
+  });
+});
+
+add_task(async function testExpansionAccessibility() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Expanding event",
+        email: "test123@gmail.com",
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let event = calendarEventList.calendarEvents[0];
+      ok(
+        ContentTaskUtils.is_visible(event.expandButton),
+        "An expansion indicator is visible"
+      );
+
+      is(
+        event.expandButton.getAttribute("aria-expanded"),
+        "false",
+        "The un-expanded state is exposed to screen readers"
+      );
+
+      info("Clicking the indicator should expand event details");
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
+      );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
+      await event.updateComplete;
+
+      is(
+        event.expandButton.getAttribute("aria-expanded"),
+        "true",
+        "The expanded state is exposed to screen readers"
+      );
+    });
+  });
+});
+
+add_task(async function testOnlyOneEventExpanded() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Event One",
+        email: "one@gmail.com",
+      },
+      {
+        summary: "Event Two",
+        email: "one@gmail.com",
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      let [firstEvent, secondEvent] = visibleEvents;
+
+      // Using the presence/absence of action buttons to test if the event is expanded
+      const hasEventActions = event =>
+        !!event.shadowRoot.querySelector(".event-quick-actions");
+
+      info("No events are expanded initially");
+      is(hasEventActions(firstEvent), false, "First event is not expanded");
+      is(hasEventActions(secondEvent), false, "Second event is not expanded");
+
+      info("Clicking on the first event expands it");
+      const firstExpanded = Promise.all([
+        ContentTaskUtils.waitForEvent(firstEvent, "toggle-details"),
+        firstEvent.updateComplete,
+      ]);
+      EventUtils.synthesizeMouseAtCenter(firstEvent, {}, content);
+      await firstExpanded;
+
+      is(hasEventActions(firstEvent), true, "First event is expanded");
+      is(hasEventActions(secondEvent), false, "Second event is not expanded");
+
+      info(
+        "Clicking on the second event causes the second event to expand and the first event to contract"
+      );
+      const secondExpanded = Promise.all([
+        ContentTaskUtils.waitForEvent(secondEvent, "toggle-details"),
+        secondEvent.updateComplete,
+      ]);
+      EventUtils.synthesizeMouseAtCenter(secondEvent, {}, content);
+      await secondExpanded;
+
+      is(hasEventActions(firstEvent), false, "First event is not expanded");
+      is(hasEventActions(secondEvent), true, "Second event is expanded");
     });
   });
 });

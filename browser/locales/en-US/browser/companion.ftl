@@ -6,7 +6,7 @@ companion-join-meeting = Join meeting
 companion-email-late = Running late
 companion-open-calendar = Open in calendar
 companion-hide-event = Dismiss event
-companion-copy-invite = Copy invite
+companion-copy-invite = Copy invite link
 companion-message-host = Message host
 companion-message-attendees = Message attendees
 companion-event-document-and-links = Documents & Links
@@ -18,6 +18,10 @@ companion-refresh-services-button =
 companion-refresh-services-button-syncing =
     .title = Syncing services
 companion-fake-time = Fake time to 10m:10 before
+calendar-event-hide-details =
+    .aria-label = Hide details
+calendar-event-show-details =
+    .aria-label = Show details
 
 # This is a short label to show how many more links are available to be
 # shown for a calendar event in the companion.

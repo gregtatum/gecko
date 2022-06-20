@@ -92,17 +92,13 @@ add_task(async function test_joinMeetingButtonHidden() {
         "calendar-event-list"
       );
       let event = calendarEventList.shadowRoot.querySelector("calendar-event");
-      let eventDetailsSection = await ContentTaskUtils.waitForCondition(() => {
-        return event.shadowRoot.querySelector(".event-details");
-      });
 
-      EventUtils.sendMouseEvent(
-        {
-          type: "mousedown",
-        },
-        eventDetailsSection,
-        content
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
       await event.updateComplete;
     });
 

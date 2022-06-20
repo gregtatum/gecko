@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import "./action-button.js";
 import "../relative-time.js";
 import { openLink, openMeeting, MozLitElement } from "../widget-utils.js";
 import { css, html, classMap, until } from "../lit.all.js";
@@ -52,10 +53,9 @@ export class CalendarEvent extends MozLitElement {
 
   static get queries() {
     return {
-      moreOptionsPanel: "panel-list[action=more-options]",
-      firstExpandedLink: ".event-link:nth-child(3)",
       relativeTime: "relative-time",
       joinMeetingButton: ".join-meeting-button",
+      expandButton: ".event-expand-button",
     };
   }
 
@@ -83,20 +83,6 @@ export class CalendarEvent extends MozLitElement {
         gap: 0.5em;
         margin-inline-end: 8px;
         white-space: nowrap;
-      }
-
-      .event-options-button {
-        padding: 0;
-        margin: 0;
-        min-width: auto;
-        width: 24px;
-        min-height: auto;
-        height: 24px;
-        background-image: url("chrome://global/skin/icons/more.svg");
-        background-repeat: no-repeat;
-        background-position: center;
-        fill: currentColor;
-        -moz-context-properties: fill;
       }
 
       .event-info {
@@ -164,12 +150,7 @@ export class CalendarEvent extends MozLitElement {
         text-decoration: none;
         cursor: default;
         min-height: auto;
-        background: var(--calendar-button-link-background);
         border-radius: 16px;
-      }
-
-      .event-links-wrapper .event-link:hover {
-        background: var(--calendar-button-link-background-hover);
       }
 
       .event-link > img {
@@ -199,31 +180,68 @@ export class CalendarEvent extends MozLitElement {
         gap: 8px;
       }
 
-      .event-links-toggle-collapsed {
-        margin: 0;
-        min-width: 24px;
+      .event .event-links-toggle-collapsed {
         align-self: start;
         justify-self: start;
-        min-height: 0;
-        max-width: initial;
-        padding: 4px;
-        border-radius: 5000px;
-        border: none;
+        justify-content: center;
+      }
+
+      .event-expand-button,
+      .event-links-toggle-collapsed {
         flex-shrink: 0;
+        margin: 0;
+        padding: 0;
+        min-width: 0;
+        min-height: 0;
+        height: 24px;
+        width: 24px;
+        border-radius: 100px;
       }
 
-      .event-links-toggle-collapsed::after {
-        width: 12px;
-        height: 12px;
-        margin-inline-start: 4px;
-        content: "";
+      .event-expand-button {
+        background-position: center;
+        background-repeat: no-repeat;
         background-image: url("chrome://global/skin/icons/arrow-down-12.svg");
+        background-size: 14px auto;
         -moz-context-properties: fill;
-        fill: currentColor;
+        fill: var(--icon-color-default);
       }
 
-      .event-links-toggle-collapsed[expanded]::after {
+      .event:not(.detailsCollapsed) .event-expand-button {
         transform: rotate(-180deg);
+      }
+
+      .event .event-button-secondary {
+        box-sizing: border-box;
+        background-color: var(--calendar-button-secondary-background);
+        border: 0.5px solid var(--calendar-button-secondary-background);
+      }
+
+      .event .event-button-secondary:hover {
+        background-color: var(--calendar-button-secondary-background-hover);
+        border-color: var(--action-button-border-color-hover);
+      }
+
+      .event .event-button-secondary:focus-visible {
+        background-color: var(--calendar-button-secondary-background-hover);
+        border-color: var(--calendar-button-secondary-background-hover);
+        outline-offset: 0;
+      }
+
+      .event .event-button-secondary:active {
+        background-color: var(--calendar-button-secondary-background-active);
+        border-color: var(--action-button-border-color-hover);
+      }
+
+      .event-quick-actions {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .event-quick-actions + .event-meeting-links,
+      .event-quick-actions + .event-host {
+        border-block-start: 1px solid var(--calendar-divider-border-color);
+        padding-block-start: 16px;
       }
 
       .event-top {
@@ -303,46 +321,28 @@ export class CalendarEvent extends MozLitElement {
 
   constructor() {
     super();
+    this.linksCollapsed = true;
     this.detailsCollapsed = true;
-    this._linksCollapsed = this.linksCollapsed = true;
-  }
-
-  openMenu(e) {
-    if (
-      this.shouldOpenContextMenu(e) ||
-      // Only open on click for keyboard events, mousedown will open for pointer events.
-      (e.type == "click" && e.mozInputSource != MouseEvent.MOZ_SOURCE_KEYBOARD)
-    ) {
-      return;
-    }
-    this.moreOptionsPanel.toggle(e);
   }
 
   toggleDetails(e) {
     if (
-      e.target.closest("button, a, panel-item") ||
-      this.moreOptionsPanel.open ||
+      e.target.closest(
+        "button.event-links-toggle-collapsed, a, action-button"
+      ) ||
       this.shouldOpenContextMenu(e)
     ) {
       return;
     }
 
-    // If taking keyboard input, only expand / collapse when the spacebar is
-    // pressed.
-    if (e.type == "keydown" && e.which != 32) {
-      return;
-    }
-
-    this.detailsCollapsed = !this.detailsCollapsed;
-    if (!this.detailsCollapsed) {
-      this.linksCollapsed = false;
-    } else {
-      this.linksCollapsed = this._linksCollapsed;
-    }
-
     // Pressing the space key causes a scroll to the bottom of the window view,
     // so suppress it.
     e.preventDefault();
+
+    this.detailsCollapsed = this.linksCollapsed = !this.detailsCollapsed;
+    this.dispatchEvent(
+      new CustomEvent("toggle-details", { detail: { eventId: this.event.id } })
+    );
   }
 
   shouldOpenContextMenu(e) {
@@ -354,14 +354,19 @@ export class CalendarEvent extends MozLitElement {
   }
 
   toggleLinksSection(e) {
-    this._linksCollapsed = this.linksCollapsed = !this.linksCollapsed;
+    this.linksCollapsed = !this.linksCollapsed;
   }
 
   eventLinkTemplate(link) {
     let { url, text, title, intermediateText } = this.getLinkProperties(link);
 
     return html`
-      <a class="event-link" href=${url} title=${url} @click=${openLink}>
+      <a
+        class="event-link event-button-secondary"
+        href=${url}
+        title=${url}
+        @click=${openLink}
+      >
         <img src=${this.getDocumentIcon(link)} role="presentation" />
         <span class="text-body-s">
           ${until(title, intermediateText, text)}
@@ -396,14 +401,13 @@ export class CalendarEvent extends MozLitElement {
           ${links.length > 2
             ? html`
                 <button
-                  data-l10n-id=${this.linksCollapsed
+                  data-l10n-id=${linksCollapsed
                     ? "companion-expand-event-links-button"
                     : "companion-collapse-event-links-button"}
                   data-l10n-args=${JSON.stringify({
                     linkCount: this.event.links.length - 2,
                   })}
-                  class="event-link event-links-toggle-collapsed text-body-s"
-                  ?expanded=${!this.linksCollapsed}
+                  class="event-link event-links-toggle-collapsed text-body-s event-button-secondary"
                   @click=${this.toggleLinksSection}
                 ></button>
               `
@@ -465,32 +469,14 @@ export class CalendarEvent extends MozLitElement {
           "event-details-none":
             this.detailsCollapsed && !fallbackDetailTemplate,
         })}
-        tabindex="0"
-        @keydown=${this.toggleDetails}
       >
         ${!this.detailsCollapsed
           ? [
-              this.eventHostTemplate(this._eventHost()),
+              this.eventActionsTemplate(),
               this.eventLinksTemplate(),
+              this.eventHostTemplate(this._eventHost()),
             ]
           : fallbackDetailTemplate}
-      </div>
-    `;
-  }
-
-  browseEventDetailsTemplate() {
-    if (!this.event.links.length) {
-      return "";
-    }
-
-    // A browse event only shows links + documents.
-    return html`
-      <div
-        class=${classMap({
-          "event-details": true,
-        })}
-      >
-        ${this.eventLinksTemplate()}
       </div>
     `;
   }
@@ -538,7 +524,7 @@ export class CalendarEvent extends MozLitElement {
   }
 
   eventHostTemplate({ host, hostType }) {
-    if (!host) {
+    if (!host || this.isBrowse) {
       return "";
     }
 
@@ -606,6 +592,66 @@ export class CalendarEvent extends MozLitElement {
     }
 
     return "";
+  }
+
+  eventActionsTemplate() {
+    const actionsConfig = {
+      hide: {
+        icon: "chrome://global/skin/icons/close.svg",
+        label: "companion-hide-event",
+        disabled: this.isBrowse,
+        eventHandler: this.hideEvent,
+        class: "event-item-hide-action",
+      },
+      copy: {
+        icon: "chrome://global/skin/icons/link.svg",
+        label: "companion-copy-invite",
+        disabled: !this.event.conference,
+        eventHandler: this.copyInvite,
+        class: "event-item-copy-invite-action",
+      },
+      message: {
+        icon: "chrome://browser/skin/mail.svg",
+        label: this._getEmailLabel(),
+        disabled:
+          (this.isBrowse && this.event.isAllDay) ||
+          !this._getEmailTargets().length,
+        eventHandler: this.openEmail,
+        class: "event-item-email-action",
+      },
+      open: {
+        icon: "chrome://global/skin/icons/open-in-new.svg",
+        label: "companion-open-calendar",
+        eventHandler: this.openCalendar,
+        class: "event-item-open-calendar-action",
+      },
+      // Used for development / testing purposes only
+      timeWarp: {
+        icon: "chrome://browser/content/companion/breakTime.svg",
+        label: "companion-fake-time",
+        eventHandler: this.setTimeWarp,
+        hidden: !this.isFakeTime,
+      },
+    };
+
+    return html`
+      <div class="event-quick-actions">
+        ${Object.values(actionsConfig).map(action => {
+          if (action.hidden) {
+            return "";
+          }
+          return html`
+            <action-button
+              class=${action.class}
+              .icon=${action.icon}
+              .label=${action.label}
+              .disabled=${action.disabled}
+              @click=${action.eventHandler}
+            ></action-button>
+          `;
+        })}
+      </div>
+    `;
   }
 
   // Get the "host" of the meeting, or all attendees if the user is the host or
@@ -701,6 +747,21 @@ export class CalendarEvent extends MozLitElement {
     }
   }
 
+  setTimeWarp(fakeNow) {
+    if (!fakeNow) {
+      const tenMinutes = 10 * 60 * 1000;
+      const tenSeconds = 10 * 1000;
+      let { startDate } = this.event;
+      let startTime = new Date(Date.parse(startDate));
+      fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
+    }
+    this.dateCreator.TEST_timeWarp({ fakeNow });
+  }
+
+  get isBrowse() {
+    return this.listType === "browse";
+  }
+
   willUpdate() {
     let { startDate, endDate } = this.event;
 
@@ -708,8 +769,7 @@ export class CalendarEvent extends MozLitElement {
   }
 
   render() {
-    let { summary, startDate, endDate, isAllDay, conference } = this.event;
-    let hideEmailAction = this.listType === "browse" && isAllDay;
+    let { summary, startDate, endDate } = this.event;
 
     return html`
       <link
@@ -726,7 +786,7 @@ export class CalendarEvent extends MozLitElement {
           [this.status]: true,
           detailsCollapsed: this.detailsCollapsed,
         })}
-        @mousedown=${this.toggleDetails}
+        @click=${this.toggleDetails}
       >
         <div class="event-top">
           ${this.status != "future"
@@ -748,16 +808,13 @@ export class CalendarEvent extends MozLitElement {
               ${this.conferenceInfoTemplate()} ${this.eventTimeTemplate()}
             </div>
           </div>
-          <div class="event-card-actions">
-            <button
-              class="ghost-button event-options-button"
-              aria-haspopup="menu"
-              aria-expanded="false"
-              @mousedown=${this.openMenu}
-              @click=${this.openMenu}
-              title="More options"
-            ></button>
-          </div>
+          <button
+            class="event-button-secondary event-expand-button"
+            aria-expanded=${!this.detailsCollapsed}
+            data-l10n-id=${this.detailsCollapsed
+              ? "calendar-event-show-details"
+              : "calendar-event-hide-details"}
+          ></button>
         </div>
         <div class="event-conference-container">
           ${!this.detailsCollapsed ||
@@ -766,40 +823,7 @@ export class CalendarEvent extends MozLitElement {
             ? this.joinConferenceTemplate()
             : ""}
         </div>
-        ${this.listType !== "browse"
-          ? this.eventDetailsTemplate()
-          : this.browseEventDetailsTemplate()}
-        <panel-list action="more-options">
-          <panel-item
-            class="event-item-hide-action"
-            data-l10n-id="companion-hide-event"
-            @click=${this.hideEvent}
-            ?hidden=${this.listType === "browse"}
-          ></panel-item>
-          <panel-item
-            class="event-item-copy-invite-action"
-            data-l10n-id="companion-copy-invite"
-            @click=${this.copyInvite}
-            ?hidden=${!conference}
-          ></panel-item>
-          <panel-item
-            class="event-item-email-action"
-            data-l10n-id=${this._getEmailLabel()}
-            @click=${this.openEmail}
-            ?hidden=${hideEmailAction || !this._getEmailTargets().length}
-          ></panel-item>
-          <panel-item
-            class="event-item-open-calendar-action"
-            data-l10n-id="companion-open-calendar"
-            @click=${this.openCalendar}
-          ></panel-item>
-          <panel-item
-            class="event-item-open-calendar-action"
-            data-l10n-id="companion-fake-time"
-            @click=${this.setTimeWarp}
-            ?hidden=${!this.isFakeTime}
-          ></panel-item>
-        </panel-list>
+        ${this.eventDetailsTemplate()}
       </div>
     `;
   }

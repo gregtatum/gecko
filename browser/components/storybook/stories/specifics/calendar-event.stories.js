@@ -38,6 +38,7 @@ const Template = ({ event, listType = LIST_TYPES.now }) =>
         .getLinkProperties=${link => ({ title: link.title || link.text })}
         .getDocumentIcon=${() =>
           "chrome://global/skin/icons/defaultFavicon.svg"}
+        .listType=${listType}
       ></calendar-event>
     </div>
   `;
@@ -163,4 +164,13 @@ export const Browse = Template.bind({});
 Browse.args = {
   listType: LIST_TYPES.browse,
   event: Default.args.event,
+};
+
+export const BrowseTwoLinks = Template.bind({});
+BrowseTwoLinks.args = {
+  listType: LIST_TYPES.browse,
+  event: {
+    ...Default.args.event,
+    links: Default.args.event.links.slice(0, 2),
+  },
 };

@@ -237,7 +237,7 @@ add_task(async function testAllDayEventInBrowseView() {
   });
 });
 
-add_task(async function testActionItemVisibilityInBrowseView() {
+add_task(async function testActionItemsDisabledInBrowseView() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.pinebuild.calendar.browseEnabled", true]],
   });
@@ -306,47 +306,7 @@ add_task(async function testEmptyStateWithoutConnectedAccount() {
   });
 });
 
-add_task(async function testExpandableDetailsWithoutLinks() {
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.pinebuild.calendar.browseEnabled", true]],
-  });
-
-  await CompanionHelper.whenReady(async helper => {
-    await helper.reload();
-    let { start, end } = PinebuildTestUtils.generateEventTimes(0, 30);
-    let events = [
-      {
-        summary: "My Meeting",
-        startDate: start,
-        endDate: end,
-        organizer: {
-          email: "test123@gmail.com",
-        },
-      },
-    ];
-
-    await setBrowseCalendarEvents(helper, events);
-    await helper.runCompanionTask(async () => {
-      let browseEventList = content.document.getElementById(
-        "browse-event-list"
-      );
-      let event = browseEventList.shadowRoot.querySelector("calendar-event");
-
-      info(
-        "If there are no meeting links, don't render event details section."
-      );
-      let eventDetailsSection = event.shadowRoot.querySelector(
-        ".event-details"
-      );
-      ok(
-        !eventDetailsSection,
-        "Event details are not rendered when meeting links aren't available."
-      );
-    });
-  });
-});
-
-add_task(async function testExpandableDetailsWithLinks() {
+add_task(async function testExpandableDetailsLinks() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.pinebuild.calendar.browseEnabled", true]],
   });
@@ -389,14 +349,17 @@ add_task(async function testExpandableDetailsWithLinks() {
 
       info("Expand details");
       let eventCard = event.shadowRoot.querySelector(".event");
-      EventUtils.sendMouseEvent(
-        {
-          type: "mousedown",
-        },
-        eventCard,
-        content
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
       await event.updateComplete;
+
+      info("Ensure action buttons are shown");
+      let actionButtons = eventCard.querySelectorAll("action-button");
+      is(actionButtons.length, 4, "The action buttons are rendered.");
 
       info("Ensure links are still shown");
       let meetingLinksSection = eventCard.querySelector(".event-links");
@@ -488,26 +451,27 @@ async function validateEmailButtonDetails(helper, expectedId, expectedUrl) {
       let browseEventList = content.document.getElementById(
         "browse-event-list"
       );
-      let visibleEvents = browseEventList.shadowRoot.querySelectorAll(
-        "calendar-event"
-      );
+      let visibleEvents = browseEventList.calendarEvents;
       let event = visibleEvents[0];
 
-      info("Open meatball menu");
-      let openMenuButton = event.shadowRoot.querySelector(
-        ".event-options-button"
+      info("Expand details");
+      const detailsToggled = ContentTaskUtils.waitForEvent(
+        event,
+        "toggle-details"
       );
-      let panelMenu = event.shadowRoot.querySelector("panel-list");
-      const EventUtils = ContentTaskUtils.getEventUtils(content);
-      EventUtils.synthesizeMouseAtCenter(openMenuButton, {}, content);
-      await ContentTaskUtils.waitForEvent(panelMenu, "shown");
+      EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+      await detailsToggled;
+      await event.updateComplete;
 
       let emailButton = event.shadowRoot.querySelector(
         ".event-item-email-action"
       );
-      ok(!emailButton.hidden, "Email button is visible");
+      ok(ContentTaskUtils.is_visible(emailButton), "Email button is visible");
+      let emailButtonLabel = emailButton.shadowRoot.querySelector(
+        ".action-button-label"
+      );
       is(
-        emailButton.getAttribute("data-l10n-id"),
+        emailButtonLabel.getAttribute("data-l10n-id"),
         l10nId,
         "The expected label is used"
       );
@@ -576,21 +540,33 @@ async function setBrowseCalendarEvents(helper, events, expectedEventCount) {
 async function checkMenuActionForBrowseEvent(
   helper,
   menuItemSelector,
-  isHidden
+  isDisabled
 ) {
   await helper.runCompanionTask(
-    async (selector, shouldBeHidden) => {
+    async (selector, shouldBeDisabled) => {
       let browseEventList = content.document.getElementById(
         "browse-event-list"
       );
-      let event = browseEventList.shadowRoot.querySelector("calendar-event");
+      let visibleEvents = browseEventList.calendarEvents;
+      let event = visibleEvents[0];
+
+      info("Expand details");
+      if (event.detailsCollapsed) {
+        const detailsExpanded = Promise.all([
+          ContentTaskUtils.waitForEvent(event, "toggle-details"),
+          event.updateComplete,
+        ]);
+        EventUtils.synthesizeMouseAtCenter(event.expandButton, {}, content);
+        await detailsExpanded;
+      }
+
       let item = event.shadowRoot.querySelector(selector);
       is(
-        item.hidden,
-        shouldBeHidden,
-        `${selector} button is ${shouldBeHidden ? "hidden" : "showing"}`
+        item.disabled,
+        shouldBeDisabled,
+        `${selector} button is ${shouldBeDisabled ? "disabled" : "enabled"}`
       );
     },
-    [menuItemSelector, isHidden]
+    [menuItemSelector, isDisabled]
   );
 }

@@ -92,8 +92,9 @@
     --colors-blue-10: #637cff;
 
     /* Background Colors */
-    --calendar-button-link-background: var(--colors-lightgrey-20);
-    --calendar-button-link-background-hover: var(--colors-lightgrey-40);
+    --calendar-button-secondary-background: var(--colors-lightgrey-20);
+    --calendar-button-secondary-background-hover: var(--colors-lightgrey-40);
+    --calendar-button-secondary-background-active: var(--colors-lightgrey-50);
     --calendar-host-image-background: var(--colors-lightgrey-30);
     --action-button-background: var(--colors-lightgrey-30);
     --action-button-background-hover: var(--colors-lightgrey-50);
@@ -105,6 +106,7 @@
     --notification-card-border-color: var(--colors-cafe-40);
     --action-button-border-color: var(--colors-lightgrey-30);
     --action-button-border-color-hover: var(--colors-lightgrey-110);
+    --calendar-divider-border-color: var(--colors-lightgrey-30);
 
     /* Icon Colors */
     --icon-color-default: var(--colors-darkgrey-30);

@@ -434,10 +434,19 @@ export class CalendarEventList extends MozLitElement {
                   .event=${event}
                   .serial=${event.serial}
                   .listType=${this.listType}
+                  @toggle-details=${this.toggleExpandedEvent}
                 ></calendar-event>
               </div>
             `
     );
+  }
+
+  toggleExpandedEvent(e) {
+    for (let child of this.calendarEvents) {
+      if (!child.detailsCollapsed && child.event.id != e.detail.eventId) {
+        child.detailsCollapsed = true;
+      }
+    }
   }
 
   get emptyCalendarMessage() {
