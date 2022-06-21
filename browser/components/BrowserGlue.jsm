@@ -467,6 +467,20 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  ContentCache: {
+    parent: {
+      moduleURI: "resource:///actors/ContentCacheParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/ContentCacheChild.jsm",
+      events: {
+        pageshow: {},
+        load: { mozSystemGroup: true, capture: true },
+      },
+    },
+    enablePreference: "browser.contentCache.enabled",
+  },
+
   ContentSearch: {
     parent: {
       esModuleURI: "resource:///actors/ContentSearchParent.sys.mjs",

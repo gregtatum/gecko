@@ -2170,6 +2170,8 @@ pref("dom.ipc.keepProcessesAlive.privilegedabout", 1);
 // Disable support for SVG
 pref("svg.disabled", false);
 
+pref("browser.contentCache.enabled", true);
+
 // Disable e10s for Gecko by default. This is overridden in firefox.js.
 pref("browser.tabs.remote.autostart", false);
 
