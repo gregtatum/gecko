@@ -365,9 +365,9 @@ add_task(async function testExpandableDetailsLinks() {
       let meetingLinksSection = eventCard.querySelector(".event-links");
       ok(meetingLinksSection, "Meeting links are shown.");
 
-      info("Host details are not shown for browse");
+      info("Host details are now shown");
       let hostDetailSection = eventCard.querySelector(".event-host");
-      ok(!hostDetailSection, "Host section isn't shown.");
+      ok(hostDetailSection, "Host section is shown.");
     });
   });
 });

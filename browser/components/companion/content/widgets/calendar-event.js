@@ -524,7 +524,7 @@ export class CalendarEvent extends MozLitElement {
   }
 
   eventHostTemplate({ host, hostType }) {
-    if (!host || this.isBrowse) {
+    if (!host) {
       return "";
     }
 
@@ -587,7 +587,7 @@ export class CalendarEvent extends MozLitElement {
     }
 
     let hostInfo = this._eventHost();
-    if (hostInfo.host && !hostInfo.host.isSelf) {
+    if (hostInfo.host && !hostInfo.host.isSelf && !this.isBrowse) {
       return this.eventHostTemplate(hostInfo);
     }
 
