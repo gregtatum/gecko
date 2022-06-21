@@ -79,19 +79,29 @@
   align-items: unset;
 }
 
-.session-card::after {
+.session-card-toggle {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 0;
+}
+
+.session-card-toggle::after {
   content: "";
   position: absolute;
   background: center center no-repeat url(chrome://global/skin/icons/arrow-down.svg);
-  width: 36px;
-  height: 36px;
-  top: 12px;
+  width: 30px;
+  height: 30px;
+  top: 0px;
   inset-inline-end: 0;
   transition-duration: 0.2s;
   transition-property: transform;
 }
 
-.expanded .session-card::after {
+.session-card-toggle:focus-visible {
+  outline-offset: initial;
+}
+
+.expanded.session.card .session-card-toggle::after {
   transform: rotate(180deg);
 }
 

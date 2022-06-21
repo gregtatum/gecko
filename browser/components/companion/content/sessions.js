@@ -50,6 +50,7 @@ export class SessionCard extends HTMLElement {
     this.data = data;
     this.className = "session card";
 
+    this.setAttribute("aria-expanded", false);
     let template = document.getElementById("template-session-card");
     let fragment = template.content.cloneNode(true);
 
@@ -77,7 +78,10 @@ export class SessionCard extends HTMLElement {
       data.pages[0]
     );*/
     fragment.querySelector(".icons").replaceChildren(...icons);
-    fragment.querySelector(".session-card").addEventListener("click", this);
+
+    this.addEventListener("click", this);
+    let cardToggleButton = fragment.querySelector(".session-card-toggle");
+    cardToggleButton.addEventListener("click", this);
 
     let restoreBtn = fragment.querySelector(".restore-button");
     restoreBtn.addEventListener("click", this);
@@ -105,7 +109,23 @@ export class SessionCard extends HTMLElement {
         break;
       }
       default:
-        this.classList.toggle("expanded");
+        this.#expandCard(event);
+    }
+  }
+
+  #expandCard(event) {
+    // We do not want the click event from the button to propagate up to
+    // the card itself. This prevents an immediate "double toggle" of the card.
+    if (event.target.className === "session-card-toggle") {
+      event.stopPropagation();
+    }
+    this.classList.toggle("expanded");
+    let panelExpanded = this.classList.contains("expanded");
+    this.setAttribute("aria-expanded", String(panelExpanded));
+    let restoreButton = this.querySelector(".restore-button");
+    restoreButton.setAttribute("aria-hidden", String(!panelExpanded));
+    if (panelExpanded) {
+      restoreButton.focus();
     }
   }
 }

@@ -142,6 +142,10 @@ last-session-title = Last Session
 # restores the users last session.
 restore-session = Restore
 
+# This string is used to describe the toggle action of the session card button
+session-card-toggle =
+  .aria-label = Expand session card
+
 # This string is used session cards to display the number of sites within a session
 session-pages-count = { $pages } sites
 
