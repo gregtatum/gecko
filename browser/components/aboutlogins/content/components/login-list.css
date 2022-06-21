@@ -325,6 +325,10 @@ ol {
   cursor: pointer;
 }
 
+:host(.in-companion) .login-list-item:not(.selected):hover {
+  color: inherit;
+}
+
 :host(.in-companion) .login-list-item:hover .more-dropdown {
   background-color: #FFFFFF;
 }
