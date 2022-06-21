@@ -108,7 +108,8 @@ export class HistoryViewerEl extends HTMLElement {
           entry.isIntersecting &&
             entry.intersectionRatio >= HistoryViewerEl.INTERSECTION_THRESHOLD
         );
-      } else {
+      }
+      if (entry.target == resultList.lastElementChild) {
         resultList.toggleAttribute("show-fade", !entry.isIntersecting);
       }
     }
@@ -201,8 +202,10 @@ export class HistoryViewerEl extends HTMLElement {
       });
     }
 
-    this.#observer.observe(resultList.firstElementChild);
-    this.#observer.observe(resultList.lastElementChild);
+    if (resultList.firstElementChild) {
+      this.#observer.observe(resultList.firstElementChild);
+      this.#observer.observe(resultList.lastElementChild);
+    }
   }
 
   /**

@@ -801,6 +801,13 @@ class CompanionHelper {
         content,
         "Companion:HistoryResultsUpdated"
       );
+      // We'll also wait for a tick of the render loop to ensure that
+      // all IntersectionObserver's have fired.
+      await new Promise(resolve => {
+        content.requestAnimationFrame(() => {
+          content.requestAnimationFrame(resolve);
+        });
+      });
     });
   }
 
@@ -849,6 +856,8 @@ class CompanionHelper {
    *   A description of each returned result.
    * @property {HistoryResultsFooterDetails} footer
    *   Information about the footer at the end of the History results.
+   * @property {boolean} hasBottomFade
+   *   True if the bottom of the list has the fade effect.
    */
 
   /**
@@ -891,6 +900,8 @@ class CompanionHelper {
         );
       }
 
+      let hasBottomFade = resultList.hasAttribute("show-fade");
+
       return {
         searchInputValue,
         results,
@@ -898,6 +909,7 @@ class CompanionHelper {
           visible: !!footerEl,
           limitOutOfTotalArgs,
         },
+        hasBottomFade,
       };
     });
   }
