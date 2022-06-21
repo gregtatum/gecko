@@ -38,9 +38,6 @@ add_task(async function test_open_new_view() {
   );
   await helper.clickHistoryResultAtIndex(TARGET_INDEX);
   await viewLoadedPromise;
-  await TestUtils.waitForCondition(() => {
-    return !gBrowser.tabbox.hasAttribute("companion-link-open");
-  });
   Assert.ok(true, "Saw the target URL loaded in a new View.");
   await gStageManager.reset();
 });
@@ -77,9 +74,6 @@ add_task(async function test_switch_to_view() {
   let viewSwitchedPromise = PinebuildTestUtils.waitForSelectedView(targetView);
   await helper.clickHistoryResultAtIndex(TARGET_INDEX);
   await viewSwitchedPromise;
-  await TestUtils.waitForCondition(() => {
-    return !gBrowser.tabbox.hasAttribute("companion-link-open");
-  });
   Assert.ok(true, "Switched to a background View with the target URI.");
   await gStageManager.reset();
 });
@@ -104,14 +98,8 @@ add_task(async function test_switch_current_view() {
     "The target View is in the background."
   );
 
+  let originalBrowser = gBrowser.selectedBrowser;
   await helper.clickHistoryResultAtIndex(TARGET_INDEX);
-  // MR2-2645: The tabbox should not have the companion-link-open
-  // attribute, which temporarily hides the stage to perform the
-  // sliding history transition.
-  let tabbox = gBrowser.tabbox;
-  Assert.ok(
-    !tabbox.hasAttribute("companion-link-open"),
-    "tabbox should not have companion-link-open attribute set."
-  );
+  Assert.equal(gBrowser.selectedBrowser, originalBrowser);
   await gStageManager.reset();
 });
