@@ -1122,7 +1122,7 @@
 
       this._selectedBrowser = newBrowser;
       this._selectedTab = newTab;
-      if (newTab != gFirefoxViewTab) {
+      if (newTab != FirefoxViewHandler.tab) {
         this.showTab(newTab);
       }
 

@@ -4,16 +4,18 @@
 
 /* eslint no-shadow: error, mozilla/no-aArgs: error */
 
+const { SearchEngine } = ChromeUtils.import(
+  "resource://gre/modules/SearchEngine.jsm"
+);
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   EngineURL: "resource://gre/modules/SearchEngine.jsm",
-  SearchEngine: "resource://gre/modules/SearchEngine.jsm",
   SearchUtils: "resource://gre/modules/SearchUtils.jsm",
 });
 
@@ -63,22 +65,34 @@ function ENSURE_WARN(assertion, message, resultCode) {
 /**
  * OpenSearchEngine represents an OpenSearch base search engine.
  */
-class OpenSearchEngine extends lazy.SearchEngine {
+class OpenSearchEngine extends SearchEngine {
   // The data describing the engine, in the form of an XML document element.
   _data = null;
 
-  constructor({ shouldPersist = true } = {}) {
+  /**
+   * Creates a OpenSearchEngine.
+   *
+   * @param {object} [options]
+   * @param {object} [options.json]
+   *   An object that represents the saved JSON settings for the engine.
+   * @param {object} [options.shouldPersist]
+   *   A flag indicating whether the engine should be persisted to disk and made
+   *   available wherever engines are used (e.g. it can be set as the default
+   *   search engine, used for search shortcuts, etc.). Non-persisted engines
+   *   are intended for more limited or temporary use. Defaults to true.
+   */
+  constructor({ json = null, shouldPersist = true } = {}) {
     super({
       isAppProvided: false,
       // We don't know what this is until after it has loaded, so add a placeholder.
-      loadPath: "[opensearch]loading",
+      loadPath: json?._loadPath ?? "[opensearch]loading",
     });
 
-    // Flag indicating whether the engine should be persisted to disk and made
-    // available wherever engines are used (e.g. it can be set as the default
-    // search engine, used for search shortcuts, etc.). Non-persisted engines
-    // are intended for more limited or temporary use.
     this._shouldPersist = shouldPersist;
+
+    if (json) {
+      this._initWithJSON(json);
+    }
   }
 
   /**
@@ -90,7 +104,7 @@ class OpenSearchEngine extends lazy.SearchEngine {
    * @param {function} [callback]
    *   A callback to receive any details of errors.
    */
-  _install(uri, callback) {
+  install(uri, callback) {
     let loadURI =
       uri instanceof Ci.nsIURI ? uri : lazy.SearchUtils.makeURI(uri);
     if (!loadURI) {

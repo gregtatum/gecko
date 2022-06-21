@@ -3249,10 +3249,10 @@ class ColorwayClosetCard extends HTMLElement {
     const collection = BuiltInThemes.findActiveColorwayCollection?.();
     if (collection) {
       const { l10nId } = collection;
-      document.l10n.setAttributes(colorwayPreviewHeading, l10nId);
+      document.l10n.setAttributes(colorwayPreviewHeading, l10nId.title);
       document.l10n.setAttributes(
         colorwayPreviewSubHeading,
-        `${l10nId}-subheading`
+        `${l10nId.title}-subheading`
       );
     }
 
@@ -3279,7 +3279,7 @@ class ColorwayClosetCard extends HTMLElement {
       "#colorways-expiry-date > span"
     );
 
-    const collection = BuiltInThemes.findActiveColorwayCollection();
+    const collection = BuiltInThemes.findActiveColorwayCollection?.();
     if (collection) {
       const { expiry } = collection;
       document.l10n.setAttributes(

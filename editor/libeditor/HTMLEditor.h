@@ -636,12 +636,24 @@ class HTMLEditor final : public EditorBase,
                                          nsIContent& aContent) const;
 
   /**
-   * Get an active editor's editing host in DOM window.  If this editor isn't
-   * active in the DOM window, this returns NULL.
+   * Compute editing host for aContent.  If this editor isn't active in the DOM
+   * window, this returns nullptr.
    */
   enum class LimitInBodyElement { No, Yes };
-  Element* ComputeEditingHost(
-      LimitInBodyElement aLimitInBodyElement = LimitInBodyElement::Yes) const;
+  [[nodiscard]] Element* ComputeEditingHost(
+      const nsIContent& aContent,
+      LimitInBodyElement aLimitInBodyElement = LimitInBodyElement::Yes) const {
+    return ComputeEditingHostInternal(&aContent, aLimitInBodyElement);
+  }
+
+  /**
+   * Compute editing host for the focus node of the Selection.  If this editor
+   * isn't active in the DOM window, this returns nullptr.
+   */
+  [[nodiscard]] Element* ComputeEditingHost(
+      LimitInBodyElement aLimitInBodyElement = LimitInBodyElement::Yes) const {
+    return ComputeEditingHostInternal(nullptr, aLimitInBodyElement);
+  }
 
   /**
    * Retruns true if we're in designMode.
@@ -758,14 +770,14 @@ class HTMLEditor final : public EditorBase,
    *                            are cloned to aNewBlock.
    * @param aNewBlock           New block container element.  All children of
    *                            this is deleted first.
-   * @param aEditingHost        Current editing host.
+   * @param aEditingHost        The editing host.
    * @return                    If succeeded, returns a suggesting point to put
    *                            caret.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
   CopyLastEditableChildStylesWithTransaction(Element& aPreviousBlock,
                                              Element& aNewBlock,
-                                             Element& aEditingHost);
+                                             const Element& aEditingHost);
 
   /**
    * RemoveBlockContainerWithTransaction() removes aElement from the DOM tree
@@ -1087,14 +1099,14 @@ class HTMLEditor final : public EditorBase,
    *
    * @param aMailCiteElement    The mail-cite element which should be split.
    * @param aPointToSplit       The point to split.
-   * @param aEditingHost        Current editing host element.
+   * @param aEditingHost        The editing host.
    * @return                    Candidate caret position where is at inserted
    *                            <br> element into the split point.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
   HandleInsertParagraphInMailCiteElement(Element& aMailCiteElement,
                                          const EditorDOMPoint& aPointToSplit,
-                                         Element& aEditingHost);
+                                         const Element& aEditingHost);
 
   /**
    * HandleInsertBRElement() inserts a <br> element into aInsertToBreak.
@@ -1108,7 +1120,7 @@ class HTMLEditor final : public EditorBase,
    *                            candidate caret point.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT CreateElementResult HandleInsertBRElement(
-      const EditorDOMPoint& aInsertToBreak, Element& aEditingHost);
+      const EditorDOMPoint& aInsertToBreak, const Element& aEditingHost);
 
   /**
    * HandleInsertLinefeed() inserts a linefeed character into aInsertToBreak.
@@ -1118,7 +1130,7 @@ class HTMLEditor final : public EditorBase,
    * @param aEditingHost        Current active editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult HandleInsertLinefeed(
-      const EditorDOMPoint& aInsertToBreak, Element& aEditingHost);
+      const EditorDOMPoint& aInsertToBreak, const Element& aEditingHost);
 
   /**
    * SplitParentInlineElementsAtRangeEdges() splits parent inline nodes at both
@@ -1128,18 +1140,11 @@ class HTMLEditor final : public EditorBase,
    * @param aRangeItem          [in/out] One or two DOM points where should be
    *                            split.  Will be modified to split point if
    *                            they're split.
+   * @return                    A suggest point to put caret if succeeded, but
+   *                            it may be unset.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
   SplitParentInlineElementsAtRangeEdges(RangeItem& aRangeItem);
-
-  /**
-   * SplitParentInlineElementsAtRangeEdges(nsTArray<RefPtr<nsRange>>&) calls
-   * SplitParentInlineElementsAtRangeEdges(RangeItem&) for each range.  Then,
-   * updates given range to keep edit target ranges as expected.
-   */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  SplitParentInlineElementsAtRangeEdges(
-      nsTArray<RefPtr<nsRange>>& aArrayOfRanges);
 
   /**
    * SplitElementsAtEveryBRElement() splits before all <br> elements in
@@ -1158,8 +1163,11 @@ class HTMLEditor final : public EditorBase,
    *                                    is first leaf node of
    *                                    aMostAncestorToBeSplit, starting from
    *                                    the first <br> element.
+   * @return                            A suggest point to put caret if
+   *                                    succeeded, but it may unset.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult SplitElementsAtEveryBRElement(
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
+  SplitElementsAtEveryBRElement(
       nsIContent& aMostAncestorToBeSplit,
       nsTArray<OwningNonNull<nsIContent>>& aOutArrayOfContents);
 
@@ -1168,92 +1176,14 @@ class HTMLEditor final : public EditorBase,
    * for each given node when this needs to do that for aEditSubAction.
    * If split a node, it in aArrayOfContents is replaced with split nodes and
    * <br> elements.
+   *
+   * @return                            A suggest point to put caret if
+   *                                    succeeded, but it may unset.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult MaybeSplitElementsAtEveryBRElement(
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
+  MaybeSplitElementsAtEveryBRElement(
       nsTArray<OwningNonNull<nsIContent>>& aArrayOfContents,
       EditSubAction aEditSubAction);
-
-  /**
-   * CollectEditableChildren() collects child nodes of aNode (starting from
-   * first editable child, but may return non-editable children after it).
-   *
-   * @param aNode               Parent node of retrieving children.
-   * @param aOutArrayOfContents [out] This method will inserts found children
-   *                            into this array.
-   * @param aIndexToInsertChildren      Starting from this index, found
-   *                                    children will be inserted to the array.
-   * @param aCollectListChildren        If Yes, will collect children of list
-   *                                    and list-item elements recursively.
-   * @param aCollectTableChildren       If Yes, will collect children of table
-   *                                    related elements recursively.
-   * @param aCollectNonEditableNodes    If Yes, will collect found children
-   *                                    even if they are not editable.
-   * @return                    Number of found children.
-   */
-  enum class CollectListChildren { No, Yes };
-  enum class CollectTableChildren { No, Yes };
-  enum class CollectNonEditableNodes { No, Yes };
-  size_t CollectChildren(
-      nsINode& aNode, nsTArray<OwningNonNull<nsIContent>>& aOutArrayOfContents,
-      size_t aIndexToInsertChildren, CollectListChildren aCollectListChildren,
-      CollectTableChildren aCollectTableChildren,
-      CollectNonEditableNodes aCollectNonEditableNodes) const;
-
-  /**
-   * SplitInlinessAndCollectEditTargetNodes() splits text nodes and inline
-   * elements around aArrayOfRanges.  Then, collects edit target nodes to
-   * aOutArrayOfNodes.  Finally, each edit target nodes is split at every
-   * <br> element in it.
-   */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  SplitInlinesAndCollectEditTargetNodes(
-      nsTArray<RefPtr<nsRange>>& aArrayOfRanges,
-      nsTArray<OwningNonNull<nsIContent>>& aOutArrayOfContents,
-      EditSubAction aEditSubAction,
-      CollectNonEditableNodes aCollectNonEditableNodes);
-
-  /**
-   * SplitTextNodesAtRangeEnd() splits text nodes if each range end is in
-   * middle of a text node.
-   */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  SplitTextNodesAtRangeEnd(nsTArray<RefPtr<nsRange>>& aArrayOfRanges);
-
-  /**
-   * CollectEditTargetNodes() collects edit target nodes in aArrayOfRanges.
-   * First, this collects all nodes in given ranges, then, modifies the
-   * result for specific edit sub-actions.
-   */
-  nsresult CollectEditTargetNodes(
-      nsTArray<RefPtr<nsRange>>& aArrayOfRanges,
-      nsTArray<OwningNonNull<nsIContent>>& aOutArrayOfContents,
-      EditSubAction aEditSubAction,
-      CollectNonEditableNodes aCollectNonEditableNodes);
-
-  /**
-   * GetCurrentHardLineStartPoint() returns start point of hard line
-   * including aPoint.  If the line starts after a `<br>` element, returns
-   * next sibling of the `<br>` element.  If the line is first line of a block,
-   * returns point of the block.
-   * NOTE: The result may be point of editing host.  I.e., the container may
-   *       be outside of editing host.
-   */
-  template <typename EditorDOMPointType>
-  EditorDOMPoint GetCurrentHardLineStartPoint(
-      const EditorDOMPointType& aPoint, EditSubAction aEditSubAction,
-      const Element& aEditingHost) const;
-
-  /**
-   * GetCurrentHardLineEndPoint() returns end point of hard line including
-   * aPoint.  If the line ends with a visible `<br>` element, returns the point
-   * after the `<br>` element.  If the line ends with a preformatted linefeed,
-   * returns the point after the linefeed unless it's an invisible linebreak
-   * immediately before a block boundary.  If the line ends with a block
-   * boundary, returns the block.
-   */
-  template <typename EditorDOMPointType>
-  EditorDOMPoint GetCurrentHardLineEndPoint(const EditorDOMPointType& aPoint,
-                                            const Element& aEditingHost) const;
 
   /**
    * CreateRangeIncludingAdjuscentWhiteSpaces() creates an nsRange instance
@@ -1267,56 +1197,6 @@ class HTMLEditor final : public EditorBase,
   already_AddRefed<nsRange> CreateRangeIncludingAdjuscentWhiteSpaces(
       const EditorDOMPointType1& aStartPoint,
       const EditorDOMPointType2& aEndPoint);
-
-  /**
-   * GetSelectionRangesExtendedToIncludeAdjuscentWhiteSpaces() collects
-   * selection ranges with extending to include adjuscent white-spaces
-   * of each range start and end.
-   *
-   * @param aOutArrayOfRanges   [out] Always appended same number of ranges
-   *                            as Selection::RangeCount().  Must be empty
-   *                            when you call this.
-   */
-  void GetSelectionRangesExtendedToIncludeAdjuscentWhiteSpaces(
-      nsTArray<RefPtr<nsRange>>& aOutArrayOfRanges);
-
-  /**
-   * CreateRangeExtendedToHardLineStartAndEnd() creates an nsRange instance
-   * which may be expanded to start/end of hard line at both edges of the given
-   * range.  If this fails handling something, returns nullptr.
-   */
-  template <typename EditorDOMRangeType>
-  already_AddRefed<nsRange> CreateRangeExtendedToHardLineStartAndEnd(
-      const EditorDOMRangeType& aRange, EditSubAction aEditSubAction) const;
-  template <typename EditorDOMPointType1, typename EditorDOMPointType2>
-  already_AddRefed<nsRange> CreateRangeExtendedToHardLineStartAndEnd(
-      const EditorDOMPointType1& aStartPoint,
-      const EditorDOMPointType2& aEndPoint, EditSubAction aEditSubAction) const;
-
-  /**
-   * GetSelectionRangesExtendedToHardLineStartAndEnd() collects selection ranges
-   * with extending to start/end of hard line from each range start and end.
-   * XXX This means that same range may be included in the result.
-   *
-   * @param aOutArrayOfRanges   [out] Always appended same number of ranges
-   *                            as Selection::RangeCount().  Must be empty
-   *                            when you call this.
-   */
-  void GetSelectionRangesExtendedToHardLineStartAndEnd(
-      nsTArray<RefPtr<nsRange>>& aOutArrayOfRanges,
-      EditSubAction aEditSubAction);
-
-  /**
-   * SelectBRElementIfCollapsedInEmptyBlock() helper method for
-   * CreateRangeIncludingAdjuscentWhiteSpaces() and
-   * CreateRangeExtendedToLineStartAndEnd().  If the given range is collapsed
-   * in a block and the block has only one `<br>` element, this makes
-   * aStartPoint and aEndRef select the `<br>` element.
-   */
-  template <typename EditorDOMPointType1, typename EditorDOMPointType2>
-  void SelectBRElementIfCollapsedInEmptyBlock(
-      EditorDOMPointType1& aStartPoint, EditorDOMPointType2& aEndPoint,
-      const Element& aEditingHost) const;
 
   /**
    * GetChildNodesOf() returns all child nodes of aParent with an array.
@@ -1340,13 +1220,15 @@ class HTMLEditor final : public EditorBase,
   Element* GetParentListElementAtSelection() const;
 
   /**
-   * MaybeExtendSelectionToHardLineEdgesForBlockEditAction() adjust Selection if
-   * there is only one range.  If range start and/or end point is <br> node or
-   * something non-editable point, they should be moved to nearest text node or
-   * something where the other methods easier to handle edit action.
+   * GetRangeExtendedToHardLineEdgesForBlockEditAction() returns an extended
+   * range if aRange should be extended before handling a block level editing.
+   * If aRange start and/or end point <br> or something non-editable point, they
+   * should be moved to nearest text node or something where the other methods
+   * easier to handle edit action.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  MaybeExtendSelectionToHardLineEdgesForBlockEditAction();
+  [[nodiscard]] Result<EditorRawDOMRange, nsresult>
+  GetRangeExtendedToHardLineEdgesForBlockEditAction(
+      const nsRange* aRange, const Element& aEditingHost) const;
 
   /**
    * InitializeInsertingElement is a callback type of methods which inserts
@@ -1547,9 +1429,10 @@ class HTMLEditor final : public EditorBase,
    * FormatBlockContainerWithTransaction() is implementation of "formatBlock"
    * command of `Document.execCommand()`.  This applies block style or removes
    * it.
-   * NOTE: This creates AutoSelectionRestorer.  Therefore, even when this
-   *       return NS_OK, editor may have been destroyed.
    *
+   * @param aSelectionRanges    The ranges which are cloned by selection or
+   *                            updated from it with doing something before
+   *                            calling this.
    * @param aBlockType  New block tag name.
    *                    If nsGkAtoms::normal or nsGkAtoms::_empty,
    *                    RemoveBlockContainerElementsWithTransaction() will be
@@ -1559,9 +1442,11 @@ class HTMLEditor final : public EditorBase,
    *                    be called.
    *                    Otherwise, CreateOrChangeBlockContainerElement() will be
    *                    called.
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  FormatBlockContainerWithTransaction(nsAtom& aBlockType);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult FormatBlockContainerWithTransaction(
+      AutoRangeArray& aSelectionRanges, nsAtom& aBlockType,
+      const Element& aEditingHost);
 
   /**
    * InsertBRElementIfHardLineIsEmptyAndEndsWithBlockBoundary() determines if
@@ -1645,20 +1530,22 @@ class HTMLEditor final : public EditorBase,
    *
    * @param aListItemElement    The list item which has the following point.
    * @param aPointToSplit       The point to split aListItemElement.
-   * @param aEditingHost        The editing host for aListItemElement
+   * @param aEditingHost        The editing host.
    * @return                    A candidate position to put caret.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
   HandleInsertParagraphInListItemElement(Element& aListItemElement,
                                          const EditorDOMPoint& aPointToSplit,
-                                         Element& aEditingHost);
+                                         const Element& aEditingHost);
 
   /**
    * InsertParagraphSeparatorAsSubAction() handles insertPargraph commad
    * (i.e., handling Enter key press) with the above helper methods.
+   *
+   * @param aEditingHost        The editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
-  InsertParagraphSeparatorAsSubAction();
+  InsertParagraphSeparatorAsSubAction(const Element& aEditingHost);
 
   /**
    * InsertLineBreakAsSubAction() inserts a new <br> element or a linefeed
@@ -1703,12 +1590,14 @@ class HTMLEditor final : public EditorBase,
    *                                    attributes will be removed.
    * @param aSelectAllOfCurrentList     Yes if this should treat all of
    *                                    ancestor list element at selection.
+   * @param aEditingHost                The editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
   ChangeSelectedHardLinesToList(nsAtom& aListElementTagName,
                                 nsAtom& aListItemElementTagName,
                                 const nsAString& aBulletType,
-                                SelectAllOfCurrentList aSelectAllOfCurrentList);
+                                SelectAllOfCurrentList aSelectAllOfCurrentList,
+                                const Element& aEditingHost);
 
   /**
    * MakeOrChangeListAndListItemAsSubAction() handles create list commands with
@@ -2031,6 +1920,7 @@ class HTMLEditor final : public EditorBase,
    *                                    same hard line will be moved.
    * @param aPointToInsert              Point to insert contents of the hard
    *                                    line.
+   * @param aEditingHost                The editing host.
    * @param aMoveToEndOfContainer       If `Yes`, aPointToInsert.Offset() will
    *                                    be ignored and instead, all contents
    *                                    will be appended to the container of
@@ -2045,7 +1935,7 @@ class HTMLEditor final : public EditorBase,
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT MoveNodeResult
   MoveOneHardLineContentsWithTransaction(
       const EditorDOMPoint& aPointInHardLine,
-      const EditorDOMPoint& aPointToInsert,
+      const EditorDOMPoint& aPointToInsert, const Element& aEditingHost,
       MoveToEndOfContainer aMoveToEndOfContainer = MoveToEndOfContainer::No);
 
   /**
@@ -2056,9 +1946,9 @@ class HTMLEditor final : public EditorBase,
    *
    * @param aPointInHardLine    A point in a hard line.
    */
-  template <typename PT, typename CT>
   Result<bool, nsresult> CanMoveOrDeleteSomethingInHardLine(
-      const EditorDOMPointBase<PT, CT>& aPointInHardLine) const;
+      const EditorDOMPoint& aPointInHardLine,
+      const Element& aEditingHost) const;
 
   /**
    * SplitNodeWithTransaction() creates a transaction to create a new node
@@ -2379,8 +2269,11 @@ class HTMLEditor final : public EditorBase,
    * RemoveListAtSelectionAsSubAction() removes list elements and list item
    * elements at Selection.  And move contents in them where the removed list
    * was.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult RemoveListAtSelectionAsSubAction();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
+  RemoveListAtSelectionAsSubAction(const Element& aEditingHost);
 
   /**
    * ChangeMarginStart() changes margin of aElement to indent or outdent.
@@ -2397,9 +2290,11 @@ class HTMLEditor final : public EditorBase,
    * need to check if the editor is still available even if this returns
    * NS_OK.
    * NOTE: Use HandleCSSIndentAtSelection() instead.
+   *
+   * @param aEditingHost        The editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  HandleCSSIndentAtSelectionInternal();
+  HandleCSSIndentAtSelectionInternal(const Element& aEditingHost);
 
   /**
    * HandleHTMLIndentAtSelectionInternal() indents around Selection with HTML.
@@ -2407,30 +2302,41 @@ class HTMLEditor final : public EditorBase,
    * need to check if the editor is still available even if this returns
    * NS_OK.
    * NOTE: Use HandleHTMLIndentAtSelection() instead.
+   *
+   * @param aEditingHost        The editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  HandleHTMLIndentAtSelectionInternal();
+  HandleHTMLIndentAtSelectionInternal(const Element& aEditingHost);
 
   /**
    * HandleCSSIndentAtSelection() indents around Selection with CSS.
    * NOTE: This is a helper method of `HandleIndentAtSelection()`.  If you
    *       want to call this directly, you should check whether you need
    *       do do something which `HandleIndentAtSelection()` does.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult HandleCSSIndentAtSelection();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
+  HandleCSSIndentAtSelection(const Element& aEditingHost);
 
   /**
    * HandleHTMLIndentAtSelection() indents around Selection with HTML.
    * NOTE: This is a helper method of `HandleIndentAtSelection()`.  If you
    *       want to call this directly, you should check whether you need
    *       do do something which `HandleIndentAtSelection()` does.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult HandleHTMLIndentAtSelection();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
+  HandleHTMLIndentAtSelection(const Element& aEditingHost);
 
   /**
    * HandleIndentAtSelection() indents around Selection with HTML or CSS.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult HandleIndentAtSelection();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
+  HandleIndentAtSelection(const Element& aEditingHost);
 
   /**
    * OutdentPartOfBlock() outdents the nodes between aStartOfOutdent and
@@ -2468,6 +2374,7 @@ class HTMLEditor final : public EditorBase,
    * NS_OK.
    * NOTE: Call `HandleOutdentAtSelection()` instead.
    *
+   * @param aEditingHost        The editing host.
    * @return                    The left content is left content of last
    *                            outdented element.
    *                            The right content is right content of last
@@ -2476,12 +2383,15 @@ class HTMLEditor final : public EditorBase,
    *                            outdented element.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT SplitRangeOffFromNodeResult
-  HandleOutdentAtSelectionInternal();
+  HandleOutdentAtSelectionInternal(const Element& aEditingHost);
 
   /**
    * HandleOutdentAtSelection() outdents contents around Selection.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult HandleOutdentAtSelection();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
+  HandleOutdentAtSelection(const Element& aEditingHost);
 
   /**
    * AlignBlockContentsWithDivElement() sets align attribute of <div> element
@@ -2616,18 +2526,20 @@ class HTMLEditor final : public EditorBase,
    *
    * @param aAlignType          New align attribute value where the contents
    *                            should be aligned to.
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  AlignContentsAtSelection(const nsAString& aAlignType);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult AlignContentsAtSelection(
+      const nsAString& aAlignType, const Element& aEditingHost);
 
   /**
    * AlignAsSubAction() handles "align" command with `Selection`.
    *
    * @param aAlignType          New align attribute value where the contents
    *                            should be aligned to.
+   * @param aEditingHost        The editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
-  AlignAsSubAction(const nsAString& aAlignType);
+  AlignAsSubAction(const nsAString& aAlignType, const Element& aEditingHost);
 
   /**
    * AdjustCaretPositionAndEnsurePaddingBRElement() may adjust caret
@@ -2703,10 +2615,12 @@ class HTMLEditor final : public EditorBase,
    *
    * @param aTargetElement      Returns target `<div>` element which should be
    *                            changed to absolute positioned.
+   * @param aEditingHost        The editing host.
    */
+  // TODO: Rewrite this with `Result<RefPtr<Element>, nsresult>`.
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
   MoveSelectedContentsToDivElementToMakeItAbsolutePosition(
-      RefPtr<Element>* aTargetElement);
+      RefPtr<Element>* aTargetElement, const Element& aEditingHost);
 
   /**
    * SetSelectionToAbsoluteAsSubAction() move selected contents to first
@@ -2714,9 +2628,11 @@ class HTMLEditor final : public EditorBase,
    * the `<div>` element positioned absolutely.
    * mNewBlockElement of TopLevelEditSubActionData will be set to the `<div>`
    * element.
+   *
+   * @param aEditingHost        The editing host.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
-  SetSelectionToAbsoluteAsSubAction();
+  SetSelectionToAbsoluteAsSubAction(const Element& aEditingHost);
 
   /**
    * SetSelectionToStaticAsSubAction() sets the `position` property of a
@@ -2760,6 +2676,9 @@ class HTMLEditor final : public EditorBase,
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult InitEditorContentAndSelection();
 
   MOZ_CAN_RUN_SCRIPT nsresult SelectAllInternal() final;
+
+  [[nodiscard]] Element* ComputeEditingHostInternal(
+      const nsIContent* aContent, LimitInBodyElement aLimitInBodyElement) const;
 
   /**
    * Creates a range with just the supplied node and appends that to the
@@ -3336,13 +3255,19 @@ class HTMLEditor final : public EditorBase,
 
   /**
    * IndentAsSubAction() indents the content around Selection.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult IndentAsSubAction();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
+  IndentAsSubAction(const Element& aEditingHost);
 
   /**
    * OutdentAsSubAction() outdents the content around Selection.
+   *
+   * @param aEditingHost        The editing host.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult OutdentAsSubAction();
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditActionResult
+  OutdentAsSubAction(const Element& aEditingHost);
 
   MOZ_CAN_RUN_SCRIPT nsresult LoadHTML(const nsAString& aInputString);
 
@@ -4547,10 +4472,10 @@ class HTMLEditor final : public EditorBase,
 
   ParagraphSeparator mDefaultParagraphSeparator;
 
-  friend class
-      AlignStateAtSelection;  // CollectEditableTargetNodes,
-                              // CollectNonEditableNodes,
-                              // GetSelectionRangesExtendedToHardLineStartAndEnd
+  friend class AlignStateAtSelection;  // CollectEditableTargetNodes,
+                                       // CollectNonEditableNodes
+  friend class AutoRangeArray;  // RangeUpdaterRef, SplitNodeWithTransaction,
+                                // SplitParentInlineElementsAtRangeEdges
   friend class AutoSelectionSetterAfterTableEdit;  // SetSelectionAfterEdit
   friend class
       AutoSetTemporaryAncestorLimiter;  // InitializeSelectionAncestorLimit
@@ -4564,29 +4489,23 @@ class HTMLEditor final : public EditorBase,
                             // ReflectPaddingBRElementForEmptyEditor,
                             // RefreshEditingUI,
                             // RemoveEmptyInclusiveAncestorInlineElements,
-                            // mComposerUpdater, mHasBeforeINputBeenCancelded
+                            // mComposerUpdater, mHasBeforeInputBeenCanceled
   friend class JoinNodesTransaction;  // DidJoinNodesTransaction, DoJoinNodes,
                                       // DoSplitNode, RangeUpdaterRef
-  friend class
-      ListElementSelectionState;  // CollectEditTargetNodes,
-                                  // CollectNonEditableNodes,
-                                  // GetSelectionRangesExtendedToHardLineStartAndEnd
-  friend class
-      ListItemElementSelectionState;  // CollectEditTargetNodes,
-                                      // CollectNonEditableNodes,
-                                      // GetSelectionRangesExtendedToHardLineStartAndEnd
+  friend class ListElementSelectionState;      // CollectEditTargetNodes,
+                                               // CollectNonEditableNodes
+  friend class ListItemElementSelectionState;  // CollectEditTargetNodes,
+                                               // CollectNonEditableNodes
   friend class MoveNodeResult;       // AllowsTransactionsToChangeSelection,
                                      // CollapseSelectionTo
   friend class MoveNodeTransaction;  // AllowsTransactionsToChangeSelection,
                                      // CollapseSelectionTo, MarkElementDirty,
                                      // RangeUpdaterRef
-  friend class
-      ParagraphStateAtSelection;  // CollectChildren,
-                                  // CollectEditTargetNodes,
-                                  // CollectListChildren,
-                                  // CollectNonEditableNodes,
-                                  // CollectTableChildren,
-                                  // GetSelectionRangesExtendedToHardLineStartAndEnd
+  friend class ParagraphStateAtSelection;    // CollectChildren,
+                                             // CollectEditTargetNodes,
+                                             // CollectListChildren,
+                                             // CollectNonEditableNodes,
+                                             // CollectTableChildren
   friend class SlurpBlobEventListener;       // BlobReader
   friend class SplitNodeResult;              // CollapseSelectionTo
   friend class SplitNodeTransaction;         // DoJoinNodes, DoSplitNode
@@ -4723,13 +4642,13 @@ class MOZ_STACK_CLASS ParagraphStateAtSelection final {
   /**
    * CollectEditableFormatNodesInSelection() collects only editable nodes
    * around selection ranges (with
-   * `HTMLEditor::GetSelectionRangesExtendedToHardLineStartAndEnd()` and
+   * `AutoRangeArray::ExtendRangesToWrapLinesToHandleBlockLevelEditAction()` and
    * `HTMLEditor::CollectEditTargetNodes()`, see its document for the detail).
    * If it includes list, list item or table related elements, they will be
    * replaced their children.
    */
   static nsresult CollectEditableFormatNodesInSelection(
-      HTMLEditor& aHTMLEditor,
+      HTMLEditor& aHTMLEditor, const dom::Element& aEditingHost,
       nsTArray<OwningNonNull<nsIContent>>& aArrayOfContents);
 
   RefPtr<nsAtom> mFirstParagraphState;
