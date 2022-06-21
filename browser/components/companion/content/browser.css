@@ -77,7 +77,7 @@
 
 :root[chromehidden~="toolbar"] #urlbar-background {
   border: none;
-  background-color: initial;
+  background-color: var(--urlbar-box-bgcolor);
 }
 
 :root[chromehidden~="toolbar"] #urlbar-input {
