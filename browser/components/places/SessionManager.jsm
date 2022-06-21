@@ -794,6 +794,9 @@ const SessionManager = new (class SessionManager extends lazy.EventEmitter {
               // We're using 2 variables per row, and 1 extra variable across all rows.
               db.variableLimit / 2 - 1
             )) {
+              let urls = chunk.map(value => new URL(value.url));
+              await lazy.PlacesUtils.maybeInsertManyPlaces(db, urls);
+
               let valuesFragment = Array.from(
                 { length: chunk.length },
                 (_, i) =>
