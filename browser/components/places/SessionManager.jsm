@@ -330,7 +330,9 @@ const SessionManager = new (class SessionManager extends lazy.EventEmitter {
    *   The window for the session to save.
    */
   async restoreLastSession(window) {
-    let results = await this.query({ limit: 1 });
+    // This query includes page data as that has additional checks to
+    // ensure the session has at least one page recorded.
+    let results = await this.query({ limit: 1, includePages: 1 });
     this.replaceSession(window, results?.[0].guid);
   }
 

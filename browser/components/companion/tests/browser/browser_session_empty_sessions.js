@@ -40,9 +40,10 @@ add_task(async function test_session_empty_sessions() {
   await PlacesUtils.withConnectionWrapper("empty_sessions", async db => {
     await db.execute(
       `INSERT INTO moz_session_metadata (guid, last_saved_at, data)
-       VALUES(:guid, 0, "")`,
+       VALUES(:guid, :lastSavedAt, "{}")`,
       {
         guid: SessionManager.makeGuid(),
+        lastSavedAt: Date.now(),
       }
     );
   });
@@ -69,6 +70,51 @@ add_task(async function test_session_empty_sessions() {
   await PinebuildTestUtils.setAsideSession(win);
 
   await assertRestoreSessionHidden(win, false, "with a non-empty session");
+
+  await BrowserTestUtils.closeWindow(win);
+});
+
+add_task(async function test_ensure_non_empty_restored() {
+  let sessions = await SessionManager.query({ limit: 1, includePages: true });
+  Assert.equal(
+    sessions.length,
+    1,
+    "should have a valid session from the previous test"
+  );
+
+  // Add another empty session.
+  await PlacesUtils.withConnectionWrapper("empty_sessions", async db => {
+    await db.execute(
+      `INSERT INTO moz_session_metadata (guid, last_saved_at, data)
+       VALUES(:guid, :lastSavedAt, "{}")`,
+      {
+        guid: SessionManager.makeGuid(),
+        lastSavedAt: Date.now(),
+      }
+    );
+  });
+
+  let win = await BrowserTestUtils.openNewBrowserWindow({
+    waitForTabURL: "about:flow-reset",
+  });
+
+  let sessionReplaced = SessionManager.once("session-replaced");
+
+  await SpecialPowers.spawn(
+    win.gBrowser.selectedBrowser.browsingContext,
+    [],
+    async () => {
+      content.document.getElementById("restore").click();
+    }
+  );
+
+  await sessionReplaced;
+
+  Assert.equal(
+    SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
+    sessions[0].guid,
+    "Should have restored the non-empty session"
+  );
 
   await BrowserTestUtils.closeWindow(win);
 });
