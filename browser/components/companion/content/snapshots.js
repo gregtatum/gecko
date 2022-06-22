@@ -5,7 +5,16 @@
 import { timeSince } from "./time-since.js";
 import { noteTelemetryTimestamp } from "./telemetry-helpers.js";
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
+  UpdateUtils: "resource://gre/modules/UpdateUtils.jsm",
+});
 
 const MAX_SNAPSHOTS = 5;
 const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
@@ -171,10 +180,23 @@ export class Snapshot extends HTMLElement {
   }
 }
 
-export class SnapshotList extends HidableElement {
+class Recommendation extends Snapshot {
+  constructor(data, source, score) {
+    super(data);
+
+    if (
+      ["nightly-pine-experimental", "default"].includes(
+        lazy.UpdateUtils.UpdateChannel
+      )
+    ) {
+      this.setAttribute("title", `Score ${score.toFixed(2)} (${source})`);
+    }
+  }
+}
+
+class SnapshotList extends HidableElement {
   constructor(snapshotTitle) {
     super();
-    this.snapshots = window.CompanionUtils.initialSnapshotData();
     this.className = "snapshot-list";
 
     let template = document.getElementById("template-snapshot-list");
@@ -185,32 +207,28 @@ export class SnapshotList extends HidableElement {
     this.appendChild(fragment);
   }
 
-  updateSnapshots(snapshots) {
-    let panel = this.querySelector(".snapshots-panel");
-    let nodes = [];
-    this.hidden = !snapshots.length;
-    for (let { snapshot, preview } of snapshots) {
-      snapshot.image = preview;
-      nodes.push(new Snapshot(snapshot));
-    }
-
-    panel.replaceChildren(...nodes);
+  updateContents(nodes) {
+    this.querySelector(".snapshots-panel").replaceChildren(...nodes);
+    this.hidden = !nodes.length;
   }
 }
 
 export class SuggestedSnapshotList extends SnapshotList {
   constructor(snapshotTitle = "Suggested") {
     super(snapshotTitle);
+    this.recommendations = window.CompanionUtils.initialRecommendationData();
   }
 
   handleEvent({ type, detail }) {
     switch (type) {
       case "Companion:SnapshotsChanged": {
-        let { snapshots } = detail;
-        this.snapshots = snapshots;
-        this.updateSnapshots(this.snapshots.slice(0, MAX_SNAPSHOTS));
+        let { recommendations } = detail;
+        this.recommendations = recommendations;
+        this.updateRecommendations(
+          this.recommendations.slice(0, MAX_SNAPSHOTS)
+        );
         noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
-          numberOfSnapshots: this.snapshots.length,
+          numberOfSnapshots: this.recommendations.length,
         });
         break;
       }
@@ -219,19 +237,29 @@ export class SuggestedSnapshotList extends SnapshotList {
 
   connectedCallback() {
     window.addEventListener("Companion:SnapshotsChanged", this);
-    this.updateSnapshots(this.snapshots.slice(0, MAX_SNAPSHOTS));
+    this.updateRecommendations(this.recommendations.slice(0, MAX_SNAPSHOTS));
     // This should generally be false. However, in case anything changes in the
     // future and we're able to get snapshots by the time of connectedCallback,
     // we want to be able to see it in our telemetry.
-    if (this.snapshots.length) {
+    if (this.recommendations.length) {
       noteTelemetryTimestamp("Companion:SuggestedSnapshotsPainted", {
-        numberOfSnapshots: this.snapshots.length,
+        numberOfSnapshots: this.recommendations.length,
       });
     }
   }
 
   disconnectedCallback() {
     window.removeEventListener("Companion:SnapshotsChanged", this);
+  }
+
+  updateRecommendations(recommendations) {
+    let nodes = [];
+    for (let { source, score, snapshot, preview } of recommendations) {
+      snapshot.image = preview;
+      nodes.push(new Recommendation(snapshot, source, score));
+    }
+
+    this.updateContents(nodes);
   }
 }
 
@@ -243,10 +271,11 @@ export class RecentlyClosedSnapshotList extends SnapshotList {
   async connectedCallback() {
     // TODO: H&M to populate with recently closed river contents
     let recentlyClosedSnapshots = [];
-    this.updateSnapshots(recentlyClosedSnapshots);
+    this.updateContents(recentlyClosedSnapshots);
   }
 }
 
 customElements.define("e-snapshot", Snapshot);
+customElements.define("e-recommendation", Recommendation);
 customElements.define("suggested-snapshot-list", SuggestedSnapshotList);
 customElements.define("recent-snapshot-list", RecentlyClosedSnapshotList);

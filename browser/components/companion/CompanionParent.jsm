@@ -1034,22 +1034,29 @@ class CompanionParent extends JSWindowActorParent {
 
     lazy.PageDataService.on("page-data", this._pageDataFound);
 
-    this.snapshotSelector.on("snapshots-updated", async (_, snapshots) => {
-      await this.ensureFaviconsCached(snapshots.map(s => s.url));
-      let snapshotList = await Promise.all(
-        snapshots.map(async s => ({
-          snapshot: s,
-          preview: await lazy.Snapshots.getSnapshotImageURL(s),
-        }))
-      );
+    this.snapshotSelector.on(
+      "snapshots-updated",
+      async (_, recommendations) => {
+        await this.ensureFaviconsCached(
+          recommendations.map(s => s.snapshot.url)
+        );
+        let recommendationList = await Promise.all(
+          recommendations.map(async r => ({
+            source: r.source,
+            score: r.score,
+            snapshot: r.snapshot,
+            preview: await lazy.Snapshots.getSnapshotImageURL(r.snapshot),
+          }))
+        );
 
-      if (!this._destroyed) {
-        this.sendAsyncMessage("Companion:SnapshotsChanged", {
-          snapshots: snapshotList,
-          newFavicons: this.consumeCachedFaviconsToSend(),
-        });
+        if (!this._destroyed) {
+          this.sendAsyncMessage("Companion:SnapshotsChanged", {
+            recommendations: recommendationList,
+            newFavicons: this.consumeCachedFaviconsToSend(),
+          });
+        }
       }
-    });
+    );
 
     // To avoid a significant delay in initializing other parts of the UI,
     // we register the events separately.

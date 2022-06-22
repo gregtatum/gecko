@@ -81,7 +81,7 @@ add_task(async function test_dismiss() {
         );
         await ContentTaskUtils.waitForCondition(() => {
           let snapshots = Array.from(
-            suggestedSnapshots.querySelectorAll("e-snapshot")
+            suggestedSnapshots.querySelectorAll("e-recommendation")
           );
           return snapshots.length == urls.length;
         }, "Should be the correct number of links displayed");
@@ -92,7 +92,9 @@ add_task(async function test_dismiss() {
           "personal",
         ].entries()) {
           info(`Dismiss the snapshot with ${action}`);
-          let snapshot = suggestedSnapshots.querySelectorAll("e-snapshot")[0];
+          let snapshot = suggestedSnapshots.querySelectorAll(
+            "e-recommendation"
+          )[0];
           let actionButton = snapshot.lastElementChild.querySelector(
             `panel-item[data-action=${action}`
           );
@@ -100,7 +102,7 @@ add_task(async function test_dismiss() {
           actionButton.button.click();
           await ContentTaskUtils.waitForCondition(() => {
             let snapshots = Array.from(
-              suggestedSnapshots.querySelectorAll("e-snapshot")
+              suggestedSnapshots.querySelectorAll("e-recommendation")
             );
             return snapshots.length == urls.length - i - 1;
           }, "Should be the correct number of links displayed");

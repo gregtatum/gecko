@@ -49,7 +49,7 @@ class CompanionChild extends JSWindowActorChild {
         let self = this;
         let CompanionUtils = {
           _tabs: new Map(),
-          _initialSnapshotData: [],
+          _initialRecommendationData: [],
           _initialSessionData: [],
 
           tabs() {
@@ -58,8 +58,8 @@ class CompanionChild extends JSWindowActorChild {
           initialSessionData() {
             return this._initialSessionData;
           },
-          initialSnapshotData() {
-            return this._initialSnapshotData;
+          initialRecommendationData() {
+            return this._initialRecommendationData;
           },
           getFavicon(url) {
             return self._cachedFavicons.get(url);
@@ -144,10 +144,10 @@ class CompanionChild extends JSWindowActorChild {
       case "Companion:SnapshotsChanged": {
         let { newFavicons } = message.data;
         this.updateFaviconCache(newFavicons);
-        if (message.data.snapshots) {
+        if (message.data.recommendations) {
           let waivedContent = Cu.waiveXrays(this.browsingContext.window);
-          waivedContent.CompanionUtils._initialSnapshotData =
-            message.data.snapshots;
+          waivedContent.CompanionUtils._initialRecommendationData =
+            message.data.recommendations;
         }
         break;
       }

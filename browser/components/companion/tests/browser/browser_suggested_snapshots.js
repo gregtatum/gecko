@@ -43,7 +43,7 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
       );
       await ContentTaskUtils.waitForCondition(() => {
         let snapshots = Array.from(
-          suggestedSnapshots.querySelectorAll("e-snapshot")
+          suggestedSnapshots.querySelectorAll("e-recommendation")
         );
         return (
           snapshots.length == PAGE_TITLES.length &&
@@ -54,7 +54,7 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
         );
       }, "Should be the correct number of links displayed");
 
-      let snapshots = suggestedSnapshots.querySelectorAll("e-snapshot");
+      let snapshots = suggestedSnapshots.querySelectorAll("e-recommendation");
 
       for (let i = 0; i < PAGE_TITLES.length; i++) {
         Assert.equal(
