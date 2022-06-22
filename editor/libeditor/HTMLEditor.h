@@ -1459,12 +1459,6 @@ class HTMLEditor final : public EditorBase,
       const EditorDOMPoint& aPointToInsert);
 
   /**
-   * Insert a `<br>` element if aElement is a block element and empty.
-   */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  InsertBRElementIfEmptyBlockElement(Element& aElement);
-
-  /**
    * Insert padding `<br>` element for empty last line into aElement if
    * aElement is a block element and empty.
    */
@@ -1479,7 +1473,7 @@ class HTMLEditor final : public EditorBase,
   MaybeInsertPaddingBRElementForEmptyLastLineAtSelection();
 
   /**
-   * SplitParagraph() splits the parent block, aParentDivOrP, at
+   * SplitParagraphWithTransaction() splits the parent block, aParentDivOrP, at
    * aStartOfRightNode.
    *
    * @param aParentDivOrP       The parent block to be split.  This must be <p>
@@ -1487,13 +1481,16 @@ class HTMLEditor final : public EditorBase,
    * @param aStartOfRightNode   The point to be start of right node after
    *                            split.  This must be descendant of
    *                            aParentDivOrP.
-   * @param aNextBRNode         Next <br> node if there is.  Otherwise, nullptr.
-   *                            If this is not nullptr, the <br> node may be
-   *                            removed.
+   * @param aMayBecomeVisibleBRElement
+   *                            Next <br> element of the split point if there
+   *                            is.  Otherwise, nullptr. If this is not nullptr,
+   *                            the <br> element may be removed if it becomes
+   *                            visible.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  SplitParagraph(Element& aParentDivOrP,
-                 const EditorDOMPoint& aStartOfRightNode, nsIContent* aBRNode);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT SplitNodeResult
+  SplitParagraphWithTransaction(Element& aParentDivOrP,
+                                const EditorDOMPoint& aStartOfRightNode,
+                                dom::HTMLBRElement* aMayBecomeVisibleBRElement);
 
   /**
    * HandleInsertParagraphInParagraph() does the right thing for Enter key
