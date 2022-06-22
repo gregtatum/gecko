@@ -12,6 +12,12 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/Sqlite.jsm"
 );
 
+ChromeUtils.defineModuleGetter(
+  lazy,
+  "AsyncShutdown",
+  "resource://gre/modules/AsyncShutdown.jsm"
+);
+
 const SCHEMA_VERSION = 1;
 
 /**
@@ -29,7 +35,16 @@ const SCHEMA_VERSION = 1;
 class ContentCacheDB {
   constructor() {
     this.console.log("constructing");
+
+    // Closing can result in data-loss if the program is shut down while the connection
+    // is still being closed or used. Add a shutdown guard to prevent this.
+    lazy.AsyncShutdown.profileBeforeChange.addBlocker(
+      "ContentCacheParent: closing db connection",
+      () => this.close()
+    );
   }
+
+  #pendingStatements = new Set();
 
   /**
    * Lazily initialized console.
@@ -71,9 +86,9 @@ class ContentCacheDB {
     }
 
     if (this.#closing) {
-      // Still waiting for the previous close event.
+      // This call is trying to get a database connection while a previous connection
+      // is still closing. Wait for the previous connection to close.
       await this.#closing;
-      this.#closing = null;
     }
 
     this.#db = this.#openConnection();
@@ -102,16 +117,62 @@ class ContentCacheDB {
   #closing = null;
 
   /**
-   * Once all actors have been closed, it closes the connection to the database.
+   * Once all actors have been closed, it closes the connection to the database. The
+   * connection is also closed during browser shutdown. This process can be slightly
+   * complex as pending transactions need to complete, and it needs to happen before
+   * browser shutdown.
+   *
+   * See the shutdown guard in the constructor.
    */
   close() {
-    if (this.#db) {
-      this.console.log("closing db connection");
-      // TODO - The .close() documentation states that active statements will be cut off.
-      // Do we need to count pending queries, or maybe create a queue of some kind?
-      this.#closing = this.#db.then(db => db.close());
-      this.#db = null;
+    const dbPromise = this.#db;
+    if (!dbPromise) {
+      // Only close if a connection has been made.
+      return Promise.resolve();
     }
+
+    if (this.#closing) {
+      // Already shutting down.
+      return this.#closing;
+    }
+
+    // Two things need to happen synchronously in this function. The db connection
+    // needs to be removed, and a closing promise need to be made. These are then used
+    // to coordinate re-opening a database connection. A new connection can't be opened
+    // until a previous closing is done.
+    this.#db = null;
+
+    this.#closing = (async () => {
+      this.console.log("initiating db close process");
+      const db = await dbPromise;
+
+      // The .close() method will cut off any pending transactions, wait for them.
+      // The pending statement promises are infallible.
+      if (this.#pendingStatements.size > 0) {
+        this.console.log("waiting for pending statements");
+
+        await Promise.all(this.#pendingStatements);
+
+        if (this.#pendingStatements.size !== 0) {
+          throw new Error(
+            "Logic error, pending statements are left while closing the db connection."
+          );
+        }
+      }
+
+      // Perform the actual DB close.
+      this.console.log("closing db");
+      await db.close();
+      this.console.log("db closed");
+
+      // Clear out the closing promise, as this will allow new connections to be
+      // without waiting for the close.
+      this.#closing = null;
+    })().catch(error => {
+      this.console.error("Error closing database:", error);
+    });
+
+    return this.#closing;
   }
 
   /**
@@ -124,13 +185,23 @@ class ContentCacheDB {
     const db = await this.getDB();
     this.console.log("add page", pageData);
     const { content, url } = pageData;
-    await db.executeCached(
+    const statement = db.executeCached(
       /* sql */ `
         INSERT INTO content_cache(content, url)
         VALUES (:content, :url)
       `,
       { content, url }
     );
+
+    this.#pendingStatements.add(statement);
+
+    await statement.catch(err => {
+      this.console.error("Unable to add a page", err);
+    });
+
+    this.#pendingStatements.delete(statement);
+
+    await statement;
   }
 
   #upgradeCheckPerformed = false;
