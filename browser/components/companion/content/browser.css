@@ -114,7 +114,7 @@ body {
   transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
 }
 
-body[browser-ready]:not([flow-reset]) {
+body[browser-ready]:not([flow-reset],[onboarding]) {
   /* This is just our normal solid color background */
   background-color: var(--pinebuild-global-background);
 }
@@ -127,7 +127,19 @@ body[browser-ready]:not([flow-reset]) {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: var(--pinebuild-pre-flow-reset-background-color);
+  background: var(--pinebuild-starting-background-color);
+}
+
+body[onboarding] {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+body[onboarding] #global-background-inner {
+  background-image: url("chrome://browser/content/companion/onboarding.png");
+}
+
+body[flow-reset] #global-background-inner {
+  background-image: url("chrome://browser/content/companion/timeofdaybackground.png");
 }
 
 #global-background-inner {
@@ -143,7 +155,6 @@ body[browser-ready]:not([flow-reset]) {
      HTML/JS. */
   opacity: 0.01;
   background-color: transparent;
-  background-image: url("chrome://browser/content/companion/timeofdaybackground.png");
   background-size: cover;
   background-position: center;
   transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
@@ -157,10 +168,10 @@ body[browser-ready]:not([flow-reset]) {
 }
 
 /* We set the browser-ready attribute the frame after we detect our first
-   paint of content in about:flow-reset. This actually is a bit awkward and
-   not 100% correct, but it's the best I could figure out. This will nicely
+   paint of content. This actually is a bit awkward and not 100% correct,
+   but it's the best I could figure out. This will nicely
    let us fade everything in all together, but it becomes tricky if
-   timeofdaybackground.png hasn't been loaded off disk yet, because then
+   the background image hasn't been loaded off disk yet, because then
    we'll start our opacity fade in before we've started to upload the image
    to the GPU. If this is the case, the GPU upload could take long enough
    that the animation drops a bunch of frames and the image just kind of
@@ -191,7 +202,7 @@ body:not([browser-ready]) .browserStack > browser {
   transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
 }
 
-:root[companion] body:not([flow-reset]) .browserStack > browser {
+:root[companion] body:not([flow-reset],[onboarding]) .browserStack > browser {
   border-inline-start: 1px solid var(--colors-cafe-40);
   border-start-start-radius: 8px;
   border-top: 1px solid var(--colors-cafe-40);

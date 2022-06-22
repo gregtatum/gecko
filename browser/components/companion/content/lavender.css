@@ -165,7 +165,7 @@
     --pinebuild-global-background: var(--colors-cafe-10);
     --pinebuild-highlight-color: var(--colors-lavender-50);
     --pinebuild-highlight-text-color: #562ea6;
-    --pinebuild-pre-flow-reset-background-color: #8d77b4;
+    --pinebuild-starting-background-color: #8d77b4;
     --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
     --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
 

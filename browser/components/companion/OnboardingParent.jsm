@@ -10,6 +10,7 @@ const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
+const COMPANION_WIDTH_AFTER_ONBOARDING = "340";
 
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
@@ -18,14 +19,36 @@ class OnboardingParent extends JSWindowActorParent {
 
       let browser = this.browsingContext.embedderElement;
       let window = browser.ownerGlobal;
-      window.gStageManager.reset({
-        url: "about:flow-reset",
-      });
 
-      // Enable commands that were disabled during onboarding.
       let doc = window.document;
       doc.body.removeAttribute("onboarding");
 
+      doc.body.setAttribute("flow-reset", true);
+      window.gStageManager.reset({
+        url: "about:flow-reset",
+      });
+      let companion = doc.getElementById("companion-box");
+      companion.setAttribute("width", COMPANION_WIDTH_AFTER_ONBOARDING);
+
+      const listener = {
+        QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
+
+        onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
+          // Wait for the first location change away from the about:flow-reset page,
+          // loading about:flow-reset includes load events for about:blank and there
+          // is no problem with being in flow reset state over about:blank.
+          let ignored = ["about:flow-reset", "about:blank"];
+          if (aWebProgress.isTopLevel && !ignored.includes(aLocationURI.spec)) {
+            window.document.body.removeAttribute("flow-reset");
+            window.gBrowser.removeProgressListener(listener);
+          }
+        },
+      };
+
+      listener.onLocationChange = listener.onLocationChange.bind(this);
+      window.gBrowser.addProgressListener(listener);
+
+      // Enable commands that were disabled during onboarding.
       let cmd = doc.getElementById("cmd_newNavigator");
       cmd.removeAttribute("disabled");
 
