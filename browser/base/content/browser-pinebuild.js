@@ -51,6 +51,9 @@ var PineBuildUIUtils = {
       cmd.setAttribute("disabled", true);
       let menu = document.getElementById("history-menu");
       menu.hidden = true;
+
+      let item = document.getElementById("sync-setup");
+      item.setAttribute("disabled", true);
     }
   },
 

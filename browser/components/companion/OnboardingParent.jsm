@@ -38,9 +38,12 @@ class OnboardingParent extends JSWindowActorParent {
       let menu = doc.getElementById("history-menu");
       menu.hidden = false;
 
+      let item = doc.getElementById("sync-setup");
+      item.removeAttribute("disabled");
+
       if (AppConstants.platform == "macosx") {
         let hiddenWindow = Services.appShell.hiddenDOMWindow;
-        let item = hiddenWindow.document.getElementById("macDockMenuNewWindow");
+        item = hiddenWindow.document.getElementById("macDockMenuNewWindow");
         item.disabled = false;
       }
     }
