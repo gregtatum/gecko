@@ -131,6 +131,11 @@ button.history-result-button:hover:active {
   width: 100%;
 }
 
+.history-result-url,
+.history-result-last-visited {
+  color: var(--history-result-secondary-text-color, unset);
+}
+
 .history-result-list > li.footer {
   display: block;
   margin-block: 16px 32px;

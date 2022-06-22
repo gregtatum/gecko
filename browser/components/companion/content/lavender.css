@@ -245,6 +245,7 @@
     --history-result-button-hover-focus-border-color: var(--colors-cafe-100);
     --history-result-button-active-bgcolor: var(--colors-cafe-10);
     --history-result-button-active-border-color: var(--colors-cafe-100);
+    --history-result-secondary-text-color: var(--colors-darkgrey-10);
 
     --urlbar-companionlink-hover-bgcolor: var(--colors-lavender-20);
     --urlbar-companionlink-hover-border: .5px solid var(--colors-lavender-70);
