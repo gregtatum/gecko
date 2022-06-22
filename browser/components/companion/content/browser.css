@@ -244,7 +244,11 @@ body:not([browser-ready]) .browserStack > browser {
 }
 
 body[onboarding] #companion-box,
-body[onboarding] #pinebuild-toolbar,
+body[onboarding] #companion-sidebar-button,
+body[onboarding] #pinebuild-back-button,
+body[onboarding] #pinebuild-reload-button,
+body[onboarding] #session-setaside-button,
+body[onboarding] active-view-manager,
 body[onboarding] #urlbar-container,
 body[onboarding] #PanelUI-button,
 body[flow-reset] #pinebuild-back-button,
@@ -383,7 +387,8 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
   visibility: hidden;
 }
 
-#nav-bar {
+#pinebuild-toolbar {
+  display: flex;
   min-height: 64px;
 }
 
