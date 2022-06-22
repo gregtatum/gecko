@@ -47,7 +47,7 @@ const DEFAULT_THEME_ID = AppConstants.PINEBUILD
 
 // On Linux, the default theme picks up the right colors from dark GTK themes.
 const DEFAULT_THEME_RESPECTS_SYSTEM_COLOR_SCHEME =
-  AppConstants.platform == "linux";
+  AppConstants.platform == "linux" && !AppConstants.PINEBUILD;
 
 const toolkitVariableMap = [
   [
