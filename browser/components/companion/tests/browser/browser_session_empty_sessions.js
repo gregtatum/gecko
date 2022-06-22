@@ -24,6 +24,7 @@ function assertRestoreSessionHidden(win, hidden, extraText) {
 add_setup(async () => {
   // Ensure all sessions are deleted.
   await PlacesUtils.withConnectionWrapper("delete", async db => {
+    await db.execute(`DELETE FROM moz_session_to_places`);
     await db.execute(`DELETE FROM moz_session_metadata`);
   });
 });

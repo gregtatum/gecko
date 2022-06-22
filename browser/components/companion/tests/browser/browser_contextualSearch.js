@@ -22,21 +22,20 @@ XPCOMUtils.defineLazyGetter(this, "SearchTestUtils", () => {
   return module;
 });
 
-let engine;
-
 add_task(async function init() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.urlbar.contextualSearch.enabled", true]],
   });
-
-  engine = await SearchTestUtils.promiseNewSearchEngine(
-    "chrome://mochitests/content/browser/browser/components/search/test/browser/testEngine.xml"
-  );
 });
 
-add_task(async function test_selectContextualSearchResult() {
+add_task(async function test_selectContextualSearchResult_already_installed() {
+  await SearchTestUtils.installSearchExtension({
+    name: "Contextual",
+    search_url: "https://example.com/browser",
+  });
+
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
-    const ENGINE_TEST_URL = "http://mochi.test:8888/";
+    const ENGINE_TEST_URL = "https://example.com/";
     BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, ENGINE_TEST_URL);
     await BrowserTestUtils.browserLoaded(
       win.gBrowser.selectedBrowser,
@@ -46,10 +45,11 @@ add_task(async function test_selectContextualSearchResult() {
 
     await CompanionHelper.whenReady(async () => {
       const query = "search";
+      let engine = Services.search.getEngineByName("Contextual");
       const [expectedUrl] = UrlbarUtils.getSearchQueryUrl(engine, query);
 
-      ok(
-        expectedUrl.includes(`?search&test=${query}`),
+      Assert.ok(
+        expectedUrl.includes(`?q=${query}`),
         "Expected URL should be a search URL"
       );
 
@@ -57,10 +57,10 @@ add_task(async function test_selectContextualSearchResult() {
         window: win,
         value: query,
       });
-      const lastResultIndex = UrlbarTestUtils.getResultCount(win) - 2;
+      const resultIndex = UrlbarTestUtils.getResultCount(win) - 2;
       const result = await UrlbarTestUtils.getDetailsOfResultAt(
         win,
-        lastResultIndex
+        resultIndex
       );
 
       is(
@@ -70,13 +70,65 @@ add_task(async function test_selectContextualSearchResult() {
       );
 
       info("Focus and select the contextual search result");
-      UrlbarTestUtils.setSelectedRowIndex(win, lastResultIndex);
+      UrlbarTestUtils.setSelectedRowIndex(win, resultIndex);
       EventUtils.synthesizeKey("KEY_Enter", {}, win);
       await BrowserTestUtils.browserLoaded(win.gBrowser.selectedBrowser);
 
-      is(
+      Assert.equal(
         win.gBrowser.selectedBrowser.currentURI.spec,
         expectedUrl,
+        "Selecting the contextual search result opens the search URL"
+      );
+    }, win);
+  });
+});
+
+add_task(async function test_selectContextualSearchResult_not_installed() {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
+    // Note: The hostname used here must be different to the previous test.
+    const ENGINE_TEST_URL =
+      "http://mochi.test:8888/browser/browser/components/search/test/browser/opensearch.html";
+    const EXPECTED_URL =
+      "http://mochi.test:8888/browser/browser/components/search/test/browser/?search&test=search";
+    BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, ENGINE_TEST_URL);
+    await BrowserTestUtils.browserLoaded(
+      win.gBrowser.selectedBrowser,
+      false,
+      ENGINE_TEST_URL
+    );
+
+    await CompanionHelper.whenReady(async () => {
+      const query = "search";
+
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        value: query,
+      });
+      const resultIndex = UrlbarTestUtils.getResultCount(win) - 2;
+      const result = await UrlbarTestUtils.getDetailsOfResultAt(
+        win,
+        resultIndex
+      );
+
+      Assert.equal(
+        result.dynamicType,
+        "contextualSearch",
+        "Second last result is a contextual search result"
+      );
+
+      info("Focus and select the contextual search result");
+      UrlbarTestUtils.setSelectedRowIndex(win, resultIndex);
+      let newBrowserCreatedPromise = BrowserTestUtils.waitForNewTab(
+        win.gBrowser,
+        EXPECTED_URL,
+        true
+      );
+      EventUtils.synthesizeKey("KEY_Enter", {}, win);
+      await newBrowserCreatedPromise;
+
+      Assert.equal(
+        win.gBrowser.selectedBrowser.currentURI.spec,
+        EXPECTED_URL,
         "Selecting the contextual search result opens the search URL"
       );
     }, win);

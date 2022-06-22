@@ -260,7 +260,7 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
       let newEngine = new lazy.OpenSearchEngine({ shouldPersist: false });
       newEngine._setIcon(result.payload.icon, false);
       await new Promise(resolve => {
-        newEngine._install(result.payload.url, errorCode => {
+        newEngine.install(result.payload.url, errorCode => {
           resolve(errorCode);
         });
       });
