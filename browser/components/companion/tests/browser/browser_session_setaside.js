@@ -17,6 +17,24 @@ XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
 let isHidden = (win, id) =>
   BrowserTestUtils.is_hidden(win.document.getElementById(id));
 
+let waitForSessions = async (helper, parent) => {
+  let sessionsLength = async () => {
+    let length = await helper.runCompanionTask(
+      wrapper =>
+        content.document.querySelectorAll(`${wrapper} .session`).length,
+      [parent]
+    );
+    return length;
+  };
+  await TestUtils.waitForCondition(sessionsLength);
+  return sessionsLength();
+};
+
+let titleHidden = async helper =>
+  helper.runCompanionTask(
+    () => content.document.querySelector("last-session-list .list-title").hidden
+  );
+
 add_setup(async () => {
   // Ensure all sessions are deleted.
   await PlacesUtils.withConnectionWrapper("delete", async db => {
@@ -48,6 +66,8 @@ add_task(async function test_session_setaside() {
       false,
       "https://example.com/"
     );
+
+    Assert.ok(await titleHidden(helper), "Last Session title is not shown");
 
     let sessionSetAside = SessionManager.once("session-set-aside");
     let sessionReplaced = SessionManager.once("session-replaced");
@@ -93,18 +113,21 @@ add_task(async function test_session_setaside() {
 
     // Test that the session is shown in the companion.
     await helper.selectCompanionTab("browse");
+    Assert.equal(
+      await waitForSessions(helper, "last-session-list"),
+      1,
+      "The session is shown in last session list"
+    );
+    Assert.ok(!(await titleHidden(helper)), "Last Session title is shown");
+
     await helper.runCompanionTask(() =>
       content.document.querySelector("button.sessions").click()
     );
-    let sessionsLength = async () => {
-      let length = await helper.runCompanionTask(
-        () =>
-          content.document.querySelectorAll("full-session-list .session").length
-      );
-      return length;
-    };
-    await TestUtils.waitForCondition(sessionsLength);
-    Assert.equal(await sessionsLength(), 1, "The session set aside is shown");
+    Assert.equal(
+      await waitForSessions(helper, "full-session-list"),
+      1,
+      "The session is shown in full session list"
+    );
 
     // Navigate to an about: page to test that the reset flow state
     // is still exited on navigation.

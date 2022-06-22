@@ -205,7 +205,6 @@
   </template>
 
   <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-list">
-    <h2 class="list-title" hidden="true" data-l10n-id="last-session-title"/>
     <div class="last-sessions-panel"/>
   </template>
 
@@ -329,7 +328,9 @@
       <template xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
         <div>
           <browse-list></browse-list>
-          <last-session-list></last-session-list>
+          <last-session-list>
+            <h2 class="list-title" id="last-session-list-title" data-l10n-id="last-session-title" hidden="true" />
+          </last-session-list>
           <recent-snapshot-list></recent-snapshot-list>
         </div>
       </template>

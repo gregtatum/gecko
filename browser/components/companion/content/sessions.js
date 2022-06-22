@@ -131,17 +131,13 @@ export class SessionCard extends HTMLElement {
 }
 
 class SessionList extends HTMLElement {
-  constructor({ showTitle = false, initialSessionData = null } = {}) {
+  constructor() {
     super();
     this.className = "last-session-list";
     this.initialSessionData = window.CompanionUtils.initialSessionData();
 
     let template = document.getElementById("template-session-list");
     let fragment = template.content.cloneNode(true);
-
-    if (showTitle) {
-      fragment.querySelector("h2").hidden = false;
-    }
 
     this.appendChild(fragment);
 
@@ -182,6 +178,10 @@ class SessionList extends HTMLElement {
       }
     }
     panel.replaceChildren(fragment);
+    let title = this.querySelector("h2");
+    if (title) {
+      title.hidden = !sessions.length;
+    }
   }
 }
 
