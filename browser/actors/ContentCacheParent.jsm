@@ -228,7 +228,7 @@ class ContentCacheDB {
           // The database hasn't been initialized yet. Create the tables.
           await connection.execute(/* sql */ `
             CREATE VIRTUAL TABLE content_cache
-            USING FTS5(content, url, tokenize="unicode61")
+            USING FTS5(content, url, tokenize="unicode61", compress=zip, uncompress=unzip)
           `);
           connection.setSchemaVersion(SCHEMA_VERSION);
           this.console.log(`create schema version ${SCHEMA_VERSION}`);
