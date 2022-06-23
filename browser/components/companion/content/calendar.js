@@ -565,9 +565,13 @@ class CalendarEventWrapper extends CalendarEvent {
       title = link.docInfo?.title;
       text = title || link.title || link.text || link.url;
       intermediateText = text;
-      title = title
-        ? Promise.resolve(title)
-        : Promise.reject(new Error("No title"));
+      if (title) {
+        title = Promise.resolve(title);
+      } else {
+        title = window.CompanionUtils.sendQuery("Companion:GetEventLinkTitle", {
+          url,
+        });
+      }
     } else {
       title = this.getDocumentTitle(link.url);
       text = link.title || link.text || link.url;

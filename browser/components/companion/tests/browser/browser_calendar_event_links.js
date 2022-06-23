@@ -10,7 +10,7 @@ add_task(async function testEventWithLinks() {
       {
         summary: "Firefox rules",
         links: [
-          { url: "https://example.com/" },
+          { url: "https://example.com/1" },
           { url: "https://example.com/2" },
         ],
       },
@@ -39,7 +39,7 @@ add_task(async function testEventWithLinks() {
       let text = [...links].map(link => link.innerText);
       Assert.deepEqual(
         text,
-        ["https://example.com/", "https://example.com/2"],
+        ["https://example.com/1", "https://example.com/2"],
         "The text content must be the urls themselves."
       );
 

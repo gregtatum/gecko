@@ -910,6 +910,9 @@ class CompanionParent extends JSWindowActorParent {
         this._onSetStageManagerViewIndex(message);
         break;
       }
+      case "Companion:GetEventLinkTitle": {
+        return this._onGetEventLinkTitle(message);
+      }
       case "Companion:GetDocumentTitle": {
         return this._onGetDocumentTitle(message);
       }
@@ -1218,6 +1221,12 @@ class CompanionParent extends JSWindowActorParent {
   _onGetDocumentTitle(message) {
     let { url } = message.data;
     return lazy.OnlineServices.getDocumentTitle(url);
+  }
+
+  async _onGetEventLinkTitle(message) {
+    let { url } = message.data;
+    let page = await lazy.PlacesUtils.history.fetch(url);
+    return page ? page.title : url;
   }
 
   _onConnectService(message) {
