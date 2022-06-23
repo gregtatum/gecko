@@ -110,40 +110,6 @@ add_task(async function test_createdoc() {
   await validateQuickAction(action);
 });
 
-add_task(async function test_checkgmail() {
-  await PinebuildTestUtils.withNewBrowserWindow(async win => {
-    await SpecialPowers.pushPrefEnv({
-      set: [
-        [
-          "browser.pinebuild.quickactions.testURL",
-          "https://example.com/gmail?email={email}",
-        ],
-      ],
-    });
-
-    await CompanionHelper.whenReady(async helper => {
-      const account = await helper.createAccount();
-
-      await UrlbarTestUtils.promiseAutocompleteResultPopup({
-        window: win,
-        value: "gmail",
-      });
-
-      const result = await UrlbarTestUtils.getDetailsOfResultAt(win, 1);
-      is(
-        result.payload.results[0]?.key,
-        "checkgmail",
-        "checkgmail quick action is displayed."
-      );
-
-      await assertActionOpensUrl(
-        `https://example.com/gmail?email=${encodeURIComponent(account.name)}`,
-        win
-      );
-    }, win);
-  });
-});
-
 add_task(async function test_connectedAccountNavigation() {
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
     await SpecialPowers.pushPrefEnv({

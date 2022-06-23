@@ -118,9 +118,23 @@ const WorkshopParentAccess = {
   async getInboxUrl(accountType) {
     await this.init();
     const account = await this.getAccountByType(accountType);
-    const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
-      "inbox-summary"
-    );
-    return inboxSummaryFolder?.webLink || null;
+    switch (accountType) {
+      case "google":
+        let inboxUrl = "https://mail.google.com/mail/";
+        if (account?.name) {
+          inboxUrl += `u/?authuser=${encodeURIComponent(account.name)}`;
+        }
+        return inboxUrl;
+      case "microsoft":
+        const inboxSummaryFolder = account?.folders.getFirstFolderWithType(
+          "inbox-summary"
+        );
+        if (inboxSummaryFolder?.webLink) {
+          return `${inboxSummaryFolder.webLink}?login_hint=${encodeURIComponent(
+            account.name
+          )}`;
+        }
+    }
+    return null;
   },
 };

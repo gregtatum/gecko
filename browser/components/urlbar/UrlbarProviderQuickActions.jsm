@@ -43,7 +43,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
 const extraActionsEnabled = () => lazy.extraActions;
 
 const GOOGLE_ACTION_URLS = {
-  email: "https://mail.google.com/mail/u/?authuser={email}",
   sheets: "https://docs.google.com/spreadsheets/create?authuser={email}",
   docs: "https://docs.google.com/document/create?authuser={email}",
   slides: "https://docs.google.com/presentation/create?authuser={email}",
@@ -117,9 +116,8 @@ const COMMANDS = {
     showBadge() {
       return hasUnreadMessages("google");
     },
-    callback: ({ email } = {}) => {
-      const url = formatGoogleURL("email", "https://gmail.com", email);
-      lazy.UrlbarUtils.openUrl(url);
+    callback: ({ inboxUrl } = {}) => {
+      lazy.UrlbarUtils.openUrl(inboxUrl);
     },
   },
   checkoutlook: {
@@ -462,11 +460,10 @@ class ProviderQuickActionsBase extends lazy.UrlbarProvider {
           result.isShown = await data.hide(!queryContext.searchString);
         }
         if (data && data.hasOwnProperty("serviceType")) {
-          if (data.serviceType === "google") {
-            result.accountAddress = await this.getAccountAddress("google");
-          } else if (data.serviceType === "microsoft") {
-            result.inboxUrl = await this.getInboxUrl("microsoft");
-          }
+          result.accountAddress = await this.getAccountAddress(
+            data.serviceType
+          );
+          result.inboxUrl = await this.getInboxUrl(data.serviceType);
         }
         return result;
       })
