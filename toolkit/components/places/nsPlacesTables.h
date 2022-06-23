@@ -392,7 +392,9 @@
       "CREATE VIRTUAL TABLE IF NOT EXISTS moz_contentcache_text " \
       "USING FTS5("                                               \
       "  text,"                                                   \
-      "  tokenize=\"unicode61\""                                 \
+      "  tokenize=\"unicode61\","                                 \
+      "  compress=zip,"                                           \
+      "  uncompress=unzip"                                        \
       ")")
 
 #endif  // __nsPlacesTables_h__
