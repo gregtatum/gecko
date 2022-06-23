@@ -385,4 +385,16 @@
       "  hash TEXT PRIMARY KEY "                              \
       ") WITHOUT ROWID")
 
+// The content cache provides a full text search (FTS) capability for all
+// text webpage content that is visited.
+#define CREATE_CONTENTCACHE                    \
+  nsLiteralCString(                            \
+      "CREATE VIRTUAL TABLE moz_contentcache " \
+      "USING FTS5("                            \
+      "  content,"                             \
+      "  url,"                                 \
+      "  tokenize=\"unicode61\","              \
+      "  compress=zip,"                        \
+      "  uncompress=unzip"                     \
+      ")")
 #endif  // __nsPlacesTables_h__
