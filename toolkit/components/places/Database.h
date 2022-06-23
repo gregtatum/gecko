@@ -245,6 +245,15 @@ class Database final : public nsIObserver, public nsSupportsWeakReference {
       const nsCOMPtr<mozIStorageService>& aStorage);
 
   /**
+   * Ensure the content cache database file exists.
+   *
+   * @param aStorage
+   *        mozStorage service instance.
+   */
+  nsresult EnsureContentCacheDatabaseAttached(
+      const nsCOMPtr<mozIStorageService>& aStorage);
+
+  /**
    * Creates a database backup and replaces the original file with a new
    * one.
    *

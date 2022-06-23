@@ -432,4 +432,14 @@
         "WHERE id = OLD.place_id; "                                \
         "END")
 
+// This trigger synchronizes the history removal with the content cache
+// database.
+#  define CREATE_PLACES_CONTENTCACHE_TRIGGER                   \
+    nsLiteralCString(                                          \
+        "CREATE TEMP TRIGGER moz_places_contentcache_trigger " \
+        "AFTER DELETE ON moz_places FOR EACH ROW "             \
+        "BEGIN "                                               \
+        "  DELETE FROM moz_contentcache_text "                 \
+        "  WHERE rowid = OLD.id; "                             \
+        "END ")
 #endif  // __nsPlacesTriggers_h__
