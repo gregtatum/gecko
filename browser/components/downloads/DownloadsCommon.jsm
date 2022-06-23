@@ -46,7 +46,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   DownloadUtils: "resource://gre/modules/DownloadUtils.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
-  Services: "resource://gre/modules/Services.jsm",
 });
 
 XPCOMUtils.defineLazyServiceGetters(lazy, {

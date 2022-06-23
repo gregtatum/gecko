@@ -12,17 +12,9 @@
  */
 const EXPORTED_SYMBOLS = ["parseHFromStr", "parseHFromUrl"];
 
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
-);
-
 const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
   Ci.nsIParserUtils
 );
-
-const lazy = {};
-
-XPCOMUtils.defineLazyGlobalGetters(lazy, ["XMLHttpRequest"]);
 
 /**
  * Fetch html data for a href.
@@ -31,7 +23,7 @@ XPCOMUtils.defineLazyGlobalGetters(lazy, ["XMLHttpRequest"]);
  */
 function fetchData(aUrl) {
   return new Promise((resolve, reject) => {
-    const xhr = new lazy.XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.onload = () => {
       resolve(xhr.responseXML);
     };

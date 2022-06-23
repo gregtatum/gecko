@@ -23,15 +23,13 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
   "TopLevelNavigationDelegate:IgnoreList";
 
-XPCOMUtils.defineLazyGlobalGetters(lazy, ["XMLHttpRequest"]);
-
 // This is used for Microsoft OAuth integration. Microsoft requires the Origin
 // header to be correct, or to be missing. There's no way to disable the Origin
 // header using `fetch()` (at best it can be empty, which doesn't work), so we
 // use XHR instead.
 function promiseXHR(data) {
   return new Promise((resolve, reject) => {
-    const xhr = new lazy.XMLHttpRequest({ mozAnon: true, mozSystem: true });
+    const xhr = new XMLHttpRequest({ mozAnon: true, mozSystem: true });
     xhr.responseType = "json";
 
     const method = data.method || "GET";
