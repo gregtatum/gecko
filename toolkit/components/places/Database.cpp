@@ -45,6 +45,8 @@
 #define DATABASE_FILENAME u"places.sqlite"_ns
 // Filename of the icons database.
 #define DATABASE_FAVICONS_FILENAME u"favicons.sqlite"_ns
+// Filename of the contentcache database.
+#define DATABASE_CONTENTCACHE_FILENAME u"contentcache.sqlite"_ns
 
 // Set to the database file name when it was found corrupt by a previous
 // maintenance run.
@@ -318,7 +320,9 @@ nsresult AttachDatabase(nsCOMPtr<mozIStorageConnection>& aDBConn,
   NS_ENSURE_SUCCESS(rv, rv);
 
   // The journal limit must be set apart for each database.
-  nsAutoCString journalSizePragma("PRAGMA favicons.journal_size_limit = ");
+  nsAutoCString journalSizePragma("PRAGMA ");
+  journalSizePragma.Append(aName);
+  journalSizePragma.Append(".journal_size_limit = ");
   journalSizePragma.AppendInt(DATABASE_MAX_WAL_BYTES +
                               DATABASE_JOURNAL_OVERHEAD_BYTES);
   Unused << aDBConn->ExecuteSimpleSQL(journalSizePragma);
@@ -732,6 +736,71 @@ nsresult Database::EnsureFaviconsDatabaseAttached(
   return NS_OK;
 }
 
+nsresult Database::EnsureContentCacheDatabaseAttached(
+    const nsCOMPtr<mozIStorageService>& aStorage) {
+  MOZ_ASSERT(NS_IsMainThread());
+
+  nsCOMPtr<nsIFile> databaseFile;
+  NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR,
+                         getter_AddRefs(databaseFile));
+  NS_ENSURE_STATE(databaseFile);
+  nsresult rv = databaseFile->Append(DATABASE_CONTENTCACHE_FILENAME);
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsString contentCachePath;
+  rv = databaseFile->GetPath(contentCachePath);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  bool fileExists = false;
+  if (NS_SUCCEEDED(databaseFile->Exists(&fileExists)) && fileExists) {
+    return AttachDatabase(mMainConn, NS_ConvertUTF16toUTF8(contentCachePath),
+                          "contentcache"_ns);
+  }
+
+  // Open the database file, this will also create it.
+  nsCOMPtr<mozIStorageConnection> conn;
+  rv = aStorage->OpenUnsharedDatabase(databaseFile,
+                                      mozIStorageService::CONNECTION_DEFAULT,
+                                      getter_AddRefs(conn));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  {
+    // Ensure we'll close the connection when done.
+    auto cleanup = MakeScopeExit([&]() {
+      // We cannot use AsyncClose() here, because by the time we try to ATTACH
+      // this database, its transaction could be still be running and that would
+      // cause the ATTACH query to fail.
+      MOZ_ALWAYS_TRUE(NS_SUCCEEDED(conn->Close()));
+    });
+
+    // Enable incremental vacuum for this database to minimize the size as the
+    // cache expires or items are removed.
+    rv = conn->ExecuteSimpleSQL("PRAGMA auto_vacuum = INCREMENTAL"_ns);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    int32_t defaultPageSize;
+    rv = conn->GetDefaultPageSize(&defaultPageSize);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = SetupDurability(conn, defaultPageSize);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // Update the database in a transaction.
+    mozStorageTransaction transaction(conn, false);
+    rv = transaction.Start();
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = conn->ExecuteSimpleSQL(CREATE_CONTENTCACHE_TEXT);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = transaction.Commit();
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // The scope exit will take care of closing the connection.
+  }
+  rv = AttachDatabase(mMainConn, NS_ConvertUTF16toUTF8(contentCachePath),
+                      "contentcache"_ns);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return NS_OK;
+}
+
 nsresult Database::BackupAndReplaceDatabaseFile(
     nsCOMPtr<mozIStorageService>& aStorage, const nsString& aDbFilename,
     bool aTryToClone, bool aReopenConnection) {
@@ -1061,6 +1130,24 @@ nsresult Database::SetupDatabaseConnection(
   // Create favicons temp entities.
   rv = mMainConn->ExecuteSimpleSQL(CREATE_ICONS_AFTERINSERT_TRIGGER);
   NS_ENSURE_SUCCESS(rv, rv);
+
+  // Attach the contentcache database to the main connection.
+  rv = EnsureContentCacheDatabaseAttached(aStorage);
+  if (NS_FAILED(rv)) {
+    // The contentcache database may be corrupt. Try to replace and reattach it.
+    nsCOMPtr<nsIFile> contentCacheFile;
+    rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR,
+                                getter_AddRefs(contentCacheFile));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = contentCacheFile->Append(DATABASE_CONTENTCACHE_FILENAME);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = contentCacheFile->Remove(false);
+    if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND) {
+      return rv;
+    }
+    rv = EnsureFaviconsDatabaseAttached(aStorage);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   // We use our functions during migration, so initialize them now.
   rv = InitFunctions();
@@ -1735,6 +1822,9 @@ nsresult Database::InitTempEntities() {
   rv = mMainConn->ExecuteSimpleSQL(CREATE_PLACES_METADATA_AFTERINSERT_TRIGGER);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = mMainConn->ExecuteSimpleSQL(CREATE_PLACES_METADATA_AFTERDELETE_TRIGGER);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = mMainConn->ExecuteSimpleSQL(CREATE_PLACES_CONTENTCACHE_TRIGGER);
   NS_ENSURE_SUCCESS(rv, rv);
 
   return NS_OK;
