@@ -2327,7 +2327,7 @@ pref("svg.disabled", false);
 
 pref("browser.contentCache.enabled", true);
 // Set to "all" to see all logs, which are useful for debuging.
-pref("browser.contentCache.logLevel", "error");
+pref("browser.contentCache.logLevel", "Error");
 
 // Disable e10s for Gecko by default. This is overridden in firefox.js.
 pref("browser.tabs.remote.autostart", false);
