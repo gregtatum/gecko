@@ -120,8 +120,23 @@ login-intro {
 }
 
 :root.in-companion .panel-header {
+  display: grid;
+  grid-template-columns: 1fr 0.20fr;
+  padding-block-start: 12px;
   align-items: center;
-  display: flex;
+}
+
+:root.in-companion section-panel::part(header) {
+  padding-inline-end: 0;
+}
+
+:root.in-companion .section-panel-header .section-panel-heading {
+  align-self: center;
+  justify-self: center;
+}
+
+:root.in-companion .section-panel-header .section-panel-heading > h1 {
+  margin: 0;
 }
 
 :root.in-companion .panel-header > .subviewbutton-back + h1 {
@@ -143,10 +158,6 @@ login-intro {
 :root.in-companion .panel-header > h1 > span {
   display: inline-block;
   white-space: pre-wrap;
-}
-
-:root.in-companion .panel-header {
-  padding-inline-end: 0;
 }
 
 :root.in-companion .panel-header > :not(:last-child) {

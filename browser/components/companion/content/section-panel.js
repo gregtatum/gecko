@@ -64,7 +64,7 @@ class SectionPanel extends MozLitElement {
         href="chrome://browser/content/companion/fonts.css"
       />
 
-      <div class="section-panel-header">
+      <div class="section-panel-header" part="header">
         <button
           class="section-panel-header-button back-button ghost-button"
           data-l10n-id="companion-header-back-button"
