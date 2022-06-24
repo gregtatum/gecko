@@ -123,6 +123,7 @@ button.history-result-button:hover:active {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow-wrap: anywhere;
+  font-weight: unset;
 }
 
 .history-result-url {

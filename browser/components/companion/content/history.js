@@ -2,6 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+const lazy = {};
+
+/**
+ * We use the UrlbarTokenizer and UrlbarUtils to get similar highlighting
+ * behaviour for the History result titles when there is a search query
+ * string to match against.
+ */
+XPCOMUtils.defineLazyModuleGetters(lazy, {
+  UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
+  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
+});
+
 import { timeSince } from "./time-since.js";
 
 window.gHistorySearch = {
@@ -173,13 +189,30 @@ export class HistoryViewerEl extends HTMLElement {
         totalBeforeLimit: total,
       }
     );
-    totalBeforeLimit.toggleAttribute("empty-query", queryString.trim() == "");
+    let trimmedQuery = queryString.trim();
+    let emptyQuery = trimmedQuery == "";
+    totalBeforeLimit.toggleAttribute("empty-query", emptyQuery);
+
+    let queryContext = {
+      searchString: queryString,
+      trimmedSearchString: trimmedQuery,
+    };
+    let queryTokens = lazy.UrlbarTokenizer.tokenize(queryContext).tokens;
 
     let resultList = this.shadowRoot.querySelector(".history-result-list");
     let frag = document.createDocumentFragment();
     for (let result of results) {
       let li = document.createElement("li");
-      li.appendChild(new HistoryResultEl(result));
+      let highlightedTitleRanges = [];
+
+      if (!emptyQuery) {
+        highlightedTitleRanges = lazy.UrlbarUtils.getTokenMatches(
+          queryTokens,
+          result.title || result.url,
+          lazy.UrlbarUtils.HIGHLIGHT.TYPED
+        );
+      }
+      li.appendChild(new HistoryResultEl(result, highlightedTitleRanges));
       frag.appendChild(li);
     }
 
@@ -224,7 +257,7 @@ export class HistoryResultEl extends HTMLElement {
    * @param {HistoryResult} result
    *   The result to represent with this HistoryResultEl.
    */
-  constructor(result) {
+  constructor(result, highlightedTitleRanges) {
     super();
     this.setAttribute("url", result.url);
 
@@ -233,15 +266,48 @@ export class HistoryResultEl extends HTMLElement {
 
     let template = document.getElementById("template-history-result");
     let fragment = template.content.cloneNode(true);
+    let titleOrURLString = result.title || result.url;
 
     let button = fragment.querySelector(".history-result-button");
     button.setAttribute("url", result.url);
-    button.title = result.title || result.url;
+    button.title = titleOrURLString;
 
     let title = fragment.querySelector(".history-result-title");
     let url = fragment.querySelector(".history-result-url");
-    title.textContent = result.title;
-    title.title = result.title;
+
+    if (highlightedTitleRanges.length) {
+      // This is an almost verbatim copy of the same logic that's used to render
+      // highlights within UrlbarResult rows, written here:
+      // https://searchfox.org/mozilla-central/rev/70504e4c6fe61c027675c792d328ee476b6b1c1f/browser/components/urlbar/UrlbarView.jsm#2193-2229
+      //
+      // That logic is within a pseudo-private method, so for safety we reimplement
+      // the logic here.
+      let index = 0;
+      highlightedTitleRanges = highlightedTitleRanges.concat([
+        [titleOrURLString.length, 0],
+      ]);
+      for (let [highlightIndex, highlightLength] of highlightedTitleRanges) {
+        if (highlightIndex - index > 0) {
+          title.appendChild(
+            document.createTextNode(
+              titleOrURLString.substring(index, highlightIndex)
+            )
+          );
+        }
+        if (highlightLength > 0) {
+          let strong = document.createElement("strong");
+          strong.textContent = titleOrURLString.substring(
+            highlightIndex,
+            highlightIndex + highlightLength
+          );
+          title.appendChild(strong);
+        }
+        index = highlightIndex + highlightLength;
+      }
+    } else {
+      title.textContent = titleOrURLString;
+    }
+    title.title = titleOrURLString;
     url.textContent = result.url;
     url.title = result.url;
 

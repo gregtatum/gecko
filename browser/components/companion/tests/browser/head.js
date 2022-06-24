@@ -818,6 +818,8 @@ class CompanionHelper {
    *   The src attribute for the favicon for the result.
    * @property {string} title
    *   The full title of the result.
+   * @property {string[]} highlights
+   *   Highlighted (bolded) strings within the title.
    * @property {string} url
    *   The full URL of the result.
    * @property {string} lastVisited
@@ -864,54 +866,69 @@ class CompanionHelper {
    * Returns a Promise that resolves with an object describing the History
    * section of the Companion.
    *
+   * @param {boolean} [reverse=false]
+   *   True to reverse the results in the returned details. This is useful
+   *   for matching against an array of visits that have been inserted into
+   *   the Places database, since History by default sorts in last-visited
+   *   order descending.
    * @returns Promise
    * @resolves {HistoryResultsDetails}
    */
-  getHistoryResultsDetails() {
-    return this.runCompanionTask(async () => {
-      let viewer = content.document.getElementById("history-viewer");
-      let searchInputValue = viewer.shadowRoot.querySelector(
-        ".history-search-input"
-      ).value;
+  getHistoryResultsDetails(reverse = false) {
+    return this.runCompanionTask(
+      async shouldReverse => {
+        let viewer = content.document.getElementById("history-viewer");
+        let searchInputValue = viewer.shadowRoot.querySelector(
+          ".history-search-input"
+        ).value;
 
-      let resultList = viewer.shadowRoot.querySelector(".history-result-list");
-      let results = Array.from(
-        resultList.querySelectorAll("li:not(.footer)")
-      ).map(listElement => {
-        let resultEl = listElement.firstElementChild;
-        return {
-          iconSrc: resultEl.shadowRoot.querySelector(".history-result-icon")
-            .src,
-          title: resultEl.shadowRoot.querySelector(".history-result-title")
-            .textContent,
-          url: resultEl.shadowRoot.querySelector(".history-result-url")
-            .textContent,
-          lastVisited: resultEl.shadowRoot.querySelector(
-            ".history-result-last-visited"
-          ).textContent,
-        };
-      });
-
-      let footerEl = resultList.querySelector("li.footer > footer");
-      let limitOutOfTotalArgs = {};
-      if (footerEl) {
-        limitOutOfTotalArgs = JSON.parse(
-          footerEl.querySelector(".limit-out-of-total").dataset.l10nArgs
+        let resultList = viewer.shadowRoot.querySelector(
+          ".history-result-list"
         );
-      }
+        let results = Array.from(
+          resultList.querySelectorAll("li:not(.footer)")
+        ).map(listElement => {
+          let resultEl = listElement.firstElementChild;
+          return {
+            iconSrc: resultEl.shadowRoot.querySelector(".history-result-icon")
+              .src,
+            title: resultEl.shadowRoot.querySelector(".history-result-title")
+              .textContent,
+            highlights: Array.from(
+              resultEl.shadowRoot.querySelectorAll(
+                ".history-result-title > strong"
+              )
+            ).map(node => node.textContent),
+            url: resultEl.shadowRoot.querySelector(".history-result-url")
+              .textContent,
+            lastVisited: resultEl.shadowRoot.querySelector(
+              ".history-result-last-visited"
+            ).textContent,
+          };
+        });
 
-      let hasBottomFade = resultList.hasAttribute("show-fade");
+        let footerEl = resultList.querySelector("li.footer > footer");
+        let limitOutOfTotalArgs = {};
+        if (footerEl) {
+          limitOutOfTotalArgs = JSON.parse(
+            footerEl.querySelector(".limit-out-of-total").dataset.l10nArgs
+          );
+        }
 
-      return {
-        searchInputValue,
-        results,
-        footer: {
-          visible: !!footerEl,
-          limitOutOfTotalArgs,
-        },
-        hasBottomFade,
-      };
-    });
+        let hasBottomFade = resultList.hasAttribute("show-fade");
+
+        return {
+          searchInputValue,
+          results: shouldReverse ? results.reverse() : results,
+          footer: {
+            visible: !!footerEl,
+            limitOutOfTotalArgs,
+          },
+          hasBottomFade,
+        };
+      },
+      [reverse]
+    );
   }
 
   /**
@@ -924,11 +941,17 @@ class CompanionHelper {
    * @param {Object} description
    *   The description of a visit passed to PlacesTestUtils.addVisits to match
    *   the result against.
+   * @param {String[]|null} [highlights=null]
+   *   Optional expected highlighted strings within the result.
    */
-  assertResultMatches(result, description) {
-    Assert.equal(result.title, description.title);
+  assertResultMatches(result, description, highlights = null) {
+    Assert.equal(result.title, description.title || description.uri);
     Assert.equal(result.iconSrc, `page-icon:${description.uri}`);
     Assert.equal(result.url, description.uri);
+
+    if (highlights) {
+      Assert.deepEqual(result.highlights, highlights);
+    }
   }
 
   /**
@@ -939,10 +962,15 @@ class CompanionHelper {
    *
    * @param {string} queryString
    *   The string to put into the search input to refine the results with.
+   * @param {boolean} [reverse=false]
+   *   True to reverse the results in the returned details. This is useful
+   *   for matching against an array of visits that have been inserted into
+   *   the Places database, since History by default sorts in last-visited
+   *   order descending.
    * @returns Promise
    * @resolves {HistoryResultsDetails}
    */
-  async refineHistoryResults(queryString) {
+  async refineHistoryResults(queryString, reverse = false) {
     let promiseHistoryResults = this.waitForHistoryResults();
     await this.runCompanionTask(
       async qs => {
@@ -956,7 +984,7 @@ class CompanionHelper {
       [queryString]
     );
     await promiseHistoryResults;
-    let details = await this.getHistoryResultsDetails();
+    let details = await this.getHistoryResultsDetails(reverse);
     Assert.equal(
       details.searchInputValue,
       queryString,
