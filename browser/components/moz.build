@@ -90,8 +90,6 @@ XPCOM_MANIFESTS += [
 
 EXTRA_COMPONENTS += [
     "BrowserComponents.manifest",
-    "tests/startupRecorder.js",
-    "tests/testComponents.manifest",
 ]
 
 EXTRA_JS_MODULES += [
@@ -99,6 +97,11 @@ EXTRA_JS_MODULES += [
     "BrowserGlue.jsm",
     "distribution.js",
 ]
+
+if CONFIG["MOZ_DEBUG"] or CONFIG["MOZ_DEV_EDITION"] or CONFIG["NIGHTLY_BUILD"]:
+    EXTRA_JS_MODULES += [
+        "StartupRecorder.jsm",
+    ]
 
 BROWSER_CHROME_MANIFESTS += [
     "safebrowsing/content/test/browser.ini",

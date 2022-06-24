@@ -5482,7 +5482,8 @@ var DefaultBrowserCheck = {
     if (buttonNumClicked == 0) {
       shellService.setAsDefault();
       shellService.pinToTaskbar();
-    } else if (checkboxState) {
+    }
+    if (checkboxState) {
       shellService.shouldCheckDefaultBrowser = false;
     }
 
