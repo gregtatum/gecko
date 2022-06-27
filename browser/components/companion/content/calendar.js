@@ -444,7 +444,7 @@ export class CalendarEventList extends MozLitElement {
   toggleExpandedEvent(e) {
     for (let child of this.calendarEvents) {
       if (!child.detailsCollapsed && child.event.id != e.detail.eventId) {
-        child.detailsCollapsed = true;
+        child.detailsCollapsed = child.linksCollapsed = true;
       }
     }
   }

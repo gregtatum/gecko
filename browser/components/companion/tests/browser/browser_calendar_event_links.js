@@ -183,3 +183,71 @@ add_task(async function testEventLinksFocus() {
     });
   });
 });
+
+add_task(async function testMultiEventLinkExpansion() {
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "First Event",
+        links: [
+          { url: "https://example.com/" },
+          { url: "https://example.com/2" },
+          { url: "https://example.com/3" },
+          { url: "https://example.com/4" },
+        ],
+      },
+      {
+        summary: "Second Event",
+        links: [
+          { url: "https://example.com/" },
+          { url: "https://example.com/2" },
+          { url: "https://example.com/3" },
+          { url: "https://example.com/4" },
+        ],
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+    await helper.runCompanionTask(async () => {
+      let calendarEventList = content.document.querySelector(
+        "calendar-event-list"
+      );
+      let visibleEvents = calendarEventList.shadowRoot.querySelectorAll(
+        "calendar-event"
+      );
+      let [firstEvent, secondEvent] = visibleEvents;
+
+      const getEventLinks = event => event.shadowRoot.querySelectorAll("a");
+
+      info("Only two links are visible for each event initially");
+      is(getEventLinks(firstEvent).length, 2, "First event has 2 links");
+      is(getEventLinks(firstEvent).length, 2, "Second event has 2 links");
+
+      info("Click on the first event to expand its links");
+      const firstExpanded = ContentTaskUtils.waitForEvent(
+        firstEvent,
+        "toggle-details"
+      );
+      EventUtils.synthesizeMouseAtCenter(firstEvent.expandButton, {}, content);
+      await firstExpanded;
+      await firstEvent.updateComplete;
+
+      is(getEventLinks(firstEvent).length, 4, "First event now has 4 links");
+      is(getEventLinks(secondEvent).length, 2, "Second event only has 2 links");
+
+      info(
+        "Click on the second event to expand its links and hide the first event's extra links"
+      );
+      const secondExpanded = ContentTaskUtils.waitForEvent(
+        secondEvent,
+        "toggle-details"
+      );
+      EventUtils.synthesizeMouseAtCenter(secondEvent.expandButton, {}, content);
+      await secondExpanded;
+      await secondEvent.updateComplete;
+
+      is(getEventLinks(firstEvent).length, 2, "First event now has 2 links");
+      is(getEventLinks(secondEvent).length, 4, "Second event now has 4 links");
+    });
+  });
+});

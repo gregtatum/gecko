@@ -567,11 +567,9 @@ add_task(async function testOnlyOneEventExpanded() {
     let events = [
       {
         summary: "Event One",
-        email: "one@gmail.com",
       },
       {
         summary: "Event Two",
-        email: "one@gmail.com",
       },
     ];
 
@@ -594,12 +592,13 @@ add_task(async function testOnlyOneEventExpanded() {
       is(hasEventActions(secondEvent), false, "Second event is not expanded");
 
       info("Clicking on the first event expands it");
-      const firstExpanded = Promise.all([
-        ContentTaskUtils.waitForEvent(firstEvent, "toggle-details"),
-        firstEvent.updateComplete,
-      ]);
-      EventUtils.synthesizeMouseAtCenter(firstEvent, {}, content);
+      const firstExpanded = ContentTaskUtils.waitForEvent(
+        firstEvent,
+        "toggle-details"
+      );
+      EventUtils.synthesizeMouseAtCenter(firstEvent.expandButton, {}, content);
       await firstExpanded;
+      await firstEvent.updateComplete;
 
       is(hasEventActions(firstEvent), true, "First event is expanded");
       is(hasEventActions(secondEvent), false, "Second event is not expanded");
@@ -607,12 +606,13 @@ add_task(async function testOnlyOneEventExpanded() {
       info(
         "Clicking on the second event causes the second event to expand and the first event to contract"
       );
-      const secondExpanded = Promise.all([
-        ContentTaskUtils.waitForEvent(secondEvent, "toggle-details"),
-        secondEvent.updateComplete,
-      ]);
-      EventUtils.synthesizeMouseAtCenter(secondEvent, {}, content);
+      const secondExpanded = ContentTaskUtils.waitForEvent(
+        secondEvent,
+        "toggle-details"
+      );
+      EventUtils.synthesizeMouseAtCenter(secondEvent.expandButton, {}, content);
       await secondExpanded;
+      await secondEvent.updateComplete;
 
       is(hasEventActions(firstEvent), false, "First event is not expanded");
       is(hasEventActions(secondEvent), true, "Second event is expanded");
