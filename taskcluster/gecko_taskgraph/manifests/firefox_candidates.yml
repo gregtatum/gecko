@@ -71,6 +71,7 @@ platform_names:
             win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
+            win64-aarch64-pinebuild: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
     tools_platform:
         by-platform:
@@ -90,6 +91,7 @@ platform_names:
             win64-pinebuild: 'win64-pinebuild'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64-devedition'
+            win64-aarch64-pinebuild: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
     filename_platform:
         by-platform:
@@ -109,6 +111,7 @@ platform_names:
             win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64_aarch64'
             win64-aarch64-devedition: 'win64_aarch64'
+            win64-aarch64-pinebuild: 'win64_aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
     product_platform:
         by-platform:
@@ -261,6 +264,7 @@ mapping:
             - win64-devedition
             - win64-aarch64-devedition
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         destinations:
             - ${version}-candidates/build${build_number}/mar-tools
     mbsdiff:
@@ -278,6 +282,7 @@ mapping:
             - win64-devedition
             - win64-aarch64-devedition
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         destinations:
             - ${version}-candidates/build${build_number}/mar-tools
     target.tar.bz2:
@@ -344,6 +349,7 @@ mapping:
             - win32-devedition
             - win64-aarch64-devedition
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         pretty_name: ${product_platform}-${version}.zip
         checksums_path: ${path_platform}/${locale}/${product_platform}-${version}.zip
     target.installer.exe:
@@ -360,6 +366,7 @@ mapping:
             - win32-devedition
             - win64-aarch64-devedition
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         pretty_name: ${pretty_product_platform} Setup ${version}.exe
         checksums_path: ${path_platform}/${locale}/${pretty_product_platform} Setup ${version}.exe
     target.stub-installer.exe:

@@ -36,6 +36,7 @@ only-for-build-platforms:
     - linux64-pinebuild/opt
     - macosx64-pinebuild/opt
     - win64-pinebuild/opt
+    - win64-aarch64-pinebuild/opt
 
 job-template:
     description: Localization
@@ -94,6 +95,7 @@ job-template:
                 linux64-pinebuild: linux64-pinebuild-opt
                 macosx64-pinebuild: macosx64-pinebuild-opt
                 win64-pinebuild: win64-pinebuild-opt
+                win64-aarch64-pinebuild: win64-aarch64-pinebuild-opt
     worker-type: b-linux
     docker-image: {in-tree: debian11-amd64-build}
     treeherder:
@@ -116,6 +118,7 @@ job-template:
                 linux64-pinebuild: linux64-pinebuild/opt
                 macosx64-pinebuild: osx-cross-pinebuild/opt
                 win64-pinebuild: windows2012-64-pinebuild/opt
+                win64-aarch64-pinebuild: windows2012-aarch64-pinebuild/opt
     env:
         by-build-platform:
             linux.*:    # linux64 and 32 get same treatment here
@@ -220,6 +223,12 @@ job-template:
                 win64-pinebuild:
                     - single_locale/pinebuild.py
                     - single_locale/win64.py
+                    - single_locale/tc_common.py
+                    - single_locale/tc_win64.py
+                    - taskcluster_nightly.py
+                win64-aarch64-pinebuild:
+                    - single_locale/pinebuild.py
+                    - single_locale/win64-aarch64.py
                     - single_locale/tc_common.py
                     - single_locale/tc_win64.py
                     - taskcluster_nightly.py

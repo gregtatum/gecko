@@ -50,6 +50,7 @@ only-for-build-platforms:
     - linux64-pinebuild/opt
     - macosx64-pinebuild/opt
     - win64-pinebuild/opt
+    - win64-aarch64-pinebuild/opt
 
 job-template:
     shipping-phase: promote

@@ -69,6 +69,7 @@ platform_names:
             win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
+            win64-aarch64-pinebuild: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
     stage_platform:
         by-platform:
@@ -88,6 +89,7 @@ platform_names:
             win64-pinebuild: 'win64'
             win64-aarch64-shippable: 'win64-aarch64'
             win64-aarch64-devedition: 'win64-aarch64'
+            win64-aarch64-pinebuild: 'win64-aarch64'
             win64-asan-reporter-shippable: 'win64-asan-reporter'
     product_platform:
         by-platform:
@@ -250,6 +252,7 @@ mapping:
             - linux64-pinebuild
             - macosx64-pinebuild
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         pretty_name: ${product_platform}-${version}.${locale}.langpack.xpi
         checksums_path: ${product_platform}-${version}.${locale}.langpack.xpi
         destinations:
@@ -270,6 +273,7 @@ mapping:
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         destinations:
             - ${year}/${month}/${upload_date}-${branch}/mar-tools/${stage_platform}
     mbsdiff:
@@ -284,6 +288,7 @@ mapping:
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         destinations:
             - ${year}/${month}/${upload_date}-${branch}/mar-tools/${stage_platform}
     target.tar.bz2:
@@ -370,6 +375,7 @@ mapping:
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         pretty_name: ${product_platform}-${version}.${locale}.${filename_platform}.zip
         checksums_path: ${product_platform}-${version}.${locale}.${filename_platform}.zip
     target.installer.exe:
@@ -384,6 +390,7 @@ mapping:
             - win64-aarch64-shippable
             - win64-asan-reporter-shippable
             - win64-pinebuild
+            - win64-aarch64-pinebuild
         pretty_name: ${product_platform}-${version}.${locale}.${filename_platform}.installer.exe
         checksums_path: ${product_platform}-${version}.${locale}.${filename_platform}.installer.exe
         destinations:
