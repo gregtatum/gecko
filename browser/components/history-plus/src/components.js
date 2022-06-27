@@ -11,7 +11,8 @@
  */
 
 import { React, ReactDOMFactories } from "./vendor.js";
-const { a, div, h1, input, img } = ReactDOMFactories;
+const { a, div, h1, input, img, b } = ReactDOMFactories;
+import { sql } from "./utils.js";
 
 const { PlacesUtils } = ChromeUtils.import(
   "resource://gre/modules/PlacesUtils.jsm"
@@ -53,6 +54,7 @@ function parseSearch(search) {
       parsedSearch.search += part;
     }
   }
+  parsedSearch.search = parsedSearch.search.trim();
   return parsedSearch;
 }
 
@@ -62,17 +64,12 @@ function parseSearch(search) {
  * >} Database
  */
 
-/**
- * @param {Database} db
- * @param {string} query
- * @param {Record<string, string>} args
- * @returns {ReturnType<Database["execute"]>}
- * (sql: string, params?: Record<string, string> | null, onRow?: any | null): Promise<Row[]>;
- */
-function dbExecute(db, query, args) {
-  console.log("[db] execute", { query: { query }, args });
-  return db.execute(query, args);
-}
+/** @type {Console} */
+// @ts-ignore
+const console = window.console.createInstance({
+  maxLogLevelPref: "browser.contentCache.logLevel",
+  prefix: "history-plus db",
+});
 
 /**
  * @param {string} searchString
@@ -82,61 +79,73 @@ export async function searchHistory(searchString) {
   const { search, host } = parseSearch(searchString);
   const db = await PlacesUtils.promiseDBConnection();
   let rows;
-  if (host) {
-    if (search.trim()) {
-      rows = await dbExecute(
-        db,
-        /* sql */ `
-          SELECT *
-          FROM moz_places
-          WHERE
-            rev_host LIKE :revHost AND
-            (
-              title LIKE :search OR
-              description LIKE :search
-            )
+  let revHost = sql``;
 
-          ORDER BY
-            last_visit_date DESC
-          LIMIT 100
-        `,
-        {
-          search: `%${search}%`,
-          revHost: `%${PlacesUtils.getReversedHost({ host })}%`,
-        }
-      );
-    } else {
-      rows = await dbExecute(
-        db,
-        /* sql */ `
-          SELECT *
-          FROM moz_places
-          WHERE
-            rev_host LIKE :revHost
-          ORDER BY
-            last_visit_date DESC
-          LIMIT 100
-        `,
-        {
-          revHost: `%${PlacesUtils.getReversedHost({ host })}%`,
-        }
-      );
-    }
-  } else {
-    rows = await dbExecute(
-      db,
-      /* sql */ `
+  /** @type {{ search: string, revHost?: string }} */
+  const args = { search };
+
+  if (!search) {
+    if (host) {
+      console.log("Searching for only a host", host);
+      const statement = sql`
         SELECT *
         FROM moz_places
         WHERE
-          title LIKE :search OR
-          description LIKE :search
+          rev_host LIKE :revHost
         ORDER BY
           last_visit_date DESC
         LIMIT 100
-      `,
-      { search: `%${search}%` }
-    );
+      `;
+      rows = await statement.run(db, {
+        revHost: `%${PlacesUtils.getReversedHost({ host })}%`,
+      });
+    } else {
+      console.log("Searching all recent history", host);
+      const statement = sql`
+        SELECT *
+        FROM moz_places
+        ORDER BY
+          last_visit_date DESC
+        LIMIT 100
+      `;
+      rows = await statement.run(db);
+    }
+  } else {
+    if (host) {
+      console.log("Searching a host and text", host, search);
+      args.revHost = `%${PlacesUtils.getReversedHost({ host })}%`;
+      revHost = sql`
+        AND moz_places.rev_host LIKE :revHost
+      `;
+    } else {
+      console.log("Searching text", search);
+    }
+    const statement = sql`
+      SELECT
+        moz_contentcache_text.text as text,
+        moz_places.url             as url,
+        moz_places.title           as title,
+        snippet(
+          moz_contentcache_text,
+          0,    -- Zero-indexed column
+          '<b>',   -- Insert before text match
+          '</b>',   -- Insert after text match
+          '',   -- The text to add to the start or end of the selected text to indicate
+                -- that the returned text does not occur at the start or end of its
+                -- column, respectively.
+          40    -- 0-64 The maximum number of tokens in the returned text.
+        ) as description
+      FROM moz_contentcache_text
+      LEFT JOIN moz_places
+      ON moz_contentcache_text.rowid = moz_places.id
+      WHERE moz_contentcache_text MATCH :search
+        ${revHost}
+      ORDER BY  rank
+      LIMIT     100
+    `;
+    console.time("moz_contentcache_text");
+    rows = await statement.run(db, args);
+    console.timeEnd("moz_contentcache_text");
   }
 
   return rows.map(row => ({
@@ -152,6 +161,14 @@ const emptyRows = [];
 
 export function HistoryPlus() {
   const [rows, setRows] = React.useState(emptyRows);
+
+  React.useEffect(() => {
+    searchHistory("").then(
+      rows => setRows(rows),
+      error => console.error(error)
+    );
+  }, []);
+
   return div(
     { className: `history` },
     h1(null, "History"),
@@ -167,6 +184,7 @@ export function HistoryPlus() {
         type: "text",
         className: "historyInput",
         placeholder: "Seach all history",
+        defaultValue: "",
         onChange: event => {
           searchHistory(event.target.value).then(
             rows => setRows(rows),
@@ -194,8 +212,29 @@ function HistoryResults(props) {
           { className: "historyResultsTitle", href: url, target: "_blank" },
           title || url
         ),
-        div({ className: "historyResultsDescription" }, description)
+        div(
+          { className: "historyResultsDescription" },
+          ApplyBoldTags({ text: description })
+        )
       )
     )
   );
+}
+
+/**
+ * @param {Object} props
+ * @param {string} [props.text]
+ */
+function ApplyBoldTags({ text }) {
+  if (!text) {
+    return null;
+  }
+  const parts = [];
+  const chunks = text.split("<b>");
+  parts.push(chunks[0]);
+  for (const chunk of chunks.slice(1)) {
+    const [innerText, ...rest] = chunk.split("</b>");
+    parts.push(b(null, innerText), ...rest);
+  }
+  return parts;
 }

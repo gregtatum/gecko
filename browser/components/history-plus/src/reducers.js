@@ -7,4 +7,9 @@
 
 import { Redux } from "./vendor.js";
 
-export const reducers = Redux.combineReducers({});
+function isLoaded(state = true) {
+  // TODO
+  return state;
+}
+
+export const reducers = Redux.combineReducers({ isLoaded });
