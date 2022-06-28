@@ -3,8 +3,7 @@
         "platforms": [
             "linux64-pinebuild",
             "macosx64-pinebuild",
-            "win64-pinebuild",
-            "win64-aarch64-pinebuild"
+            "win64-pinebuild"
         ],
         "revision": "default"
     }

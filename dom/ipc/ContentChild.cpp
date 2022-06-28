@@ -678,6 +678,7 @@ mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
   mSharedFontListBlocks = std::move(aSharedFontListBlocks);
 
   gfx::gfxVars::SetValuesForInitialize(aXPCOMInit.gfxNonDefaultVarUpdates());
+  PerfStats::SetCollectionMask(aXPCOMInit.perfStatsMask());
   InitSharedUASheets(std::move(aSharedUASheetHandle), aSharedUASheetAddress);
   InitXPCOM(std::move(aXPCOMInit), aInitialData,
             aIsReadyForBackgroundProcessing);
@@ -3040,6 +3041,10 @@ void ContentChild::ShutdownInternal() {
                     : "Not profiling - SendShutdownProfile (failed)"_ns));
   }
 
+  if (PerfStats::GetCollectionMask() != 0) {
+    SendShutdownPerfStats(PerfStats::CollectLocalPerfStatsJSON());
+  }
+
   // Start a timer that will insure we quickly exit after a reasonable
   // period of time. Prevents shutdown hangs after our connection to the
   // parent closes.
@@ -4361,12 +4366,16 @@ mozilla::ipc::IPCResult ContentChild::RecvGetLayoutHistoryState(
     GetLayoutHistoryStateResolver&& aResolver) {
   nsCOMPtr<nsILayoutHistoryState> state;
   nsIDocShell* docShell;
+  mozilla::Maybe<mozilla::dom::Wireframe> wireframe;
   if (!aContext.IsNullOrDiscarded() &&
       (docShell = aContext.get()->GetDocShell())) {
     docShell->PersistLayoutHistoryState();
     docShell->GetLayoutHistoryState(getter_AddRefs(state));
+    wireframe = static_cast<nsDocShell*>(docShell)->GetWireframe();
   }
-  aResolver(state);
+  aResolver(Tuple<nsILayoutHistoryState*, const mozilla::Maybe<Wireframe>&>(
+      state, wireframe));
+
   return IPC_OK();
 }
 
