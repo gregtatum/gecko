@@ -15,6 +15,8 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
@@ -24,7 +26,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   DownloadsCommon: "resource:///modules/DownloadsCommon.jsm",
   FileUtils: "resource://gre/modules/FileUtils.jsm",
   UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
-  Services: "resource://gre/modules/Services.jsm",
 });
 
 XPCOMUtils.defineLazyServiceGetter(
@@ -1091,9 +1092,7 @@ DownloadsViewUI.DownloadElementShell.prototype = {
   },
 
   onButton() {
-    if (
-      lazy.Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
-    ) {
+    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
       let window = this.browserWindow || this.element.ownerGlobal;
       window.dispatchEvent(
         new CustomEvent("DownloadDoCommand", {

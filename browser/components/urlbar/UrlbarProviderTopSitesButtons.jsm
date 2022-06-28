@@ -9,10 +9,10 @@ var EXPORTED_SYMBOLS = ["UrlbarProviderTopSitesButtons"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 XPCOMUtils.defineLazyModuleGetters(this, {
   AboutNewTab: "resource:///modules/AboutNewTab.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",

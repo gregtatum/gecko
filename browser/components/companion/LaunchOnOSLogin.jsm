@@ -9,10 +9,13 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
-  AppConstants: "resource://gre/modules/AppConstants.jsm",
   Subprocess: "resource://gre/modules/Subprocess.jsm",
   MacAttribution: "resource:///modules/MacAttribution.jsm",
 });
@@ -42,9 +45,9 @@ function ensureOSSettingsMatchPref() {
     !Cu.isInAutomation &&
     !lazy.gIsXPCShell &&
     Services.prefs.getBoolPref(PREF_LAUNCH_ON_LOGIN, false);
-  if (lazy.AppConstants.platform == "win") {
+  if (AppConstants.platform == "win") {
     reflectPrefToRegistry(prefVal);
-  } else if (lazy.AppConstants.platform == "macosx") {
+  } else if (AppConstants.platform == "macosx") {
     reflectPrefToLaunchDAgent(prefVal);
   }
 }

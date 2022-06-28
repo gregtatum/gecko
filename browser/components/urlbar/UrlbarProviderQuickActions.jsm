@@ -19,6 +19,10 @@ const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
 
+const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
+  "resource:///modules/UrlbarUtils.jsm"
+);
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
@@ -26,9 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   DevToolsShim: "chrome://devtools-startup/content/DevToolsShim.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
   UrlbarView: "resource:///modules/UrlbarView.jsm",
   WorkshopParentAccess: "resource:///modules/WorkshopParentAccess.jsm",
 });
@@ -117,7 +119,7 @@ const COMMANDS = {
       return hasUnreadMessages("google");
     },
     callback: ({ inboxUrl } = {}) => {
-      lazy.UrlbarUtils.openUrl(inboxUrl);
+      UrlbarUtils.openUrl(inboxUrl);
     },
   },
   checkoutlook: {
@@ -133,7 +135,7 @@ const COMMANDS = {
       return hasUnreadMessages("microsoft");
     },
     callback: ({ inboxUrl } = {}) => {
-      lazy.UrlbarUtils.openUrl(inboxUrl);
+      UrlbarUtils.openUrl(inboxUrl);
     },
   },
   createmeeting: {
@@ -144,7 +146,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("meeting", "https://meeting.new", email);
-      lazy.UrlbarUtils.openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   createslides: {
@@ -155,7 +157,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("slides", "https://slides.new", email);
-      lazy.UrlbarUtils.openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   createsheet: {
@@ -166,7 +168,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("sheets", "https://sheets.new", email);
-      lazy.UrlbarUtils.openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   createdoc: {
@@ -177,7 +179,7 @@ const COMMANDS = {
     serviceType: "google",
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("docs", "https://docs.new", email);
-      lazy.UrlbarUtils.openUrl(url);
+      UrlbarUtils.openUrl(url);
     },
   },
   screenshot: {
@@ -222,7 +224,7 @@ const COMMANDS = {
     callback: () => {
       let window = lazy.BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
-      lazy.UrlbarUtils.openUrl("view-source:" + spec);
+      UrlbarUtils.openUrl("view-source:" + spec);
     },
     title: "Flowstate",
   },
@@ -280,7 +282,7 @@ function restartBrowser() {
  * A provider that returns a suggested url to the user based on what
  * they have currently typed so they can navigate directly.
  */
-class ProviderQuickActionsBase extends lazy.UrlbarProvider {
+class ProviderQuickActionsBase extends UrlbarProvider {
   // A tree that maps keywords to a result.
   _tree = new KeywordTree();
   _serviceData = {};
@@ -417,7 +419,7 @@ class ProviderQuickActionsBase extends lazy.UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   getSuggestedIndex() {
@@ -476,8 +478,8 @@ class ProviderQuickActionsBase extends lazy.UrlbarProvider {
       results.length > MAX_RESULTS ? MAX_RESULTS : results.length;
 
     const result = new lazy.UrlbarResult(
-      lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      lazy.UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+      UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
         results,
         dynamicType: DYNAMIC_TYPE_NAME,
@@ -597,7 +599,7 @@ class ProviderQuickActionsBase extends lazy.UrlbarProvider {
     let data = result.payload.results.find(item => item.key === key);
 
     if (command.url) {
-      lazy.UrlbarUtils.openUrl(command.url);
+      UrlbarUtils.openUrl(command.url);
     } else {
       command.callback({
         email: data?.accountAddress,

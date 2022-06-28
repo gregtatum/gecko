@@ -16,8 +16,10 @@ var EXPORTED_SYMBOLS = ["UrlbarProviderInputHistory"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 XPCOMUtils.defineLazyModuleGetters(this, {
-  AppConstants: "resource://gre/modules/AppConstants.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",

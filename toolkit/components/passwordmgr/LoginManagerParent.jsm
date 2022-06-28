@@ -8,6 +8,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const LoginInfo = new Components.Constructor(
   "@mozilla.org/login-manager/loginInfo;1",
@@ -32,7 +35,6 @@ XPCOMUtils.defineLazyGetter(lazy, "PasswordRulesManager", () => {
 });
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
-  AppConstants: "resource://gre/modules/AppConstants.jsm",
   ChromeMigrationUtils: "resource:///modules/ChromeMigrationUtils.jsm",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   LoginHelper: "resource://gre/modules/LoginHelper.jsm",
@@ -456,7 +458,7 @@ class LoginManagerParent extends JSWindowActorParent {
 
   #onOpenPreferences(hostname, entryPoint) {
     const window = this.getRootBrowser().ownerGlobal;
-    if (lazy.AppConstants.PINEBUILD) {
+    if (AppConstants.PINEBUILD) {
       Services.obs.notifyObservers(window, "companion-show-passwords-panel");
     } else {
       lazy.LoginHelper.openPasswordManager(window, {

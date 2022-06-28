@@ -14,13 +14,15 @@ const { FormHistory } = ChromeUtils.import(
   "resource://gre/modules/FormHistory.jsm"
 );
 
+const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
+  "resource:///modules/UrlbarUtils.jsm"
+);
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
-  UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
   UrlbarSearchUtils: "resource:///modules/UrlbarSearchUtils.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
 /**
@@ -30,7 +32,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 /**
  * A provider that returns the Top Sites shown on about:newtab.
  */
-class ProviderRecentSearches extends lazy.UrlbarProvider {
+class ProviderRecentSearches extends UrlbarProvider {
   constructor() {
     super();
   }
@@ -51,7 +53,7 @@ class ProviderRecentSearches extends lazy.UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -98,11 +100,11 @@ class ProviderRecentSearches extends lazy.UrlbarProvider {
     );
     for (let result of results) {
       let res = new lazy.UrlbarResult(
-        lazy.UrlbarUtils.RESULT_TYPE.SEARCH,
-        lazy.UrlbarUtils.RESULT_SOURCE.HISTORY,
+        UrlbarUtils.RESULT_TYPE.SEARCH,
+        UrlbarUtils.RESULT_SOURCE.HISTORY,
         ...lazy.UrlbarResult.payloadAndSimpleHighlights(queryContext.tokens, {
-          engine: [engine.name, lazy.UrlbarUtils.HIGHLIGHT.TYPED],
-          suggestion: [result.value, lazy.UrlbarUtils.HIGHLIGHT.NONE],
+          engine: [engine.name, UrlbarUtils.HIGHLIGHT.TYPED],
+          suggestion: [result.value, UrlbarUtils.HIGHLIGHT.NONE],
         })
       );
       addCallback(this, res);

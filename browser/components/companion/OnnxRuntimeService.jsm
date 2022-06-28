@@ -9,6 +9,7 @@ const EXPORTED_SYMBOLS = ["OnnxRuntimeService"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
@@ -24,16 +25,12 @@ const lazy = {};
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   HiddenFrame: "resource://gre/modules/HiddenFrame.jsm",
-  Services: "resource://gre/modules/Services.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "OnnxRuntimeService",
-    maxLogLevel: lazy.Services.prefs.getBoolPref(
-      "browser.companion.onnx.log",
-      false
-    )
+    maxLogLevel: Services.prefs.getBoolPref("browser.companion.onnx.log", false)
       ? "Debug"
       : "Info",
   });
@@ -45,14 +42,14 @@ XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
 function loadContentWindow(browser, url) {
   let uri;
   try {
-    uri = lazy.Services.io.newURI(url);
+    uri = Services.io.newURI(url);
   } catch (e) {
     let msg = `Invalid URL passed to loadContentWindow(): ${url}`;
     Cu.reportError(msg);
     throw new Error(msg);
   }
 
-  const principal = lazy.Services.scriptSecurityManager.getSystemPrincipal();
+  const principal = Services.scriptSecurityManager.getSystemPrincipal();
   let oa = lazy.E10SUtils.predictOriginAttributes({
     browser,
   });
@@ -86,7 +83,7 @@ const OnnxRuntimeService = {
    * Add observers if initializing.
    */
   init() {
-    if (!lazy.Services.prefs.getBoolPref("browser.companion.onnx", false)) {
+    if (!Services.prefs.getBoolPref("browser.companion.onnx", false)) {
       return;
     }
 
@@ -105,7 +102,7 @@ const OnnxRuntimeService = {
       matches: ["resource://ort/ort.html"],
     });
 
-    lazy.Services.obs.addObserver(this, "interaction-added");
+    Services.obs.addObserver(this, "interaction-added");
   },
 
   /**
@@ -166,11 +163,11 @@ const OnnxRuntimeService = {
    * Release the browser and remove observers.
    */
   uninit() {
-    if (!lazy.Services.prefs.getBoolPref("browser.companion.onnx", false)) {
+    if (!Services.prefs.getBoolPref("browser.companion.onnx", false)) {
       return;
     }
 
     this._browser = null;
-    lazy.Services.obs.removeObserver(this, "interaction-added");
+    Services.obs.removeObserver(this, "interaction-added");
   },
 };

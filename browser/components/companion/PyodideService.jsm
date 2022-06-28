@@ -9,6 +9,7 @@ const EXPORTED_SYMBOLS = ["PyodideService"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
@@ -24,13 +25,12 @@ const lazy = {};
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   HiddenFrame: "resource://gre/modules/HiddenFrame.jsm",
-  Services: "resource://gre/modules/Services.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "PyodideService",
-    maxLogLevel: lazy.Services.prefs.getBoolPref(
+    maxLogLevel: Services.prefs.getBoolPref(
       "browser.companion.pyodide.log",
       false
     )
@@ -45,14 +45,14 @@ XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
 function loadContentWindow(browser, url) {
   let uri;
   try {
-    uri = lazy.Services.io.newURI(url);
+    uri = Services.io.newURI(url);
   } catch (e) {
     let msg = `Invalid URL passed to loadContentWindow(): ${url}`;
     Cu.reportError(msg);
     throw new Error(msg);
   }
 
-  const principal = lazy.Services.scriptSecurityManager.getSystemPrincipal();
+  const principal = Services.scriptSecurityManager.getSystemPrincipal();
   let oa = lazy.E10SUtils.predictOriginAttributes({
     browser,
   });
@@ -86,7 +86,7 @@ const PyodideService = {
    * Register the actors, add observers.
    */
   init() {
-    if (!lazy.Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
+    if (!Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
       return;
     }
 
@@ -103,7 +103,7 @@ const PyodideService = {
       matches: ["resource://pyodide/pyodide.html"],
     });
 
-    lazy.Services.obs.addObserver(this, "interactions-exported");
+    Services.obs.addObserver(this, "interactions-exported");
     lazy.logConsole.debug("PyodideService init");
   },
 
@@ -229,10 +229,10 @@ const PyodideService = {
    *  Release the browser, remove observers.
    */
   uninit() {
-    if (!lazy.Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
+    if (!Services.prefs.getBoolPref("browser.companion.pyodide", false)) {
       return;
     }
     this._browser = null;
-    lazy.Services.obs.removeObserver(this, "interactions-exported");
+    Services.obs.removeObserver(this, "interactions-exported");
   },
 };

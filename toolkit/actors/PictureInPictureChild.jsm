@@ -18,6 +18,9 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/DeferredTask.jsm"
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 ChromeUtils.defineModuleGetter(
   lazy,
   "KEYBOARD_CONTROLS",
@@ -51,10 +54,6 @@ const { setTimeout, clearTimeout } = ChromeUtils.import(
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
-
-XPCOMUtils.defineLazyModuleGetters(lazy, {
-  AppConstants: "resource://gre/modules/AppConstants.jsm",
-});
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
@@ -675,7 +674,7 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
     });
     this.addMouseButtonListeners();
     state.isTrackingVideos = true;
-    if (lazy.AppConstants.PINEBUILD) {
+    if (AppConstants.PINEBUILD) {
       this.sendAsyncMessage(
         "PictureInPicture:StartTrackingMouseOverVideos",
         {}
@@ -716,7 +715,7 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       this.onMouseLeaveVideo(oldOverVideo);
     }
     state.isTrackingVideos = false;
-    if (lazy.AppConstants.PINEBUILD) {
+    if (AppConstants.PINEBUILD) {
       this.sendAsyncMessage("PictureInPicture:StopTrackingMouseOverVideos", {});
     }
   }

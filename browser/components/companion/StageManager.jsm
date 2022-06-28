@@ -11,13 +11,14 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
@@ -741,7 +742,7 @@ class InternalView {
       : workspaceId;
     this.#view = new View(this);
     this.#pinnedState = PINNED_STATE.NOT_PINNED;
-    this.#contentPrincipal = lazy.Services.scriptSecurityManager.createNullPrincipal(
+    this.#contentPrincipal = Services.scriptSecurityManager.createNullPrincipal(
       {}
     );
     this.#creationTime = Cu.now();
@@ -767,12 +768,12 @@ class InternalView {
       this.historyId = historyEntry.ID;
       this.cachedEntry = historyEntry;
 
-      this.url = lazy.Services.io.newURI(historyEntry.url);
+      this.url = Services.io.newURI(historyEntry.url);
       let originAttributes = lazy.E10SUtils.predictOriginAttributes({
         window,
         userContextId: workspaceId,
       });
-      this.#contentPrincipal = lazy.Services.scriptSecurityManager.createContentPrincipal(
+      this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
         this.url,
         originAttributes
       );
@@ -869,7 +870,7 @@ class InternalView {
       window: this.#window,
       userContextId: this.#workspaceId,
     });
-    this.#contentPrincipal = lazy.Services.scriptSecurityManager.createContentPrincipal(
+    this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
       this.url,
       originAttributes
     );
@@ -2280,7 +2281,7 @@ class StageManager extends EventTarget {
     super();
     this.#window = window;
 
-    if (!lazy.Services.appinfo.sessionHistoryInParent) {
+    if (!Services.appinfo.sessionHistoryInParent) {
       throw new Error(
         "Cannot function unless session history is in the parent."
       );

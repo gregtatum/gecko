@@ -10,13 +10,17 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
+const { EventEmitter } = ChromeUtils.import(
+  "resource://gre/modules/EventEmitter.jsm"
+);
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
-  EventEmitter: "resource://gre/modules/EventEmitter.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
@@ -25,7 +29,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
   return console.createInstance({
     prefix: "SessionManager",
-    maxLogLevel: lazy.Services.prefs.getBoolPref(
+    maxLogLevel: Services.prefs.getBoolPref(
       "browser.places.perwindowsessions.log",
       false
     )
@@ -117,14 +121,14 @@ const DEFAULT_WORKSPACE_ID = 0;
  *    - "CorruptDatabase"
  *        Generic database corruption.
  */
-const SessionManager = new (class SessionManager extends lazy.EventEmitter {
+const SessionManager = new (class SessionManager extends EventEmitter {
   init() {
     if (!lazy.perWindowEnabled) {
       return;
     }
-    lazy.Services.obs.addObserver(this, SESSION_CLOSED_OBJECTS_CHANGED, true);
-    lazy.Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
-    lazy.Services.obs.addObserver(this, IDLE_DAILY_TOPIC);
+    Services.obs.addObserver(this, SESSION_CLOSED_OBJECTS_CHANGED, true);
+    Services.obs.addObserver(this, SESSION_WRITE_COMPLETE_TOPIC, true);
+    Services.obs.addObserver(this, IDLE_DAILY_TOPIC);
 
     lazy.PlacesUtils.history.shutdownClient.jsclient.addBlocker(
       "SessionManager: flushing sessions",
@@ -145,9 +149,9 @@ const SessionManager = new (class SessionManager extends lazy.EventEmitter {
       return;
     }
     this.#pendingSaves.clear();
-    lazy.Services.obs.removeObserver(this, SESSION_CLOSED_OBJECTS_CHANGED);
-    lazy.Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
-    lazy.Services.obs.removeObserver(this, IDLE_DAILY_TOPIC);
+    Services.obs.removeObserver(this, SESSION_CLOSED_OBJECTS_CHANGED);
+    Services.obs.removeObserver(this, SESSION_WRITE_COMPLETE_TOPIC);
+    Services.obs.removeObserver(this, IDLE_DAILY_TOPIC);
   }
 
   /**

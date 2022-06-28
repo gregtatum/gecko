@@ -10,15 +10,17 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
+  "resource:///modules/UrlbarUtils.jsm"
+);
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   CompanionParent: "resource:///actors/CompanionParent.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
   UrlbarView: "resource:///modules/UrlbarView.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
 /**
@@ -48,7 +50,7 @@ const VIEW_TEMPLATE = {
 /**
  * A provider that returns the Top Sites shown on about:newtab.
  */
-class ProviderOpenCompanionSearch extends lazy.UrlbarProvider {
+class ProviderOpenCompanionSearch extends UrlbarProvider {
   constructor() {
     super();
     lazy.UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
@@ -67,7 +69,7 @@ class ProviderOpenCompanionSearch extends lazy.UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -91,8 +93,8 @@ class ProviderOpenCompanionSearch extends lazy.UrlbarProvider {
    */
   async startQuery(queryContext, addCallback) {
     const result = new lazy.UrlbarResult(
-      lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      lazy.UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+      UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
         input: queryContext.searchString,
         dynamicType: DYNAMIC_RESULT_TYPE,

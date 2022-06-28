@@ -6,6 +6,7 @@ const EXPORTED_SYMBOLS = ["OnlineServices"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { DeferredTask } = ChromeUtils.import(
   "resource://gre/modules/DeferredTask.jsm"
 );
@@ -20,7 +21,6 @@ const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   OAuth2: "resource:///modules/OAuth2.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   setInterval: "resource://gre/modules/Timer.jsm",
 });
 
@@ -623,7 +623,7 @@ class TestService {
     if (this.auth) {
       await this.auth.connect();
       if (
-        lazy.Services.prefs.getBoolPref(
+        Services.prefs.getBoolPref(
           "pinebuild.testing.OAuthErrorAccessToken",
           false
         )
@@ -666,7 +666,7 @@ function load() {
   }
   loaded = true;
 
-  let config = JSON.parse(lazy.Services.prefs.getCharPref(PREF_STORE, "[]"));
+  let config = JSON.parse(Services.prefs.getCharPref(PREF_STORE, "[]"));
 
   for (let service of config) {
     // In the past, services could have null auth due to a bug.
@@ -763,8 +763,8 @@ const OnlineServices = {
     // grab events for this service and put them in the cache
     let meetingResults = await service.getNextMeetings();
     this.data = this.data.concat(meetingResults);
-    lazy.Services.obs.notifyObservers(this.data, "companion-services-refresh");
-    lazy.Services.obs.notifyObservers(null, "companion-signin", service.app);
+    Services.obs.notifyObservers(this.data, "companion-services-refresh");
+    Services.obs.notifyObservers(null, "companion-signin", service.app);
     return service;
   },
 
@@ -789,8 +789,8 @@ const OnlineServices = {
     }
     ServiceInstances.delete(service);
     this.persist();
-    lazy.Services.obs.notifyObservers(this.data, "companion-services-refresh");
-    lazy.Services.obs.notifyObservers(null, "companion-signout", service.app);
+    Services.obs.notifyObservers(this.data, "companion-services-refresh");
+    Services.obs.notifyObservers(null, "companion-signout", service.app);
   },
 
   getServices(type) {
@@ -844,7 +844,7 @@ const OnlineServices = {
 
   persist() {
     let config = JSON.stringify(Array.from(ServiceInstances));
-    lazy.Services.prefs.setCharPref(PREF_STORE, config);
+    Services.prefs.setCharPref(PREF_STORE, config);
   },
 
   setCache(data) {
@@ -901,7 +901,7 @@ const OnlineServices = {
     if (eventResults.some(r => r.value != null)) {
       let events = eventResults.flatMap(r => r.value || []);
       this.setCache(events);
-      lazy.Services.obs.notifyObservers(events, "companion-services-refresh");
+      Services.obs.notifyObservers(events, "companion-services-refresh");
     }
 
     // Reset the auto refresh task to its full refresh time. This will also

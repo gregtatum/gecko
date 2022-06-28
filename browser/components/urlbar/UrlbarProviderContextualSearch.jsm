@@ -10,14 +10,16 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
+  "resource:///modules/UrlbarUtils.jsm"
+);
+
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
   UrlbarView: "resource:///modules/UrlbarView.jsm",
   UrlbarSearchUtils: "resource:///modules/UrlbarSearchUtils.jsm",
   OpenSearchEngine: "resource://gre/modules/OpenSearchEngine.jsm",
@@ -66,7 +68,7 @@ const VIEW_TEMPLATE = {
  * A provider that returns an option for using the search engine provided
  * by the active view if it utilizes OpenSearch.
  */
-class ProviderContextualSearch extends lazy.UrlbarProvider {
+class ProviderContextualSearch extends UrlbarProvider {
   constructor() {
     super();
     this.engines = new Map();
@@ -86,7 +88,7 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
    * The type of the provider.
    */
   get type() {
-    return lazy.UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -128,7 +130,7 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
       engine = this.engines.get(hostname);
     } else {
       // Strip www. to allow for partial matches when looking for an engine.
-      const [host] = lazy.UrlbarUtils.stripPrefixAndTrim(hostname, {
+      const [host] = UrlbarUtils.stripPrefixAndTrim(hostname, {
         stripWww: true,
       });
       engine = (
@@ -148,7 +150,7 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
       if (engine.name === defaultEngine.name) {
         return;
       }
-      const [url] = lazy.UrlbarUtils.getSearchQueryUrl(
+      const [url] = UrlbarUtils.getSearchQueryUrl(
         engine,
         queryContext.searchString
       );
@@ -191,8 +193,8 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
     shouldAddEngine = false,
   }) {
     const result = new lazy.UrlbarResult(
-      lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      lazy.UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+      UrlbarUtils.RESULT_TYPE.DYNAMIC,
+      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
         engine,
         icon,
@@ -223,7 +225,7 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
     return {
       icon: {
         attributes: {
-          src: result.payload.icon || lazy.UrlbarUtils.ICON.SEARCH_GLASS,
+          src: result.payload.icon || UrlbarUtils.ICON.SEARCH_GLASS,
         },
       },
       search: {
@@ -265,11 +267,11 @@ class ProviderContextualSearch extends lazy.UrlbarProvider {
         });
       });
       this.engines.set(result.payload.hostname, newEngine);
-      const [url] = lazy.UrlbarUtils.getSearchQueryUrl(
+      const [url] = UrlbarUtils.getSearchQueryUrl(
         newEngine,
         result.payload.input
       );
-      lazy.UrlbarUtils.openUrl(url);
+      UrlbarUtils.openUrl(url);
     }
   }
 }

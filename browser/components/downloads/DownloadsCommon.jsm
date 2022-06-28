@@ -34,11 +34,13 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
-  AppConstants: "resource://gre/modules/AppConstants.jsm",
   NetUtil: "resource://gre/modules/NetUtil.jsm",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   DownloadHistory: "resource://gre/modules/DownloadHistory.jsm",
@@ -885,7 +887,7 @@ DownloadsDataCtor.prototype = {
     // for which the end time is stored differently, as a Places annotation.
     download.endTime = Date.now();
 
-    if (lazy.AppConstants.PINEBUILD) {
+    if (AppConstants.PINEBUILD) {
       download.uuid = Services.uuid.generateUUID().toString();
     }
 
@@ -1010,7 +1012,7 @@ DownloadsDataCtor.prototype = {
       return;
     }
 
-    if (lazy.AppConstants.PINEBUILD) {
+    if (AppConstants.PINEBUILD) {
       const XUL_NS =
         "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
       let notification = browserWin.document.createElementNS(

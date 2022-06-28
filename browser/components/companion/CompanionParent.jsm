@@ -9,6 +9,10 @@ var EXPORTED_SYMBOLS = ["CompanionParent"];
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { PageDataSchema } = ChromeUtils.import(
+  "resource:///modules/pagedata/PageDataSchema.jsm"
+);
 
 const lazy = {};
 
@@ -18,13 +22,11 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
-  PageDataSchema: "resource:///modules/pagedata/PageDataSchema.jsm",
   PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   requestIdleCallback: "resource://gre/modules/Timer.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
   SnapshotGroups: "resource:///modules/SnapshotGroups.jsm",
-  Services: "resource://gre/modules/Services.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
   Snapshots: "resource:///modules/Snapshots.jsm",
   SnapshotSelector: "resource:///modules/SnapshotSelector.jsm",
@@ -36,7 +38,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "browser.companion.snapshots.selectByType",
   false
 );
-const workshopEnabled = lazy.Services.prefs.getBoolPref(
+const workshopEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled",
   false
 );
@@ -51,7 +53,7 @@ const PREFERRED_SNAPSHOT_FAVICON_WIDTH_PX = 16;
 // Defines pages that we force to show a certain snapshot type. The regular
 // expresions are applied to the entire url.
 const DOMAIN_TYPES = {
-  [lazy.PageDataSchema.DATA_TYPE.PRODUCT]: [
+  [PageDataSchema.DATA_TYPE.PRODUCT]: [
     /^https:\/\/www\.walmart\.com\//,
     /^https:\/\/www\.target\.com\//,
 
@@ -88,54 +90,36 @@ class CompanionParent extends JSWindowActorParent {
     this._cacheCleanupTimeout = null;
     this._cleanupCaches = this.cleanupCaches.bind(this);
 
-    lazy.Services.obs.addObserver(
+    Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-add-window"
     );
-    lazy.Services.obs.addObserver(
+    Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-remove-window"
     );
-    lazy.Services.obs.addObserver(
+    Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-tab-added"
     );
-    lazy.Services.obs.addObserver(
+    Services.obs.addObserver(
       this._observer,
       "browser-window-tracker-tab-removed"
     );
 
-    lazy.Services.obs.addObserver(
-      this._observer,
-      "companion-show-passwords-panel"
-    );
-    lazy.Services.obs.addObserver(this._observer, "companion-signin");
-    lazy.Services.obs.addObserver(this._observer, "companion-signout");
-    lazy.Services.obs.addObserver(this._observer, "companion-services-refresh");
-    lazy.Services.obs.addObserver(this._observer, "companion-submenu-change");
-    lazy.Services.obs.addObserver(
-      this._observer,
-      "oauth-refresh-token-received"
-    );
-    lazy.Services.obs.addObserver(
-      this._observer,
-      "oauth-access-token-received"
-    );
-    lazy.Services.obs.addObserver(this._observer, "oauth-access-token-error");
-    lazy.Services.obs.addObserver(
-      this._observer,
-      "places-snapshot-group-added"
-    );
-    lazy.Services.obs.addObserver(
-      this._observer,
-      "places-snapshot-group-updated"
-    );
-    lazy.Services.obs.addObserver(
-      this._observer,
-      "places-snapshot-group-deleted"
-    );
+    Services.obs.addObserver(this._observer, "companion-show-passwords-panel");
+    Services.obs.addObserver(this._observer, "companion-signin");
+    Services.obs.addObserver(this._observer, "companion-signout");
+    Services.obs.addObserver(this._observer, "companion-services-refresh");
+    Services.obs.addObserver(this._observer, "companion-submenu-change");
+    Services.obs.addObserver(this._observer, "oauth-refresh-token-received");
+    Services.obs.addObserver(this._observer, "oauth-access-token-received");
+    Services.obs.addObserver(this._observer, "oauth-access-token-error");
+    Services.obs.addObserver(this._observer, "places-snapshot-group-added");
+    Services.obs.addObserver(this._observer, "places-snapshot-group-updated");
+    Services.obs.addObserver(this._observer, "places-snapshot-group-deleted");
 
-    lazy.Services.prefs.addObserver(
+    Services.prefs.addObserver(
       "browser.companion.stagemanagerdebugging",
       this._setupStageManagerPrefObservers
     );
@@ -161,9 +145,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   setUpStageManagerDebuggingObservers() {
-    if (
-      lazy.Services.prefs.getBoolPref("browser.companion.stagemanagerdebugging")
-    ) {
+    if (Services.prefs.getBoolPref("browser.companion.stagemanagerdebugging")) {
       let hist = this.browsingContext.topChromeWindow.gStageManager;
       for (let event of [
         "ViewChanged",
@@ -202,62 +184,44 @@ class CompanionParent extends JSWindowActorParent {
       lazy.clearTimeout(this._cacheCleanupTimeout);
       this._cacheCleanupTimeout = null;
     }
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-add-window"
     );
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-remove-window"
     );
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-tab-added"
     );
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(
       this._observer,
       "browser-window-tracker-tab-removed"
     );
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(
       this._observer,
       "companion-show-passwords-panel"
     );
-    lazy.Services.obs.removeObserver(this._observer, "companion-signin");
-    lazy.Services.obs.removeObserver(this._observer, "companion-signout");
-    lazy.Services.obs.removeObserver(
-      this._observer,
-      "companion-services-refresh"
-    );
-    lazy.Services.obs.removeObserver(
-      this._observer,
-      "companion-submenu-change"
-    );
-    lazy.Services.obs.removeObserver(
-      this._observer,
-      "oauth-refresh-token-received"
-    );
-    lazy.Services.obs.removeObserver(
-      this._observer,
-      "oauth-access-token-received"
-    );
-    lazy.Services.obs.removeObserver(
-      this._observer,
-      "oauth-access-token-error"
-    );
-    lazy.Services.obs.removeObserver(
-      this._observer,
-      "places-snapshot-group-added"
-    );
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(this._observer, "companion-signin");
+    Services.obs.removeObserver(this._observer, "companion-signout");
+    Services.obs.removeObserver(this._observer, "companion-services-refresh");
+    Services.obs.removeObserver(this._observer, "companion-submenu-change");
+    Services.obs.removeObserver(this._observer, "oauth-refresh-token-received");
+    Services.obs.removeObserver(this._observer, "oauth-access-token-received");
+    Services.obs.removeObserver(this._observer, "oauth-access-token-error");
+    Services.obs.removeObserver(this._observer, "places-snapshot-group-added");
+    Services.obs.removeObserver(
       this._observer,
       "places-snapshot-group-updated"
     );
-    lazy.Services.obs.removeObserver(
+    Services.obs.removeObserver(
       this._observer,
       "places-snapshot-group-deleted"
     );
 
-    lazy.Services.prefs.removeObserver(
+    Services.prefs.removeObserver(
       "browser.companion.stagemanagerdebugging",
       this._setupStageManagerPrefObservers
     );
@@ -402,7 +366,7 @@ class CompanionParent extends JSWindowActorParent {
     );
     return new Promise(resolve => {
       service.getFaviconDataForPage(
-        lazy.Services.io.newURI(page),
+        Services.io.newURI(page),
         (uri, dataLength, data, mimeType) => {
           resolve({
             url: page,
@@ -791,7 +755,7 @@ class CompanionParent extends JSWindowActorParent {
 
   maybeGetStageManager() {
     if (
-      !lazy.Services.prefs.getBoolPref(
+      !Services.prefs.getBoolPref(
         "browser.companion.stagemanagerdebugging",
         false
       )
@@ -1086,7 +1050,7 @@ class CompanionParent extends JSWindowActorParent {
       newFavicons: this.consumeCachedFaviconsToSend(),
     });
 
-    lazy.Services.obs.notifyObservers(
+    Services.obs.notifyObservers(
       this.browsingContext.top.embedderElement.ownerGlobal,
       "companion-open"
     );
@@ -1156,7 +1120,7 @@ class CompanionParent extends JSWindowActorParent {
 
   _onOpenURL(message) {
     let { url } = message.data;
-    let uri = lazy.Services.io.newURI(url);
+    let uri = Services.io.newURI(url);
     if (!uri.scheme.startsWith("http")) {
       let extProtocolSvc = Cc[
         "@mozilla.org/uriloader/external-protocol-service;1"
@@ -1193,7 +1157,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.validateCompanionPref(name)) {
       return;
     }
-    lazy.Services.prefs.setCharPref(name, value);
+    Services.prefs.setCharPref(name, value);
   }
 
   _onSetBoolPref(message) {
@@ -1201,7 +1165,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.validateCompanionPref(name)) {
       return;
     }
-    lazy.Services.prefs.setBoolPref(name, value);
+    Services.prefs.setBoolPref(name, value);
   }
 
   _onSetIntPref(message) {
@@ -1209,7 +1173,7 @@ class CompanionParent extends JSWindowActorParent {
     if (!this.validateCompanionPref(name)) {
       return;
     }
-    lazy.Services.prefs.setIntPref(name, value);
+    Services.prefs.setIntPref(name, value);
   }
 
   _onSetStageManagerViewIndex(message) {
@@ -1257,19 +1221,11 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   _onAccountCreated(message) {
-    lazy.Services.obs.notifyObservers(
-      null,
-      "companion-signin",
-      message.data.type
-    );
+    Services.obs.notifyObservers(null, "companion-signin", message.data.type);
   }
 
   _onAccountDeleted(message) {
-    lazy.Services.obs.notifyObservers(
-      null,
-      "companion-signout",
-      message.data.type
-    );
+    Services.obs.notifyObservers(null, "companion-signout", message.data.type);
   }
 
   _onOpen() {
@@ -1282,7 +1238,7 @@ class CompanionParent extends JSWindowActorParent {
   }
 
   _onIsActiveWindow() {
-    return !!lazy.Services.focus.activeWindow;
+    return !!Services.focus.activeWindow;
   }
 
   _onSuggestedSnapshotsPainted(message) {
@@ -1292,7 +1248,7 @@ class CompanionParent extends JSWindowActorParent {
     gTimestampsRecorded.add(message.name);
 
     let { time, extraData } = message.data;
-    let processStart = lazy.Services.startup.getStartupInfo().process.getTime();
+    let processStart = Services.startup.getStartupInfo().process.getTime();
     let delta = time - processStart;
     Glean.pinebuild.suggestedSnapshotsPainted.setRaw(delta);
     Glean.pinebuild.suggestedSnapshotsCount.add(extraData.numberOfSnapshots);
@@ -1305,14 +1261,14 @@ class CompanionParent extends JSWindowActorParent {
     gTimestampsRecorded.add(message.name);
 
     let { time, extraData } = message.data;
-    let processStart = lazy.Services.startup.getStartupInfo().process.getTime();
+    let processStart = Services.startup.getStartupInfo().process.getTime();
     let delta = time - processStart;
     Glean.pinebuild.calendarPainted.setRaw(delta);
     Glean.pinebuild.calendarEventCount.add(extraData.numberOfEvents);
   }
 
   async _onBeginHistorySearch(message) {
-    const RESULT_LIMIT = lazy.Services.prefs.getIntPref(
+    const RESULT_LIMIT = Services.prefs.getIntPref(
       "browser.pinebuild.companion.history.max-results",
       50
     );
