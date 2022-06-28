@@ -976,6 +976,13 @@ body[flow-reset] #urlbar[open] #urlbar-background {
   opacity: 0;
 }
 
+@media (prefers-contrast) {
+  .confirmation {
+    color: WindowText;
+    background: Window;
+  }
+}
+
 @media not (prefers-contrast) {
   /* Switch to white fill when in flow-reset state, since the background is darker. */
   body[flow-reset] #companion-sidebar-button:not([checked]) > .toolbarbutton-icon {
