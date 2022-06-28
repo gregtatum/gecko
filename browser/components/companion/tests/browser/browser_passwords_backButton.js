@@ -15,7 +15,7 @@ add_task(async function testLoginsBackButton() {
     info("Navigating to companion browse menu");
     await helper.selectCompanionTab("browse");
 
-    await helper.openBrowseSubmenu("passwords", false);
+    await helper.openBrowseSubmenu("passwords");
 
     // We need to wait for the xul:browser that loads the passwords frame
     // to load.
@@ -132,8 +132,6 @@ add_task(async function testLoginsBackButtonKeyboardNavigation() {
             .querySelector("section-panel")
             .shadowRoot.querySelector(".back-button");
         });
-        EventUtils.synthesizeKey("KEY_Tab", {}, content);
-        EventUtils.synthesizeKey("KEY_Tab", {}, content);
         is(getFocusedElement(), backButton, "Back button should be focused");
         let browsePanelShown = ContentTaskUtils.waitForEvent(
           content.document.getElementById("companion-deck"),

@@ -54,7 +54,11 @@ add_task(async function test_focus_on_back() {
           .shadowRoot.querySelector(".back-button");
       });
       ok(backBtn, "Found back button");
-      backBtn.focus();
+      is(
+        getFocusedElement(),
+        backBtn,
+        "The back button is focused after navigating to browse submenu"
+      );
       let browsePanelShown = ContentTaskUtils.waitForEvent(
         content.document.getElementById("companion-deck"),
         "view-changed"
@@ -81,5 +85,7 @@ add_task(async function test_focus_on_back() {
         "The correct item is focused after going back to browse list"
       );
     });
+    // Reset the companion's state
+    await helper.reload();
   });
 });

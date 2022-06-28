@@ -54,17 +54,48 @@ function maybeInitializeUI() {
     document.getElementById("companion-deck").selectedViewName = "passwords";
   });
 
+  const companionDeck = document.getElementById("companion-deck");
+
   let goBack = () => {
-    const previousViewName = document.getElementById("companion-deck")
-      .selectedViewName;
+    const previousViewName = companionDeck.selectedViewName;
     document.dispatchEvent(new Event("browse-panel-hidden"));
-    document.getElementById("companion-deck").selectedViewName = "browse";
+    companionDeck.selectedViewName = "browse";
     const focusEl = document.querySelector(`button.${previousViewName}`);
     focusEl?.focus();
   };
 
   window.addEventListener("section-panel-back", goBack);
   window.addEventListener("Companion:BrowsePanel", goBack);
+
+  companionDeck.addEventListener("view-changed", () => {
+    // Clumsily wait for the iframes in the passwords and downloads
+    // browse submenu items to load, before focusing their back
+    // buttons. We would eventually like to do this in a cleaner, more
+    // reliable way (MR2-2770).
+    setTimeout(() => {
+      let currentView = document.querySelector(
+        `[name=${companionDeck.selectedViewName}][slot=selected]`
+      );
+      if (!currentView) {
+        return;
+      }
+      let backBtn;
+      if (currentView.attributes.name.value == "passwords") {
+        const passwordsFrame = document.getElementById(
+          "companion-login-browser"
+        );
+        const sectionPanel = passwordsFrame.contentDocument.querySelector(
+          "section-panel"
+        );
+        backBtn = sectionPanel.shadowRoot.querySelector("button.back-button");
+      } else {
+        backBtn = currentView.shadowRoot
+          ? currentView.shadowRoot.querySelector("button.back-button")
+          : currentView.querySelector("button.back-button");
+      }
+      backBtn?.focus();
+    }, 100);
+  });
 
   // When "browser.startup.launchOnOSLogin" is true, pinebuildBackground() will
   // initialize itself and our notification implementation, so we can rely on
