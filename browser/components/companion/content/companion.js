@@ -55,8 +55,12 @@ function maybeInitializeUI() {
   });
 
   let goBack = () => {
+    const previousViewName = document.getElementById("companion-deck")
+      .selectedViewName;
     document.dispatchEvent(new Event("browse-panel-hidden"));
     document.getElementById("companion-deck").selectedViewName = "browse";
+    const focusEl = document.querySelector(`button.${previousViewName}`);
+    focusEl?.focus();
   };
 
   window.addEventListener("section-panel-back", goBack);

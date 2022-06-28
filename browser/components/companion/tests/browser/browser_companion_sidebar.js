@@ -38,3 +38,48 @@ add_task(async function test_open_companion() {
     );
   });
 });
+
+/* Ensures that focus is maintained after hitting back button */
+add_task(async function test_focus_on_back() {
+  await CompanionHelper.whenReady(async helper => {
+    info("Navigating to companion browse menu");
+    await helper.selectCompanionTab("browse");
+
+    await helper.openBrowseSubmenu("sessions", true);
+
+    await helper.runCompanionTask(async () => {
+      const backBtn = await ContentTaskUtils.waitForCondition(() => {
+        return content.document
+          .querySelector("section-panel")
+          .shadowRoot.querySelector(".back-button");
+      });
+      ok(backBtn, "Found back button");
+      backBtn.focus();
+      let browsePanelShown = ContentTaskUtils.waitForEvent(
+        content.document.getElementById("companion-deck"),
+        "view-changed"
+      );
+      info("Click the back button once");
+      EventUtils.synthesizeKey("KEY_Enter", {}, content);
+      await browsePanelShown;
+      const sessionsBtn = content.document.querySelector(
+        `.browse button.sessions`
+      );
+      function getFocusedElement() {
+        let element = content.document.activeElement;
+        const getShadowRootFocus = e => {
+          if (e.shadowRoot) {
+            return getShadowRootFocus(e.shadowRoot.activeElement);
+          }
+          return e;
+        };
+        return getShadowRootFocus(element);
+      }
+      is(
+        getFocusedElement(),
+        sessionsBtn,
+        "The correct item is focused after going back to browse list"
+      );
+    });
+  });
+});

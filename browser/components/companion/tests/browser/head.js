@@ -519,6 +519,33 @@ class CompanionHelper {
     );
   }
 
+  /**
+   * Opens Browse submenu
+   *
+   * @param {String} submenuName Name of submenu to be used as selector (ex: passwords, sessions, etc)
+   * @param {Boolean} useKeyboard True/False value to indicate whether to simulate keyboard navigation or not
+   */
+  async openBrowseSubmenu(submenuName, useKeyboard) {
+    await this.runCompanionTask(
+      async (submenu, keyboard) => {
+        const deck = content.document.getElementById("companion-deck");
+        const submenuBtn = content.document.querySelector(
+          `.browse button.${submenu}`
+        );
+        ok(submenuBtn, `Found ${submenu} button`);
+        let submenuShown = ContentTaskUtils.waitForEvent(deck, "view-changed");
+        if (keyboard) {
+          submenuBtn.focus();
+          EventUtils.synthesizeKey("KEY_Enter", {}, content);
+        } else {
+          submenuBtn.click();
+        }
+        await submenuShown;
+      },
+      [submenuName, useKeyboard]
+    );
+  }
+
   runCompanionTask(taskFn, args = []) {
     return SpecialPowers.spawn(this.browser, args, taskFn);
   }

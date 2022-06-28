@@ -15,21 +15,7 @@ add_task(async function testLoginsBackButton() {
     info("Navigating to companion browse menu");
     await helper.selectCompanionTab("browse");
 
-    await helper.runCompanionTask(async () => {
-      info("Looking for passwords entry in the companion browse menu");
-      let passwordsEntry = content.document.querySelector(".passwords");
-      ok(
-        !ContentTaskUtils.is_hidden(passwordsEntry),
-        "Passwords option is visible"
-      );
-
-      let passwordsShown = ContentTaskUtils.waitForEvent(
-        content.document.getElementById("companion-deck"),
-        "view-changed"
-      );
-      passwordsEntry.click();
-      await passwordsShown;
-    });
+    await helper.openBrowseSubmenu("passwords", false);
 
     // We need to wait for the xul:browser that loads the passwords frame
     // to load.
@@ -118,22 +104,7 @@ add_task(async function testLoginsBackButtonKeyboardNavigation() {
   await CompanionHelper.whenReady(async helper => {
     info("Navigating to companion browse menu");
     await helper.selectCompanionTab("browse");
-    await helper.runCompanionTask(async () => {
-      info("Looking for passwords entry in the companion browse menu");
-      let passwordsEntry = content.document.querySelector(".passwords");
-      ok(
-        !ContentTaskUtils.is_hidden(passwordsEntry),
-        "Passwords option is visible"
-      );
-
-      let passwordsShown = ContentTaskUtils.waitForEvent(
-        content.document.getElementById("companion-deck"),
-        "view-changed"
-      );
-      passwordsEntry.focus();
-      EventUtils.synthesizeKey("KEY_Enter", {}, content);
-      await passwordsShown;
-    });
+    await helper.openBrowseSubmenu("passwords", true);
 
     // We need to wait for the xul:browser that loads the passwords frame
     // to load.
