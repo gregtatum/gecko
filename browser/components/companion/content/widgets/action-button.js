@@ -28,6 +28,7 @@ export class ActionButton extends MozLitElement {
         justify-content: center;
         width: fit-content;
         max-width: 62px;
+        cursor: pointer;
       }
 
       .action-button:focus-visible {

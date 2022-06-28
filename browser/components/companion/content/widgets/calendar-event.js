@@ -77,6 +77,13 @@ export class CalendarEvent extends MozLitElement {
         padding: 16px 8px;
       }
 
+      .event,
+      .event-link,
+      .event button,
+      .event a {
+        cursor: pointer;
+      }
+
       .conference-info {
         display: flex;
         align-items: center;
@@ -148,7 +155,6 @@ export class CalendarEvent extends MozLitElement {
         margin-inline: 0;
         margin: 4px 0;
         text-decoration: none;
-        cursor: default;
         min-height: auto;
         border-radius: 16px;
       }
