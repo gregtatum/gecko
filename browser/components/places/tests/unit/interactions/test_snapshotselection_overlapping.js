@@ -68,9 +68,7 @@ add_task(async function test_enable_overlapping() {
   snapshots = await snapshotPromise;
 
   // Only snapshots with overlapping interactions should be selected
-  await assertSnapshotList(snapshots, [
-    { url: TEST_URL2, source: "Overlapping" },
-  ]);
+  await assertSnapshotList(snapshots, [{ url: TEST_URL2 }]);
 });
 
 add_task(async function test_overlapping_with_scoring() {
@@ -91,7 +89,5 @@ add_task(async function test_overlapping_with_scoring() {
   selector.rebuild();
   snapshots = await snapshotPromise;
 
-  await assertSnapshotList(snapshots, [
-    { url: TEST_URL2, source: "Overlapping" },
-  ]);
+  await assertSnapshotList(snapshots, [{ url: TEST_URL2 }]);
 });

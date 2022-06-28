@@ -35,15 +35,11 @@ XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
  *   The recommended snapshot.
  * @property {number} score
  *   The score for this snapshot.
- * @property {string | undefined} source
- *   The source that provided the largest score for this snapshot.
  */
 
 /**
  * @typedef {object} RecommendationGroup
  *   A set of recommendations with an associated weight to apply to their scores.
- * @property {string} source
- *   The source of the group.
  * @property {Recommendation[]} recommendations
  *   The recommended snapshot.
  * @property {number} weight
@@ -108,8 +104,8 @@ const SnapshotScorer = new (class SnapshotScorer {
      *   The snapshot.
      * @property {number} snapshotScore
      *   The score generated from this snapshot.
-     * @property {Map<string, number>} sourceScore
-     *   The score from the sources of the recommendation.
+     * @property {number} sourceScore
+     *   The score from the source of the recommendation.
      */
 
     /**
@@ -121,7 +117,7 @@ const SnapshotScorer = new (class SnapshotScorer {
     let currentDate = this.#dateOverride ?? Date.now();
     let currentSessionUrls = selectionContext.getCurrentSessionUrls();
 
-    for (let { source, recommendations, weight } of recommendationGroups) {
+    for (let { recommendations, weight } of recommendationGroups) {
       for (let { snapshot, score } of recommendations) {
         if (
           selectionContext.filterAdult &&
@@ -133,8 +129,8 @@ const SnapshotScorer = new (class SnapshotScorer {
         let currentScore = combined.get(snapshot.url);
         if (currentScore) {
           // We've already generated the snapshot specific score, update the
-          // source specific scores.
-          currentScore.sourceScore.set(source, score * weight);
+          // source specific score.
+          currentScore.sourceScore += score * weight;
         } else {
           currentScore = {
             snapshot,
@@ -143,7 +139,7 @@ const SnapshotScorer = new (class SnapshotScorer {
               currentDate,
               currentSessionUrls
             ),
-            sourceScore: new Map([[source, score * weight]]),
+            sourceScore: score * weight,
           };
 
           combined.set(snapshot.url, currentScore);
@@ -155,26 +151,11 @@ const SnapshotScorer = new (class SnapshotScorer {
     for (let currentScore of combined.values()) {
       let recommendation = {
         snapshot: currentScore.snapshot,
-        score: currentScore.snapshotScore,
-        source: undefined,
+        score: currentScore.snapshotScore + currentScore.sourceScore,
       };
 
-      // Add up all the source scores and identify the largest.
-      let maxScore = null;
-      let source = null;
-      for (let [id, score] of currentScore.sourceScore) {
-        recommendation.score += score;
-
-        if (maxScore === null || maxScore < score) {
-          maxScore = score;
-          source = id;
-        }
-      }
-
-      recommendation.source = source;
-
       lazy.logConsole.debug(
-        `Scored ${recommendation.score} for ${recommendation.snapshot.url} from source ${recommendation.source}`
+        `Scored ${recommendation.score} for ${recommendation.snapshot.url}`
       );
 
       if (recommendation.score >= this.snapshotThreshold) {

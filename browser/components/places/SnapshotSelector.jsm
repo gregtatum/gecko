@@ -60,8 +60,6 @@ XPCOMUtils.defineLazyGetter(lazy, "logConsole", function() {
  *   The snapshot this recommendation relates to.
  * @property {number} score
  *   The score for the snapshot.
- * @property {string | undefined} source
- *   The source that provided the largest score for this snapshot.
  */
 
 /**
@@ -187,19 +185,19 @@ class SnapshotSelector extends EventEmitter {
   /**
    * Called internally when the set of snapshots has been generated.
    *
-   * @param {Recommendation[]} recommendations
+   * @param {Snapshot[]} snapshots
    */
-  #snapshotsGenerated(recommendations) {
+  #snapshotsGenerated(snapshots) {
     // If this instance has been destroyed then do nothing.
     if (!this.#task) {
       return;
     }
 
     lazy.logConsole.debug(
-      "Generated recommendations",
-      recommendations.map(s => s.snapshot.url)
+      "Generated snapshots",
+      snapshots.map(s => s.url)
     );
-    this.emit("snapshots-updated", recommendations);
+    this.emit("snapshots-updated", snapshots);
   }
 
   /**
@@ -236,21 +234,18 @@ class SnapshotSelector extends EventEmitter {
       return !context.filterAdult || !lazy.FilterAdult.isAdultUrl(snapshot.url);
     });
 
-    let recommendations = snapshots.map((snapshot, index) => ({
-      source: "recent",
-      score: snapshots.length - index,
-      snapshot,
-    }));
+    snapshots = lazy.SnapshotScorer.dedupeSnapshots(
+      snapshots.map(s => ({
+        snapshot: s,
+      }))
+    )
+      .slice(0, context.count)
+      .map(s => s.snapshot)
+      .slice();
 
-    recommendations = lazy.SnapshotScorer.dedupeSnapshots(
-      recommendations
-    ).slice(0, context.count);
+    lazy.PlacesUIUtils.insertTitleStartDiffs(snapshots);
 
-    lazy.PlacesUIUtils.insertTitleStartDiffs(
-      recommendations.map(s => s.snapshot)
-    );
-
-    this.#snapshotsGenerated(recommendations);
+    this.#snapshotsGenerated(snapshots);
   }
 
   /**
@@ -289,7 +284,7 @@ class SnapshotSelector extends EventEmitter {
             )
           );
 
-          return { source: key, recommendations, weight };
+          return { recommendations, weight };
         }
       )
     );
@@ -299,13 +294,13 @@ class SnapshotSelector extends EventEmitter {
       ...recommendationGroups
     );
 
-    recommendations = recommendations.slice(0, context.count);
+    let snapshots = recommendations
+      .slice(0, context.count)
+      .map(r => r.snapshot);
 
-    lazy.PlacesUIUtils.insertTitleStartDiffs(
-      recommendations.map(r => r.snapshot)
-    );
+    lazy.PlacesUIUtils.insertTitleStartDiffs(snapshots);
 
-    this.#snapshotsGenerated(recommendations);
+    this.#snapshotsGenerated(snapshots);
   }
 
   /**

@@ -213,7 +213,6 @@ add_task(async function test_scores() {
     let snapshots = await SnapshotScorer.combineAndScore(
       { getCurrentSessionUrls: () => sessionUrls },
       {
-        source: "foo",
         recommendations: [{ snapshot, score: data.sourceScore ?? 0 }],
         weight: 3.0,
       }
@@ -222,7 +221,6 @@ add_task(async function test_scores() {
     assertRecommendations(snapshots, [
       {
         url,
-        source: "foo",
         score: data.score,
       },
     ]);
@@ -249,7 +247,7 @@ add_task(async function test_score_threshold() {
 
   let snapshots = await SnapshotScorer.combineAndScore(
     { getCurrentSessionUrls: () => sessionUrls },
-    { source: "bar", recommendations: sourceRecommendations, weight: 3.0 }
+    { recommendations: sourceRecommendations, weight: 3.0 }
   );
 
   assertRecommendations(
@@ -258,7 +256,6 @@ add_task(async function test_score_threshold() {
     THRESHOLD_TESTS.map((t, i) => {
       return {
         url: `https://example.com/${i + SCORE_TESTS.length}`,
-        source: "bar",
         score: t.score,
       };
     }).filter(t => t.score > THRESHOLD)
