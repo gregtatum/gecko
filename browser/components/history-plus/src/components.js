@@ -207,7 +207,11 @@ function HistoryResults(props) {
     rows.map(({ url, title, description }) =>
       div(
         { className: "historyResultsRow" },
-        div({ className: "historyResultsUrl" }, url),
+        div(
+          { className: "historyResultsUrl" },
+          img({ src: "page-icon:" + url, className: "historyResultsFavicon" }),
+          DisplayURL(url)
+        ),
         a(
           { className: "historyResultsTitle", href: url, target: "_blank" },
           title || url
@@ -219,6 +223,13 @@ function HistoryResults(props) {
       )
     )
   );
+}
+
+/**
+ * @param {string} url
+ */
+function DisplayURL(url) {
+  return url.replace(/^https?:\/\//, "");
 }
 
 /**

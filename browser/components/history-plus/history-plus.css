@@ -6,7 +6,7 @@ body {
   position: absolute;
   inset: 0;
   padding: 40px;
-  font-size: 12px;
+  font-size: 1.36em;
 }
 
 .history {
@@ -37,23 +37,36 @@ input.historyInput {
 }
 
 .historyResultsRow {
-  margin: 32px 0;
+  margin: 38px 0;
   max-width: 652px;
 }
 
 .historyResultsUrl {
   margin: 4px 0;
-  font-size: 11px;
+  font-size: 14px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .historyResultsTitle {
   display: block;
-  font-size: 15px;
+  font-size: 21px;
   white-space: nowrap;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin: 5px 0;
+}
+
+.historyResultsFavicon {
+  width: 16px;
+  height: 16px;
+  margin-inline-end: 6px;
+}
+
+.historyResultsDescription {
+  line-height: 1.6;
 }
