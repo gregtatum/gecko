@@ -295,32 +295,9 @@ class GoogleService {
     if (!id || !type) {
       return null;
     }
-    let apiTarget;
-    switch (type) {
-      case "document":
-        apiTarget = new URL(
-          `https://docs.googleapis.com/v1/documents/${id}?fields=title`
-        );
-        break;
-      case "spreadsheets":
-        apiTarget = new URL(
-          `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=properties.title`
-        );
-        break;
-      case "presentation":
-        apiTarget = new URL(
-          `https://slides.googleapis.com/v1/presentations/${id}?fields=title`
-        );
-        break;
-      case "drive":
-      case "file":
-        apiTarget = new URL(
-          `https://www.googleapis.com/drive/v2/files/${id}?fields=name`
-        );
-        break;
-      default:
-        return null;
-    }
+    let apiTarget = new URL(
+      `https://www.googleapis.com/drive/v2/files/${id}?fields=title`
+    );
     let token = await this.getToken();
     let headers = {
       Authorization: `Bearer ${token}`,
@@ -333,14 +310,11 @@ class GoogleService {
     let results = await response.json();
 
     if (results.error) {
+      lazy.log.error(JSON.stringify(results));
       return null;
     }
 
     lazy.log.debug(JSON.stringify(results));
-
-    if (type == "spreadsheets") {
-      return results.properties.title;
-    }
 
     return results.title;
   }
