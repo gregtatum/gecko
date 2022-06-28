@@ -952,6 +952,9 @@ class CompanionParent extends JSWindowActorParent {
       this.snapshotSelector.updateDetailsAndRebuild({
         url: null,
         time: Date.now(),
+        sessionStartTime: lazy.SessionManager.getSessionStartTime(
+          this.browsingContext.topChromeWindow
+        ),
       });
       return;
     }
@@ -959,6 +962,9 @@ class CompanionParent extends JSWindowActorParent {
     this.snapshotSelector.updateDetailsAndRebuild({
       url: aLocationURI.spec,
       time: Date.now(),
+      sessionStartTime: lazy.SessionManager.getSessionStartTime(
+        this.browsingContext.topChromeWindow
+      ),
     });
 
     if (!lazy.selectByType) {
@@ -970,7 +976,6 @@ class CompanionParent extends JSWindowActorParent {
         if (regex.test(aLocationURI.spec)) {
           this._pageType = type;
           this.snapshotSelector.updateDetailsAndRebuild({ type });
-
           return;
         }
       }
@@ -1020,6 +1025,9 @@ class CompanionParent extends JSWindowActorParent {
       url: gBrowser.currentURI.spec,
       time: Date.now(),
       rebuildImmediately: true,
+      sessionStartTime: lazy.SessionManager.getSessionStartTime(
+        this.browsingContext.topChromeWindow
+      ),
     });
 
     gBrowser.addProgressListener(this);

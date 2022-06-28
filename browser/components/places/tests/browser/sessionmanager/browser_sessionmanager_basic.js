@@ -28,7 +28,22 @@ add_setup(async function() {
   });
 });
 
+let lastSessionStartTime = Date.now();
+function assertSessionStartTime(sessionWindow, hasSession) {
+  let lastValue = lastSessionStartTime;
+  lastSessionStartTime = SessionManager.getSessionStartTime(sessionWindow);
+  // We make so that the time should change at every test.
+  Assert.notEqual(lastValue, lastSessionStartTime);
+  if (!hasSession) {
+    Assert.deepEqual(lastSessionStartTime, undefined);
+  } else {
+    Assert.greater(lastSessionStartTime, 0);
+  }
+}
+
 add_task(async function test_register_session() {
+  assertSessionStartTime(win, false);
+
   dateCheckpoint = Date.now();
   Assert.ok(
     !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
@@ -56,6 +71,7 @@ add_task(async function test_register_session() {
     lastSavedAt: dateCheckpoint,
     data: {},
   });
+  assertSessionStartTime(win, true);
 });
 
 add_task(async function test_set_aside_session() {
@@ -80,6 +96,7 @@ add_task(async function test_set_aside_session() {
     0,
     "There should be no views in the global history."
   );
+  assertSessionStartTime(win, false);
 });
 
 let previousSessionGuid;
@@ -101,6 +118,7 @@ add_task(async function test_start_second_session() {
     previousSessionGuid,
     "Should have a different guid"
   );
+  assertSessionStartTime(win, true);
 });
 
 add_task(async function test_restore_first_session() {
@@ -118,4 +136,12 @@ add_task(async function test_restore_first_session() {
     TEST_URL,
     "Should have loaded the expected URL"
   );
+  assertSessionStartTime(win, true);
+});
+
+add_task(async function test_other_window() {
+  let win2 = await BrowserTestUtils.openNewBrowserWindow();
+  assertSessionStartTime(win2, false);
+  await promiseWindowClosedAndSessionSaved(win2);
+  assertSessionStartTime(win, true);
 });

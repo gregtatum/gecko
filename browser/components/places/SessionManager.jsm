@@ -176,6 +176,12 @@ const SessionManager = new (class SessionManager extends EventEmitter {
   #pendingSaves = new Set();
 
   /**
+   * @type {Map}
+   *   Maps session guids to their session start time.
+   */
+  #sessionStartTimes = new Map();
+
+  /**
    * Registers a new session for a window by allocating a UUID and registering
    * it with SessionStore.
    *
@@ -205,6 +211,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     // Write to the window first, whilst we're still in the synchronous part
     // to avoid re-entrancy issues.
     lazy.SessionStore.setCustomWindowValue(window, "SessionManagerGuid", guid);
+    this.#sessionStartTimes.set(guid, Date.now());
 
     try {
       // Save the session in the database, so that we have the guid saved.
@@ -228,6 +235,30 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       lazy.SessionStore.deleteCustomWindowValue(window, "SessionManagerGuid");
       this.emit("session-save-error", annotateDatabaseError(ex));
     }
+  }
+
+  /**
+   * Get current session start time.
+   * @param {DOMWindow} window
+   *  the window to get the session start time for.
+   * @returns {number}
+   *   The start time of the session, in milliseconds from the Unix epoch.
+   *   It is undefined if there's no active session.
+   *
+   * @note we can't just use SessionStore startTime because we're working with
+   * a unique large session, so that value never changes.
+   */
+  getSessionStartTime(window) {
+    let guid;
+    try {
+      guid = lazy.SessionStore.getCustomWindowValue(
+        window,
+        "SessionManagerGuid"
+      );
+    } catch (ex) {
+      // Window may not have a SessionStore entry.
+    }
+    return this.#sessionStartTimes.get(guid);
   }
 
   /**
@@ -264,6 +295,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
     // ready as soon as we need it.
     let loadDataPromise;
     if (restoreSessionGuid) {
+      this.#sessionStartTimes.set(restoreSessionGuid, Date.now());
       loadDataPromise = this.#loadSessionData(restoreSessionGuid);
     }
 
