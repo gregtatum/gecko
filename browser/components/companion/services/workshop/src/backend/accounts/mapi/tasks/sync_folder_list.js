@@ -98,7 +98,11 @@ export default TaskDefiner.defineSimpleTask([
         // calInfo.owner can be null: in this case we keep it.
         if (
           calInfo.owner &&
-          calInfo.owner.address !== account.accountDef.name
+          account.accountDef.identities.every(
+            identity =>
+              identity.name !== calInfo.owner.name &&
+              identity.address !== calInfo.owner.address
+          )
         ) {
           continue;
         }

@@ -12605,7 +12605,7 @@ var WorkshopBackend = (() => {
             const modifiedFolders = new Map();
             const observedFolderServerIds = new Set();
             for (const calInfo of results.value) {
-              if (calInfo.owner && calInfo.owner.address !== account.accountDef.name) {
+              if (calInfo.owner && account.accountDef.identities.every((identity) => identity.name !== calInfo.owner.name && identity.address !== calInfo.owner.address)) {
                 continue;
               }
               observedFolderServerIds.add(calInfo.id);
