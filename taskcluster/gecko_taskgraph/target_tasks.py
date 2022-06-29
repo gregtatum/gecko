@@ -705,12 +705,6 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
     def filter(task):
         platform = task.attributes.get("build_platform", "")
         if platform not in [
-            "win64",
-            "win64-shippable",
-            "linux64",
-            "linux64-shippable",
-            "macosx64",
-            "macosx64-shippable",
             "win64-pinebuild",
             "linux64-pinebuild",
             "macosx64-pinebuild",
