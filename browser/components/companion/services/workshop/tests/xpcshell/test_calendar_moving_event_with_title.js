@@ -111,7 +111,7 @@ const INITIAL_EVENTS = [
         url: "https://docs.google.com/document/d/special",
         docInfo: {
           type: "document",
-          titles: ["document: id is special-0", "document: id is special-1"],
+          titles: ["drive: id is special-0", "drive: id is special-1"],
         },
       },
     ],

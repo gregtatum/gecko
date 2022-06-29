@@ -165,7 +165,7 @@ const GAPI_DESCRIPTION_TEST = [
         url: "https://docs.google.com/document/d/foobar",
         docInfo: {
           type: "document",
-          title: "document: id is foobar",
+          title: "drive: id is foobar",
         },
       },
     ],
@@ -177,7 +177,7 @@ const GAPI_DESCRIPTION_TEST = [
         url: "https://docs.google.com/spreadsheets/d/raboof",
         docInfo: {
           type: "spreadsheets",
-          title: "spreadsheets: id is raboof",
+          title: "drive: id is raboof",
         },
       },
     ],
@@ -189,7 +189,7 @@ const GAPI_DESCRIPTION_TEST = [
         url: "https://docs.google.com/spreadsheets/u/1/d/boofar",
         docInfo: {
           type: "spreadsheets",
-          title: "spreadsheets: id is boofar",
+          title: "drive: id is boofar",
         },
       },
     ],

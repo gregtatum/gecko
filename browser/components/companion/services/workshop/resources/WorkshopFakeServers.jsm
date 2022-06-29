@@ -516,20 +516,8 @@ class GapiFakeServer extends BaseFakeServer {
         handler: this.unpaged(this.unpaged_gmail_feed),
       },
       {
-        // prefix for `https://docs.googleapis.com/v1/documents/${id}`
-        prefix: "/v1/documents/",
-        extraPathSegments: ["id"],
-        handler: this.unpaged(this.unpaged_document),
-      },
-      {
-        // prefix for `https://sheets.googleapis.com/v4/spreadsheets/${id}`
-        prefix: "/v4/spreadsheets/",
-        extraPathSegments: ["id"],
-        handler: this.unpaged(this.unpaged_spreadsheets),
-      },
-      {
-        // prefix for https://www.googleapis.com/drive/v3/files/${id}
-        prefix: "/drive/v3/files/",
+        // prefix for https://www.googleapis.com/drive/v2/files/${id}
+        prefix: "/drive/v2/files/",
         extraPathSegments: ["id"],
         handler: this.unpaged(this.unpaged_drive),
       },
@@ -652,7 +640,7 @@ class GapiFakeServer extends BaseFakeServer {
     throw new HttpError(400, "Only 'me' is implemented.");
   }
 
-  unpaged_document({ id }) {
+  unpaged_drive({ id }) {
     if (id === "invalid") {
       return {
         error: "Invalid id",
@@ -664,19 +652,7 @@ class GapiFakeServer extends BaseFakeServer {
       id = this.specialTitle;
     }
     return {
-      title: `document: id is ${id}`,
-    };
-  }
-
-  unpaged_spreadsheets({ id }) {
-    return {
-      properties: { title: `spreadsheets: id is ${id}` },
-    };
-  }
-
-  unpaged_drive({ id }) {
-    return {
-      name: `drive: id is ${id}`,
+      title: `drive: id is ${id}`,
     };
   }
 
