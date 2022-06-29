@@ -27,7 +27,7 @@ function searchString(state = "", action) {
         }
         search = (state.slice(0, index) + state.slice(end)).trim();
       }
-      return search + " site:" + action.site;
+      return (search + " site:" + action.site).trim() + " ";
     }
     default:
       return state;

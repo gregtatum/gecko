@@ -47,13 +47,22 @@ class TestBuildContentCache(MarionetteTestCase):
         for entry in entries:
             hash = hex(entry["url_hash"])[2:]
             url = entry["url"]
-            content_path = os.path.join("/Users/greg/dev/content-caching/data/cached", hash + "-" + urlparse(url).netloc + ".txt")
-            if os.path.exists(content_path):
-                print("Already Visited: ", entry["url"])
+
+            if not url.startswith("http"):
+                print("Not http or https: ", url)
                 continue
 
-            print("Loading: ", entry["url"])
-            self.marionette.navigate(entry["url"])
+            if url.startswith("http://127.0.0.1"):
+                print("Skipping localhost: ", url)
+                continue
+
+            content_path = os.path.join("/Users/greg/dev/content-caching/data/cached", hash + "-" + urlparse(url).netloc + ".txt")
+            if os.path.exists(content_path):
+                print("Already Visited: ", url)
+                continue
+
+            print("Loading: ", url)
+            self.marionette.navigate(url)
             time.sleep(1)
 
             with open(content_path, "w") as f:

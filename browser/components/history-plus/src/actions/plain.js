@@ -13,11 +13,10 @@
  */
 
 /**
- * @param {string} site
+ * There needs to be at least one action creator here.
  */
-export function addSiteToSearchString(site) {
+export function fakeAction() {
   return {
-    type: /** @type {const} */ ("add-site-to-search-string"),
-    site,
+    type: /** @type {const} */ ("fake-action"),
   };
 }

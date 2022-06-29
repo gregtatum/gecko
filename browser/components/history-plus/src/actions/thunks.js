@@ -4,6 +4,7 @@
  */
 
 // @ts-check
+import * as Selectors from "../selectors.js";
 import { sql, console } from "../utils.js";
 
 const { PlacesUtils } = ChromeUtils.import(
@@ -157,5 +158,27 @@ export function searchHistory(searchString) {
 
     dispatch(PlainInternal.setHistoryRows(historyRows));
     return historyRows;
+  };
+}
+
+/**
+ * @param {string} site
+ * @returns {HistoryPlus.Thunk<Promise<HistoryPlus.HistoryRow[]>>}
+ */
+export function addSiteToSearchString(site) {
+  return async (dispatch, getState) => {
+    const oldSearch = Selectors.getSearchString(getState());
+    const index = oldSearch.indexOf("site:");
+    let search = oldSearch;
+    if (index !== -1) {
+      let end = index + "site:".length;
+      for (; end < search.length; end++) {
+        if (search[end] === " " || search[end] === "\t") {
+          break;
+        }
+      }
+      search = (oldSearch.slice(0, index) + oldSearch.slice(end)).trim();
+    }
+    return dispatch(searchHistory((search + " site:" + site).trim() + " "));
   };
 }
