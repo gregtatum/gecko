@@ -109,7 +109,7 @@ async function showNotification(event) {
     // could be some surprises with multiple triggerings, so we may need to
     // change this to involve a pre-pass unless we address this in the backend
     // for workshop.)
-    tag: event.originalId || event.id,
+    tag: event?.originalId || event?.id,
   });
   notification.onclick = function(e) {
     e.preventDefault();
@@ -131,6 +131,9 @@ async function showNotification(event) {
 }
 
 function processEvents(events, now) {
+  if (!events || !events.length) {
+    return;
+  }
   logConsole.debug("processEvents, now:", now);
   logConsole.debug("processEvents removing timers:", notificationTimers.size);
   for (let timer of notificationTimers) {
