@@ -117,3 +117,61 @@ export function sql(strings, ...sqlStates) {
 
   return new SqlState(text);
 }
+
+/** @type {Console} */
+// @ts-ignore
+export const console = window.console.createInstance({
+  maxLogLevelPref: "browser.contentCache.logLevel",
+  prefix: "history-plus",
+});
+
+/**
+ * Create a more minimalist action logger.
+ * @param {HistoryPlus.Store} store
+ */
+export function reduxLogger(store) {
+  /**
+   * @param {(action: HistoryPlus.Action) => any} nextMiddleware
+   */
+  return function (nextMiddleware) {
+    /** @type {(action: HistoryPlus.Action) => any} */
+    return action => {
+      const style = "font-weight: bold; color: #fa0";
+      const prevState = store.getState();
+      const result = nextMiddleware(action);
+      const nextState = store.getState();
+      console.log(`[action] %c${action.type}`, style, {
+        action,
+        prevState,
+        nextState,
+        stack: (new Error().stack || "(no stack)").split("\n"),
+      });
+      return result;
+    };
+  };
+}
+
+/**
+ * Apply thunks in the redux middleware.
+ *
+ * @param {HistoryPlus.Store} store
+ */
+export function thunkMiddleware({ dispatch, getState }) {
+  /**
+   * @param {(action: HistoryPlus.Action) => any} nextMiddleware
+   */
+  return function (nextMiddleware) {
+    /**
+     * @param {any} actionOrThunk
+     */
+    return actionOrThunk => {
+      if (typeof actionOrThunk === "function") {
+        // This is a thunk, apply it.
+        return actionOrThunk(dispatch, getState);
+      }
+
+      // Apply the normal action.
+      return nextMiddleware(actionOrThunk);
+    };
+  };
+}

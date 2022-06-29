@@ -3,14 +3,27 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 // @ts-check
 
+const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+
 import { ReactDOM, React, Redux, ReactRedux } from "./src/vendor.js";
 import { reducers } from "./src/reducers.js";
-import * as actions from "./src/actions-plain.js";
 import { HistoryPlus } from "./src/components.js";
+import { reduxLogger, thunkMiddleware } from "./src/utils.js";
 
-const store = Redux.createStore(reducers);
+/** @type {any[]} */
+const middleware = [thunkMiddleware];
+if (Services.prefs.getCharPref("browser.contentCache.logLevel") === "All") {
+  // Only add the logger if it is required, since it fires for every action.
+  middleware.push(reduxLogger);
+}
 
-store.dispatch(actions.initializeStore());
+const store = Redux.createStore(reducers, Redux.applyMiddleware(...middleware));
+
+Object.assign(/** @type {any} */(window), {
+  store,
+  getState: store.getState,
+  dispatch: store.dispatch,
+});
 
 const root = document.querySelector("#root");
 if (!root) {

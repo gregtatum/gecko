@@ -5,4 +5,16 @@
 
 // @ts-check
 
-import { reselect } from "./vendor.js";
+/**
+ * @param {HistoryPlus.State} state
+ */
+export function getSearchString(state) {
+  return state.searchString;
+}
+
+/**
+ * @param {HistoryPlus.State} state
+ */
+export function getHistoryRows(state) {
+  return state.historyRows;
+}

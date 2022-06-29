@@ -7,8 +7,9 @@ browser.jar:
     content/browser/history-plus/index.html            (index.html)
     content/browser/history-plus/initializer.js        (initializer.js)
 
-    content/browser/history-plus/src/actions-plain.js  (src/actions-plain.js)
-    content/browser/history-plus/src/actions-thunk.js  (src/actions-thunk.js)
+    content/browser/history-plus/src/actions/index.js  (src/actions/index.js)
+    content/browser/history-plus/src/actions/plain.js  (src/actions/plain.js)
+    content/browser/history-plus/src/actions/thunks.js  (src/actions/thunks.js)
     content/browser/history-plus/src/components.js     (src/components.js)
     content/browser/history-plus/src/reducers.js       (src/reducers.js)
     content/browser/history-plus/src/selectors.js      (src/selectors.js)
