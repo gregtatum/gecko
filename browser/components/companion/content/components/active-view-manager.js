@@ -155,7 +155,8 @@ export default class ActiveViewManager extends window.MozHTMLElement {
       }
       case "UserAction:OpenPageActionMenu": {
         let view = event.detail.view;
-        this.#openPageActionPanel(event.composedTarget, view);
+        let triggerEvent = event.detail.triggerEvent;
+        this.#openPageActionPanel(event.composedTarget, view, triggerEvent);
         break;
       }
       case "UserAction:PinView": {
@@ -337,10 +338,12 @@ export default class ActiveViewManager extends window.MozHTMLElement {
    * Page Action panel creation and handling
    */
 
-  #openPageActionPanel(target, view) {
+  #openPageActionPanel(target, view, triggerEvent) {
     this.#pageActionView = view;
     let panel = this.#getPageActionPanel();
-    PanelMultiView.openPopup(panel, target, "after_end").catch(Cu.reportError);
+    PanelMultiView.openPopup(panel, target, {
+      triggerEvent,
+    }).catch(Cu.reportError);
   }
 
   #getPageActionPanel() {

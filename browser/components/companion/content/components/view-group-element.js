@@ -125,7 +125,7 @@ export default class ViewGroupElement extends MozLitElement {
     let e = new CustomEvent("UserAction:OpenPageActionMenu", {
       bubbles: true,
       composed: true,
-      detail: { view: this.activeView },
+      detail: { view: this.activeView, triggerEvent: event },
     });
     this.dispatchEvent(e);
     // We don't want this to get handled by the #onViewGroupSelected handler, since
@@ -250,6 +250,7 @@ export default class ViewGroupElement extends MozLitElement {
         </div>
         <button class="page-action-button" ?hidden=${!this.active}
                 @click="${this.#pageActionButtonClicked}"
+                @keypress="${this.#pageActionButtonClicked}"
                 data-l10n-id="page-action-menu-button"
         ></button>
       </div>

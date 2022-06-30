@@ -1427,8 +1427,11 @@ var PinebuildTestUtils = {
       !BrowserTestUtils.is_hidden(pageActionMenuButton),
       "Page Action Menu button is visible."
     );
-    EventUtils.synthesizeMouseAtCenter(pageActionMenuButton, {}, win);
+    pageActionMenuButton.focus();
+    EventUtils.synthesizeKey(" ", {}, win);
     await popupshown;
+    let firstToolbarButton = pageActionMenuPanel.querySelector("toolbarbutton");
+    Assert.equal(Services.focus.focusedElement, firstToolbarButton);
     return pageActionMenuPanel;
   },
 
