@@ -258,11 +258,17 @@
                           oncommand="gSync.openSyncedTabsPanel();"
                           hidden="true" data-l10n-id="menu-history-synced-tabs"/>
                 <menuitem id="historyRestoreLastSession"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           command="Browser:RestoreLastSession" data-l10n-id="menu-history-restore-last-session"/>
                 <menuitem id="hiddenTabsMenu"
                           oncommand="gTabsPanel.showHiddenTabsPanel(event);"
                           hidden="true" data-l10n-id="menu-history-hidden-tabs"/>
                 <menu id="historyUndoMenu"
+#ifdef PINEBUILD
+                      hidden="true"
+#endif
                       disabled="true" data-l10n-id="menu-history-undo-menu">
                   <menupopup id="historyUndoPopup"
 #ifndef XP_MACOSX
