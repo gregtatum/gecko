@@ -249,9 +249,11 @@
 
     --urlbar-companionlink-hover-bgcolor: var(--colors-lavender-20);
     --urlbar-companionlink-hover-border: .5px solid var(--colors-lavender-70);
-    --urlbar-companionlink-active-bgcolor: var(--colors-lavender-20);
-    --urlbar-companionlink-active-border: .5px solid var(--colors-teal-90);
-    --urlbar-companionlink-active-outline: 1.5px solid var(--colors-teal-90);
+    --urlbar-companionlink-selected-bgcolor: var(--colors-lavender-20);
+    --urlbar-companionlink-selected-border: .5px solid var(--colors-teal-90);
+    --urlbar-companionlink-selected-outline: 1.5px solid var(--colors-teal-90);
+    --urlbar-companionlink-active-bgcolor: var(--colors-lavender-40);
+    --urlbar-companionlink-active-border: .5px solid var(--colors-lavender-70);
   }
 }
 

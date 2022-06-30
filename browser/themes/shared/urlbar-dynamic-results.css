@@ -378,10 +378,16 @@
   border: var(--urlbar-companionlink-hover-border);
 }
 
-.urlbarView-row[dynamicType=companionSearchLink] > .urlbarView-row-inner[selected] {
+.urlbarView-row[dynamicType=companionSearchLink]:active > .urlbarView-row-inner[selected] {
   background: var(--urlbar-companionlink-active-bgcolor);
-  border: var(--urlbar-companionlink-active-border);
-  outline: var(--urlbar-companionlink-active-outline);
+  border: var(--urlbar-companionlink-hover-border);
+  outline: none;
+}
+
+.urlbarView-row[dynamicType=companionSearchLink] > .urlbarView-row-inner[selected] {
+  background: var(--urlbar-companionlink-selected-bgcolor);
+  border: var(--urlbar-companionlink-selected-border);
+  outline: var(--urlbar-companionlink-selected-outline);
 }
 }
 /** endif **/
