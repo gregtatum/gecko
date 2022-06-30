@@ -1205,7 +1205,12 @@ class CompanionParent extends JSWindowActorParent {
   async _onGetEventLinkTitle(message) {
     let { url } = message.data;
     let page = await lazy.PlacesUtils.history.fetch(url);
-    return page ? page.title : url;
+    if (!page || !page.title) {
+      // We have to throw so the promise rejects for the
+      // until in lit to work properly.
+      throw new Error("No title or empty title");
+    }
+    return page.title;
   }
 
   _onConnectService(message) {

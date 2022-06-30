@@ -625,6 +625,7 @@ class CalendarEventWrapper extends CalendarEvent {
       this._cachedDocumentTitles.set(url, title);
       return title;
     }
+    // This is needed so the until works properly
     throw new Error("Couldn't get a better document title");
   }
 
