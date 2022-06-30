@@ -202,6 +202,7 @@ class _Interactions {
       }
     }
     Services.obs.addObserver(this, DOMWINDOW_OPENED_TOPIC, true);
+    Services.obs.addObserver(this, "places-snapshots-added", true);
     lazy.idleService.addIdleObserver(this, lazy.pageViewIdleTime);
     this.#initialized = true;
   }
@@ -501,6 +502,17 @@ class _Interactions {
       case DOMWINDOW_OPENED_TOPIC:
         this.#onWindowOpen(subject);
         break;
+      case "places-snapshots-added":
+        // For manually created snapshots we want to flush interactions to disk
+        // asap, so that heuristics can use them.
+        data = JSON.parse(data);
+        if (
+          data.some(d => d.userPersisted != lazy.Snapshots.USER_PERSISTED.NO)
+        ) {
+          lazy.logConsole.debug("User added some snapshots");
+          this.#updateInteraction();
+        }
+        break;
       case "idle":
         lazy.logConsole.debug("User went idle");
         // We save the state of the current interaction when we are notified
@@ -668,6 +680,7 @@ class InteractionsStore {
     );
     if (this.#timer) {
       lazy.clearTimeout(this.#timer);
+      this.#timer = undefined;
       this.#timerResolve();
       this.#interactions.clear();
     }
@@ -727,6 +740,9 @@ class InteractionsStore {
 
     // Reset the buffer.
     let interactions = this.#interactions;
+    if (!interactions.size) {
+      return;
+    }
     // Don't clear() this, since that would also clear interactions.
     this.#interactions = new Map();
 

@@ -844,3 +844,6 @@ data-reporting-notification-message = { -brand-short-name } automatically sends 
 data-reporting-notification-button =
     .label = Choose What I Share
     .accesskey = C
+
+# Label for the indicator shown in the private browsing window titlebar.
+private-browsing-indicator-label = Private browsing

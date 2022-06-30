@@ -117,6 +117,8 @@ const PRIVATE_BROWSING_PERMS = {
 
 const L10N_ID_MAPPING = {
   "theme-disabled-heading": "theme-disabled-heading2",
+  "colorway-collection-independent-voices-subheading":
+    "colorway-collection-independent-voices-subheading2",
 };
 
 function getL10nIdMapping(id) {
@@ -3238,7 +3240,7 @@ class ColorwayClosetCard extends HTMLElement {
       document.l10n.setAttributes(colorwayPreviewHeading, l10nId.title);
       document.l10n.setAttributes(
         colorwayPreviewSubHeading,
-        `${l10nId.title}-subheading`
+        getL10nIdMapping(`${l10nId.title}-subheading`)
       );
     }
 
@@ -3258,16 +3260,16 @@ class ColorwayClosetCard extends HTMLElement {
     card.querySelector(".addon-icon").hidden = true;
 
     let preview = card.querySelector(".card-heading-image");
-    // TODO: Bug 1772855 - set preview.src for colorways card preview
-    preview.hidden = false;
-
-    let colorwayExpiryDateSpan = card.querySelector(
-      "#colorways-expiry-date > span"
-    );
-
     const collection = BuiltInThemes.findActiveColorwayCollection?.();
     if (collection) {
-      const { expiry } = collection;
+      const { cardImagePath, expiry } = collection;
+      if (cardImagePath) {
+        preview.src = cardImagePath;
+      }
+
+      let colorwayExpiryDateSpan = card.querySelector(
+        "#colorways-expiry-date > span"
+      );
       document.l10n.setAttributes(
         colorwayExpiryDateSpan,
         "colorway-collection-expiry-date-span",
@@ -3275,13 +3277,13 @@ class ColorwayClosetCard extends HTMLElement {
           expiryDate: expiry.getTime(),
         }
       );
-    }
 
-    let colorwaysButton = card.querySelector("[action='open-colorways']");
-    colorwaysButton.hidden = false;
-    colorwaysButton.onclick = () => {
-      ColorwayClosetOpener.openModal();
-    };
+      let colorwaysButton = card.querySelector("[action='open-colorways']");
+      colorwaysButton.hidden = false;
+      colorwaysButton.onclick = () => {
+        ColorwayClosetOpener.openModal();
+      };
+    }
   }
 }
 customElements.define("colorways-card", ColorwayClosetCard);

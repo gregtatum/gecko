@@ -631,6 +631,9 @@ pref("browser.search.separatePrivateDefault.ui.banner.max", 0);
 // Enables the display of the Mozilla VPN banner in private browsing windows
 pref("browser.privatebrowsing.vpnpromourl", "https://vpn.mozilla.org/?utm_source=firefox-browser&utm_medium=firefox-%CHANNEL%-browser&utm_campaign=private-browsing-vpn-link");
 
+// Enables the new private browsing indicator.
+pref("browser.privatebrowsing.enable-new-indicator", false);
+
 // Whether the user is opted-in to privacy segmentation.
 pref("browser.privacySegmentation.enabled", false);
 
@@ -1402,7 +1405,6 @@ pref("services.sync.prefs.sync.media.autoplay.default", true);
 pref("services.sync.prefs.sync.media.eme.enabled", true);
 pref("services.sync.prefs.sync.media.videocontrols.picture-in-picture.video-toggle.enabled", true);
 pref("services.sync.prefs.sync.network.cookie.cookieBehavior", true);
-pref("services.sync.prefs.sync.network.cookie.lifetimePolicy", true);
 pref("services.sync.prefs.sync.network.cookie.thirdparty.sessionOnly", true);
 pref("services.sync.prefs.sync.permissions.default.image", true);
 pref("services.sync.prefs.sync.pref.downloads.disable_button.edit_actions", true);
@@ -1784,20 +1786,18 @@ pref("browser.ping-centre.log", false);
 // Enable GMP support in the addon manager.
 pref("media.gmp-provider.enabled", true);
 
-#ifdef NIGHTLY_BUILD
-// Enable Dynamic First-Party Isolation in Nightly.
+// Enable Dynamic First-Party Isolation by default.
 pref("network.cookie.cookieBehavior", 5 /* BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN */);
-#else
-// Enable blocking access to storage from tracking resources by default.
-pref("network.cookie.cookieBehavior", 4 /* BEHAVIOR_REJECT_TRACKER */);
-#endif
 
 // Whether to show the section in preferences which allows users to opt-in to
 // Total Cookie Protection (dFPI) in standard mode.
 pref("privacy.restrict3rdpartystorage.rollout.preferences.TCPToggleInStandard", false);
 
-// Target URL for the learn more link of the TCP in standard mode section.
+// Target URL for the learn more link of the TCP in standard mode rollout section.
 pref("privacy.restrict3rdpartystorage.rollout.preferences.learnMoreURLSuffix", "total-cookie-protection");
+
+// Target URL for the learn more link of the TCP in standard mode section.
+pref("privacy.restrict3rdpartystorage.preferences.learnMoreURLSuffix", "total-cookie-protection");
 
 // Enable Dynamic First-Party Isolation in the private browsing mode.
 pref("network.cookie.cookieBehavior.pbmode", 5 /* BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN */);
@@ -1870,7 +1870,7 @@ pref("browser.contentblocking.reject-and-isolate-cookies.preferences.ui.enabled"
 //     "cookieBehaviorPBM4": cookie behaviour BEHAVIOR_REJECT_TRACKER
 //     "cookieBehaviorPBM5": cookie behaviour BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN
 // One value from each section must be included in the browser.contentblocking.features.strict pref.
-pref("browser.contentblocking.features.strict", "tp,tpPrivate,cookieBehavior5,cookieBehaviorPBM5,cm,fp,stp,lvl2,rp,rpTop,ocsp,qps");
+pref("browser.contentblocking.features.strict", "tp,tpPrivate,cm,fp,stp,lvl2,rp,rpTop,ocsp,qps");
 
 // Hide the "Change Block List" link for trackers/tracking content in the custom
 // Content Blocking/ETP panel. By default, it will not be visible. There is also
@@ -2578,13 +2578,8 @@ pref("devtools.responsive.reloadNotification.enabled", true);
 pref("devtools.responsive.touchSimulation.enabled", false);
 // The user agent of the viewport.
 pref("devtools.responsive.userAgent", "");
-
-// Show the custom user agent input only in Nightly.
-#if defined(NIGHTLY_BUILD)
-  pref("devtools.responsive.showUserAgentInput", true);
-#else
-  pref("devtools.responsive.showUserAgentInput", false);
-#endif
+// Show the custom user agent input by default
+pref("devtools.responsive.showUserAgentInput", true);
 
 // Show tab debug targets for This Firefox (on by default for local builds).
 #ifdef MOZILLA_OFFICIAL

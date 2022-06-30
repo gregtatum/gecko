@@ -9524,12 +9524,11 @@ bool PresShell::DoReflow(nsIFrame* target, bool aInterruptible,
 
   nsDocShell* docShell =
       static_cast<nsDocShell*>(GetPresContext()->GetDocShell());
-  RefPtr<TimelineConsumers> timelines = TimelineConsumers::Get();
-  bool isTimelineRecording = timelines && timelines->HasConsumer(docShell);
+  bool isTimelineRecording = TimelineConsumers::HasConsumer(docShell);
 
   if (isTimelineRecording) {
-    timelines->AddMarkerForDocShell(docShell, "Reflow",
-                                    MarkerTracingType::START);
+    TimelineConsumers::AddMarkerForDocShell(docShell, "Reflow",
+                                            MarkerTracingType::START);
   }
 
   Maybe<uint64_t> innerWindowID;
@@ -9732,7 +9731,8 @@ bool PresShell::DoReflow(nsIFrame* target, bool aInterruptible,
   }
 
   if (isTimelineRecording) {
-    timelines->AddMarkerForDocShell(docShell, "Reflow", MarkerTracingType::END);
+    TimelineConsumers::AddMarkerForDocShell(docShell, "Reflow",
+                                            MarkerTracingType::END);
   }
 
   return !interrupted;

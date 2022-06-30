@@ -11,6 +11,7 @@
 #include "mozilla/layers/ImageBridgeChild.h"
 #include "mozilla/layers/ISurfaceAllocator.h"  // for GfxMemoryImageReporter
 #include "mozilla/layers/CompositorBridgeChild.h"
+#include "mozilla/layers/RemoteTextureMap.h"
 #include "mozilla/webrender/RenderThread.h"
 #include "mozilla/webrender/WebRenderAPI.h"
 #include "mozilla/webrender/webrender_ffi.h"
@@ -1289,6 +1290,7 @@ void gfxPlatform::InitLayersIPC() {
     }
 #endif
     if (!gfxConfig::IsEnabled(Feature::GPU_PROCESS) && UseWebRender()) {
+      RemoteTextureMap::Init();
       wr::RenderThread::Start(GPUProcessManager::Get()->AllocateNamespace());
       image::ImageMemoryReporter::InitForWebRender();
     }
@@ -1320,6 +1322,7 @@ void gfxPlatform::ShutdownLayersIPC() {
     layers::ImageBridgeChild::ShutDown();
     // This could be running on either the Compositor or the Renderer thread.
     gfx::CanvasManagerParent::Shutdown();
+    RemoteTextureMap::Shutdown();
     // This has to happen after shutting down the child protocols.
     layers::CompositorThreadHolder::Shutdown();
     image::ImageMemoryReporter::ShutdownForWebRender();
@@ -2376,10 +2379,19 @@ void gfxPlatform::InitAcceleration() {
           gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_HARDWARE_VIDEO_DECODING,
                                     discardFailureId, &status))) {
     if (status == nsIGfxInfo::FEATURE_STATUS_OK ||
+#ifdef MOZ_WAYLAND
+        StaticPrefs::media_ffmpeg_vaapi_enabled() ||
+#endif
         StaticPrefs::media_hardware_video_decoding_force_enabled_AtStartup()) {
       sLayersSupportsHardwareVideoDecoding = true;
     }
   }
+
+#ifdef MOZ_WAYLAND
+  sLayersSupportsHardwareVideoDecoding =
+      gfxPlatformGtk::GetPlatform()->InitVAAPIConfig(
+          sLayersSupportsHardwareVideoDecoding);
+#endif
 
   sLayersAccelerationPrefsInitialized = true;
 
@@ -2692,6 +2704,43 @@ void gfxPlatform::InitWebRenderConfig() {
     gfxVars::SetHwDecodedVideoZeroCopy(true);
   }
 
+  bool reuseDecoderDevice = false;
+  if (StaticPrefs::gfx_direct3d11_reuse_decoder_device_AtStartup()) {
+    reuseDecoderDevice = true;
+
+    if (reuseDecoderDevice &&
+        !StaticPrefs::
+            gfx_direct3d11_reuse_decoder_device_force_enabled_AtStartup()) {
+      nsCString failureId;
+      int32_t status;
+      const nsCOMPtr<nsIGfxInfo> gfxInfo = components::GfxInfo::Service();
+      if (NS_FAILED(gfxInfo->GetFeatureStatus(
+              nsIGfxInfo::FEATURE_REUSE_DECODER_DEVICE, failureId, &status))) {
+        FeatureState& feature =
+            gfxConfig::GetFeature(Feature::REUSE_DECODER_DEVICE);
+        feature.DisableByDefault(FeatureStatus::BlockedNoGfxInfo,
+                                 "gfxInfo is broken",
+                                 "FEATURE_FAILURE_WR_NO_GFX_INFO"_ns);
+        reuseDecoderDevice = false;
+      } else {
+        if (status != nsIGfxInfo::FEATURE_ALLOW_ALWAYS) {
+          FeatureState& feature =
+              gfxConfig::GetFeature(Feature::REUSE_DECODER_DEVICE);
+          feature.DisableByDefault(FeatureStatus::Blocked,
+                                   "Blocklisted by gfxInfo", failureId);
+          reuseDecoderDevice = false;
+        }
+      }
+    }
+  }
+
+  if (reuseDecoderDevice) {
+    FeatureState& feature =
+        gfxConfig::GetFeature(Feature::REUSE_DECODER_DEVICE);
+    feature.EnableByDefault();
+    gfxVars::SetReuseDecoderDevice(true);
+  }
+
   if (Preferences::GetBool("gfx.webrender.flip-sequential", false)) {
     if (UseWebRender() && gfxVars::UseWebRenderANGLE()) {
       gfxVars::SetUseWebRenderFlipSequentialWin(true);
@@ -2738,7 +2787,9 @@ void gfxPlatform::InitHardwareVideoConfig() {
   nsCString failureId;
 
   FeatureState& featureVP8 = gfxConfig::GetFeature(Feature::VP8_HW_DECODE);
+#ifndef MOZ_WIDGET_GTK
   featureVP8.EnableByDefault();
+#endif
 
   if (!IsGfxInfoStatusOkay(nsIGfxInfo::FEATURE_VP8_HW_DECODE, &message,
                            failureId)) {
@@ -2748,8 +2799,9 @@ void gfxPlatform::InitHardwareVideoConfig() {
   gfxVars::SetUseVP8HwDecode(featureVP8.IsEnabled());
 
   FeatureState& featureVP9 = gfxConfig::GetFeature(Feature::VP9_HW_DECODE);
+#ifndef MOZ_WIDGET_GTK
   featureVP9.EnableByDefault();
-
+#endif
   if (!IsGfxInfoStatusOkay(nsIGfxInfo::FEATURE_VP9_HW_DECODE, &message,
                            failureId)) {
     featureVP9.Disable(FeatureStatus::Blocklisted, message.get(), failureId);
@@ -3464,6 +3516,7 @@ bool gfxPlatform::FallbackFromAcceleration(FeatureStatus aStatus,
 void gfxPlatform::DisableGPUProcess() {
   gfxVars::SetRemoteCanvasEnabled(false);
 
+  RemoteTextureMap::Init();
   if (gfxVars::UseWebRender()) {
     // We need to initialize the parent process to prepare for WebRender if we
     // did not end up disabling it, despite losing the GPU process.

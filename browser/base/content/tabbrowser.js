@@ -767,7 +767,7 @@
           .reduce((a, b) => a.concat(b))
           .filter(
             anim =>
-              anim instanceof CSSAnimation &&
+              CSSAnimation.isInstance(anim) &&
               (anim.animationName === "tab-throbber-animation" ||
                 anim.animationName === "tab-throbber-animation-rtl") &&
               anim.playState === "running"
@@ -1448,7 +1448,7 @@
         // last clicked when switching back to that tab
         if (
           newFocusedElement &&
-          (newFocusedElement instanceof HTMLAnchorElement ||
+          (HTMLAnchorElement.isInstance(newFocusedElement) ||
             newFocusedElement.getAttributeNS(
               "http://www.w3.org/1999/xlink",
               "type"
@@ -5880,7 +5880,7 @@
             return;
           }
 
-          let targetIsWindow = event.target instanceof Window;
+          let targetIsWindow = Window.isInstance(event.target);
 
           // We're about to open a modal dialog, so figure out for which tab:
           // If this is a same-process modal dialog, then we're given its DOM

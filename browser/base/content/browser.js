@@ -570,6 +570,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   true
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "gPrivateBrowsingNewIndicatorEnabled",
+  "browser.privatebrowsing.enable-new-indicator",
+  false
+);
+
 customElements.setElementCreationCallback("translation-notification", () => {
   Services.scriptloader.loadSubScript(
     "chrome://browser/content/translation-notification.js",
@@ -1634,7 +1641,7 @@ var gBrowserInit = {
       return this._tabToAdopt;
     }
 
-    if (window.arguments && window.arguments[0] instanceof window.XULElement) {
+    if (window.arguments && window.XULElement.isInstance(window.arguments[0])) {
       this._tabToAdopt = window.arguments[0];
 
       // Clear the reference of the tab being adopted from the arguments.
@@ -2515,7 +2522,7 @@ var gBrowserInit = {
       //                      window (for this case, all other arguments are
       //                      ignored).
       let uri = window.arguments?.[0];
-      if (!uri || uri instanceof window.XULElement) {
+      if (!uri || window.XULElement.isInstance(uri)) {
         return null;
       }
 
@@ -3353,7 +3360,7 @@ function BrowserPageInfo(
   browsingContext,
   browser
 ) {
-  if (documentURL instanceof HTMLDocument) {
+  if (HTMLDocument.isInstance(documentURL)) {
     Deprecated.warning(
       "Please pass the location URL instead of the document " +
         "to BrowserPageInfo() as the first argument.",
@@ -7169,9 +7176,9 @@ function hrefAndLinkNodeForClickEvent(event) {
   function isHTMLLink(aNode) {
     // Be consistent with what nsContextMenu.js does.
     return (
-      (aNode instanceof HTMLAnchorElement && aNode.href) ||
-      (aNode instanceof HTMLAreaElement && aNode.href) ||
-      aNode instanceof HTMLLinkElement
+      (HTMLAnchorElement.isInstance(aNode) && aNode.href) ||
+      (HTMLAreaElement.isInstance(aNode) && aNode.href) ||
+      HTMLLinkElement.isInstance(aNode)
     );
   }
 
@@ -7411,7 +7418,7 @@ function middleMousePaste(event) {
     }
   });
 
-  if (event instanceof Event) {
+  if (Event.isInstance(event)) {
     event.stopPropagation();
   }
 }
@@ -8737,6 +8744,13 @@ var gPrivateBrowsingUI = {
       "privatebrowsingmode",
       PrivateBrowsingUtils.permanentPrivateBrowsing ? "permanent" : "temporary"
     );
+    // If enabled, show the new private browsing indicator with label.
+    // This will hide the old indicator.
+    docElement.toggleAttribute(
+      "privatebrowsingnewindicator",
+      gPrivateBrowsingNewIndicatorEnabled
+    );
+
     gBrowser.updateTitlebar();
 
     if (PrivateBrowsingUtils.permanentPrivateBrowsing) {
