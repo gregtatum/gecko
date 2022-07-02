@@ -133,6 +133,15 @@ export default class ViewGroupElement extends MozLitElement {
     event.stopPropagation();
   }
 
+  #pageActionButtonKeypressed(event) {
+    if (event.key != " " && event.key != "Enter") {
+      return;
+    }
+
+    this.#pageActionButtonClicked(event);
+    event.preventDefault();
+  }
+
   /**
    * Returns the View that the majority of the ViewGroup component
    * represents.
@@ -250,7 +259,7 @@ export default class ViewGroupElement extends MozLitElement {
         </div>
         <button class="page-action-button" ?hidden=${!this.active}
                 @click="${this.#pageActionButtonClicked}"
-                @keypress="${this.#pageActionButtonClicked}"
+                @keypress="${this.#pageActionButtonKeypressed}"
                 data-l10n-id="page-action-menu-button"
         ></button>
       </div>

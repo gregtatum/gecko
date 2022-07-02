@@ -343,6 +343,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     let panel = this.#getPageActionPanel();
     PanelMultiView.openPopup(panel, target, {
       triggerEvent,
+      position: "after_end",
     }).catch(Cu.reportError);
   }
 
