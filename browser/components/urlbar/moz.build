@@ -54,7 +54,7 @@ EXTRA_JS_MODULES += [
 
 if CONFIG["PINEBUILD"]:
     EXTRA_JS_MODULES += [
-        "UrlbarProviderQuickActions.jsm",
+        "UrlbarProviderPinebuildQuickActions.jsm",
         "UrlbarProviderRecentSearches.jsm",
         "UrlbarProviderTopSitesButtons.jsm",
     ]

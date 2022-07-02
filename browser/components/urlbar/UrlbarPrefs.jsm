@@ -248,7 +248,7 @@ const PREF_URLBAR_DEFAULTS = new Map([
   ["suggest.topsites", true],
 
   // Whether results will include QuickActions.
-  ["suggest.quickactions", AppConstants.PINEBUILD],
+  ["suggest.pinebuildquickactions", AppConstants.PINEBUILD],
 
   // JSON'ed array of blocked quick suggest URL digests.
   ["quicksuggest.blockedDigests", ""],

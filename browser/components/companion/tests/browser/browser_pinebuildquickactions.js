@@ -1,8 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
-const { UrlbarProviderQuickActionsFilter } = ChromeUtils.import(
-  "resource:///modules/UrlbarProviderQuickActions.jsm"
+const { UrlbarProviderPinebuildQuickActionsFilter } = ChromeUtils.import(
+  "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm"
 );
 
 XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
@@ -28,7 +28,7 @@ async function validateQuickAction(action) {
       const result = await UrlbarTestUtils.getDetailsOfResultAt(win, 1);
       is(
         result.dynamicType,
-        "quickActions",
+        "pinebuildquickactions",
         "Second Urlbar result is a quick action."
       );
 
@@ -53,7 +53,7 @@ async function assertActionOpensUrl(url, win) {
 add_task(async function test_basic() {
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
     await CompanionHelper.whenReady(async helper => {
-      UrlbarProviderQuickActionsFilter.addAction("test", {
+      UrlbarProviderPinebuildQuickActionsFilter.addAction("test", {
         title: "Test Action",
         label: "testing",
         icon: "chrome://global/skin/icons/settings.svg",

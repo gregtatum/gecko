@@ -5,8 +5,8 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = [
-  "UrlbarProviderQuickActionsFilter",
-  "UrlbarProviderQuickActionsEmpty",
+  "UrlbarProviderPinebuildQuickActionsFilter",
+  "UrlbarProviderPinebuildQuickActionsEmpty",
 ];
 
 const { XPCOMUtils } = ChromeUtils.import(
@@ -100,8 +100,8 @@ const hasConnectedAccount = accountType => {
 };
 
 // These prefs are relative to the `browser.urlbar` branch.
-const ENABLED_PREF = "suggest.quickactions";
-const DYNAMIC_TYPE_NAME = "quickActions";
+const ENABLED_PREF = "suggest.pinebuildquickactions";
+const DYNAMIC_TYPE_NAME = "pinebuildquickactions";
 
 const MAX_RESULTS = 5;
 
@@ -802,5 +802,5 @@ class KeywordTree {
  */
 class ProviderQuickActionsFilter extends ProviderQuickActionsBase {}
 
-var UrlbarProviderQuickActionsFilter = new ProviderQuickActionsFilter();
-var UrlbarProviderQuickActionsEmpty = new ProviderQuickActionsEmpty();
+var UrlbarProviderPinebuildQuickActionsFilter = new ProviderQuickActionsFilter();
+var UrlbarProviderPinebuildQuickActionsEmpty = new ProviderQuickActionsEmpty();

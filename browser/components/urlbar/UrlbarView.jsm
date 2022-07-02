@@ -1922,8 +1922,8 @@ class UrlbarView {
           }
           break;
         case UrlbarUtils.RESULT_TYPE.DYNAMIC:
-          if (row.result.providerName == "quickActions") {
-            return { id: "urlbar-group-quickactions" };
+          if (row.result.providerName == "pinebuildquickactions") {
+            return { id: "urlbar-group-pinebuildquickactions" };
           }
           break;
       }

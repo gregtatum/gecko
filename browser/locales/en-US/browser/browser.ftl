@@ -550,7 +550,7 @@ urlbar-group-firefox-suggest =
 urlbar-group-recent-searches =
   .label = Recent Searches
 
-urlbar-group-quickactions =
+urlbar-group-pinebuildquickactions =
   .label = Quick Actions
 
 # A label shown above the search suggestions group in the urlbar results. It

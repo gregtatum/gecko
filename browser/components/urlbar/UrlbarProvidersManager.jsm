@@ -72,10 +72,10 @@ var localProviderModules = {
 };
 
 if (AppConstants.PINEBUILD) {
-  localProviderModules.UrlbarProviderQuickActionsEmpty =
-    "resource:///modules/UrlbarProviderQuickActions.jsm";
-  localProviderModules.UrlbarProviderQuickActionsFilter =
-    "resource:///modules/UrlbarProviderQuickActions.jsm";
+  localProviderModules.UrlbarProviderPinebuildQuickActionsEmpty =
+    "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm";
+  localProviderModules.UrlbarProviderPinebuildQuickActionsFilter =
+    "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm";
   localProviderModules.UrlbarProviderTopSitesButtons =
     "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
   localProviderModules.UrlbarProviderRecentSearches =
