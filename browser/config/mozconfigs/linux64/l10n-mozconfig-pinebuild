@@ -1,7 +1,7 @@
+ac_add_options --enable-pinebuild
+
 ac_add_options --enable-update-channel=${MOZ_UPDATE_CHANNEL}
-if test "${MOZ_UPDATE_CHANNEL}" = "nightly-pine"; then
-  ac_add_options --with-branding=browser/branding/nightly-pinebuild
-elif test "${MOZ_UPDATE_CHANNEL}" = "beta-pine"; then
+if test "${MOZ_UPDATE_CHANNEL}" = "beta-pine"; then
   ac_add_options --with-branding=browser/branding/beta-pinebuild
 fi
 

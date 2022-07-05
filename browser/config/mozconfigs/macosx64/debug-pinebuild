@@ -8,6 +8,6 @@ export MOZILLA_OFFICIAL=1
 # Package js shell.
 export MOZ_PACKAGE_JSSHELL=1
 
-ac_add_options --with-branding=browser/branding/nightly-pinebuild
+ac_add_options --enable-pinebuild
 
 . "$topsrcdir/build/mozconfig.common.override"

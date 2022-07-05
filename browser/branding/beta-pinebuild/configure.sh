@@ -9,8 +9,6 @@ else
   MOZ_APP_PROFILE="Mozilla/Flowstate"
 fi
 MOZ_MACBUNDLE_ID=mr2demo
-BROWSER_CHROME_URL=chrome://browser/content/browser-pinebuild.xhtml
-PINEBUILD=1
 
 MOZ_HANDLER_CLSID="8f28155f-2622-4d18-9b9a-9b219ca1028b"
 MOZ_IHANDLERCONTROL_IID="7c539645-6db6-43ec-8b21-6b55a3816a01"

@@ -2,9 +2,9 @@
 . "$topsrcdir/browser/config/mozconfigs/win64-aarch64/common-win64"
 . "$topsrcdir/browser/config/mozconfigs/win64-aarch64/common-opt"
 
-if test "${MOZ_UPDATE_CHANNEL}" = "nightly-pine"; then
-  ac_add_options --with-branding=browser/branding/nightly-pinebuild
-elif test "${MOZ_UPDATE_CHANNEL}" = "beta-pine"; then
+ac_add_options --enable-pinebuild
+
+if test "${MOZ_UPDATE_CHANNEL}" = "beta-pine"; then
   ac_add_options --with-branding=browser/branding/beta-pinebuild
 fi
 
