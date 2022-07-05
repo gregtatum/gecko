@@ -97,6 +97,7 @@ class PinnedViews extends MozLitElement {
       />
       <div
         id="pinned-views"
+        role="tablist"
         ?hidden=${!this.viewGroups.length && !this.dragging}
         ?hasviews=${this.viewGroups.length}
         ?dragging=${this.dragging}
@@ -111,6 +112,7 @@ class PinnedViews extends MozLitElement {
               <view-group
                 tabindex="0"
                 exportparts="domain, history"
+                role="tab"
                 ?active=${viewGroup.includes(this.activeView)}
                 .viewGroup=${viewGroup}
                 .activeView=${this.activeView}

@@ -135,7 +135,7 @@ export default class River extends MozLitElement {
         data-l10n-args='{ "count": ${this.overflowedViews.length} }'
         ?hidden=${!this.overflowedViews.length}
       ></toolbarbutton>
-      <div id="river" ?containsActive=${containsActive}>
+      <div id="river" ?containsActive=${containsActive} role="tablist">
         <div
           class="view-groups-wrapper"
           ?topisactive=${topViewGroup?.includes(this.activeView)}
@@ -148,6 +148,7 @@ export default class River extends MozLitElement {
                 ?top=${viewGroup === topViewGroup}
                 exportparts="domain, history"
                 tabindex="0"
+                role="tab"
                 ?active=${viewGroup.includes(this.activeView)}
                 .viewGroup=${viewGroup}
                 .activeView=${this.activeView}
