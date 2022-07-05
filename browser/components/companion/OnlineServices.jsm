@@ -35,8 +35,6 @@ XPCOMUtils.defineLazyGetter(lazy, "log", () => {
   });
 });
 
-Cu.importGlobalProperties(["fetch"]);
-
 const PREF_LOGLEVEL = "browser.companion.loglevel";
 
 // Fetch calendar events every five minutes.
