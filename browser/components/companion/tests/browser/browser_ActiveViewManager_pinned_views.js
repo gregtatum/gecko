@@ -34,4 +34,37 @@ add_task(async function test_no_top_view() {
     !viewGroups[0].hasAttribute("top"),
     "Should not have the 'top' attribute."
   );
+  gStageManager.reset();
+});
+
+/**
+ * Test that pinning multiple Views from the same domain does not group
+ * them.
+ */
+add_task(async function test_never_group_pinned_views() {
+  const TEST_URL_1 = "https://example.com/";
+  const TEST_URL_2 = "https://example.com/browser/browser/";
+
+  let [view1, view2] = await PinebuildTestUtils.loadViews([
+    TEST_URL_1,
+    TEST_URL_2,
+  ]);
+  gStageManager.setViewPinnedState(view1, true);
+  gStageManager.setViewPinnedState(view2, true);
+
+  Assert.ok(view1.pinned, "View 1 should now be pinned.");
+  Assert.ok(view2.pinned, "View 2 should now be pinned.");
+
+  let viewGroupsEls = await PinebuildTestUtils.getPinnedViewGroups();
+  Assert.equal(viewGroupsEls.length, 2, "There should be 2 ViewGroups");
+  Assert.equal(
+    viewGroupsEls[0].viewGroup.length,
+    1,
+    "There is only 1 View in the ViewGroup"
+  );
+  Assert.equal(
+    viewGroupsEls[1].viewGroup.length,
+    1,
+    "There is only 1 View in the ViewGroup"
+  );
 });

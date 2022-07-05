@@ -441,6 +441,10 @@ class ViewGroup {
       }
     }
 
+    if (pinning) {
+      return false;
+    }
+
     // If either of the View icons are null, we'll still let them group
     // if they're same origin. We'll have a chance to reconsider the grouping
     // once the favicon finishes loading.
