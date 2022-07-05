@@ -460,6 +460,7 @@ task-priority:
         'mozilla-esr.*': 'very-high'
         'mozilla-beta': 'high'
         'mozilla-central': 'medium'
+        'pine-stable': 'medium'
         'pine': 'medium'
         'autoland': 'low'
         'mozilla-inbound': 'low'
@@ -656,7 +657,7 @@ workers:
 mac-notarization:
     mac-behavior:
         by-project:
-            pine:
+            pine(|-stable):
                 by-shippable:
                     "true": mac_notarize
                     default: mac_sign_and_pkg

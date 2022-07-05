@@ -53,6 +53,7 @@ SIGNING_SCOPE_ALIAS_TO_PROJECT = [
             "comm-central",
             "oak",
             "pine",
+            "pine-stable",
         },
     ],
     [
@@ -101,6 +102,7 @@ BEETMOVER_SCOPE_ALIAS_TO_PROJECT = [
             "comm-central",
             "oak",
             "pine",
+            "pine-stable",
         },
     ],
     [
@@ -156,6 +158,7 @@ BALROG_SCOPE_ALIAS_TO_PROJECT = [
             "comm-central",
             "oak",
             "pine",
+            "pine-stable",
         },
     ],
     [

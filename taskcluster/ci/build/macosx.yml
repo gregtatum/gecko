@@ -203,7 +203,7 @@ macosx64-pinebuild/debug:
             - builds/releng_base_mac_64_cross_builds.py
         custom-build-variant-cfg: cross-debug
         mozconfig-variant: debug-pinebuild
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     use-sccache: true
     fetches:
         toolchain:
@@ -460,7 +460,7 @@ macosx64-x64-pinebuild/opt:
         extra-config:
             stage_platform: macosx64-pinebuild
         mozconfig-variant: pinebuild
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     fetches:
         toolchain:
             - linux64-cctools-port
@@ -499,7 +499,7 @@ macosx64-aarch64-pinebuild/opt:
             stage_platform: macosx64-aarch64-pinebuild
             mozconfig_platform: macosx64-aarch64
         mozconfig-variant: pinebuild
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     fetches:
         toolchain:
             - linux64-cctools-port
@@ -525,7 +525,7 @@ macosx64-pinebuild/opt:
         platform: osx-cross-pinebuild/opt
         symbol: B
         tier: 1
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     worker:
         max-run-time: 1800
     run:

@@ -420,7 +420,7 @@ linux64-pinebuild/debug:
         mozconfig-variant: debug-pinebuild
         tooltool-downloads: public
         need-xvfb: true
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     use-sccache: true
     fetches:
         toolchain:
@@ -627,7 +627,7 @@ linux64-pinebuild/opt:
         tooltool-downloads: public
         need-xvfb: true
         mozconfig-variant: pinebuild
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     fetches:
         toolchain:
             - linux64-binutils

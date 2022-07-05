@@ -1382,7 +1382,7 @@ win64-pinebuild/opt:
                 LD_PRELOAD: "/builds/worker/fetches/liblowercase/liblowercase.so"
                 LOWERCASE_DIRS: "/builds/worker/fetches/vs"
         mozconfig-variant: pinebuild
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     fetches:
         toolchain:
             - linux64-binutils
@@ -1421,7 +1421,7 @@ win64-pinebuild/debug:
         max-run-time: 7200
         env:
             MOZ_AUTOMATION_PACKAGE_TESTS: "1"
-    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine']
+    run-on-projects: ['mozilla-central', 'mozilla-beta', 'pine', 'pine-stable']
     run:
         options: [append-env-variables-from-configs]
         actions: [get-secrets, build]
@@ -1980,7 +1980,7 @@ win64-aarch64-pinebuild/opt:
                 LD_PRELOAD: "/builds/worker/fetches/liblowercase/liblowercase.so"
                 LOWERCASE_DIRS: "/builds/worker/fetches/vs"
         mozconfig-variant: pinebuild
-    run-on-projects: ['pine']
+    run-on-projects: ['pine', 'pine-stable']
     fetches:
         toolchain:
             - linux64-binutils

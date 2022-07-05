@@ -91,6 +91,10 @@ PER_PROJECT_PARAMETERS = {
         "target_tasks_method": "pine_tasks",
         "release_type": "nightly-pine",
     },
+    "pine-stable": {
+        "target_tasks_method": "pine_tasks",
+        "release_type": "nightly-pine",
+    },
     "kaios": {
         "target_tasks_method": "kaios_tasks",
     },

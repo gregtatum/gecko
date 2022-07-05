@@ -96,12 +96,14 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - pine
+          - pine-stable
           - maple
       when:
           by-project:
               # 10pm PDT, after Pacific, before Europe.
               # Also triggerable via hook.
               pine: [{hour: 5, minute: 0}]
+              pine-stable: []  # never (hook only)
               maple: []  # never (hook only)
 
     - name: ship-geckoview
@@ -145,6 +147,7 @@ jobs:
           - mozilla-esr102
           - elm
           - pine
+          - pine-stable
       # For all non m-c jobs we just run once daily matching the 10 UTC
       # nightly which is designed to align with searchfox's AWS cron
       # jobs (for legacy reasons) rather than trying to align with

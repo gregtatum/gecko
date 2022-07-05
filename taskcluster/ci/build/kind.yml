@@ -50,7 +50,10 @@ job-defaults:
                         pinebuild: nightly-pine
                         default: nightly
                 nightly-oak: nightly-oak
-                nightly-pine: nightly-pine
+                nightly-pine:
+                    by-project:
+                        pine: nightly-pine
+                        pine-stable: nightly-pine-stable
                 beta:
                     by-shipping-product:
                         devedition: aurora
