@@ -6,6 +6,8 @@
 // This is a UA widget. It runs in per-origin UA widget scope,
 // to be loaded by UAWidgetsChild.jsm.
 
+let console;
+
 this.TextRecognitionWidget = class {
   /**
    * @param {ShadowRoot} shadowRoot
@@ -28,6 +30,9 @@ this.TextRecognitionWidget = class {
     this.isInitialized = false;
     /** @type {null | number} */
     this.lastCanvasStyleWidth = null;
+
+    console = this.window.console;
+    console.log("!!! constructor");
   }
 
   /*
@@ -41,127 +46,131 @@ this.TextRecognitionWidget = class {
   }
 
   positionSpans() {
-    if (!this.shadowRoot.firstChild) {
-      return;
-    }
-    this.lazilyInitialize();
+    try {
+      if (!this.shadowRoot.firstChild) {
+        return;
+      }
+      this.lazilyInitialize();
 
-    /** @type {HTMLDivElement} */
-    const div = this.shadowRoot.firstChild;
-    const canvas = div.querySelector("canvas");
-    const spans = div.querySelectorAll("span");
+      /** @type {HTMLDivElement} */
+      const div = this.shadowRoot.firstChild;
+      const canvas = div.querySelector("canvas");
+      const spans = div.querySelectorAll("span");
 
-    // TODO Bug 1770438 - The <img> element does not currently let child elements be
-    // sized relative to the size of the containing <img> element. It would be better
-    // to teach the <img> element how to do this. For the prototype, do the more expensive
-    // operation of getting the bounding client rect, and handle the positioning manually.
-    const imgRect = this.element.getBoundingClientRect();
-    div.style.width = imgRect.width + "px";
-    div.style.height = imgRect.height + "px";
-    canvas.style.width = imgRect.width + "px";
-    canvas.style.height = imgRect.height + "px";
+      // TODO Bug 1770438 - The <img> element does not currently let child elements be
+      // sized relative to the size of the containing <img> element. It would be better
+      // to teach the <img> element how to do this. For the prototype, do the more expensive
+      // operation of getting the bounding client rect, and handle the positioning manually.
+      const imgRect = this.element.getBoundingClientRect();
+      div.style.width = imgRect.width + "px";
+      div.style.height = imgRect.height + "px";
+      canvas.style.width = imgRect.width + "px";
+      canvas.style.height = imgRect.height + "px";
 
-    // The ctx is only available when redrawing the canvas. This is operation is only
-    // done when necessary, as it can be expensive.
-    /** @type {null | CanvasRenderingContext2D} */
-    let ctx = null;
+      // The ctx is only available when redrawing the canvas. This is operation is only
+      // done when necessary, as it can be expensive.
+      /** @type {null | CanvasRenderingContext2D} */
+      let ctx = null;
 
-    if (
-      // The canvas hasn't been drawn to yet.
-      this.lastCanvasStyleWidth === null ||
-      // Only redraw when the image has grown 25% larger. This percentage was chosen
-      // as it visually seemed to work well, with the canvas never appearing blurry
-      // when manually testing it.
-      imgRect.width > this.lastCanvasStyleWidth * 1.25
-    ) {
-      const dpr = this.window.devicePixelRatio;
-      canvas.width = imgRect.width * dpr;
-      canvas.height = imgRect.height * dpr;
-      this.lastCanvasStyleWidth = imgRect.width;
+      if (
+        // The canvas hasn't been drawn to yet.
+        this.lastCanvasStyleWidth === null ||
+        // Only redraw when the image has grown 25% larger. This percentage was chosen
+        // as it visually seemed to work well, with the canvas never appearing blurry
+        // when manually testing it.
+        imgRect.width > this.lastCanvasStyleWidth * 1.25
+      ) {
+        const dpr = this.window.devicePixelRatio;
+        canvas.width = imgRect.width * dpr;
+        canvas.height = imgRect.height * dpr;
+        this.lastCanvasStyleWidth = imgRect.width;
 
-      ctx = canvas.getContext("2d");
-      ctx.scale(dpr, dpr);
-      ctx.fillStyle = "#00000088";
-      ctx.fillRect(0, 0, imgRect.width, imgRect.height);
+        ctx = canvas.getContext("2d");
+        ctx.scale(dpr, dpr);
+        ctx.fillStyle = "#00000088";
+        ctx.fillRect(0, 0, imgRect.width, imgRect.height);
 
-      ctx.beginPath();
-    }
-
-    for (const span of spans) {
-      let spanRect = this.spanRects.get(span);
-      if (!spanRect) {
-        // This only needs to happen once.
-        spanRect = span.getBoundingClientRect();
-        this.spanRects.set(span, spanRect);
+        ctx.beginPath();
       }
 
-      const points = span.dataset.points.split(",").map(p => Number(p));
-      // Use the points in the string, e.g.
-      // "0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273"
-      //  0         1       2         3        4        5        6        7
-      //  ^ bottomleft      ^ topleft          ^ topright        ^ bottomright
-      let [
-        bottomLeftX,
-        bottomLeftY,
-        topLeftX,
-        topLeftY,
-        topRightX,
-        topRightY,
-        bottomRightX,
-        bottomRightY,
-      ] = points;
+      for (const span of spans) {
+        let spanRect = this.spanRects.get(span);
+        if (!spanRect) {
+          // This only needs to happen once.
+          spanRect = span.getBoundingClientRect();
+          this.spanRects.set(span, spanRect);
+        }
 
-      // Invert the Y.
-      topLeftY = 1 - topLeftY;
-      topRightY = 1 - topRightY;
-      bottomLeftY = 1 - bottomLeftY;
-      bottomRightY = 1 - bottomRightY;
+        const points = span.dataset.points.split(",").map(p => Number(p));
+        // Use the points in the string, e.g.
+        // "0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273"
+        //  0         1       2         3        4        5        6        7
+        //  ^ bottomleft      ^ topleft          ^ topright        ^ bottomright
+        let [
+          bottomLeftX,
+          bottomLeftY,
+          topLeftX,
+          topLeftY,
+          topRightX,
+          topRightY,
+          bottomRightX,
+          bottomRightY,
+        ] = points;
 
-      // Create a projection matrix to position the <span> relative to the bounds.
-      // prettier-ignore
-      const mat4 = projectPoints(
-        spanRect.width,               spanRect.height,
-        imgRect.width * topLeftX,     imgRect.height * topLeftY,
-        imgRect.width * topRightX,    imgRect.height * topRightY,
-        imgRect.width * bottomLeftX,  imgRect.height * bottomLeftY,
-        imgRect.width * bottomRightX, imgRect.height * bottomRightY
-      );
+        // Invert the Y.
+        topLeftY = 1 - topLeftY;
+        topRightY = 1 - topRightY;
+        bottomLeftY = 1 - bottomLeftY;
+        bottomRightY = 1 - bottomRightY;
 
-      span.style.transform = "matrix3d(" + mat4.join(", ") + ")";
+        // Create a projection matrix to position the <span> relative to the bounds.
+        // prettier-ignore
+        const mat4 = projectPoints(
+          spanRect.width, spanRect.height,
+          imgRect.width * topLeftX, imgRect.height * topLeftY,
+          imgRect.width * topRightX, imgRect.height * topRightY,
+          imgRect.width * bottomLeftX, imgRect.height * bottomLeftY,
+          imgRect.width * bottomRightX, imgRect.height * bottomRightY
+        );
+
+        span.style.transform = "matrix3d(" + mat4.join(", ") + ")";
+
+        if (ctx) {
+          const inset = 3;
+          ctx.moveTo(
+            imgRect.width * bottomLeftX + inset,
+            imgRect.height * bottomLeftY - inset
+          );
+          ctx.lineTo(
+            imgRect.width * topLeftX + inset,
+            imgRect.height * topLeftY + inset
+          );
+          ctx.lineTo(
+            imgRect.width * topRightX - inset,
+            imgRect.height * topRightY + inset
+          );
+          ctx.lineTo(
+            imgRect.width * bottomRightX - inset,
+            imgRect.height * bottomRightY - inset
+          );
+          ctx.closePath();
+        }
+      }
 
       if (ctx) {
-        const inset = 3;
-        ctx.moveTo(
-          imgRect.width * bottomLeftX + inset,
-          imgRect.height * bottomLeftY - inset
-        );
-        ctx.lineTo(
-          imgRect.width * topLeftX + inset,
-          imgRect.height * topLeftY + inset
-        );
-        ctx.lineTo(
-          imgRect.width * topRightX - inset,
-          imgRect.height * topRightY + inset
-        );
-        ctx.lineTo(
-          imgRect.width * bottomRightX - inset,
-          imgRect.height * bottomRightY - inset
-        );
-        ctx.closePath();
+        // This composite operation will cut out the quads. The color is arbitrary.
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+
+        // Creating a round line will grow the selection slightly, and round the corners.
+        ctx.lineWidth = 10;
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
       }
-    }
-
-    if (ctx) {
-      // This composite operation will cut out the quads. The color is arbitrary.
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-
-      // Creating a round line will grow the selection slightly, and round the corners.
-      ctx.lineWidth = 10;
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -176,48 +185,155 @@ this.TextRecognitionWidget = class {
       return;
     }
     this.isInitialized = true;
-
-    const parser = new this.window.DOMParser();
-    let parserDoc = parser.parseFromString(
-      `<div class="textrecognition" xmlns="http://www.w3.org/1999/xhtml" role="none">
+    try {
+      console.log(`!!! initialize`);
+      const parser = new this.window.DOMParser();
+      let parserDoc = parser.parseFromString(
+        `<div class="textrecognition" xmlns="http://www.w3.org/1999/xhtml" role="none">
         <link rel="stylesheet" href="chrome://global/skin/media/textrecognition.css" />
         <canvas />
         <!-- The spans will be reattached here -->
       </div>`,
-      "application/xml"
-    );
-    if (
-      this.shadowRoot.children.length !== 1 ||
-      this.shadowRoot.firstChild.tagName !== "DIV"
-    ) {
-      throw new Error(
-        "Expected the shadowRoot to have a single div as the root element."
+        "application/xml"
       );
+      if (
+        this.shadowRoot.children.length !== 1 ||
+        this.shadowRoot.firstChild.tagName !== "DIV"
+      ) {
+        throw new Error(
+          "Expected the shadowRoot to have a single div as the root element."
+        );
+      }
+
+      /** @type {HTMLDivElement} */
+      const spansDiv = this.shadowRoot.firstChild;
+      // Example layout of spansDiv:
+      // <div>
+      //   <span data-points="0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273">
+      //     Text that has been recognized
+      //   </span>
+      //   ...
+      // </div>
+      spansDiv.remove();
+
+      this.shadowRoot.importNodeAndAppendChildAt(
+        this.shadowRoot,
+        parserDoc.documentElement,
+        true /* deep */
+      );
+
+      {
+        // Cluster close groups of text to allow for better text selection.
+        //
+        // Before:
+        //
+        // <div>
+        //   <span /><span /><span /><span />...
+        // </div>
+        //
+        // After clustering:
+        //
+        // <div>
+        //   <div> <!-- Cluster -->
+        //     <span />
+        //     <span />
+        //   </div>>
+        //   <div> <!-- Cluster -->
+        //     <span />
+        //     <span />
+        //   </div>>
+        //   ...
+        // </div>
+
+        /** @type {Vec2[]} */
+        const centers = [];
+
+        /** @type {HTMLSpanElement[]} */
+        const spans = [];
+
+        for (const span of spansDiv.querySelectorAll("span")) {
+          const p = span.dataset.points.split(",").map(p => Number(p));
+
+          // Pick either the left-most or right-most edge. This optimizes for
+          // aligned text over centered text.
+          const minOrMax =
+            this.window.getComputedStyle(this.element).direction === "ltr"
+              ? Math.min
+              : Math.max;
+
+          centers.push([
+            minOrMax(p[0], p[2], p[4], p[6]),
+            (p[1] + p[3] + p[5] + p[7]) / 4,
+          ]);
+
+          // The span will be placed into a new cluster.
+          spans.push(span);
+          span.remove();
+        }
+
+        // The values are ranged 0 - 1. This value might be able to be determined
+        // algorithmically.
+        const averageDistance = 0.1;
+        const clusters = cluster(
+          centers,
+          // Neighborhood radius:
+          averageDistance,
+          // Minimum points to form a cluster:
+          2
+        );
+        console.log(`!!! Results:`, {
+          clusters,
+          centers,
+          averageDistance,
+        });
+
+        for (const cluster of clusters) {
+          const divCluster = this.shadowRoot.createElementAndAppendChildAt(
+            this.shadowRoot.firstChild,
+            "p"
+          );
+          divCluster.className = "textrecognitionCluster";
+          for (let i = 0; i < cluster.length; i++) {
+            const index = cluster[i];
+            const span = spans[index];
+            if (!span) {
+              throw new Error(
+                "Logic error, expected to find a span at that index."
+              );
+            }
+            span.className = "textrecognitionText";
+            if (i + 1 === cluster.length) {
+              // Each cluster could be a paragraph, so add a newline to the end
+              // for better copying.
+              span.innerText += "\n";
+            } else {
+              span.innerText += " ";
+            }
+            this.shadowRoot.importNodeAndAppendChildAt(
+              divCluster,
+              span,
+              true /* deep */
+            );
+          }
+        }
+      }
+
+      this.shadowRoot.importNodeAndAppendChildAt(
+        this.shadowRoot.firstChild,
+        spansDiv,
+        true /* deep */
+      );
+    } catch (error) {
+      console.error(error);
     }
-
-    const spansDiv = this.shadowRoot.firstChild;
-    // Example layout of spansDiv:
-    // <div>
-    //   <span data-points="0.0275349,0.14537,0.0275349,0.244662,0.176966,0.244565,0.176966,0.145273">
-    //     Text that has been recognized
-    //   </span>
-    //   ...
-    // </div>
-    spansDiv.remove();
-
-    this.shadowRoot.importNodeAndAppendChildAt(
-      this.shadowRoot,
-      parserDoc.documentElement,
-      true /* deep */
-    );
-
-    this.shadowRoot.importNodeAndAppendChildAt(
-      this.shadowRoot.firstChild,
-      spansDiv,
-      true /* deep */
-    );
   }
 };
+
+/**
+ * A two dimensional vector.
+ *
+ * @typedef {[number, number]} Vec2
+ */
 
 /**
  * A three dimensional vector.
@@ -360,7 +476,159 @@ function projectPoints(w, h, x1, y1, x2, y2, x3, y3, x4, y4) {
   return [
     mat3[0], mat3[3], 0, mat3[6],
     mat3[1], mat3[4], 0, mat3[7],
-    0,       0,       1, 0,
+    0, 0, 1, 0,
     mat3[2], mat3[5], 0, mat3[8],
   ];
+}
+
+/**
+ * Calculate euclidean distance.
+ *
+ * @param {Vec2} a
+ * @param {Vec2} b
+ * @returns {number}
+ */
+function distance(a, b) {
+  const dx = a[0] - b[0];
+  const dy = a[1] - b[1];
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * @typedef {number} PointIndex
+ */
+
+/**
+ * An implementation of the DBSCAN clustering algorithm.
+ *
+ * https://en.wikipedia.org/wiki/DBSCAN#Algorithm
+ *
+ * @param {Vec2[]} points
+ * @param {number} distance
+ * @param {number} minPoints
+ * @returns {Array<PointIndex[]>}
+ */
+function cluster(points, distance, minPoints) {
+  /**
+   * A flat of array of labels that match the index of the points array. The values have
+   * the following meaning:
+   *
+   *   undefined := No label has been assigned
+   *   "noise"   := Noise is a point that hasn't been clustered.
+   *   number    := Cluster index
+   *
+   * @type {undefined | "noise" | Index}
+   */
+  const labels = Array(points.length);
+  const noiseLabel = "noise";
+
+  let nextClusterIndex = 0;
+
+  // Every point must be visited at least once. Often they will be visited earlier
+  // in the interior of the loop.
+  for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+    if (labels[pointIndex] !== undefined) {
+      // This point is already labeled from the interior logic.
+      continue;
+    }
+
+    // Get the neighbors that are within the range of the epsilon value, includes
+    // the current point.
+    const neighbors = getNeighborsWithinDistance(points, distance, pointIndex);
+
+    if (neighbors.length < minPoints) {
+      labels[pointIndex] = noiseLabel;
+      continue;
+    }
+
+    // Start a new cluster.
+    const clusterIndex = nextClusterIndex++;
+    labels[pointIndex] = clusterIndex;
+
+    // Fill the cluster. The neighbors array grows.
+    for (let i = 0; i < neighbors.length; i++) {
+      const nextPointIndex = neighbors[i];
+      if (typeof labels[nextPointIndex] === "number") {
+        // This point was already claimed, ignore it.
+        continue;
+      }
+
+      if (labels[nextPointIndex] === noiseLabel) {
+        // Claim this point and move on since noise has no neighbors.
+        labels[nextPointIndex] = clusterIndex;
+        continue;
+      }
+
+      // Claim this point as part of this cluster.
+      labels[nextPointIndex] = clusterIndex;
+
+      const newNeighbors = getNeighborsWithinDistance(
+        points,
+        distance,
+        nextPointIndex
+      );
+
+      if (newNeighbors.length >= minPoints) {
+        // Add on to the neighbors if more are found.
+        for (const newNeighbor of newNeighbors) {
+          if (!neighbors.includes(newNeighbor)) {
+            neighbors.push(newNeighbor);
+          }
+        }
+      }
+    }
+  }
+
+  const clusters = [];
+
+  // Pre-populate the clusters
+  for (let i = 0; i < nextClusterIndex; i++) {
+    clusters[i] = [];
+  }
+
+  // Turn the labels into clusters, adding the noise to the end.
+  for (let pointIndex = 0; pointIndex < labels.length; pointIndex++) {
+    const label = labels[pointIndex];
+    if (typeof label === "number") {
+      clusters[label].push(pointIndex);
+    } else if (label === noiseLabel) {
+      // Add a single cluster.
+      clusters.push([pointIndex]);
+    } else {
+      throw new Error("Logic error. Expected every point to have a label.");
+    }
+  }
+
+  clusters.sort((a, b) => points[b[0]][1] - points[a[0]][1]);
+
+  return clusters;
+}
+
+/**
+ * @param {Vec2[]} points
+ * @param {number} distance
+ * @param {number} index,
+ * @returns {Index[]}
+ */
+function getNeighborsWithinDistance(points, distance, index) {
+  let neighbors = [index];
+  // There is no reason to compute the square root here if we square the
+  // original distance.
+  const distanceSquared = distance * distance;
+
+  for (let otherIndex = 0; otherIndex < points.length; otherIndex++) {
+    if (otherIndex === index) {
+      continue;
+    }
+    const a = points[index];
+    const b = points[otherIndex];
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
+
+    if (dx * dx + dy * dy < distanceSquared) {
+      neighbors.push(otherIndex);
+    }
+  }
+
+  return neighbors;
 }
