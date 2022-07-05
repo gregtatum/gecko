@@ -80,6 +80,7 @@
 .view-icon-container {
   display: flex;
   fill: currentColor;
+  -moz-context-properties: fill;
   width: 32px;
   height: 32px;
   padding: 4px;
