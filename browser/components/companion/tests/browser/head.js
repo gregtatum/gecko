@@ -27,6 +27,10 @@ const { LoginHelper } = ChromeUtils.import(
   "resource://gre/modules/LoginHelper.jsm"
 );
 
+let { OSKeyStoreTestUtils } = ChromeUtils.import(
+  "resource://testing-common/OSKeyStoreTestUtils.jsm"
+);
+
 const { isAllDayEvent } = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );

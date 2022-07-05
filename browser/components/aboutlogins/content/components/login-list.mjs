@@ -4,7 +4,10 @@
 
 import LoginListItemFactory from "./login-list-item.mjs";
 import LoginListSectionFactory from "./login-list-section.mjs";
-import { recordTelemetryEvent } from "../aboutLoginsUtils.mjs";
+import {
+  recordTelemetryEvent,
+  promptForPrimaryPassword,
+} from "../aboutLoginsUtils.mjs";
 
 const collator = new Intl.Collator();
 const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "long" });
@@ -284,7 +287,7 @@ export default class LoginList extends HTMLElement {
     return section;
   }
 
-  handleEvent(event) {
+  async handleEvent(event) {
     switch (event.type) {
       case "click": {
         if (event.originalTarget == this._createLoginButton) {
@@ -321,6 +324,14 @@ export default class LoginList extends HTMLElement {
           case "copy-password":
           case "copy-username": {
             const isPassword = action === "copy-password";
+            if (isPassword) {
+              let primaryPasswordAuth = await promptForPrimaryPassword(
+                "about-logins-copy-password-os-auth-dialog-message"
+              );
+              if (!primaryPasswordAuth) {
+                return;
+              }
+            }
             listItem.dispatchEvent(
               new CustomEvent("AboutLoginsCopyLoginDetail", {
                 bubbles: true,
