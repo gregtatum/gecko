@@ -263,7 +263,7 @@ export class CalendarEventList extends MozLitElement {
   onEventsUpdated(e, updateSource = "seeked") {
     let plainEvents = this.getRelevantEvents(
       this.listView.items.filter(event =>
-        this.isBrowse ? event : !this.hiddenEvents.has(event?.id)
+        this.isBrowse ? event : event && !this.hiddenEvents.has(event.id)
       )
     );
     this.events = this.getEventsAndBreaks(plainEvents);
