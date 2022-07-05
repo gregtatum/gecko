@@ -93,20 +93,6 @@ export default TaskDefiner.defineSimpleTask([
       const observedFolderServerIds = new Set();
 
       for (const calInfo of results.value) {
-        // For now we only want folders that the user owns, so we skip
-        // any folders associated with shared calendars, etc.
-        // calInfo.owner can be null: in this case we keep it.
-        if (
-          calInfo.owner &&
-          account.accountDef.identities.every(
-            identity =>
-              identity.name !== calInfo.owner.name &&
-              identity.address !== calInfo.owner.address
-          )
-        ) {
-          continue;
-        }
-
         // We're only setting the folder as observed since we want it; this may
         // result in a redundant deletion between the above call to
         // modifiedFolders.set and our deletion inference pass after this loop.
