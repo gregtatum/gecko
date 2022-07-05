@@ -73,7 +73,7 @@ const ColorwayCloset = {
     // The radio buttons represent colorway "groups". A group is a colorway
     // from the current collection to represent related colorways with another
     // intensity. If the current collection doesn't have intensities, each
-    // colorway has their own group.
+    // colorway is their own group.
     this.colorwayGroups = this.colorways.filter(
       colorway => !ID_SUFFIXES_FOR_SECONDARY_INTENSITIES.test(colorway.id)
     );
@@ -83,9 +83,7 @@ const ColorwayCloset = {
       input.type = "radio";
       input.name = "colorway";
       input.value = addon.id;
-      // TODO bug 1770030: localize name with Fluent
-      // TODO: this name includes the intensity, which we don't want here
-      input.setAttribute("title", addon.name);
+      input.setAttribute("title", this._getColorwayGroupName(addon));
       input.style.setProperty("--colorway-icon", `url(${addon.iconURL})`);
       this.el.colorwayRadios.appendChild(input);
     }
@@ -147,10 +145,10 @@ const ColorwayCloset = {
   },
 
   _displayColorwayData() {
-    // TODO bug 1770030: localize name and description with Fluent
-    // TODO: this name includes the intensity, which we don't want here
-    this.el.colorwayName.innerText = this.selectedColorway.name;
-    this.el.colorwayDescription.innerText = this.groupIdForSelectedColorway;
+    this.el.colorwayName.innerText = this._getColorwayGroupName(
+      this.selectedColorway
+    );
+    this.el.colorwayDescription.innerText = this.selectedColorway.description;
     this.el.colorwayFigure.src = this._getFigureUrl();
 
     this.el.intensityContainer.hidden = !this.hasIntensities;
@@ -162,9 +160,9 @@ const ColorwayCloset = {
         ".colorway-intensity-radio"
       )) {
         let intensity = radio.getAttribute("data-intensity");
-        radio.value = this.selectedColorway.id.replace(
-          MATCH_INTENSITY_FROM_ID,
-          `-${intensity}-colorway@mozilla.org`
+        radio.value = this._changeIntensity(
+          this.selectedColorway.id,
+          intensity
         );
         if (intensity == selectedIntensity) {
           radio.checked = true;
@@ -183,10 +181,29 @@ const ColorwayCloset = {
       : null;
   },
 
+  _changeIntensity(colorwayId, intensity) {
+    return colorwayId.replace(
+      MATCH_INTENSITY_FROM_ID,
+      `-${intensity}-colorway@mozilla.org`
+    );
+  },
+
+  _getColorwayGroupName(addon) {
+    return BuiltInThemes.getLocalizedColorwayGroupName(addon.id) || addon.name;
+  },
+
   handleEvent(e) {
     switch (e.type) {
       case "change":
-        this.colorways.find(colorway => colorway.id == e.target.value).enable();
+        let newId = e.target.value;
+        // Persist the selected intensity when toggling between colorway radios.
+        if (e.currentTarget == this.el.colorwayRadios && this.hasIntensities) {
+          let selectedIntensity = document
+            .querySelector(".colorway-intensity-radio:checked")
+            .getAttribute("data-intensity");
+          newId = this._changeIntensity(newId, selectedIntensity);
+        }
+        this.colorways.find(colorway => colorway.id == newId).enable();
         break;
       case "unload":
         AddonManager.removeAddonListener(this);
@@ -225,6 +242,8 @@ const ColorwayCloset = {
         break;
       }
     }
+    this.el.setColorwayButton.disabled =
+      this.previousTheme.id == this.selectedColorway.id;
   },
 };
 

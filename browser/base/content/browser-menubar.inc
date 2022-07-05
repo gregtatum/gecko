@@ -427,7 +427,7 @@
               >
                 <menupopup id="menuWebDeveloperPopup">
                   <menuitem id="menu_taskManager"
-                            oncommand="switchToTabHavingURI('about:performance', true)"
+                            oncommand="switchToTabHavingURI('about:processes', true)"
                             data-l10n-id="menu-tools-task-manager"/>
                   <menuitem id="menu_pageSource"
                             key="key_viewSource"

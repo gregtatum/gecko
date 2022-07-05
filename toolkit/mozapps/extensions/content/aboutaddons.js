@@ -4370,7 +4370,7 @@ gViewController.defineView("list", async type => {
   ];
 
   if (type == "theme" && COLORWAY_CLOSET_ENABLED) {
-    MozXULElement.insertFTLIfNeeded("preview/colorwaycloset.ftl");
+    MozXULElement.insertFTLIfNeeded("preview/colorways.ftl");
 
     const hasActiveColorways = !!BuiltInThemes.findActiveColorwayCollection?.();
     sections.push({

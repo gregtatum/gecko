@@ -1980,13 +1980,6 @@ var CustomizableUIInternal = {
         if (aWidget.source == CustomizableUI.SOURCE_BUILTIN) {
           node.classList.add("subviewbutton-nav");
         }
-
-        let keyPressHandler = this.handleWidgetKeyPress.bind(
-          this,
-          aWidget,
-          node
-        );
-        viewbutton.addEventListener("keypress", keyPressHandler);
       }
 
       if (aWidget.onCreated) {
@@ -2182,15 +2175,6 @@ var CustomizableUIInternal = {
         aWidget.id
       );
     }
-  },
-
-  handleWidgetKeyPress(aWidget, aNode, aEvent) {
-    if (aEvent.key != " " && aEvent.key != "Enter") {
-      return;
-    }
-    aEvent.stopPropagation();
-    aEvent.preventDefault();
-    this.handleWidgetCommand(aWidget, aNode, aEvent);
   },
 
   _getPanelForNode(aNode) {
