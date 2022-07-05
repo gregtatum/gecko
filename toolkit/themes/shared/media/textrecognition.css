@@ -20,8 +20,19 @@ canvas {
   inset: 0;
 }
 
-span {
+.textrecognitionText {
+  /* The text is positioned in the widget logic. */
   position: absolute;
   transform-origin: 0 0;
   color: transparent;
+  white-space: nowrap;
+}
+
+.textrecognitionCluster {
+  /* Clusters should not be used for positioning. */
+  position: absolute;
+  outline: 1px solid red;
+  margin: 0;
+  padding: 0;
+  display: block;
 }
