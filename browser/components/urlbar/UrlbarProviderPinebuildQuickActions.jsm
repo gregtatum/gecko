@@ -81,7 +81,6 @@ const hasUnreadMessages = accountType => {
   if (lazy.WorkshopParentAccess.workshopEnabled) {
     return lazy.WorkshopParentAccess.getUnreadMessageCount(accountType);
   }
-
   if (Cu.isInAutomation) {
     accountType = "testservice";
   }
@@ -112,7 +111,7 @@ const COMMANDS = {
     label: "Go to Inbox",
     title: "Gmail",
     serviceType: "google",
-    hide(isDefault) {
+    isShown(isDefault) {
       return shouldShowEmailResult("google", isDefault);
     },
     showBadge() {
@@ -128,7 +127,7 @@ const COMMANDS = {
     label: "Go to Inbox",
     serviceType: "microsoft",
     title: "Outlook",
-    hide(isDefault) {
+    isShown(isDefault) {
       return shouldShowEmailResult("microsoft", isDefault);
     },
     showBadge() {
@@ -144,6 +143,9 @@ const COMMANDS = {
     label: "Schedule a meeting",
     title: "Google Calendar",
     serviceType: "google",
+    isShown() {
+      return hasConnectedAccount("google");
+    },
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("meeting", "https://meeting.new", email);
       UrlbarUtils.openUrl(url);
@@ -155,6 +157,9 @@ const COMMANDS = {
     label: "Create Google slides",
     title: "Google Slides",
     serviceType: "google",
+    isShown() {
+      return hasConnectedAccount("google");
+    },
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("slides", "https://slides.new", email);
       UrlbarUtils.openUrl(url);
@@ -166,6 +171,9 @@ const COMMANDS = {
     label: "Create a Google Sheet",
     title: "Google Sheets",
     serviceType: "google",
+    isShown() {
+      return hasConnectedAccount("google");
+    },
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("sheets", "https://sheets.new", email);
       UrlbarUtils.openUrl(url);
@@ -177,6 +185,9 @@ const COMMANDS = {
     label: "Create a Google doc",
     title: "Google Docs",
     serviceType: "google",
+    isShown() {
+      return hasConnectedAccount("google");
+    },
     callback: ({ email } = {}) => {
       const url = formatGoogleURL("docs", "https://docs.new", email);
       UrlbarUtils.openUrl(url);
@@ -186,7 +197,7 @@ const COMMANDS = {
     commands: ["screenshot"],
     icon: "chrome://browser/skin/screenshot.svg",
     label: "Take a Screenshot",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     callback: () => {
       Services.obs.notifyObservers(null, "menuitem-screenshot-extension");
     },
@@ -196,7 +207,7 @@ const COMMANDS = {
     commands: ["preferences"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     url: "about:preferences",
     title: "Flowstate",
   },
@@ -204,7 +215,7 @@ const COMMANDS = {
     commands: ["downloads"],
     icon: "chrome://browser/skin/downloads/downloads.svg",
     label: "Open Downloads",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     url: "about:downloads",
     title: "Flowstate",
   },
@@ -212,7 +223,7 @@ const COMMANDS = {
     commands: ["privacy", "private"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Open Preferences (Privacy & Security)",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     callback: "about:preferences#privacy",
     title: "Flowstate",
   },
@@ -220,7 +231,7 @@ const COMMANDS = {
     commands: ["view-source"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "View Source",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     callback: () => {
       let window = lazy.BrowserWindowTracker.getTopWindow();
       let spec = window.gBrowser.selectedTab.linkedBrowser.documentURI.spec;
@@ -232,7 +243,7 @@ const COMMANDS = {
     commands: ["inspector"],
     icon: "chrome://devtools/skin/images/tool-inspector.svg",
     label: "Open Inspector",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     callback: () => {
       // TODO: This is supposed to be called with an element to start inspecting.
       lazy.DevToolsShim.inspectNode(
@@ -248,7 +259,7 @@ const COMMANDS = {
     commands: ["restart"],
     icon: "chrome://global/skin/icons/settings.svg",
     label: "Restart Firefox",
-    hide: extraActionsEnabled,
+    isShown: extraActionsEnabled,
     callback: restartBrowser,
     title: "Flowstate",
   },
@@ -458,8 +469,8 @@ class ProviderQuickActionsBase extends UrlbarProvider {
         if (data && data.hasOwnProperty("showBadge")) {
           result.showBadge = await data.showBadge();
         }
-        if (data && data.hasOwnProperty("hide")) {
-          result.isShown = await data.hide(!queryContext.searchString);
+        if (data && data.hasOwnProperty("isShown")) {
+          result.isShown = await data.isShown(!queryContext.searchString);
         }
         if (data && data.hasOwnProperty("serviceType")) {
           result.accountAddress = await this.getAccountAddress(

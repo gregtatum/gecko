@@ -14,18 +14,33 @@ XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
   return module;
 });
 
-async function validateQuickAction(action) {
+async function validateAuthenticatedQuickAction(action) {
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
     await SpecialPowers.pushPrefEnv({
       set: [["browser.pinebuild.quickactions.testURL", action.url]],
     });
     await CompanionHelper.whenReady(async helper => {
+      info("Action should not show before account is connected");
       await UrlbarTestUtils.promiseAutocompleteResultPopup({
         window: win,
         value: action.command,
       });
 
-      const result = await UrlbarTestUtils.getDetailsOfResultAt(win, 1);
+      let result = await UrlbarTestUtils.getDetailsOfResultAt(win, 1);
+      isnot(
+        result.dynamicType,
+        "quickActions",
+        "Second Urlbar result is not a quick action."
+      );
+
+      info("Action should show once account is connected");
+      await helper.createAccount();
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        value: action.command,
+      });
+
+      result = await UrlbarTestUtils.getDetailsOfResultAt(win, 1);
       is(
         result.dynamicType,
         "pinebuildquickactions",
@@ -77,7 +92,7 @@ add_task(async function test_createmeeting() {
     url: "https://example.com/new-meeting",
   };
 
-  await validateQuickAction(action);
+  await validateAuthenticatedQuickAction(action);
 });
 
 add_task(async function test_createslides() {
@@ -87,7 +102,7 @@ add_task(async function test_createslides() {
     url: "https://example.com/slides",
   };
 
-  await validateQuickAction(action);
+  await validateAuthenticatedQuickAction(action);
 });
 
 add_task(async function test_createsheet() {
@@ -97,7 +112,7 @@ add_task(async function test_createsheet() {
     url: "https://example.com/spreadsheet",
   };
 
-  await validateQuickAction(action);
+  await validateAuthenticatedQuickAction(action);
 });
 
 add_task(async function test_createdoc() {
@@ -107,7 +122,7 @@ add_task(async function test_createdoc() {
     url: "https://example.com/document",
   };
 
-  await validateQuickAction(action);
+  await validateAuthenticatedQuickAction(action);
 });
 
 add_task(async function test_connectedAccountNavigation() {
