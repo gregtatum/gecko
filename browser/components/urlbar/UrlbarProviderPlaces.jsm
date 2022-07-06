@@ -119,20 +119,24 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
+  "resource:///modules/UrlbarUtils.jsm"
+);
+
+const lazy = {};
+
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   KeywordUtils: "resource://gre/modules/KeywordUtils.jsm",
   ObjectUtils: "resource://gre/modules/ObjectUtils.jsm",
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   PromiseUtils: "resource://gre/modules/PromiseUtils.jsm",
   Sqlite: "resource://gre/modules/Sqlite.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarProviderOpenTabs: "resource:///modules/UrlbarProviderOpenTabs.jsm",
   UrlbarProvidersManager: "resource:///modules/UrlbarProvidersManager.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
   UrlbarSearchUtils: "resource:///modules/UrlbarSearchUtils.jsm",
   UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
 function setTimeout(callback, ms) {
@@ -142,19 +146,19 @@ function setTimeout(callback, ms) {
 }
 
 // Maps restriction character types to textual behaviors.
-XPCOMUtils.defineLazyGetter(this, "typeToBehaviorMap", () => {
+XPCOMUtils.defineLazyGetter(lazy, "typeToBehaviorMap", () => {
   return new Map([
-    [UrlbarTokenizer.TYPE.RESTRICT_HISTORY, "history"],
-    [UrlbarTokenizer.TYPE.RESTRICT_BOOKMARK, "bookmark"],
-    [UrlbarTokenizer.TYPE.RESTRICT_TAG, "tag"],
-    [UrlbarTokenizer.TYPE.RESTRICT_OPENPAGE, "openpage"],
-    [UrlbarTokenizer.TYPE.RESTRICT_SEARCH, "search"],
-    [UrlbarTokenizer.TYPE.RESTRICT_TITLE, "title"],
-    [UrlbarTokenizer.TYPE.RESTRICT_URL, "url"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_HISTORY, "history"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_BOOKMARK, "bookmark"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_TAG, "tag"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_OPENPAGE, "openpage"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_SEARCH, "search"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_TITLE, "title"],
+    [lazy.UrlbarTokenizer.TYPE.RESTRICT_URL, "url"],
   ]);
 });
 
-XPCOMUtils.defineLazyGetter(this, "sourceToBehaviorMap", () => {
+XPCOMUtils.defineLazyGetter(lazy, "sourceToBehaviorMap", () => {
   return new Map([
     [UrlbarUtils.RESULT_SOURCE.HISTORY, "history"],
     [UrlbarUtils.RESULT_SOURCE.BOOKMARKS, "bookmark"],
@@ -179,7 +183,7 @@ XPCOMUtils.defineLazyGetter(this, "sourceToBehaviorMap", () => {
  */
 function makeKeyForMatch(match) {
   let key, prefix;
-  let action = PlacesUtils.parseActionUrl(match.value);
+  let action = lazy.PlacesUtils.parseActionUrl(match.value);
   if (!action) {
     [key, prefix] = UrlbarUtils.stripPrefixAndTrim(match.value, {
       stripHttp: true,
@@ -295,16 +299,16 @@ function convertLegacyMatches(context, matches, urls) {
  * @returns {object} an UrlbarResult
  */
 function makeUrlbarResult(tokens, info) {
-  let action = PlacesUtils.parseActionUrl(info.url);
+  let action = lazy.PlacesUtils.parseActionUrl(info.url);
   if (action) {
     switch (action.type) {
       case "searchengine": {
         if (action.params.isSearchHistory) {
           // Return a form history result.
-          return new UrlbarResult(
+          return new lazy.UrlbarResult(
             UrlbarUtils.RESULT_TYPE.SEARCH,
             UrlbarUtils.RESULT_SOURCE.HISTORY,
-            ...UrlbarResult.payloadAndSimpleHighlights(tokens, {
+            ...lazy.UrlbarResult.payloadAndSimpleHighlights(tokens, {
               engine: action.params.engineName,
               suggestion: [
                 action.params.searchSuggestion,
@@ -315,10 +319,10 @@ function makeUrlbarResult(tokens, info) {
           );
         }
 
-        return new UrlbarResult(
+        return new lazy.UrlbarResult(
           UrlbarUtils.RESULT_TYPE.SEARCH,
           UrlbarUtils.RESULT_SOURCE.SEARCH,
-          ...UrlbarResult.payloadAndSimpleHighlights(tokens, {
+          ...lazy.UrlbarResult.payloadAndSimpleHighlights(tokens, {
             engine: [action.params.engineName, UrlbarUtils.HIGHLIGHT.TYPED],
             suggestion: [
               action.params.searchSuggestion,
@@ -335,20 +339,20 @@ function makeUrlbarResult(tokens, info) {
         );
       }
       case "switchtab":
-        return new UrlbarResult(
+        return new lazy.UrlbarResult(
           UrlbarUtils.RESULT_TYPE.TAB_SWITCH,
           UrlbarUtils.RESULT_SOURCE.TABS,
-          ...UrlbarResult.payloadAndSimpleHighlights(tokens, {
+          ...lazy.UrlbarResult.payloadAndSimpleHighlights(tokens, {
             url: [action.params.url, UrlbarUtils.HIGHLIGHT.TYPED],
             title: [info.comment, UrlbarUtils.HIGHLIGHT.TYPED],
             icon: info.icon,
           })
         );
       case "visiturl":
-        return new UrlbarResult(
+        return new lazy.UrlbarResult(
           UrlbarUtils.RESULT_TYPE.URL,
           UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
-          ...UrlbarResult.payloadAndSimpleHighlights(tokens, {
+          ...lazy.UrlbarResult.payloadAndSimpleHighlights(tokens, {
             title: [info.comment, UrlbarUtils.HIGHLIGHT.TYPED],
             url: [action.params.url, UrlbarUtils.HIGHLIGHT.TYPED],
             icon: info.icon,
@@ -400,10 +404,10 @@ function makeUrlbarResult(tokens, info) {
       .sort();
   }
 
-  return new UrlbarResult(
+  return new lazy.UrlbarResult(
     UrlbarUtils.RESULT_TYPE.URL,
     source,
-    ...UrlbarResult.payloadAndSimpleHighlights(tokens, {
+    ...lazy.UrlbarResult.payloadAndSimpleHighlights(tokens, {
       url: [info.url, UrlbarUtils.HIGHLIGHT.TYPED],
       icon: info.icon,
       title: [comment, UrlbarUtils.HIGHLIGHT.TYPED],
@@ -440,7 +444,7 @@ function Search(queryContext, listener, provider) {
   this._matchBehavior = Ci.mozIPlacesAutoComplete.MATCH_BOUNDARY;
   // Set the default behavior for this search.
   this._behavior = this._searchString
-    ? UrlbarPrefs.get("defaultBehavior")
+    ? lazy.UrlbarPrefs.get("defaultBehavior")
     : this._emptySearchDefaultBehavior;
 
   this._inPrivateWindow = queryContext.isPrivate;
@@ -456,14 +460,14 @@ function Search(queryContext, listener, provider) {
     this._filterOnHost = engine.getResultDomain();
   }
 
-  this._userContextId = UrlbarProviderOpenTabs.getUserContextIdForOpenPagesTable(
+  this._userContextId = lazy.UrlbarProviderOpenTabs.getUserContextIdForOpenPagesTable(
     this._userContextId,
     this._inPrivateWindow
   );
 
   // Use the original string here, not the stripped one, so the tokenizer can
   // properly recognize token types.
-  let { tokens } = UrlbarTokenizer.tokenize({
+  let { tokens } = lazy.UrlbarTokenizer.tokenize({
     searchString: unescapedSearchString,
     trimmedSearchString: unescapedSearchString.trim(),
   });
@@ -472,9 +476,9 @@ function Search(queryContext, listener, provider) {
   this._leadingRestrictionToken = null;
   if (tokens.length) {
     if (
-      UrlbarTokenizer.isRestrictionToken(tokens[0]) &&
+      lazy.UrlbarTokenizer.isRestrictionToken(tokens[0]) &&
       (tokens.length > 1 ||
-        tokens[0].type == UrlbarTokenizer.TYPE.RESTRICT_SEARCH)
+        tokens[0].type == lazy.UrlbarTokenizer.TYPE.RESTRICT_SEARCH)
     ) {
       this._leadingRestrictionToken = tokens[0].value;
     }
@@ -500,11 +504,11 @@ function Search(queryContext, listener, provider) {
   if (
     queryContext &&
     queryContext.restrictSource &&
-    sourceToBehaviorMap.has(queryContext.restrictSource)
+    lazy.sourceToBehaviorMap.has(queryContext.restrictSource)
   ) {
     this._behavior = 0;
     this.setBehavior("restrict");
-    let behavior = sourceToBehaviorMap.get(queryContext.restrictSource);
+    let behavior = lazy.sourceToBehaviorMap.get(queryContext.restrictSource);
     this.setBehavior(behavior);
 
     // When we are in restrict mode, all the tokens are valid for searching, so
@@ -525,7 +529,7 @@ function Search(queryContext, listener, provider) {
   // Set the right JavaScript behavior based on our preference.  Note that the
   // preference is whether or not we should filter JavaScript, and the
   // behavior is if we should search it or not.
-  if (!UrlbarPrefs.get("filter.javascript")) {
+  if (!lazy.UrlbarPrefs.get("filter.javascript")) {
     this.setBehavior("javascript");
   }
 
@@ -581,11 +585,11 @@ Search.prototype = {
     // Set the proper behavior while filtering tokens.
     let filtered = [];
     for (let token of tokens) {
-      if (!UrlbarTokenizer.isRestrictionToken(token)) {
+      if (!lazy.UrlbarTokenizer.isRestrictionToken(token)) {
         filtered.push(token);
         continue;
       }
-      let behavior = typeToBehaviorMap.get(token.type);
+      let behavior = lazy.typeToBehaviorMap.get(token.type);
       if (!behavior) {
         throw new Error(`Unknown token type ${token.type}`);
       }
@@ -646,7 +650,7 @@ Search.prototype = {
     // Used by stop() to interrupt an eventual running statement.
     this.interrupt = () => {
       // Interrupt any ongoing statement to run the search sooner.
-      if (!UrlbarProvidersManager.interruptLevel) {
+      if (!lazy.UrlbarProvidersManager.interruptLevel) {
         conn.interrupt();
       }
     };
@@ -657,7 +661,7 @@ Search.prototype = {
 
     // If the query is simply "@" and we have tokenAliasEngines then return
     // early. UrlbarProviderTokenAliasEngines will add engine results.
-    let tokenAliasEngines = await UrlbarSearchUtils.tokenAliasEngines();
+    let tokenAliasEngines = await lazy.UrlbarSearchUtils.tokenAliasEngines();
     if (this._trimmedOriginalSearchString == "@" && tokenAliasEngines.length) {
       this._provider.finishSearch(true);
       return;
@@ -677,7 +681,7 @@ Search.prototype = {
       // UrlbarProviderSearchSuggestions will handle suggestions, if any.
       let emptySearchRestriction =
         this._trimmedOriginalSearchString.length <= 3 &&
-        this._leadingRestrictionToken == UrlbarTokenizer.RESTRICT.SEARCH &&
+        this._leadingRestrictionToken == lazy.UrlbarTokenizer.RESTRICT.SEARCH &&
         /\s*\S?$/.test(this._trimmedOriginalSearchString);
       if (
         emptySearchRestriction ||
@@ -728,7 +732,7 @@ Search.prototype = {
       return false;
     }
 
-    let aliasEngine = await UrlbarSearchUtils.engineForAlias(
+    let aliasEngine = await lazy.UrlbarSearchUtils.engineForAlias(
       this._heuristicToken,
       this._originalSearchString
     );
@@ -737,7 +741,7 @@ Search.prototype = {
       return true;
     }
 
-    let { entry } = await KeywordUtils.getBindableKeyword(
+    let { entry } = await lazy.KeywordUtils.getBindableKeyword(
       this._heuristicToken,
       this._originalSearchString
     );
@@ -860,7 +864,7 @@ Search.prototype = {
     // already checked that the typed query is a subset of the search history
     // query above with this._searchTokens.every(...).
     if (
-      !UrlbarSearchUtils.serpsAreEquivalent(
+      !lazy.UrlbarSearchUtils.serpsAreEquivalent(
         historyUrl,
         generatedSuggestionUrl,
         [parseResult.termsParameterName]
@@ -903,10 +907,13 @@ Search.prototype = {
     // Restyle past searches, unless they are bookmarks or special results.
     if (
       match.style == "favicon" &&
-      (UrlbarPrefs.get("restyleSearches") || this._searchModeEngine)
+      (lazy.UrlbarPrefs.get("restyleSearches") || this._searchModeEngine)
     ) {
       let restyled = this._maybeRestyleSearchMatch(match);
-      if (restyled && UrlbarPrefs.get("maxHistoricalSearchSuggestions") == 0) {
+      if (
+        restyled &&
+        lazy.UrlbarPrefs.get("maxHistoricalSearchSuggestions") == 0
+      ) {
         // The user doesn't want search history.
         return;
       }
@@ -949,7 +956,7 @@ Search.prototype = {
     let [urlMapKey, prefix, action] = makeKeyForMatch(match);
     if (
       (match.placeId && this._usedPlaceIds.has(match.placeId)) ||
-      this._usedURLs.some(e => ObjectUtils.deepEqual(e.key, urlMapKey))
+      this._usedURLs.some(e => lazy.ObjectUtils.deepEqual(e.key, urlMapKey))
     ) {
       let isDupe = true;
       if (action && ["switchtab", "remotetab"].includes(action.type)) {
@@ -957,7 +964,7 @@ Search.prototype = {
         // among current matches.
         for (let i = 0; i < this._usedURLs.length; ++i) {
           let { key: matchKey, action: matchAction } = this._usedURLs[i];
-          if (ObjectUtils.deepEqual(matchKey, urlMapKey)) {
+          if (lazy.ObjectUtils.deepEqual(matchKey, urlMapKey)) {
             isDupe = true;
             if (!matchAction || action.type == "switchtab") {
               this._usedURLs[i] = {
@@ -988,7 +995,7 @@ Search.prototype = {
           let { key: existingKey, prefix: existingPrefix } = this._usedURLs[i];
 
           let existingPrefixRank = UrlbarUtils.getPrefixRank(existingPrefix);
-          if (ObjectUtils.deepEqual(existingKey, urlMapKey)) {
+          if (lazy.ObjectUtils.deepEqual(existingKey, urlMapKey)) {
             isDupe = true;
 
             if (prefix == existingPrefix) {
@@ -1041,7 +1048,7 @@ Search.prototype = {
     let index = 0;
     if (!this._groups) {
       this._groups = [];
-      this._makeGroups(UrlbarPrefs.get("resultGroups"), this._maxResults);
+      this._makeGroups(lazy.UrlbarPrefs.get("resultGroups"), this._maxResults);
     }
 
     let replace = 0;
@@ -1195,7 +1202,7 @@ Search.prototype = {
       // This means removing less interesting urls, like redirects or
       // non-bookmarked title-less pages.
 
-      if (UrlbarPrefs.get("restyleSearches") || this._searchModeEngine) {
+      if (lazy.UrlbarPrefs.get("restyleSearches") || this._searchModeEngine) {
         // If restyle is enabled, we want to filter out redirect targets,
         // because sources are urls built using search engines definitions that
         // we can reverse-parse.
@@ -1264,9 +1271,9 @@ Search.prototype = {
     // Otherwise, it is bookmarks, if they are enabled. If both history and
     // bookmarks are disabled, it defaults to open pages.
     let val = Ci.mozIPlacesAutoComplete.BEHAVIOR_RESTRICT;
-    if (UrlbarPrefs.get("suggest.history")) {
+    if (lazy.UrlbarPrefs.get("suggest.history")) {
       val |= Ci.mozIPlacesAutoComplete.BEHAVIOR_HISTORY;
-    } else if (UrlbarPrefs.get("suggest.bookmark")) {
+    } else if (lazy.UrlbarPrefs.get("suggest.bookmark")) {
       val |= Ci.mozIPlacesAutoComplete.BEHAVIOR_BOOKMARK;
     } else {
       val |= Ci.mozIPlacesAutoComplete.BEHAVIOR_OPENPAGE;
@@ -1297,7 +1304,7 @@ Search.prototype = {
    */
   get _searchQuery() {
     let params = {
-      parent: PlacesUtils.tagsFolderId,
+      parent: lazy.PlacesUtils.tagsFolderId,
       query_type: QUERYTYPE_FILTERED,
       matchBehavior: this._matchBehavior,
       searchBehavior: this._behavior,
@@ -1412,10 +1419,10 @@ class ProviderPlaces extends UrlbarProvider {
   getDatabaseHandle() {
     if (!this._promiseDatabase) {
       this._promiseDatabase = (async () => {
-        let conn = await PlacesUtils.promiseLargeCacheDBConnection();
+        let conn = await lazy.PlacesUtils.promiseLargeCacheDBConnection();
 
         // We don't catch exceptions here as it is too late to block shutdown.
-        Sqlite.shutdown.addBlocker("UrlbarProviderPlaces closing", () => {
+        lazy.Sqlite.shutdown.addBlocker("UrlbarProviderPlaces closing", () => {
           // Break a possible cycle through the
           // previous result, the controller and
           // ourselves.
@@ -1442,7 +1449,7 @@ class ProviderPlaces extends UrlbarProvider {
     if (
       !queryContext.trimmedSearchString &&
       queryContext.searchMode?.engineName &&
-      UrlbarPrefs.get("update2.emptySearchBehavior") < 2
+      lazy.UrlbarPrefs.get("update2.emptySearchBehavior") < 2
     ) {
       return false;
     }
@@ -1520,7 +1527,7 @@ class ProviderPlaces extends UrlbarProvider {
   }
 
   _startLegacyQuery(queryContext, callback) {
-    let deferred = PromiseUtils.defer();
+    let deferred = lazy.PromiseUtils.defer();
     let listener = (matches, searchOngoing) => {
       callback(matches);
       if (!searchOngoing) {
