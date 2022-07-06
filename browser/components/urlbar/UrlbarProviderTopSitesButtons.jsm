@@ -11,12 +11,15 @@ const { XPCOMUtils } = ChromeUtils.import(
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
+  "resource:///modules/UrlbarUtils.jsm"
+);
+
+const lazy = {};
+XPCOMUtils.defineLazyModuleGetters(lazy, {
   AboutNewTab: "resource:///modules/AboutNewTab.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProvider: "resource:///modules/UrlbarUtils.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
   UrlbarView: "resource:///modules/UrlbarView.jsm",
   TOP_SITES_DEFAULT_ROWS: "resource://activity-stream/common/Reducers.jsm",
 });
@@ -34,7 +37,7 @@ const MAX_BUTTONS = 8;
 class ProviderTopSitesButtons extends UrlbarProvider {
   constructor() {
     super();
-    UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
+    lazy.UrlbarResult.addDynamicResultType(DYNAMIC_TYPE_NAME);
     let children = [...Array(MAX_BUTTONS).keys()].map((v, i) => {
       return {
         name: `button-${i}`,
@@ -58,7 +61,7 @@ class ProviderTopSitesButtons extends UrlbarProvider {
       };
     });
 
-    UrlbarView.addDynamicViewTemplate(DYNAMIC_TYPE_NAME, {
+    lazy.UrlbarView.addDynamicViewTemplate(DYNAMIC_TYPE_NAME, {
       children,
     });
   }
@@ -125,7 +128,7 @@ class ProviderTopSitesButtons extends UrlbarProvider {
     // can configure Top Sites but cannot configure the default empty search
     // results. See bug 1623666.
     if (
-      !UrlbarPrefs.get("suggest.topsites") ||
+      !lazy.UrlbarPrefs.get("suggest.topsites") ||
       !Services.prefs.getBoolPref(
         "browser.newtabpage.activity-stream.feeds.system.topsites",
         false
@@ -134,7 +137,7 @@ class ProviderTopSitesButtons extends UrlbarProvider {
       return;
     }
 
-    let sites = AboutNewTab.getTopSites();
+    let sites = lazy.AboutNewTab.getTopSites();
     sites = sites.filter(site => site && !site.searchTopSite);
     sites = sites.filter(site => !site.sponsored_position);
 
@@ -146,7 +149,7 @@ class ProviderTopSitesButtons extends UrlbarProvider {
         this,
         "topSitesRows",
         "browser.newtabpage.activity-stream.topSitesRows",
-        TOP_SITES_DEFAULT_ROWS
+        lazy.TOP_SITES_DEFAULT_ROWS
       );
     }
 
@@ -161,7 +164,7 @@ class ProviderTopSitesButtons extends UrlbarProvider {
       };
     });
 
-    const result = new UrlbarResult(
+    const result = new lazy.UrlbarResult(
       UrlbarUtils.RESULT_TYPE.DYNAMIC,
       UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
       {
