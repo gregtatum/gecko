@@ -31,4 +31,8 @@ canvas {
 .textrecognitionCluster {
   /* Clusters should not be used for positioning. */
   position: absolute;
+  outline: 1px solid red;
+  margin: 0;
+  padding: 0;
+  display: block;
 }

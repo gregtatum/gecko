@@ -274,8 +274,7 @@ this.TextRecognitionWidget = class {
         // The values are ranged 0 - 1. This value might be able to be determined
         // algorithmically.
         const averageDistance = 0.1;
-        const dbscan = new DBSCAN();
-        const clusters = dbscan.run(
+        const clusters = cluster(
           centers,
           // Neighborhood radius:
           averageDistance,
@@ -286,14 +285,12 @@ this.TextRecognitionWidget = class {
           clusters,
           centers,
           averageDistance,
-          noise: dbscan.noise,
-          combined: [...clusters, ...dbscan.noise.map(n => [n])],
         });
 
-        for (const cluster of [...clusters, ...dbscan.noise.map(n => [n])]) {
+        for (const cluster of clusters) {
           const divCluster = this.shadowRoot.createElementAndAppendChildAt(
             this.shadowRoot.firstChild,
-            "div"
+            "p"
           );
           divCluster.className = "textrecognitionCluster";
           for (let i = 0; i < cluster.length; i++) {
@@ -309,6 +306,8 @@ this.TextRecognitionWidget = class {
               // Each cluster could be a paragraph, so add a newline to the end
               // for better copying.
               span.innerText += "\n";
+            } else {
+              span.innerText += " ";
             }
             this.shadowRoot.importNodeAndAppendChildAt(
               divCluster,
@@ -496,223 +495,140 @@ function distance(a, b) {
 }
 
 /**
- * The MIT License
- *
- * Copyright © 2013 Abeja Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the “Software”), to deal in the
- * Software without restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * The software is provided “as is”, without warranty of any kind, express or
- * implied, including but not limited to the warranties of merchantability, fitness
- * for a particular purpose and noninfringement. In no event shall the authors or
- * copyright holders be liable for any claim, damages or other liability, whether
- * in an action of contract, tort or otherwise, arising from, out of or in
- * connection with the software or the use or other dealings in the software.
- *
- * DBSCAN - Density based clustering
- *
- * https://github.com/uhho/density-clustering/blob/master/lib/DBSCAN.js
- *
- * @author Lukasz Krawczyk <contact@lukaszkrawczyk.eu>
- * @copyright MIT
+ * @typedef {number} PointIndex
  */
 
-class DBSCAN {
+/**
+ * An implementation of the DBSCAN clustering algorithm.
+ *
+ * https://en.wikipedia.org/wiki/DBSCAN#Algorithm
+ *
+ * @param {Vec2[]} points
+ * @param {number} distance
+ * @param {number} minPoints
+ * @returns {Array<PointIndex[]>}
+ */
+function cluster(points, distance, minPoints) {
   /**
-   * @param {Array} dataset
-   * @param {number} epsilon
-   * @param {number} minPts
-   * @returns {DBSCAN}
-   */
-  constructor(dataset, epsilon, minPts) {
-    /** @type {Array} */
-    this.dataset = [];
-    /** @type {number} */
-    this.epsilon = 1;
-    /** @type {number} */
-    this.minPts = 2;
-    /** @type {Array} */
-    this.clusters = [];
-    /** @type {Array} */
-    this.noise = [];
-
-    // temporary variables used during computation
-
-    /** @type {Array} */
-    this._visited = [];
-    /** @type {Array} */
-    this._assigned = [];
-    /** @type {number} */
-    this._datasetLength = 0;
-
-    this.#init(dataset, epsilon, minPts);
-  }
-
-  /**
-   * Start clustering
+   * A flat of array of labels that match the index of the points array. The values have
+   * the following meaning:
    *
-   * @param {Array} dataset
-   * @param {number} epsilon
-   * @param {number} minPts
-   * @returns {undefined}
-   * @access public
+   *   undefined := No label has been assigned
+   *   "noise"   := Noise is a point that hasn't been clustered.
+   *   number    := Cluster index
+   *
+   * @type {undefined | "noise" | Index}
    */
-  run(dataset, epsilon, minPts) {
-    this.#init(dataset, epsilon, minPts);
+  const labels = Array(points.length);
+  const noiseLabel = "noise";
 
-    for (var pointId = 0; pointId < this._datasetLength; pointId++) {
-      // if point is not visited, check if it forms a cluster
-      if (this._visited[pointId] !== 1) {
-        this._visited[pointId] = 1;
+  let nextClusterIndex = 0;
 
-        // if closest neighborhood is too small to form a cluster, mark as noise
-        var neighbors = this.#regionQuery(pointId);
+  // Every point must be visited at least once. Often they will be visited earlier
+  // in the interior of the loop.
+  for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+    if (labels[pointIndex] !== undefined) {
+      // This point is already labeled from the interior logic.
+      continue;
+    }
 
-        if (neighbors.length < this.minPts) {
-          this.noise.push(pointId);
-        } else {
-          // create new cluster and add point
-          var clusterId = this.clusters.length;
-          this.clusters.push([]);
-          this.#addToCluster(pointId, clusterId);
+    // Get the neighbors that are within the range of the epsilon value, includes
+    // the current point.
+    const neighbors = getNeighborsWithinDistance(points, distance, pointIndex);
 
-          this.#expandCluster(clusterId, neighbors);
+    if (neighbors.length < minPoints) {
+      labels[pointIndex] = noiseLabel;
+      continue;
+    }
+
+    // Start a new cluster.
+    const clusterIndex = nextClusterIndex++;
+    labels[pointIndex] = clusterIndex;
+
+    // Fill the cluster. The neighbors array grows.
+    for (let i = 0; i < neighbors.length; i++) {
+      const nextPointIndex = neighbors[i];
+      if (typeof labels[nextPointIndex] === "number") {
+        // This point was already claimed, ignore it.
+        continue;
+      }
+
+      if (labels[nextPointIndex] === noiseLabel) {
+        // Claim this point and move on since noise has no neighbors.
+        labels[nextPointIndex] = clusterIndex;
+        continue;
+      }
+
+      // Claim this point as part of this cluster.
+      labels[nextPointIndex] = clusterIndex;
+
+      const newNeighbors = getNeighborsWithinDistance(
+        points,
+        distance,
+        nextPointIndex
+      );
+
+      if (newNeighbors.length >= minPoints) {
+        // Add on to the neighbors if more are found.
+        for (const newNeighbor of newNeighbors) {
+          if (!neighbors.includes(newNeighbor)) {
+            neighbors.push(newNeighbor);
+          }
         }
       }
     }
-
-    return this.clusters;
   }
 
-  /******************************************************************************/
-  // protected functions
+  const clusters = [];
 
-  /**
-   * Set object properties
-   *
-   * @param {Array} dataset
-   * @param {number} epsilon
-   * @param {number} minPts
-   * @returns {undefined}
-   * @access protected
-   */
-  #init(dataset, epsilon, minPts) {
-    if (dataset) {
-      if (!(dataset instanceof Array)) {
-        throw Error(
-          "Dataset must be of type array, " + typeof dataset + " given"
-        );
-      }
+  // Pre-populate the clusters
+  for (let i = 0; i < nextClusterIndex; i++) {
+    clusters[i] = [];
+  }
 
-      this.dataset = dataset;
-      this.clusters = [];
-      this.noise = [];
-
-      this._datasetLength = dataset.length;
-      this._visited = new Array(this._datasetLength);
-      this._assigned = new Array(this._datasetLength);
-    }
-
-    if (epsilon) {
-      this.epsilon = epsilon;
-    }
-
-    if (minPts) {
-      this.minPts = minPts;
+  // Turn the labels into clusters, adding the noise to the end.
+  for (let pointIndex = 0; pointIndex < labels.length; pointIndex++) {
+    const label = labels[pointIndex];
+    if (typeof label === "number") {
+      clusters[label].push(pointIndex);
+    } else if (label === noiseLabel) {
+      // Add a single cluster.
+      clusters.push([pointIndex]);
+    } else {
+      throw new Error("Logic error. Expected every point to have a label.");
     }
   }
 
-  /**
-   * Expand cluster to closest points of given neighborhood
-   *
-   * @param {number} clusterId
-   * @param {Array} neighbors
-   * @returns {undefined}
-   * @access protected
-   */
-  #expandCluster(clusterId, neighbors) {
-    /**
-     * It's very important to calculate length of neighbors array each time,
-     * as the number of elements changes over time
-     */
-    for (var i = 0; i < neighbors.length; i++) {
-      var pointId2 = neighbors[i];
+  clusters.sort((a, b) => points[b[0]][1] - points[a[0]][1]);
 
-      if (this._visited[pointId2] !== 1) {
-        this._visited[pointId2] = 1;
-        var neighbors2 = this.#regionQuery(pointId2);
+  return clusters;
+}
 
-        if (neighbors2.length >= this.minPts) {
-          neighbors = DBSCAN.#mergeArrays(neighbors, neighbors2);
-        }
-      }
+/**
+ * @param {Vec2[]} points
+ * @param {number} distance
+ * @param {number} index,
+ * @returns {Index[]}
+ */
+function getNeighborsWithinDistance(points, distance, index) {
+  let neighbors = [index];
+  // There is no reason to compute the square root here if we square the
+  // original distance.
+  const distanceSquared = distance * distance;
 
-      // add to cluster
-      if (this._assigned[pointId2] !== 1) {
-        this.#addToCluster(pointId2, clusterId);
-      }
+  for (let otherIndex = 0; otherIndex < points.length; otherIndex++) {
+    if (otherIndex === index) {
+      continue;
+    }
+    const a = points[index];
+    const b = points[otherIndex];
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
+
+    if (dx * dx + dy * dy < distanceSquared) {
+      neighbors.push(otherIndex);
     }
   }
 
-  /**
-   * Add new point to cluster
-   *
-   * @param {number} pointId
-   * @param {number} clusterId
-   */
-  #addToCluster(pointId, clusterId) {
-    this.clusters[clusterId].push(pointId);
-    this._assigned[pointId] = 1;
-  }
-
-  /**
-   * Find all neighbors around given point
-   *
-   * @param {number} pointId,
-   * @param {number} epsilon
-   * @returns {Array}
-   * @access protected
-   */
-  #regionQuery(pointId) {
-    var neighbors = [];
-
-    for (var id = 0; id < this._datasetLength; id++) {
-      var dist = distance(this.dataset[pointId], this.dataset[id]);
-      if (dist < this.epsilon) {
-        neighbors.push(id);
-      }
-    }
-
-    return neighbors;
-  }
-
-  /******************************************************************************/
-  // helpers
-
-  /**
-   * @param {Array} a
-   * @param {Array} b
-   * @returns {Array}
-   * @access protected
-   */
-  static #mergeArrays(a, b) {
-    var len = b.length;
-
-    for (var i = 0; i < len; i++) {
-      var P = b[i];
-      if (!a.includes(P)) {
-        a.push(P);
-      }
-    }
-
-    return a;
-  }
+  return neighbors;
 }
