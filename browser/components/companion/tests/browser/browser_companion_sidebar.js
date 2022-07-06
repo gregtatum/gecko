@@ -54,6 +54,9 @@ add_task(async function test_focus_on_back() {
           .shadowRoot.querySelector(".back-button");
       });
       ok(backBtn, "Found back button");
+      await ContentTaskUtils.waitForCondition(() => {
+        return getFocusedElement() == backBtn;
+      });
       is(
         getFocusedElement(),
         backBtn,

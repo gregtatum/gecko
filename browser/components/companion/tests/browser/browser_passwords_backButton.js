@@ -132,6 +132,9 @@ add_task(async function testLoginsBackButtonKeyboardNavigation() {
             .querySelector("section-panel")
             .shadowRoot.querySelector(".back-button");
         });
+        await ContentTaskUtils.waitForCondition(() => {
+          return getFocusedElement() == backButton;
+        });
         is(getFocusedElement(), backButton, "Back button should be focused");
         let browsePanelShown = ContentTaskUtils.waitForEvent(
           content.document.getElementById("companion-deck"),
