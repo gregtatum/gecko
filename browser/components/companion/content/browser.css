@@ -139,7 +139,7 @@ body[onboarding] #global-background-inner {
 }
 
 body[flow-reset] #global-background-inner {
-  background-image: url("chrome://browser/content/companion/timeofdaybackground.png");
+  background-image: url("chrome://browser/content/companion/time_of_day_background.png");
 }
 
 #global-background-inner {
