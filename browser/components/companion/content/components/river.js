@@ -3,7 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
-import { html, repeat } from "chrome://browser/content/companion/lit.all.js";
+import {
+  html,
+  repeat,
+  ifDefined,
+} from "chrome://browser/content/companion/lit.all.js";
 import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
 import ViewGroupElement from "chrome://browser/content/companion/components/view-group-element.js";
 
@@ -143,17 +147,31 @@ export default class River extends MozLitElement {
           ${repeat(
             this.viewGroups,
             viewGroup => viewGroup.id,
-            (viewGroup, index) => html`
-              <view-group
-                ?top=${viewGroup === topViewGroup}
-                exportparts="domain, history"
-                tabindex="0"
-                role="tab"
-                ?active=${viewGroup.includes(this.activeView)}
-                .viewGroup=${viewGroup}
-                .activeView=${this.activeView}
-              ></view-group>
-            `
+            (viewGroup, index) => {
+              let isExpandedWithHistory = null;
+              let isActive = viewGroup.includes(this.activeView);
+
+              // We intentionally only set isExpandedWithHistory to `true` or `false`
+              // if there's more than 1 View in the ViewGroup so that ifDefined knows
+              // to remove the `aria-expanded` attribute if it turns out that there's
+              // only a single View in the ViewGroup.
+              if (viewGroup.length > 1) {
+                isExpandedWithHistory = isActive;
+              }
+
+              return html`
+                <view-group
+                  ?top=${viewGroup === topViewGroup}
+                  exportparts="domain, history"
+                  tabindex="0"
+                  role="tab"
+                  aria-expanded=${ifDefined(isExpandedWithHistory)}
+                  ?active=${isActive}
+                  .viewGroup=${viewGroup}
+                  .activeView=${this.activeView}
+                ></view-group>
+              `;
+            }
           )}
         </div>
       </div>
