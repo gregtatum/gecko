@@ -56,12 +56,15 @@ function maybeInitializeUI() {
 
   const companionDeck = document.getElementById("companion-deck");
 
-  let goBack = () => {
+  let goBack = e => {
     const previousViewName = companionDeck.selectedViewName;
     document.dispatchEvent(new Event("browse-panel-hidden"));
     companionDeck.selectedViewName = "browse";
     const focusEl = document.querySelector(`button.${previousViewName}`);
-    focusEl?.focus();
+    let preventFocusRing = !e?.detail?.showKeyboardFocus;
+    focusEl?.focus({
+      preventFocusRing,
+    });
   };
 
   window.addEventListener("section-panel-back", goBack);

@@ -47,9 +47,12 @@ class SectionPanel extends MozLitElement {
     };
   }
 
-  goBack() {
+  goBack(e) {
     this.dispatchEvent(
-      new CustomEvent("section-panel-back", { bubbles: true })
+      new CustomEvent("section-panel-back", {
+        bubbles: true,
+        detail: { showKeyboardFocus: e.type == "keypress" },
+      })
     );
   }
 
@@ -69,6 +72,7 @@ class SectionPanel extends MozLitElement {
           class="section-panel-header-button back-button ghost-button"
           data-l10n-id="companion-header-back-button"
           @click=${this.goBack}
+          @keypress=${this.goBack}
         ></button>
         <span class="section-panel-heading">
           <h1 class="text-heading-m-med" data-l10n-id="${this.l10nId}"></h1>
