@@ -8,6 +8,12 @@ def js_standalone():
     return False
 
 
+# Spoof pinebuild for the included scripts.
+@dependable
+def pinebuild():
+    return False
+
+
 @depends(target)
 def fold_libs(target):
     return target.os in ("WINNT", "OSX", "Android")
