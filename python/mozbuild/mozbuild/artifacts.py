@@ -96,6 +96,7 @@ class ArtifactJob(object):
     ]
     nightly_candidate_trees = [
         "projects/pine",
+        "projects/pine-stable",
         "mozilla-central",
         "integration/autoland",
     ]
@@ -982,7 +983,7 @@ class TaskCache(CacheManager):
         )
 
     @cachedmethod(operator.attrgetter("_cache"))
-    def artifacts(self, tree, job, artifact_job_class, rev):
+    def artifacts(self, tree, job, artifact_job_class, rev, variant):
         # Grab the second part of the repo name, which is generally how things
         # are indexed. Eg: 'integration/autoland' is indexed as
         # 'autoland'
@@ -991,11 +992,11 @@ class TaskCache(CacheManager):
         if job.endswith("-opt"):
             tree += ".shippable"
 
-        namespace = "{trust_domain}.v2.{tree}.revision.{rev}.{product}.{job}".format(
+        namespace = "{trust_domain}.v2.{tree}.revision.{rev}.{variant}.{job}".format(
             trust_domain=artifact_job_class.trust_domain,
             rev=rev,
             tree=tree,
-            product=artifact_job_class.product,
+            variant=variant,
             job=job,
         )
         self.log(
@@ -1319,8 +1320,11 @@ https://firefox-source-docs.mozilla.org/contributing/vcs/mercurial_bundles.html
 
     def find_pushhead_artifacts(self, task_cache, job, tree, pushhead):
         try:
+            variant = self._artifact_job.product
+            if self._substs.get("PINEBUILD") is not None:
+                variant = "pinebuild"
             taskId, artifacts = task_cache.artifacts(
-                tree, job, self._artifact_job.__class__, pushhead
+                tree, job, self._artifact_job.__class__, pushhead, variant
             )
         except ValueError:
             return None
