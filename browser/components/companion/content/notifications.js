@@ -134,6 +134,8 @@ function processEvents(events, now) {
   if (!events || !events.length) {
     return;
   }
+  // MR2-2720 - sometimes we receive null events from the backend
+  let filteredEvents = events.filter(event => event);
   logConsole.debug("processEvents, now:", now);
   logConsole.debug("processEvents removing timers:", notificationTimers.size);
   for (let timer of notificationTimers) {
@@ -143,7 +145,7 @@ function processEvents(events, now) {
   let notificationTimeout = Services.prefs.getIntPref(
     "browser.pinebuild.companion.notifications.minutesBeforeEvent"
   );
-  for (let event of events) {
+  for (let event of filteredEvents) {
     let notificationTime =
       new Date(event.startDate) - 60 * notificationTimeout * 1000;
     if (notificationTime > now) {
