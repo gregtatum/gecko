@@ -14119,8 +14119,7 @@ var WorkshopBackend = (() => {
                   "https://www.googleapis.com/auth/gmail.readonly",
                   "https://www.googleapis.com/auth/calendar.events.readonly",
                   "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
-                  "https://www.googleapis.com/auth/documents.readonly",
-                  "https://www.googleapis.com/auth/drive.readonly"
+                  "https://www.googleapis.com/auth/drive.metadata.readonly",
                 ]
               }
             },
