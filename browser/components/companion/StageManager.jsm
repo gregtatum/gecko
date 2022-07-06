@@ -3349,7 +3349,12 @@ class StageManager extends EventTarget {
     let currentView = this.#historyCarouselMode
       ? this.#currentHistoryCarouselInternalView
       : this.#currentInternalView;
-    this.#closeInternalView(currentView);
+    let workspace = this.#workspaces.get(currentView?.workspaceId);
+    if (workspace?.viewStack.length > 1) {
+      this.#closeInternalView(currentView);
+    } else {
+      this.#window.close();
+    }
   }
 
   /**
