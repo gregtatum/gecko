@@ -23,10 +23,6 @@ add_task(async () => {
     { url: TEST_URL2, created_at: now - 1000 },
     { url: TEST_URL3, created_at: now - 3000 },
   ]);
-  Services.prefs.setBoolPref(
-    "browser.pinebuild.snapshots.relevancy.enabled",
-    false
-  );
 
   // Simulate a browser keeping this page data cached.
   let actor = {};

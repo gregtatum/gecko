@@ -74,8 +74,8 @@ add_task(async function test_enable_overlapping() {
 });
 
 add_task(async function test_overlapping_with_scoring() {
-  // Set the threshold to above the snapshots score.
-  Services.prefs.setIntPref("browser.places.snapshots.threshold", 4);
+  // Reset the threshold, the snapshot should be lower than the required score.
+  Services.prefs.clearUserPref("browser.places.snapshots.threshold");
 
   let snapshotPromise = selector.once("snapshots-updated");
   selector.rebuild();

@@ -76,7 +76,7 @@ const SnapshotScorer = new (class SnapshotScorer {
       this,
       "snapshotThreshold",
       "browser.places.snapshots.threshold",
-      3
+      4
     );
 
     let branch = Services.prefs.getBranch("browser.snapshots.score.");

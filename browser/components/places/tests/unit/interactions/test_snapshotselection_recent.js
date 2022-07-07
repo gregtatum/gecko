@@ -12,11 +12,6 @@ const TEST_URL3 = "https://example.com/14235";
 const TEST_URL4 = "https://example.com/14345";
 
 add_task(async function test_interactions_recent() {
-  Services.prefs.setBoolPref(
-    "browser.pinebuild.snapshots.relevancy.enabled",
-    false
-  );
-
   let now = Date.now();
   await addInteractions([
     { url: TEST_URL1, created_at: now - 2000 },

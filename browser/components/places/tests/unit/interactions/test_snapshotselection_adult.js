@@ -25,10 +25,6 @@ async function addSnapshotAndFilter(url) {
 
 add_task(async function setup() {
   let now = Date.now();
-  Services.prefs.setBoolPref(
-    "browser.pinebuild.snapshots.relevancy.enabled",
-    false
-  );
 
   await addInteractions([{ url: TEST_URL1, created_at: now - 2000 }]);
   await Snapshots.add({ url: TEST_URL1 });
