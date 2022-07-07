@@ -1819,8 +1819,6 @@ pref("dom.storage_access.enabled", true);
 #if defined(NIGHTLY_BUILD) || defined(PINEBUILD)
 pref("privacy.query_stripping.enabled", true);
 #endif
-// Enable URL query stripping in Private Browsing Mode for all desktop channels.
-pref("privacy.query_stripping.enabled.pbmode", true);
 
 pref("browser.contentblocking.cryptomining.preferences.ui.enabled", true);
 pref("browser.contentblocking.fingerprinting.preferences.ui.enabled", true);
