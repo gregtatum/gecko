@@ -14,13 +14,12 @@ const COMPANION_WIDTH_AFTER_ONBOARDING = "340";
 
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
+    let browser = this.browsingContext.embedderElement;
+    let window = browser.ownerGlobal;
+    let doc = window.document;
     if (message.name == "OnboardingCompleted") {
       Services.prefs.setBoolPref("browser.pinebuild.onboarding.complete", true);
 
-      let browser = this.browsingContext.embedderElement;
-      let window = browser.ownerGlobal;
-
-      let doc = window.document;
       doc.body.removeAttribute("onboarding");
 
       doc.body.setAttribute("flow-reset", true);
@@ -69,6 +68,12 @@ class OnboardingParent extends JSWindowActorParent {
         item = hiddenWindow.document.getElementById("macDockMenuNewWindow");
         item.disabled = false;
       }
+    } else if (message.name == "OpenFxa") {
+      doc.body.setAttribute("onboarding", "with-browsing");
+      await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
+      // The promise above is resolved once the user signs into fxa so it's safe to
+      // reset the onboarding attribute now.
+      doc.body.setAttribute("onboarding", "no-browsing");
     }
   }
 }

@@ -114,7 +114,7 @@ body {
   transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
 }
 
-body[browser-ready]:not([flow-reset],[onboarding]) {
+body[browser-ready]:not([flow-reset],[onboarding="no-browsing"]) {
   /* This is just our normal solid color background */
   background-color: var(--pinebuild-global-background);
 }
@@ -130,11 +130,11 @@ body[browser-ready]:not([flow-reset],[onboarding]) {
   background: var(--pinebuild-starting-background-color);
 }
 
-body[onboarding] {
+body[onboarding="no-browsing"] {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-body[onboarding] #global-background-inner {
+body[onboarding="no-browsing"] #global-background-inner {
   background-image: url("chrome://browser/content/companion/onboarding.png");
 }
 
@@ -202,7 +202,7 @@ body:not([browser-ready]) .browserStack > browser {
   transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
 }
 
-:root[companion] body:not([flow-reset],[onboarding]) .browserStack > browser {
+:root[companion] body:not([flow-reset],[onboarding="no-browsing"]) .browserStack > browser {
   border-inline-start: 1px solid var(--colors-cafe-40);
   border-start-start-radius: 8px;
   border-top: 1px solid var(--colors-cafe-40);
@@ -244,13 +244,13 @@ body:not([browser-ready]) .browserStack > browser {
 }
 
 body[onboarding] #companion-box,
-body[onboarding] #companion-sidebar-button,
-body[onboarding] #pinebuild-back-button,
-body[onboarding] #pinebuild-reload-button,
 body[onboarding] #session-setaside-button,
-body[onboarding] active-view-manager,
 body[onboarding] #urlbar-container,
-body[onboarding] #PanelUI-button,
+body[onboarding="no-browsing"] #companion-sidebar-button,
+body[onboarding="no-browsing"] #pinebuild-back-button,
+body[onboarding="no-browsing"] #pinebuild-reload-button,
+body[onboarding="no-browsing"] active-view-manager,
+body[onboarding="no-browsing"] #PanelUI-button,
 body[flow-reset] #pinebuild-back-button,
 body[flow-reset] #pinebuild-reload-button,
 body[flow-reset] #session-setaside-button,

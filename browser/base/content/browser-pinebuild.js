@@ -64,7 +64,7 @@ var PineBuildUIUtils = {
     ) {
       // Set the "onboarding" attribute on the chrome window, so we know to adjust
       // behavior for the onboarding experience.
-      window.document.body.setAttribute("onboarding", true);
+      window.document.body.setAttribute("onboarding", "no-browsing");
     }
   },
 

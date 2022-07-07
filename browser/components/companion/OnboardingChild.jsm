@@ -8,8 +8,6 @@ var EXPORTED_SYMBOLS = ["OnboardingChild"];
 
 class OnboardingChild extends JSWindowActorChild {
   async handleEvent(event) {
-    if (event.type == "OnboardingCompleted") {
-      this.sendAsyncMessage("OnboardingCompleted");
-    }
+    this.sendAsyncMessage(event.type);
   }
 }

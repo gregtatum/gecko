@@ -1228,6 +1228,7 @@ BrowserGlue.prototype = {
           moduleURI: "resource:///actors/OnboardingChild.jsm",
           events: {
             OnboardingCompleted: { wantUntrusted: true },
+            OpenFxa: { wantUntrusted: true },
           },
         },
         matches: ["about:onboarding"],

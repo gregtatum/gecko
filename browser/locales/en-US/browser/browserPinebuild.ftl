@@ -82,3 +82,7 @@ active-view-manager-context-menu-close-view-group =
      [1] Close View
     *[other] Close View Group
   }
+
+# Pinebuild onboarding strings
+onboarding-fxa-label = Go to Firefox Accounts
+onboarding-complete-label = Complete onboarding

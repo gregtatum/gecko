@@ -3,11 +3,18 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 window.onload = event => {
-  let button = document.getElementById("completeButton");
-  button.addEventListener("click", buttonClicked);
+  let completeButton = document.getElementById("completeButton");
+  completeButton.addEventListener("click", buttonClicked);
+  let fxaButton = document.getElementById("openFxa");
+  fxaButton.addEventListener("click", openFxa);
 };
 
 function buttonClicked() {
   let event = new CustomEvent("OnboardingCompleted", { bubbles: true });
+  document.dispatchEvent(event);
+}
+
+function openFxa() {
+  let event = new CustomEvent("OpenFxa", { bubbles: true });
   document.dispatchEvent(event);
 }
