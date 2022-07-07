@@ -1688,6 +1688,7 @@ class PictureInPictureChild extends JSWindowActorChild {
         break;
       }
       case "emptied": {
+        this.isSubtitlesEnabled = false;
         if (this.emptiedTimeout) {
           clearTimeout(this.emptiedTimeout);
           this.emptiedTimeout = null;
@@ -2316,6 +2317,8 @@ class PictureInPictureChild extends JSWindowActorChild {
             ?.length).toString(),
         }
       );
+    } else {
+      this.sendAsyncMessage("PictureInPicture:HideSubtitlesButton");
     }
     this.#subtitlesEnabled = val;
   }

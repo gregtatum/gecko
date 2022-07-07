@@ -1,3 +1,0 @@
-$UNVALIDATED/browser/components/companion/services/workshop/node_modules/
-$UNVALIDATED/browser/components/companion/storybook/node_modules/
-$UNVALIDATED/function2
