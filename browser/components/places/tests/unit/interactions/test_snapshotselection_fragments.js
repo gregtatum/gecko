@@ -12,6 +12,10 @@ const TEST_FRAGMENT_URL1 = "https://example.com/#fragment";
 const TEST_FRAGMENT_URL2 = "https://example.com/12345#row=1";
 
 add_task(async function test_snapshot_selection_fragments() {
+  Services.prefs.setBoolPref(
+    "browser.pinebuild.snapshots.relevancy.enabled",
+    false
+  );
   await Snapshots.reset();
 
   let selector = new SnapshotSelector({ count: 5 });
