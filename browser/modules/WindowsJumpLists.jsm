@@ -7,6 +7,9 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 // Stop updating jumplists after some idle time.
 const IDLE_TIMEOUT_SECONDS = 5 * 60;
@@ -125,6 +128,11 @@ var tasksCfg = [
     // shutdown. Thus true for consistency.
   },
 ];
+
+if (AppConstants.PINEBUILD) {
+  // We want to remove the "Open new tab" option in pinebuild
+  tasksCfg.shift();
+}
 
 // Open new private window
 let privateWindowTask = {
