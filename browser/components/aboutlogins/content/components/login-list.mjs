@@ -139,6 +139,7 @@ export default class LoginList extends HTMLElement {
     window.addEventListener("AboutLoginsLoginSelected", this);
     window.addEventListener("AboutLoginsShowBlankLogin", this);
     window.addEventListener("AboutLoginsRemoveUpdateState", this);
+    window.addEventListener("AboutLoginsEditToggleEditing", this);
     this._list.addEventListener("click", this);
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
@@ -352,7 +353,6 @@ export default class LoginList extends HTMLElement {
                 bubbles: true,
               })
             );
-            this.classList.add("editing");
             break;
           }
           default:
@@ -433,6 +433,17 @@ export default class LoginList extends HTMLElement {
         );
         break;
       }
+
+      case "AboutLoginsEditToggleEditing": {
+        let message = event.detail.message;
+        if (message === "success") {
+          this.classList.add("editing");
+        } else {
+          this.classList.remove("editing");
+        }
+        break;
+      }
+
       case "AboutLoginsFilterLogins": {
         this._filter = event.detail.toLocaleLowerCase();
         this.render();

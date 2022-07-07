@@ -332,9 +332,18 @@ export default class LoginItem extends HTMLElement {
       "about-logins-edit-login-os-auth-dialog-message"
     );
     if (!primaryPasswordAuth) {
+      window.dispatchEvent(
+        new CustomEvent("AboutLoginsEditToggleEditing", {
+          detail: { message: "cancel" },
+        })
+      );
       return;
     }
-
+    window.dispatchEvent(
+      new CustomEvent("AboutLoginsEditToggleEditing", {
+        detail: { message: "success" },
+      })
+    );
     this._toggleEditing();
     this.render();
 
