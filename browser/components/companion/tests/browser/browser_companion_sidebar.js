@@ -62,6 +62,14 @@ add_task(async function test_focus_on_back() {
         backBtn,
         "The back button is focused after navigating to browse submenu"
       );
+      // Test that other keypresses such as Tab don't trigger the back button (MR2-2875)
+      EventUtils.synthesizeKey("VK_TAB", {}, content);
+      EventUtils.synthesizeKey("VK_TAB", { shiftKey: true }, content);
+      is(
+        getFocusedElement(),
+        backBtn,
+        "The back button is focused again after tabbing away and tabbing back"
+      );
       let browsePanelShown = ContentTaskUtils.waitForEvent(
         content.document.getElementById("companion-deck"),
         "view-changed"

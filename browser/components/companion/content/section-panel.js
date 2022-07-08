@@ -48,10 +48,20 @@ class SectionPanel extends MozLitElement {
   }
 
   goBack(e) {
+    e.stopPropagation();
+    if (
+      e.type == "keypress" &&
+      e.charCode != KeyEvent.DOM_VK_SPACE &&
+      e.keyCode != KeyEvent.DOM_VK_RETURN
+    ) {
+      return;
+    }
     this.dispatchEvent(
       new CustomEvent("section-panel-back", {
         bubbles: true,
-        detail: { showKeyboardFocus: e.type == "keypress" },
+        detail: {
+          showKeyboardFocus: e.type == "keypress",
+        },
       })
     );
   }
