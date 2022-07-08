@@ -135,10 +135,10 @@ class Redirector {
 }
 
 /**
- * The default fixed date/time to use if not explicitly specified, currently
- * April 26th at 9:00am in the local timezone for workshop backed tests.
+ * When running against Workshop we override this value so we can use a fixed date/time.
+ * For Workshop this will get set to April 26th at 9:00am in the local timezone.
  */
-let DEFAULT_FAKE_NOW_TS = new Date(2022, 3, 26, 9).valueOf();
+let DEFAULT_FAKE_NOW_TS = new Date().valueOf();
 
 /**
  * The time the first event should start at, set to the current time in ms.
@@ -419,6 +419,8 @@ class CompanionHelper {
     );
 
     if (workshopEnabled) {
+      // Override so we can use a fixed date/time for our tests.
+      DEFAULT_FAKE_NOW_TS = new Date(2022, 3, 26, 9).valueOf();
       let workshopHelper = new WorkshopHelper();
 
       // Start the Workshop server before the tests run.
