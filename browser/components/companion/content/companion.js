@@ -49,6 +49,9 @@ function maybeInitializeUI() {
   });
   window.addEventListener("Companion:ResetFlowExited", () => {
     document.body.removeAttribute("flow-reset");
+    let randomImageNumber = Math.ceil(Math.random() * 4);
+    let flowResetImageElement = document.getElementById("flow-reset-image");
+    flowResetImageElement.src = `chrome://browser/content/companion/flow-reset-bg${randomImageNumber}.png`;
   });
   window.addEventListener("Companion:ShowPasswordsPanel", () => {
     document.getElementById("companion-deck").selectedViewName = "passwords";

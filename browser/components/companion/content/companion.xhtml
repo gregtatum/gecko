@@ -308,12 +308,14 @@
       <template xmlns="http://www.w3.org/1999/xhtml" name="now" id="scroll">
         <div>
           <section id="flow-reset-placeholder">
-            <img src="chrome://browser/content/companion/flow-reset-placeholder.png" />
             <button id="flow-reset-close" onclick="exitFlowReset()"></button>
-            <h3 data-l10n-id="session-cleared-title"/>
-            <small data-l10n-id="session-cleared">
-              <a id="session-cleared-link" data-l10n-name="session-cleared-link" onclick="exitFlowReset(true)"></a>
-            </small>
+            <div id="flow-reset-text">
+              <h3 data-l10n-id="session-cleared-title"/>
+              <small data-l10n-id="session-cleared">
+                <a id="session-cleared-link" data-l10n-name="session-cleared-link" onclick="exitFlowReset(true)"></a>
+              </small>
+            </div>
+            <img id="flow-reset-image" src="chrome://browser/content/companion/flow-reset-bg1.png" />
           </section>
           <section id="now-content">
             <global-nav-debugging></global-nav-debugging>

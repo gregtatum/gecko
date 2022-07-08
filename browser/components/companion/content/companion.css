@@ -578,7 +578,7 @@ snapshot-group-list-detail {
   display: none;
   position: relative;
   border-radius: 16px;
-  padding-block-start: 55px;
+  background-color: var(--colors-white);
   box-shadow: 0px 2px 6px 0px #3A394433;
   height: 100%;
   box-sizing: border-box;
@@ -586,32 +586,28 @@ snapshot-group-list-detail {
   overflow: hidden;
 }
 
-#flow-reset-placeholder::after {
-  content: "";
-  position: absolute;
-  top: -50px;
-  left: -50px;
-  bottom: 300px;
-  right: -50px;
-  background: radial-gradient(481.74% 98.84% at 50% 83.12%, rgba(255, 255, 255, 0) 39.42%, rgba(0, 197, 224, 0.02) 60.44%, rgba(0, 184, 224, 0.145) 73.89%, rgba(132, 89, 255, 0.4) 94.52%);
-  border-radius: 16px;
-  opacity: .7;
-  rotate: -6deg;
-  pointer-events: none;
+#flow-reset-image {
+  max-width: 100%;
 }
 
 #flow-reset-close {
   width: 16px;
   height: 16px;
-  position: absolute;
-  top: 5px;
-  right: 5px;
+  margin-block: 5px 0;
+  margin-inline: 0 5px;
   background: center center no-repeat url(chrome://global/skin/icons/close.svg);
-  background-size: 12px;
+  background-size: 16px;
+}
+
+#flow-reset-text {
+  width: 100%;
 }
 
 [flow-reset] #flow-reset-placeholder {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 [flow-reset] #now-content {
