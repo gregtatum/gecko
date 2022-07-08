@@ -134,6 +134,12 @@ const WorkshopParentAccess = {
             account.name
           )}`;
         }
+        // For consumer accounts, the URL is https://outlook.live.com, for
+        // Office365 accounts, the URL is https://outlook.office.com.
+        // but we have no way to distinguish between the two. So for now,
+        // we're just sending folks to the generic outlook URL. This should
+        // be a very uncommon case.
+        return "https://outlook.com";
     }
     return null;
   },
