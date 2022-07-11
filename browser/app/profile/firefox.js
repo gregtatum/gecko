@@ -2780,7 +2780,7 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   pref("browser.pinebuild.ignoreBeforeUnloadOnExit", true);
   pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
-  pref("browser.pinebuild.snapshots.relevancy.enabled", false);
+  pref("browser.pinebuild.snapshots.relevancy.enabled", true);
   pref("browser.pinebuild.login-view-overwriting.enabled", true);
   pref("browser.companion.snapshot-groups.enabled", false);
   pref("identity.fxaccounts.commands.enabled", false);

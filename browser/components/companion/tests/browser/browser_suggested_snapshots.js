@@ -68,6 +68,10 @@ function testSnapshotTitles(helper, expectedTitles, excludedTitle) {
 }
 
 add_setup(async function() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.snapshots.relevancy.enabled", false]],
+  });
+
   // Add a file URI to test.
   const TEST_FILE = "file_pdfjs_object_stream.pdf";
   let testFileUri = getChromeDir(getResolvedURI(gTestPath));

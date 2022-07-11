@@ -16,6 +16,10 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 let win;
 
 add_setup(async function() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.snapshots.relevancy.enabled", false]],
+  });
+
   await Interactions.reset();
   await PlacesUtils.history.clear();
   await PlacesTestUtils.addVisits(TEST_URLS);
