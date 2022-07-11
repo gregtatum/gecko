@@ -1961,7 +1961,7 @@ BrowserGlue.prototype = {
     // rollout.
     // Avoid overwriting cookie behavior set by enterprise policy.
     if (
-      lazy.NimbusFeatures.tcpByDefault.isEnabled() &&
+      lazy.NimbusFeatures.tcpByDefault.getVariable("enabled") &&
       !hasCookieBehaviorPolicy()
     ) {
       Services.telemetry.scalarSet(
@@ -3019,6 +3019,14 @@ BrowserGlue.prototype = {
               lazy.RemoteAgent.running) &&
             Services.prefs.getBoolPref("app.update.disabledForTesting", false);
           if (!disabledForTesting) {
+            try {
+              lazy.BackgroundUpdate.scheduleFirefoxMessagingSystemTargetingSnapshotting();
+            } catch (e) {
+              Cu.reportError(
+                "There was an error scheduling Firefox Messaging System targeting snapshotting: " +
+                  e
+              );
+            }
             lazy.BackgroundUpdate.maybeScheduleBackgroundUpdateTask();
           }
         },
@@ -4614,7 +4622,9 @@ BrowserGlue.prototype = {
         return "disallow-postUpdate";
       }
 
-      return lazy.NimbusFeatures.upgradeDialog.isEnabled() ? "" : "disabled";
+      return lazy.NimbusFeatures.upgradeDialog.getVariable("enabled")
+        ? ""
+        : "disabled";
     })();
 
     // Record why the dialog is showing or not.
@@ -5876,7 +5886,7 @@ var AboutHomeStartupCache = {
 
     this.setDeferredResult(this.CACHE_RESULT_SCALARS.UNSET);
 
-    this._enabled = lazy.NimbusFeatures.abouthomecache.isEnabled();
+    this._enabled = !!lazy.NimbusFeatures.abouthomecache.getVariable("enabled");
 
     if (!this._enabled) {
       this.recordResult(this.CACHE_RESULT_SCALARS.DISABLED);

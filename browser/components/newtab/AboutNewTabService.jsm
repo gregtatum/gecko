@@ -127,7 +127,7 @@ const AboutHomeStartupCacheChild = {
       );
     }
 
-    if (!lazy.NimbusFeatures.abouthomecache.isEnabled()) {
+    if (!lazy.NimbusFeatures.abouthomecache.getVariable("enabled")) {
       return;
     }
 
@@ -446,7 +446,7 @@ class BaseAboutNewTabService {
      */
 
     lazy.NimbusFeatures.aboutwelcome.recordExposureEvent({ once: true });
-    if (lazy.NimbusFeatures.aboutwelcome.isEnabled({ defaultValue: true })) {
+    if (lazy.NimbusFeatures.aboutwelcome.getVariable("enabled") ?? true) {
       return ABOUT_WELCOME_URL;
     }
     return this.defaultURL;
