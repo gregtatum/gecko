@@ -16,7 +16,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   HiddenFrame: "resource://gre/modules/HiddenFrame.jsm",
 });
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const workshopEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled",
   false

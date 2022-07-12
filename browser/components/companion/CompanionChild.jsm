@@ -5,7 +5,6 @@
 "use strict";
 
 var EXPORTED_SYMBOLS = ["CompanionChild"];
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 class CompanionChild extends JSWindowActorChild {
   constructor() {

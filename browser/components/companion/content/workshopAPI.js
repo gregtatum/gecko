@@ -11,7 +11,6 @@ import { ServiceUtils } from "./service-utils.js";
 const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const isLoggingEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop-logs.enabled",
   false

@@ -7,7 +7,6 @@ import { MailAPIFactory } from "chrome://browser/content/companion/workshop-api-
 const OnlineServicesHelper = ChromeUtils.import(
   "resource:///modules/OnlineServicesHelper.jsm"
 );
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
 let workshopAPI = null;
 const workshopEnabled = Services.prefs.getBoolPref(

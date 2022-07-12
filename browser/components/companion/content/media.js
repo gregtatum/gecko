@@ -4,8 +4,6 @@
 
 import { getListDiff } from "./listDiff.js";
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
 const allowMute = Services.prefs.getBoolPref(
   "browser.companion.media.mute.enabled",
   false

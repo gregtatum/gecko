@@ -13,8 +13,6 @@ import {
 } from "./workshopAPI.js";
 import { noteTelemetryTimestamp } from "./telemetry-helpers.js";
 
-var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });

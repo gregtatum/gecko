@@ -8,8 +8,6 @@ import { MozLitElement } from "./widget-utils.js";
 import { classMap, html, css } from "./lit.all.js";
 import { Workshop, workshopAPI } from "./workshopAPI.js";
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
 ChromeUtils.defineModuleGetter(
   globalThis,
   "OnlineServices",

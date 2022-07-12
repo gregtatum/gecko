@@ -3,8 +3,6 @@
 
 /* eslint-disable no-unused-vars */
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-
 const { FakeEventFactory } = ChromeUtils.import(
   "resource:///modules/WorkshopFakeEvents.jsm"
 );

@@ -2,12 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// On Mac, we get included from the hidden window, which means we already
-// have Services defined, so we can't import in the usual const { Services }
-// way.
-var Services = ChromeUtils.import("resource://gre/modules/Services.jsm")
-  .Services;
-
 function pinebuildBackground() {
   if (
     !Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false) &&
