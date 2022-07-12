@@ -217,11 +217,12 @@ add_task(async function testMultiEventLinkExpansion() {
       );
       let [firstEvent, secondEvent] = visibleEvents;
 
-      const getEventLinks = event => event.shadowRoot.querySelectorAll("a");
+      const getEventLinks = event =>
+        event.shadowRoot.querySelectorAll("a.event-link");
 
       info("Only two links are visible for each event initially");
       is(getEventLinks(firstEvent).length, 2, "First event has 2 links");
-      is(getEventLinks(firstEvent).length, 2, "Second event has 2 links");
+      is(getEventLinks(secondEvent).length, 2, "Second event has 2 links");
 
       info("Click on the first event to expand its links");
       const firstExpanded = ContentTaskUtils.waitForEvent(
