@@ -140,12 +140,15 @@ add_task(async function test_keyboard_focus() {
  * Tests that the gClickAndHoldListenersOnElement mechanism that Megaback uses
  * doesn't cause the StageManager to go back twice in a row if the user uses
  * the keyboard to press the back button. (MR2-2882)
+ * Additionally tests that focus does not move from the back button when
+ * using a keyboard to activate the back button. (MR2-1608)
  */
 add_task(async function test_back_button_keyboard_events() {
   let [view1, view2] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/",
   ]);
+  let backButton = document.getElementById("pinebuild-back-button");
 
   Assert.equal(gStageManager.currentView, view2);
 
@@ -159,7 +162,6 @@ add_task(async function test_back_button_keyboard_events() {
       gStageManager,
       "ViewChanged"
     );
-    let backButton = document.getElementById("pinebuild-back-button");
     // toolbarbutton's are not focusable normally, unless the user begins
     // using the keyboard to navigate. We temporarily force focusability
     // here.
@@ -178,8 +180,18 @@ add_task(async function test_back_button_keyboard_events() {
   for (let keyChar of ["KEY_Enter", " "]) {
     await focusAndPressBackButton(keyChar);
     Assert.equal(gStageManager.currentView, view2);
+    Assert.equal(
+      document.activeElement,
+      backButton,
+      "Back button has focus after view has changed"
+    );
     await focusAndPressBackButton(keyChar);
     Assert.equal(gStageManager.currentView, view1);
+    Assert.equal(
+      document.activeElement,
+      backButton,
+      "Back button has focus after view has changed"
+    );
     await PinebuildTestUtils.setCurrentView(view3);
   }
 });

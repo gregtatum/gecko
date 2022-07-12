@@ -1351,7 +1351,6 @@
           !findBar.hidden &&
           findBar._findField.getAttribute("focused") == "true";
       }
-
       let activeEl = document.activeElement;
       // If focus is on the old tab, move it to the new tab.
       if (activeEl == oldTab) {
@@ -1359,7 +1358,9 @@
       } else if (
         gMultiProcessBrowser &&
         activeEl != newBrowser &&
-        activeEl != newTab
+        activeEl != newTab &&
+        // eslint-disable-next-line prettier/prettier
+        (AppConstants.PINEBUILD && activeEl != document.getElementById("pinebuild-back-button"))
       ) {
         // In e10s, if focus isn't already in the tabstrip or on the new browser,
         // and the new browser's previous focus wasn't in the url bar but focus is
@@ -1408,6 +1409,17 @@
         // selected which could cause them to overwrite what they've
         // already typed in.
         if (gURLBar.focused && newBrowser.userTypedValue) {
+          return;
+        }
+
+        // If the pinebuild Back button is focused,
+        // even if the URL was previously focused,
+        // we do not want to pull focus to the URL bar.
+        if (
+          AppConstants.PINEBUILD &&
+          document.activeElement ==
+            document.getElementById("pinebuild-back-button")
+        ) {
           return;
         }
 
