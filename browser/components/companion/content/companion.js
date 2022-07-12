@@ -64,9 +64,9 @@ function maybeInitializeUI() {
     document.dispatchEvent(new Event("browse-panel-hidden"));
     companionDeck.selectedViewName = "browse";
     const focusEl = document.querySelector(`button.${previousViewName}`);
-    let preventFocusRing = !e?.detail?.showKeyboardFocus;
+    let focusVisible = e?.detail?.showKeyboardFocus;
     focusEl?.focus({
-      preventFocusRing,
+      focusVisible,
     });
   };
 

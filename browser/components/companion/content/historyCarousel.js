@@ -597,7 +597,7 @@ const HistoryCarousel = {
       });
     } else {
       this.whenVisible.then(() => {
-        this.list.focus({ preventFocusRing: true });
+        this.list.focus({ focusVisible: false });
 
         document.dispatchEvent(
           new CustomEvent("HistoryCarouselReady", { bubbles: true })
