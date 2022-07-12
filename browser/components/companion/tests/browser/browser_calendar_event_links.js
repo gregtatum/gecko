@@ -27,14 +27,8 @@ add_task(async function testEventWithLinks() {
         return event.shadowRoot.querySelector(".event-links-wrapper");
       });
       let links = eventLinksSection.querySelectorAll("a");
-      let favicon = links[0].querySelector("img").src;
 
       is(links.length, 2, "There are two links displayed.");
-      is(
-        favicon,
-        "chrome://global/skin/icons/defaultFavicon.svg",
-        "The default icon should be defaultFavicon.svg"
-      );
 
       let text = [...links].map(link => link.innerText);
       Assert.deepEqual(
