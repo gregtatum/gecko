@@ -147,7 +147,11 @@ session-card-toggle =
   .aria-label = Expand session card
 
 # This string is used session cards to display the number of sites within a session
-session-pages-count = { $pages } sites
+session-pages-count =
+    { $pages ->
+        [one] { $pages } site
+       *[other] { $pages } sites
+    }
 
 # These are shown in the now tab when the user has set aside a session and
 # entered "Flow Reset" state.
