@@ -74,6 +74,9 @@
                           command="cmd_file_importFromAnotherBrowser" data-l10n-id="menu-file-import-from-another-browser"/>
                 <menuseparator/>
                 <menuitem id="goOfflineMenuitem"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           type="checkbox"
                           command="cmd_toggleOfflineStatus" data-l10n-id="menu-file-go-offline"/>
                 <menuitem id="menu_FileQuitItem"
@@ -495,6 +498,9 @@
                           data-l10n-id="menu-help-share-ideas"
                           appmenu-data-l10n-id="appmenu-help-share-ideas"/>
                 <menuitem id="helpSafeMode"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           oncommand="safeModeRestart();"
                           data-l10n-id="menu-help-enter-troubleshoot-mode2"
                           appmenu-data-l10n-id="appmenu-help-enter-troubleshoot-mode2"/>
