@@ -339,7 +339,18 @@ export class CalendarEventList extends MozLitElement {
       }
     } else if (e.type === "hide-event") {
       this.hiddenEvents.add(e.detail.eventId);
-      this.onEventsUpdated({}, "event-hidden");
+      if (workshopEnabled) {
+        this.onEventsUpdated({}, "event-hidden");
+      } else {
+        for (let child of this.calendarEvents) {
+          if (child.event.id == e.detail.eventId) {
+            child.hidden = true;
+          }
+        }
+        this.dispatchOnUpdateComplete(
+          new CustomEvent("calendar-events-updated")
+        );
+      }
     }
   }
 
