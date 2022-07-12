@@ -71,6 +71,7 @@ class GoogleService {
       this.getUnreadCountAtom.bind(this),
       60 * 1000
     );
+    this.getInboxURL();
   }
 
   async connect() {
@@ -265,6 +266,15 @@ class GoogleService {
       }
       return a.startDate - b.startDate;
     });
+  }
+
+  async getInboxURL() {
+    if (!this.inboxURL) {
+      this.inboxURL = "https://mail.google.com/mail/";
+      if (this.emailAddress) {
+        this.inboxURL += `u/?authuser=${encodeURIComponent(this.emailAddress)}`;
+      }
+    }
   }
 
   async getUnreadCountAtom() {
