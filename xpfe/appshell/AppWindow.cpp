@@ -3015,7 +3015,7 @@ struct LoadNativeMenusListener {
   nsCOMPtr<nsIWidget> mParentWindow;
 };
 
-static bool sHiddenWindowLoadedNativeMenus = true;
+static bool sHiddenWindowLoadedNativeMenus = false;
 static nsTArray<LoadNativeMenusListener> sLoadNativeMenusListeners;
 
 static void BeginLoadNativeMenus(Document* aDoc, nsIWidget* aParentWindow);

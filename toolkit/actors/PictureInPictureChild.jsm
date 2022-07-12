@@ -17,10 +17,13 @@ ChromeUtils.defineModuleGetter(
   "DeferredTask",
   "resource://gre/modules/DeferredTask.jsm"
 );
+<<<<<<< working copy: pine tip f50a277e6fc0
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
+=======
+>>>>>>> merge rev:    central b8040f409025
 ChromeUtils.defineModuleGetter(
   lazy,
   "KEYBOARD_CONTROLS",

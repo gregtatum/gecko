@@ -775,7 +775,7 @@ var FullScreen = {
   },
 
   // Autohide helpers for the context menu item
-  getAutohide(aItem) {
+  updateAutohideMenuitem(aItem) {
     aItem.setAttribute(
       "checked",
       Services.prefs.getBoolPref("browser.fullscreen.autohide")

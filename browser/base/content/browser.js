@@ -6,7 +6,6 @@
 var { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
-var { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 var { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
@@ -6635,7 +6634,7 @@ function showFullScreenViewContextMenuItems(popup) {
   }
   let autoHide = popup.querySelector(".fullscreen-context-autohide");
   if (autoHide) {
-    FullScreen.getAutohide(autoHide);
+    FullScreen.updateAutohideMenuitem(autoHide);
   }
 }
 

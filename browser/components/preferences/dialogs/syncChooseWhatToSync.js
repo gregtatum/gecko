@@ -4,7 +4,6 @@
 
 /* import-globals-from /toolkit/content/preferencesBindings.js */
 
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
