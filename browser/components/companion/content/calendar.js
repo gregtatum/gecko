@@ -35,7 +35,6 @@ const MICROSOFT_SLIDES_ICON =
 // This was the best generic icon I could come up with.
 const MICROSOFT_DRIVE_ICON =
   "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/genericfile.svg";
-const DEFAULT_ICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
 // Update display every minute
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
@@ -608,7 +607,7 @@ class CalendarEventWrapper extends CalendarEvent {
         return GOOGLE_DRIVE_ICON;
     }
 
-    return window.CompanionUtils.getFavicon(href) || DEFAULT_ICON;
+    return `page-icon:${url}`;
   }
 
   async getDocumentTitle(url) {
