@@ -407,6 +407,11 @@ class MicrosoftService {
     return this.auth.getToken();
   }
 
+  // For Microsoft, we don't have an email address
+  getAccountAddress() {
+    return null;
+  }
+
   async getNextMeetings() {
     let token = await this.getToken();
 
