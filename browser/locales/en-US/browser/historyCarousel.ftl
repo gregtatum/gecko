@@ -13,6 +13,10 @@ history-carousel-previous-button =
   .aria-label = Previous view in history
   .title = { history-carousel-previous-button.aria-label }
 
+history-carousel-previous-button-label = { history-carousel-previous-button.aria-label }
+
 history-carousel-next-button =
   .aria-label = Next view in history
   .title = { history-carousel-next-button.aria-label }
+
+history-carousel-next-button-label = { history-carousel-next-button.aria-label }

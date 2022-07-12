@@ -199,3 +199,8 @@ li:not(:first-child) {
 li:not(:last-child) {
   margin-inline-end: -8%;
 }
+
+.visually-hidden {
+  position: absolute;
+  clip: rect(0, 0, 0, 0);
+}
