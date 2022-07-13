@@ -18,6 +18,10 @@ const { AppConstants } = ChromeUtils.import(
 
 const lazy = {};
 
+ChromeUtils.defineESModuleGetters(lazy, {
+  PageDataService: "resource:///modules/pagedata/PageDataService.sys.mjs",
+});
+
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   AboutNewTab: "resource:///modules/AboutNewTab.jsm",
   ActorManagerParent: "resource://gre/modules/ActorManagerParent.jsm",
@@ -55,7 +59,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   LaunchOnOSLogin: "resource:///modules/LaunchOnOSLogin.jsm",
   Log: "resource://gre/modules/Log.jsm",
   LoginBreaches: "resource:///modules/LoginBreaches.jsm",
-  PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
   NetUtil: "resource://gre/modules/NetUtil.jsm",
   NewTabUtils: "resource://gre/modules/NewTabUtils.jsm",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
