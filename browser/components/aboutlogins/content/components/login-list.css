@@ -329,31 +329,8 @@ ol {
   color: inherit;
 }
 
-:host(.in-companion) .login-list-item:hover .more-dropdown {
-  background-color: #FFFFFF;
-}
-
 :host(.in-companion) .login-list-item:hover .more-dropdown:hover {
   background-color: #CFCFD8;
-}
-
-:host(.in-companion) .more-dropdown {
-  /* This is essentially visually-hidden styles you'd use for screen
-  * reader content. And we're using it so the screen reader will notice
-  * the content that's hidden when not hovered/focused. */
-  clip-path: inset(50%);
-  overflow: hidden;
-  width: 1px;
-  /* height is left the same, so the parent's height doesn't change when
-  * the hover/focus content is shown. */
-}
-
-/* Un-set the visually hidden button style under certain conditions */
-:host(.in-companion) .login-list-item:hover .more-dropdown,
-:host(.in-companion) .more-dropdown:focus {
-  clip-path: none;
-  overflow: visible;
-  width: auto;
 }
 
 :host(:not(.in-companion)) .more-dropdown-container {
