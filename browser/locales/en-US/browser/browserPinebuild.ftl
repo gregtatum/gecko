@@ -94,15 +94,15 @@ onboarding-flow-connect-title = Connect your Firefox account
 onboarding-flow-connect-text = A new way to internet is just ahead. Log in or create an account to unlock Flowstate.
 
 onboarding-flow-connected-title = Firefox account connected
-onboarding-flow-connected-text = Your account has been verified. Just one more step and you'll be on your way.
+onboarding-flow-connected-text = Your account has been verified. Just one more step and you’ll be on your way.
 
 onboarding-flow-data-prefs-title = Choose what data to share with Flowstate
-onboarding-flow-data-prefs-text = Flowstate's data protection policy puts your privacy first. We will never collect data without your permission. <a data-l10n-name="link-learn-more">Learn more</a>
+onboarding-flow-data-prefs-text = Flowstate’s data protection policy puts your privacy first. We will never collect data without your permission. <a data-l10n-name="link-learn-more">Learn more</a>
 onboarding-flow-data-prefs-label-firefox-suggest = Enable Firefox Suggest
 onboarding-flow-data-prefs-label-better-browsing = Make browsing and searching better
 onboarding-flow-data-prefs-label-usage-statistics = Automatically send usage statistics
 
-onboarding-flow-complete-title = You're ready to go!
+onboarding-flow-complete-title = You’re ready to go!
 
 onboarding-flow-button-next = Next
 onboarding-flow-button-complete = Start browsing
