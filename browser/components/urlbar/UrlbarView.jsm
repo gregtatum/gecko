@@ -1922,7 +1922,9 @@ class UrlbarView {
           }
           break;
         case lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC:
-          if (row.result.providerName == "pinebuildquickactions") {
+          if (row.result.providerName == "quickactions") {
+            return { id: "urlbar-group-quickactions" };
+          } else if (row.result.providerName == "pinebuildquickactions") {
             return { id: "urlbar-group-pinebuildquickactions" };
           }
           break;
