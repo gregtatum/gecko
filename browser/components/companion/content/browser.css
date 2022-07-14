@@ -57,6 +57,7 @@
 
 :root:not([chromehidden~="toolbar"]) {
   min-width: 1024px;
+  min-height: 760px;
 }
 /* Styling for popup windows */
 
@@ -916,7 +917,13 @@ body[flow-reset] #urlbar[breakout],
 body[flow-reset] #urlbar[breakout][breakout-extend] {
   display: block;
   position: fixed;
-  top: calc((var(--pinebuild-urlbar-toolbar-height) + 35%));
+  /* When the window is at its minumum height the urlbar
+     should be at 150px in order to fully display. When
+     the window is large enough to display the expanded urlbar
+     it is positioned @ 35% (335px when the window is 960px high).
+     In between we calculate its position to make sure it
+     positions smoothly when resizing. */
+  top: clamp(150px, calc((1.21 * 100%) - 775px), 35%);
   left: var(--companion-width);
   right: 0;
   width: -moz-available;
