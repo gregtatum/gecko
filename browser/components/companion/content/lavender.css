@@ -168,6 +168,8 @@
     --pinebuild-starting-background-color: #8d77b4;
     --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
     --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
+    --pinebuild-onboarding-box-shadow: -1px 2px 12px 0px rgba(132, 106, 65, 0.2);
+    --pinebuild-onboarding-card-background-color: #cebef6;
 
     --avm-workspace-bgcolor: var(--colors-cafe-20);
     --avm-workspace-contains-pins-bgcolor: var(--colors-cafe-40);

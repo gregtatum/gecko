@@ -86,3 +86,23 @@ active-view-manager-context-menu-close-view-group =
 # Pinebuild onboarding strings
 onboarding-fxa-label = Go to Firefox Accounts
 onboarding-complete-label = Complete onboarding
+onboarding-flow-welcome-title = Welcome to Flowstate
+onboarding-flow-welcome-text-1 = Less clutter. More focus.<br/> Always in the flow.
+onboarding-flow-welcome-text-2 = Thanks for being one of the first to try out the new browser from Mozilla.  Get set up in just a few steps.
+
+onboarding-flow-connect-title = Connect your Firefox account
+onboarding-flow-connect-text = A new way to internet is just ahead. Log in or create an account to unlock Flowstate.
+
+onboarding-flow-connected-title = Firefox account connected
+onboarding-flow-connected-text = Your account has been verified. Just one more step and you'll be on your way.
+
+onboarding-flow-data-prefs-title = Choose what data to share with Flowstate
+onboarding-flow-data-prefs-text = Flowstate's data protection policy puts your privacy first. We will never collect data without your permission. <a data-l10n-name="link-learn-more">Learn more</a>
+onboarding-flow-data-prefs-label-firefox-suggest = Enable Firefox Suggest
+onboarding-flow-data-prefs-label-better-browsing = Make browsing and searching better
+onboarding-flow-data-prefs-label-usage-statistics = Automatically send usage statistics
+
+onboarding-flow-complete-title = You're ready to go!
+
+onboarding-flow-button-next = Next
+onboarding-flow-button-complete = Start browsing

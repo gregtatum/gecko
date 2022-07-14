@@ -243,6 +243,9 @@ body:not([browser-ready]) .browserStack > browser {
   -moz-box-flex: 1;
 }
 
+body[fxa-flow-onboarding] #companion-box,
+body[fxa-flow-onboarding] #session-setaside-button,
+body[fxa-flow-onboarding] #urlbar-container,
 body[onboarding] #companion-box,
 body[onboarding] #session-setaside-button,
 body[onboarding] #urlbar-container,

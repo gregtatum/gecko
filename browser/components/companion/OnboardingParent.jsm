@@ -10,69 +10,105 @@ const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
 const COMPANION_WIDTH_AFTER_ONBOARDING = "340";
+// This const is the index of the onboarding screen which the user should see
+// after successfully signing into FxA via web flow.
+const ONBOARDING_SCREEN_AFTER_FXA = 2;
 
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
     let browser = this.browsingContext.embedderElement;
     let window = browser.ownerGlobal;
     let doc = window.document;
-    if (message.name == "OnboardingCompleted") {
-      Services.prefs.setBoolPref("browser.pinebuild.onboarding.complete", true);
 
-      doc.body.removeAttribute("onboarding");
+    switch (message.name) {
+      case "OnboardingCompleted":
+        Services.prefs.setBoolPref(
+          "browser.pinebuild.onboarding.complete",
+          true
+        );
 
-      doc.body.setAttribute("flow-reset", true);
-      window.gStageManager.reset({
-        url: "about:flow-reset",
-      });
-      let companion = doc.getElementById("companion-box");
-      companion.setAttribute("width", COMPANION_WIDTH_AFTER_ONBOARDING);
+        doc.body.removeAttribute("onboarding");
 
-      const listener = {
-        QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
+        doc.body.setAttribute("flow-reset", true);
+        window.gStageManager.reset({
+          url: "about:flow-reset",
+        });
+        let companion = doc.getElementById("companion-box");
+        companion.setAttribute("width", COMPANION_WIDTH_AFTER_ONBOARDING);
 
-        onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
-          // Wait for the first location change away from the about:flow-reset page,
-          // loading about:flow-reset includes load events for about:blank and there
-          // is no problem with being in flow reset state over about:blank.
-          let ignored = ["about:flow-reset", "about:blank"];
-          if (aWebProgress.isTopLevel && !ignored.includes(aLocationURI.spec)) {
-            window.document.body.removeAttribute("flow-reset");
-            window.gBrowser.removeProgressListener(listener);
-          }
-        },
-      };
+        const listener = {
+          QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
 
-      listener.onLocationChange = listener.onLocationChange.bind(this);
-      window.gBrowser.addProgressListener(listener);
+          onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
+            // Wait for the first location change away from the about:flow-reset page,
+            // loading about:flow-reset includes load events for about:blank and there
+            // is no problem with being in flow reset state over about:blank.
+            let ignored = ["about:flow-reset", "about:blank"];
+            if (
+              aWebProgress.isTopLevel &&
+              !ignored.includes(aLocationURI.spec)
+            ) {
+              window.document.body.removeAttribute("flow-reset");
+              window.gBrowser.removeProgressListener(listener);
+            }
+          },
+        };
 
-      // Enable commands that were disabled during onboarding.
-      let cmd = doc.getElementById("cmd_newNavigator");
-      cmd.removeAttribute("disabled");
+        listener.onLocationChange = listener.onLocationChange.bind(this);
+        window.gBrowser.addProgressListener(listener);
 
-      cmd = doc.getElementById("Browser:OpenFile");
-      cmd.setAttribute("disabled", false);
+        // Enable commands that were disabled during onboarding.
+        let cmd = doc.getElementById("cmd_newNavigator");
+        cmd.removeAttribute("disabled");
 
-      cmd = doc.getElementById("Browser:ShowAllHistory");
-      cmd.removeAttribute("disabled");
+        cmd = doc.getElementById("Browser:OpenFile");
+        cmd.setAttribute("disabled", false);
 
-      let menu = doc.getElementById("history-menu");
-      menu.hidden = false;
+        cmd = doc.getElementById("Browser:ShowAllHistory");
+        cmd.removeAttribute("disabled");
 
-      let item = doc.getElementById("sync-setup");
-      item.removeAttribute("disabled");
+        let menu = doc.getElementById("history-menu");
+        menu.hidden = false;
 
-      if (AppConstants.platform == "macosx") {
-        let hiddenWindow = Services.appShell.hiddenDOMWindow;
-        item = hiddenWindow.document.getElementById("macDockMenuNewWindow");
-        item.disabled = false;
-      }
-    } else if (message.name == "OpenFxa") {
-      doc.body.setAttribute("onboarding", "with-browsing");
-      await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
-      // The promise above is resolved once the user signs into fxa so it's safe to
-      // reset the onboarding attribute now.
-      doc.body.setAttribute("onboarding", "no-browsing");
+        let item = doc.getElementById("sync-setup");
+        item.removeAttribute("disabled");
+
+        if (AppConstants.platform == "macosx") {
+          let hiddenWindow = Services.appShell.hiddenDOMWindow;
+          item = hiddenWindow.document.getElementById("macDockMenuNewWindow");
+          item.disabled = false;
+        }
+        break;
+      case "OpenFxa":
+        doc.body.setAttribute("onboarding", "with-browsing");
+        await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
+        Services.prefs.setIntPref(
+          "browser.pinebuild.onboarding.progress",
+          ONBOARDING_SCREEN_AFTER_FXA
+        );
+
+        // Message child with updated pref value to pass on to component
+        this.sendAsyncMessage("OnboardingProgressPrefValueUpdated", {
+          prefValue: ONBOARDING_SCREEN_AFTER_FXA,
+        });
+
+        // The promise above is resolved once the user signs into fxa so it's safe to
+        // reset the onboarding attribute now.
+        doc.body.setAttribute("onboarding", "no-browsing");
+        break;
+      case "GetOnboardingProgressPrefValue":
+        return Services.prefs.getIntPref(
+          "browser.pinebuild.onboarding.progress",
+          0
+        );
+      case "SetOnboardingProgressPrefValue":
+        let newPrefValue = message.data;
+        Services.prefs.setIntPref(
+          "browser.pinebuild.onboarding.progress",
+          newPrefValue
+        );
     }
+
+    return null;
   }
 }

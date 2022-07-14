@@ -12,7 +12,101 @@
     <script defer src="chrome://browser/content/companion/onboarding-flow.js"></script>
   </head>
   <body>
-   <button id="completeButton" data-l10n-id="onboarding-complete-label"></button>
-   <button id="openFxa" type="submit" data-l10n-id="onboarding-fxa-label"></button>
+    <onboarding-flow>
+      <section
+        data-forward-nav="true"
+        data-backward-nav="false"
+        data-card-name="Welcome"
+        aria-role="tabpanel"
+        class="onboarding-flow-card onboarding-bg-1 onboarding-welcome-card"
+        >
+        <div class="onboarding-card-text-container">
+          <h2 data-l10n-id="onboarding-flow-welcome-title"></h2>
+          <p class="center-text" data-l10n-id="onboarding-flow-welcome-text-1"></p>
+          <p data-l10n-id="onboarding-flow-welcome-text-2"></p>
+          <button
+            data-action="navigate-forward"
+            data-l10n-id="onboarding-flow-button-next"></button>
+        </div>
+      </section>
+      <section
+        data-forward-nav="false"
+        data-backward-nav="true"
+        data-card-name="Connect Account"
+        aria-role="tabpanel"
+        class="onboarding-flow-card onboarding-bg-1 onboarding-connect-account-card"
+        hidden>
+        <div class="onboarding-card-text-container">
+          <h2 data-l10n-id="onboarding-flow-connect-title"></h2>
+          <p class="center-text" data-l10n-id="onboarding-flow-connect-text"></p>
+            <input type="email" id="email" name="email" placeholder="Email">
+            <button
+              data-action="initiate-fxa-flow"
+              data-l10n-id="onboarding-flow-button-next"></button>
+        </div>
+      </section>
+      <section
+        data-forward-nav="true"
+        data-backward-nav="false"
+        data-card-name="Account Connected"
+        aria-role="tabpanel"
+        class="onboarding-flow-card onboarding-bg-1 onboarding-account-connected-card"
+        hidden>
+        <div class="onboarding-card-text-container">
+          <h2 data-l10n-id="onboarding-flow-connected-title"></h2>
+          <p data-l10n-id="onboarding-flow-connected-text"></p>
+          <button
+            data-action="navigate-forward"
+            data-l10n-id="onboarding-flow-button-next"></button>
+        </div>
+      </section>
+      <section
+        data-forward-nav="true"
+        data-backward-nav="true"
+        data-card-name="Data Preferences"
+        aria-role="tabpanel"
+        class="onboarding-flow-card onboarding-bg-3 onboarding-data-prefs-card"
+        hidden>
+        <div class="onboarding-card-text-halvsies">
+          <h2 data-l10n-id="onboarding-flow-data-prefs-title"></h2>
+          <p data-l10n-id="onboarding-flow-data-prefs-text"><a href="#" target="_blank" data-l10n-name="link-learn-more"></a></p>
+          <fieldset>
+            <label>
+              <span data-l10n-id="onboarding-flow-data-prefs-label-firefox-suggest"></span> <input type="checkbox" name="firefox-suggest" />
+            </label>
+            <label>
+              <span data-l10n-id="onboarding-flow-data-prefs-label-better-browsing"></span> <input type="checkbox" name="better-browsing" />
+            </label>
+            <label>
+              <span data-l10n-id="onboarding-flow-data-prefs-label-usage-statistics"></span> <input type="checkbox" name="usage-statistics" />
+            </label>
+          </fieldset>
+          <button
+            data-action="navigate-forward"
+            data-l10n-id="onboarding-flow-button-next"></button>
+        </div>
+      </section>
+      <section
+        data-forward-nav="true"
+        data-backward-nav="true"
+        data-card-name="Ready to Go"
+        aria-role="tabpanel"
+        class="onboarding-flow-card onboarding-bg-2 onboarding-ready-card"
+        hidden>
+        <div class="onboarding-card-text-container">
+          <h2 data-l10n-id="onboarding-flow-complete-title"></h2>
+          <button data-action="complete-onboarding" data-l10n-id="onboarding-flow-button-complete"></button>
+        </div>
+      </section>
+      <div class="onboarding-flow-breadcrumbs" aria-role="tablist"></div>
+      <button
+        class="onboarding-backward-nav"
+        data-action="navigate-backward"
+        aria-label="Go Back to Previous Card">&lt;</button>
+      <button
+        class="onboarding-forward-nav"
+        data-action="navigate-forward"
+        aria-label="Go Forward to Next Card">&gt;</button>
+    </onboarding-flow>
   </body>
 </html>
