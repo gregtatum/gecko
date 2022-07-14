@@ -22,12 +22,6 @@ const TOPIC_SYNC_STATE_CHANGED = "sync-ui-state:update";
 
 const extraServices = [
   {
-    type: "google-mozilla",
-    nameId: "preferences-services-google-mozilla-account",
-    labelsId: "preferences-services-google-labels",
-    icon: "chrome://browser/content/companion/mozsocial.png",
-  },
-  {
     type: "google",
     nameId: "preferences-services-google-account",
     labelsId: "preferences-services-google-labels",
