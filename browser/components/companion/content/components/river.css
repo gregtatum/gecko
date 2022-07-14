@@ -108,33 +108,33 @@ view-group[active]:not(:last-of-type) {
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) and (not (prefers-contrast)) {
-  .view-groups-wrapper > view-group {
+  .view-groups-wrapper:not([keying]) > view-group:not(:focus-visible) {
     margin-inline-start: calc(-1 * var(--river-collapse-amount));
   }
 
-  .view-groups-wrapper > view-group:first-of-type {
+  .view-groups-wrapper:not([keying]) > view-group:first-of-type {
     padding-inline-start: var(--river-collapse-amount);
   }
 
-  .view-groups-wrapper > view-group[active] + view-group {
+  .view-groups-wrapper:not([keying]) > view-group[active] + view-group:not(:focus-visible) {
     margin-inline-start: 0;
   }
 
-  .view-groups-wrapper > view-group:not([active]):hover::part(icon-container) {
+  .view-groups-wrapper:not([keying]) > view-group:not([active]):hover::part(icon-container) {
     scale: 1.25;
   }
 
-  .view-groups-wrapper:not([topisactive]):hover > view-group:not(:hover),
-  .view-groups-wrapper:hover > view-group[active] ~ view-group {
+  .view-groups-wrapper:not([keying]):not([topisactive]):hover > view-group:not(:hover),
+  .view-groups-wrapper:not([keying]):hover > view-group[active] ~ view-group {
     translate: calc(-1 * var(--river-collapse-amount));
   }
 
-  .view-groups-wrapper:hover > view-group:not([active]):hover ~ view-group {
+  .view-groups-wrapper:not([keying]):hover > view-group:not([active]):hover ~ view-group {
     translate: calc(1 * var(--river-collapse-amount));
   }
 
-  .view-groups-wrapper:hover > view-group:is([active]):hover ~ view-group,
-  .view-groups-wrapper:hover > view-group:is([active]) ~ view-group:hover ~ view-group {
+  .view-groups-wrapper:not([keying]):hover > view-group:is([active]):hover ~ view-group,
+  .view-groups-wrapper:not([keying]):hover > view-group:is([active]) ~ view-group:hover ~ view-group {
     translate: 0;
   }
 }
