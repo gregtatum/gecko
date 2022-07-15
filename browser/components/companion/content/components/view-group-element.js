@@ -259,8 +259,8 @@ export default class ViewGroupElement extends MozLitElement {
         } @transitioncancel=${this.#transitionEndOrCancel}>
           <img class="view-loading-spinner" src="chrome://browser/content/companion/viewLoading.svg"></img>
         </div>
-        <span class="view-icon-container" part="icon-container">
-          <img class="view-icon" src=${iconURL}></img>
+        <span class="view-icon-container" part="icon-container" aria-hidden="true">
+          <img class="view-icon" src=${iconURL} alt=""></img>
         </span>
         <div class="view-label-container" part="label-container">
           <div class="view-title"

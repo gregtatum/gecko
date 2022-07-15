@@ -105,7 +105,7 @@ class PinnedViews extends MozLitElement {
         @dragleave=${this.#onDragLeave}
         @drop=${this.#onDrop}
       >
-        <img id="pin-icon" src="chrome://browser/skin/pin-12.svg"></img>
+        <img id="pin-icon" src="chrome://browser/skin/pin-12.svg" aria-hidden="true" alt=""></img>
         ${this.viewGroups.map(viewGroup => {
           let isActive = viewGroup.includes(this.activeView);
           return html`
