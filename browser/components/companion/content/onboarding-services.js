@@ -44,8 +44,16 @@ export class ServicesOnboarding extends MozLitElement {
       Workshop.getConnectedAccounts().then(accounts =>
         this.setConnectedServices(accounts)
       );
-    } else {
+    } else if (window.CompanionUtils.connectedServices) {
       this.setConnectedServices(window.CompanionUtils.connectedServices);
+    } else {
+      window.addEventListener(
+        "Companion:Setup",
+        () => {
+          this.setConnectedServices(window.CompanionUtils.connectedServices);
+        },
+        { once: true }
+      );
     }
   }
 
