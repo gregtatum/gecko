@@ -43,13 +43,13 @@ const MICROSOFT_DRIVE_ICON =
 const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
 
 window.gCalendarEventListener = {
+  // TODO(MR2-2224): _calendarEvents isn't needed for Workshop.
+  lastCalendarEvents: [],
+
   init() {
     this.dispatchRefreshEventsEvent = this.dispatchRefreshEventsEvent.bind(
       this
     );
-
-    // TODO(MR2-2224): _calendarEvents isn't needed for Workshop.
-    this._calendarEvents = [];
 
     window.addEventListener("Companion:RegisterCalendarEvents", this);
     window.addEventListener("Companion:SignIn", this);
@@ -62,7 +62,7 @@ window.gCalendarEventListener = {
     document.dispatchEvent(
       new CustomEvent("refresh-events", {
         // TODO(MR2-2224): We shouldn't need the config for Workshop.
-        detail: { events: this._calendarEvents },
+        detail: { events: this.lastCalendarEvents },
       })
     );
   },
@@ -70,7 +70,7 @@ window.gCalendarEventListener = {
   handleEvent({ type, detail }) {
     switch (type) {
       case "Companion:RegisterCalendarEvents": {
-        this._calendarEvents = detail.events;
+        this.lastCalendarEvents = detail.events;
         if (!workshopEnabled) {
           this.dispatchRefreshEventsEvent();
         }
@@ -198,7 +198,7 @@ export class CalendarEventList extends MozLitElement {
 
   constructor() {
     super();
-    this.events = [];
+    this.events = window.gCalendarEventListener.lastCalendarEvents;
     this.dismissedEventStore = new DismissedEventStore();
     this.listView = null;
     this.listType = "";

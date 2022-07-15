@@ -187,6 +187,34 @@ add_task(async function testEventInBrowseView() {
   });
 });
 
+add_task(async function testEventsLoadInBrowse() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    let events = [
+      {
+        summary: "Browse loaded",
+      },
+    ];
+
+    await helper.setCalendarEvents(events);
+
+    await selectCalendarTab(helper);
+
+    let eventShown = await helper.runCompanionTask(async () => {
+      return ContentTaskUtils.waitForCondition(() => {
+        let browseEventList = content.document.getElementById(
+          "browse-event-list"
+        );
+        return !!browseEventList.renderRoot.querySelector("calendar-event");
+      });
+    });
+    ok(eventShown, "Event was shown in browse");
+  });
+});
+
 add_task(async function testMultiDayEventInBrowseView() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.pinebuild.calendar.browseEnabled", true]],
