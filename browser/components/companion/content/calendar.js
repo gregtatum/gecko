@@ -258,18 +258,18 @@ export class CalendarEventList extends MozLitElement {
   }
 
   onEventsUpdated(e, updateSource = "seeked") {
-    let plainEvents = this.getRelevantEvents(
-      this.listView.items.filter(event =>
-        this.isBrowse ? event : event && !this.hiddenEvents.has(event.id)
-      )
-    );
+    // Under certain circumstances we get falsy events from Workshop
+    let allEvents = workshopEnabled
+      ? this.listView.items.filter(event => event)
+      : this.events.filter(event => !event.isBreakTime);
+    let plainEvents = this.getRelevantEvents(allEvents);
     this.events = this.getEventsAndBreaks(plainEvents);
 
     if (
-      this.serial !== this.listView.serial ||
+      (workshopEnabled && this.serial !== this.listView?.serial) ||
       updateSource === "event-hidden"
     ) {
-      this.serial = this.listView.serial;
+      this.serial = this.listView?.serial;
       this.dispatchOnUpdateComplete(
         new CustomEvent("calendar-events-updated", {
           detail: { eventCount: plainEvents.length },
@@ -316,7 +316,12 @@ export class CalendarEventList extends MozLitElement {
         let startDate = new Date(event.startDate);
         let endDate = new Date(event.endDate);
 
-        return startDate <= oneHourFromNow && endDate >= now && !event.isAllDay;
+        return (
+          startDate <= oneHourFromNow &&
+          endDate >= now &&
+          !event.isAllDay &&
+          !this.hiddenEvents.has(event.id)
+        );
       });
     }
     return uniqueEvents.sort(
@@ -329,28 +334,16 @@ export class CalendarEventList extends MozLitElement {
       if (workshopEnabled) {
         this.refreshView();
       } else {
-        let plainEvents = this.getRelevantEvents(e.detail.events);
-        let eventsAndBreaks = this.getEventsAndBreaks(plainEvents);
         this.connected = !!window.CompanionUtils?.connectedServices?.length;
-        this.events = eventsAndBreaks;
+        this.events = e.detail.events;
+        this.onEventsUpdated({}, "refresh-events");
         noteTelemetryTimestamp("Companion:CalendarPainted", {
           numberOfEvents: this.events.length,
         });
       }
     } else if (e.type === "hide-event") {
       this.hiddenEvents.add(e.detail.eventId);
-      if (workshopEnabled) {
-        this.onEventsUpdated({}, "event-hidden");
-      } else {
-        for (let child of this.calendarEvents) {
-          if (child.event.id == e.detail.eventId) {
-            child.hidden = true;
-          }
-        }
-        this.dispatchOnUpdateComplete(
-          new CustomEvent("calendar-events-updated")
-        );
-      }
+      this.onEventsUpdated({}, "event-hidden");
     }
   }
 
