@@ -12,6 +12,7 @@ const { DeferredTask } = ChromeUtils.import(
 const {
   parseGoogleCalendarResult,
   parseMicrosoftCalendarResult,
+  DismissedEventStore,
 } = ChromeUtils.import("resource:///modules/OnlineServicesHelper.jsm");
 
 const PREF_STORE = "onlineservices.config";
@@ -895,5 +896,16 @@ const OnlineServices = {
     this.refreshEventsTask.disarm();
     this.refreshEventsTask.arm();
     this.alreadyFetching = false;
+  },
+
+  _dismissedEventStore: new DismissedEventStore(),
+  storeDismissedEvent(id) {
+    this._dismissedEventStore.dismissEvent(id);
+  },
+  getDismissedEvents() {
+    return this._dismissedEventStore.store;
+  },
+  clearDismissedEvents() {
+    this._dismissedEventStore.load([]);
   },
 };

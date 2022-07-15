@@ -13,6 +13,9 @@ import {
 } from "./workshopAPI.js";
 import { noteTelemetryTimestamp } from "./telemetry-helpers.js";
 
+const { DismissedEventStore } = ChromeUtils.import(
+  "resource:///modules/OnlineServicesHelper.jsm"
+);
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
@@ -196,11 +199,18 @@ export class CalendarEventList extends MozLitElement {
   constructor() {
     super();
     this.events = [];
-    this.hiddenEvents = new Set();
+    this.dismissedEventStore = new DismissedEventStore();
     this.listView = null;
     this.listType = "";
     this.isFakeTime = false;
     this.connected = false;
+    window.addEventListener(
+      "Companion:Setup",
+      () => {
+        this.dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
+      },
+      { once: true }
+    );
   }
 
   maybeStopListening() {
@@ -215,6 +225,7 @@ export class CalendarEventList extends MozLitElement {
   connectedCallback() {
     document.addEventListener("refresh-events", this);
     document.addEventListener("hide-event", this);
+    window.addEventListener("Companion:DismissedEvent", this);
 
     if (workshopEnabled) {
       this.createCalendarListView();
@@ -232,6 +243,7 @@ export class CalendarEventList extends MozLitElement {
   disconnectedCallback() {
     document.removeEventListener("refresh-events", this);
     document.removeEventListener("hide-event", this);
+    window.removeEventListener("Companion:DismissedEvent", this);
 
     if (workshopEnabled) {
       this.cleanup();
@@ -320,7 +332,7 @@ export class CalendarEventList extends MozLitElement {
           startDate <= oneHourFromNow &&
           endDate >= now &&
           !event.isAllDay &&
-          !this.hiddenEvents.has(event.id)
+          !this.dismissedEventStore.isDismissed(event.originalId)
         );
       });
     }
@@ -342,7 +354,11 @@ export class CalendarEventList extends MozLitElement {
         });
       }
     } else if (e.type === "hide-event") {
-      this.hiddenEvents.add(e.detail.eventId);
+      window.CompanionUtils.sendAsyncMessage("Companion:DismissEvent", {
+        eventId: e.detail.eventId,
+      });
+    } else if (e.type == "Companion:DismissedEvent") {
+      this.dismissedEventStore.dismissEvent(e.detail.eventId);
       this.onEventsUpdated({}, "event-hidden");
     }
   }
@@ -545,7 +561,7 @@ class CalendarEventWrapper extends CalendarEvent {
   hideEvent() {
     document.dispatchEvent(
       new CustomEvent("hide-event", {
-        detail: { eventId: this.event.id },
+        detail: { eventId: this.event.originalId },
       })
     );
   }
@@ -620,7 +636,9 @@ class CalendarEventWrapper extends CalendarEvent {
     }
     let title = await window.CompanionUtils.sendQuery(
       "Companion:GetDocumentTitle",
-      { url }
+      {
+        url,
+      }
     );
     if (title) {
       this._cachedDocumentTitles.set(url, title);

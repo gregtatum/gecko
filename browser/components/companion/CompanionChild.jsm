@@ -123,6 +123,7 @@ class CompanionChild extends JSWindowActorChild {
           tabs,
           newFavicons,
           connectedServices,
+          dismissedEvents,
           stageManager,
           sessions,
         } = message.data;
@@ -133,6 +134,7 @@ class CompanionChild extends JSWindowActorChild {
           waivedContent.CompanionUtils._tabs.set(tab.browserId, tab);
         }
         waivedContent.CompanionUtils.connectedServices = connectedServices;
+        waivedContent.CompanionUtils.dismissedEvents = dismissedEvents;
         waivedContent.CompanionUtils.stageManager = stageManager;
 
         this.updateFaviconCache(newFavicons);

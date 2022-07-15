@@ -8,7 +8,12 @@ const EXPORTED_SYMBOLS = [
   "parseMicrosoftCalendarResult",
   "MainThreadServices",
   "isAllDayEvent",
+  "DismissedEventStore",
 ];
+
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
 
 const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
   Ci.nsIParserUtils
@@ -17,6 +22,12 @@ const parserUtils = Cc["@mozilla.org/parserutils;1"].getService(
 const { parseHFromStr, parseHFromUrl } = ChromeUtils.import(
   "resource:///modules/HParser.jsm"
 );
+
+const lazy = {};
+XPCOMUtils.defineLazyModuleGetters(lazy, {
+  clearTimeout: "resource://gre/modules/Timer.jsm",
+  setTimeout: "resource://gre/modules/Timer.jsm",
+});
 
 const URL_REGEX = /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
 
@@ -435,4 +446,49 @@ function isAllDayEvent(startDate, endDate, upperBound = 12) {
   let durationInHours = durationInMs / ONE_HOUR_MS;
 
   return durationInHours >= upperBound;
+}
+
+class DismissedEventStore {
+  #cleanupTimeout;
+  #store = new Set();
+
+  dismissEvent(id) {
+    this.#prepareCleanup();
+    this.#store.add(id);
+  }
+
+  isDismissed(id) {
+    return this.#store.has(id);
+  }
+
+  load(prevStore) {
+    if (this.#cleanupTimeout) {
+      lazy.clearTimeout(this.#cleanupTimeout);
+    }
+    this.#prepareCleanup();
+    this.#store = new Set(prevStore.values());
+  }
+
+  get store() {
+    return new Set(this.#store.values());
+  }
+
+  // Clear the store when midnight rolls around. This will un-hide events that
+  // span the day boundary unfortunately.
+  #prepareCleanup() {
+    if (this.#cleanupTimeout) {
+      return;
+    }
+    let now = new Date();
+    // This probably has some time zone changing/daylight savings issues.
+    let tomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+    this.#cleanupTimeout = lazy.setTimeout(() => {
+      this.#store = new Set();
+      this.#cleanupTimeout = null;
+    }, tomorrow - now);
+  }
 }

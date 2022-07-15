@@ -1053,6 +1053,10 @@ class CompanionHelper {
       [index]
     );
   }
+
+  clearDismissedEvents() {
+    OnlineServices.clearDismissedEvents();
+  }
 }
 
 var PinebuildTestUtils = {

@@ -107,6 +107,7 @@ class CompanionParent extends JSWindowActorParent {
     );
 
     Services.obs.addObserver(this._observer, "companion-show-passwords-panel");
+    Services.obs.addObserver(this._observer, "companion-dismiss-event");
     Services.obs.addObserver(this._observer, "companion-signin");
     Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
@@ -203,6 +204,7 @@ class CompanionParent extends JSWindowActorParent {
       this._observer,
       "companion-show-passwords-panel"
     );
+    Services.obs.removeObserver(this._observer, "companion-dismiss-event");
     Services.obs.removeObserver(this._observer, "companion-signin");
     Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
@@ -591,6 +593,12 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:ShowPasswordsPanel");
         break;
       }
+      case "companion-dismiss-event": {
+        this.sendAsyncMessage("Companion:DismissedEvent", {
+          eventId: data,
+        });
+        break;
+      }
       case "companion-signin":
       case "companion-signout":
         if (topic == "companion-signin") {
@@ -792,6 +800,15 @@ class CompanionParent extends JSWindowActorParent {
 
   async receiveMessage(message) {
     switch (message.name) {
+      case "Companion:DismissEvent": {
+        lazy.OnlineServices.storeDismissedEvent(message.data.eventId);
+        Services.obs.notifyObservers(
+          null,
+          "companion-dismiss-event",
+          message.data.eventId
+        );
+        break;
+      }
       case "Companion:Subscribe": {
         await this._onSubscribe();
         break;
@@ -1005,6 +1022,7 @@ class CompanionParent extends JSWindowActorParent {
     this.sendAsyncMessage("Companion:Setup", {
       tabs,
       connectedServices: lazy.OnlineServices.connectedServiceTypes,
+      dismissedEvents: lazy.OnlineServices.getDismissedEvents(),
       newFavicons,
       stageManager,
       sessions,
