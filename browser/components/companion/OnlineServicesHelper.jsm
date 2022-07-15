@@ -275,7 +275,7 @@ function parseGoogleCalendarResult(result, primaryEmail) {
   let start = result.start?.date || result.start?.dateTime;
   let end = result.end?.date || result.end?.dateTime;
 
-  event.id = result.id;
+  event.originalId = event.id = result.id;
   event.summary = result.summary;
 
   event.startDate = new Date(start);
@@ -329,7 +329,7 @@ function parseMicrosoftCalendarResult(result) {
   }
 
   let event = {};
-  event.id = result.id;
+  event.originalId = event.id = result.id;
   event.summary = result.subject;
   event.startDate = new Date(result.start?.dateTime + "Z");
   event.endDate = new Date(result.end?.dateTime + "Z");
