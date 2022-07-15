@@ -34,6 +34,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   #contextMenuViewGroup;
   #contextMenuView;
   #historyMenulist;
+  #focusedViewGroupEl;
 
   static EVENTS = [
     "WorkspaceAdded",
@@ -143,14 +144,23 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           workspace?.pinnedViewGroups.length
         );
         this.#updateWorkspaces(workspaceId);
+
+        if (event.type == "ViewChanged") {
+          if (this.#focusedViewGroupEl?.isConnected) {
+            this.#focusedViewGroupEl.focus({ focusVisible: true });
+          }
+          this.#focusedViewGroupEl = null;
+        }
         break;
       }
       case "UserAction:ViewSelected": {
+        this.#cacheFocusedViewGroupEl();
         let view = event.detail.clickedView;
         this.#viewSelected(view);
         break;
       }
       case "UserAction:ViewGroupSelected": {
+        this.#cacheFocusedViewGroupEl();
         let viewGroup = event.detail.clickedViewGroup;
         this.#viewGroupSelected(viewGroup);
         break;
@@ -280,6 +290,13 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
   #viewGroupCloseOne(viewGroup) {
     window.gStageManager.closeViewInGroup(viewGroup);
+  }
+
+  #cacheFocusedViewGroupEl() {
+    let fe = document.commandDispatcher.focusedElement;
+    if (fe.localName == "view-group") {
+      this.#focusedViewGroupEl = fe;
+    }
   }
 
   /**
