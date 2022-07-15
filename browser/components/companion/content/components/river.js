@@ -185,6 +185,7 @@ export default class River extends MozLitElement {
                   ?active=${isActive}
                   .viewGroup=${viewGroup}
                   .activeView=${this.activeView}
+                  .keying=${this.keying}
                 ></view-group>
               `;
             }

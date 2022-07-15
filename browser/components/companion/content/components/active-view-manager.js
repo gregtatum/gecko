@@ -33,6 +33,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   #pageActionView;
   #contextMenuViewGroup;
   #contextMenuView;
+  #historyMenulist;
 
   static EVENTS = [
     "WorkspaceAdded",
@@ -65,6 +66,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.addEventListener("UserAction:ViewGroupSelected", this);
     this.addEventListener("UserAction:ViewGroupCloseOne", this);
     this.addEventListener("UserAction:OpenPageActionMenu", this);
+    this.addEventListener("UserAction:OpenHistoryMenu", this);
     this.addEventListener("UserAction:PinView", this);
     this.addEventListener("UserAction:UnpinView", this);
 
@@ -95,6 +97,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     this.removeEventListener("UserAction:ViewSelected", this);
     this.removeEventListener("UserAction:ViewGroupCloseOne", this);
     this.removeEventListener("UserAction:OpenPageActionMenu", this);
+    this.removeEventListener("UserAction:OpenHistoryMenu", this);
     this.removeEventListener("UserAction:PinView", this);
     this.removeEventListener("UserAction:UnpinView", this);
 
@@ -158,6 +161,14 @@ export default class ActiveViewManager extends window.MozHTMLElement {
         this.#openPageActionPanel(event.composedTarget, view, triggerEvent);
         break;
       }
+      case "UserAction:OpenHistoryMenu": {
+        this.#openHistoryMenu(
+          event.composedTarget,
+          event.detail.viewGroup,
+          event.detail.activeView
+        );
+        break;
+      }
       case "UserAction:PinView": {
         let view = event.detail.view;
         let index = event.detail.index;
@@ -199,6 +210,17 @@ export default class ActiveViewManager extends window.MozHTMLElement {
           this.#pageActionPanelHiding(event);
         } else if (event.currentTarget == this.#contextMenuPopup) {
           this.#contextMenuPopupHiding(event);
+        }
+        break;
+      }
+      case "popuphidden": {
+        if (event.currentTarget == this.#historyMenulist.menupopup) {
+          this.#historyMenuitemSelected(this.#historyMenulist.selectedItem);
+          let popup = this.#historyMenulist.menupopup;
+          while (popup.lastChild) {
+            popup.lastChild.remove();
+          }
+          this.#historyMenulist.hidden = true;
         }
         break;
       }
@@ -613,6 +635,61 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     { index = undefined, appMode = false } = {}
   ) {
     window.gStageManager.setViewPinnedState(view, state, appMode, index);
+    this.#viewSelected(view);
+  }
+
+  #openHistoryMenu(target, viewGroup, activeView) {
+    let menulist = this.#getHistoryMenulist();
+    menulist.hidden = false;
+    let frag = document.createDocumentFragment();
+    let selectedMenuitem = null;
+    for (let view of viewGroup) {
+      let menuitem = document.createXULElement("menuitem");
+      menuitem.setAttribute("label", view.title);
+      menuitem.setAttribute("tooltiptext", view.url.spec);
+      menuitem.view = view;
+      frag.appendChild(menuitem);
+
+      if (view == activeView) {
+        selectedMenuitem = menuitem;
+      }
+    }
+
+    while (menulist.menupopup.lastChild) {
+      menulist.menupopup.lastChild.remove();
+    }
+    menulist.menupopup.appendChild(frag);
+    menulist.selectedItem = selectedMenuitem;
+
+    let rect = window.windowUtils.getBoundsWithoutFlushing(target);
+    menulist.menupopup.openPopupAtScreenRect(
+      "after_end",
+      rect.left,
+      rect.top,
+      rect.width,
+      rect.height,
+      false,
+      false
+    );
+  }
+
+  #getHistoryMenulist() {
+    if (this.#historyMenulist) {
+      return this.#historyMenulist;
+    }
+
+    this.#historyMenulist = document.createXULElement("menulist");
+    this.#historyMenulist.setAttribute("popuponly", "true");
+    this.#historyMenulist.setAttribute("hidden", "true");
+    let popup = document.createXULElement("menupopup");
+    popup.addEventListener("popuphidden", this);
+    this.#historyMenulist.appendChild(popup);
+    document.getElementById("mainPopupSet").appendChild(this.#historyMenulist);
+    return this.#historyMenulist;
+  }
+
+  #historyMenuitemSelected(menuitem) {
+    let view = menuitem.view;
     this.#viewSelected(view);
   }
 

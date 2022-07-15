@@ -26,6 +26,7 @@ export default class ViewGroupElement extends MozLitElement {
       activeView: { type: Object },
       active: { type: Boolean },
       busyAnimating: { type: Boolean },
+      keying: { type: Boolean },
     };
   }
 
@@ -35,22 +36,12 @@ export default class ViewGroupElement extends MozLitElement {
     this.activeView = null;
     this.busyAnimationTimeout = null;
     this.addEventListener("click", this.#onViewGroupSelected);
-    this.addEventListener("keyup", this.#onViewGroupSelected);
+    this.addEventListener("keydown", this.#onKeyDown);
     this.addEventListener("auxclick", this.#onAuxClick);
     this.#slidingWindowIndex = -1;
   }
 
-  #onViewGroupSelected(event) {
-    if (
-      event.type == "keyup" &&
-      !(
-        event.keyCode == KeyEvent.DOM_VK_RETURN ||
-        event.keyCode == KeyEvent.DOM_VK_SPACE
-      )
-    ) {
-      return;
-    }
-
+  #onViewGroupSelected() {
     let e = new CustomEvent("UserAction:ViewGroupSelected", {
       bubbles: true,
       composed: true,
@@ -77,6 +68,34 @@ export default class ViewGroupElement extends MozLitElement {
       detail: { clickedViewGroup: this.viewGroup },
     });
     this.dispatchEvent(closeEvent);
+  }
+
+  #onKeyDown(event) {
+    switch (event.keyCode) {
+      case KeyEvent.DOM_VK_DOWN: {
+        if (this.keying && this.active && this.viewGroup.length > 1) {
+          this.#openHistoryMenu();
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        break;
+      }
+      case KeyEvent.DOM_VK_RETURN:
+      // Intentional fall-through
+      case KeyEvent.DOM_VK_SPACE: {
+        this.#onViewGroupSelected();
+        break;
+      }
+    }
+  }
+
+  #openHistoryMenu() {
+    let e = new CustomEvent("UserAction:OpenHistoryMenu", {
+      bubbles: true,
+      composed: true,
+      detail: { viewGroup: this.viewGroup, activeView: this.activeView },
+    });
+    this.dispatchEvent(e);
   }
 
   #onViewHistoryNavigation(event) {
