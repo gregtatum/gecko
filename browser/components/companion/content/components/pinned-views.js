@@ -106,20 +106,24 @@ class PinnedViews extends MozLitElement {
         @drop=${this.#onDrop}
       >
         <img id="pin-icon" src="chrome://browser/skin/pin-12.svg"></img>
-        ${this.viewGroups.map(
-          viewGroup =>
-            html`
-              <view-group
-                tabindex="0"
-                exportparts="domain, history"
-                role="tab"
-                ?active=${viewGroup.includes(this.activeView)}
-                .viewGroup=${viewGroup}
-                .activeView=${this.activeView}
-                ?app=${viewGroup.isApp}
-              ></view-group>
-            `
-        )}
+        ${this.viewGroups.map(viewGroup => {
+          let isActive = viewGroup.includes(this.activeView);
+          return html`
+            <view-group
+              tabindex="0"
+              exportparts="domain, history"
+              role="tab"
+              ?active=${isActive}
+              aria-label=${isActive
+                ? this.activeView.title
+                : viewGroup.lastView.title}
+              aria-selected=${isActive}
+              .viewGroup=${viewGroup}
+              .activeView=${this.activeView}
+              ?app=${viewGroup.isApp}
+            ></view-group>
+          `;
+        })}
       </div>
     `;
   }

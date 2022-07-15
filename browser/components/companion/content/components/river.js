@@ -182,6 +182,10 @@ export default class River extends MozLitElement {
                   tabindex="0"
                   role="tab"
                   aria-expanded=${ifDefined(isExpandedWithHistory)}
+                  aria-label=${isActive
+                    ? this.activeView.title
+                    : viewGroup.lastView.title}
+                  aria-selected=${isActive}
                   ?active=${isActive}
                   .viewGroup=${viewGroup}
                   .activeView=${this.activeView}
