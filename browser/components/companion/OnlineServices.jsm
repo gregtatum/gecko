@@ -470,7 +470,7 @@ class MicrosoftService {
         apiTarget = new URL(
           `https://graph.microsoft.com/v1.0/me/calendars/${
             calendar.id
-          }/events?orderby=start/dateTime&$filter=start/dateTime ge '${dayStart.toISOString()}' AND start/dateTime le '${midnight.toISOString()}'`
+          }/calendarview?startdatetime=${dayStart.toISOString()}&enddatetime=${midnight.toISOString()}`
         );
 
         response = await fetch(apiTarget, {
