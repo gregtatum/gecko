@@ -203,7 +203,8 @@ export class CalendarEventList extends MozLitElement {
     this.listView = null;
     this.listType = "";
     this.isFakeTime = false;
-    this.connected = false;
+    this.connected =
+      !!window?.CompanionUtils?.connectedServices?.length || false;
     window.addEventListener(
       "Companion:Setup",
       () => {
