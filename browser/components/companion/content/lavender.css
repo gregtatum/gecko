@@ -100,6 +100,9 @@
     --action-button-background-hover: var(--colors-lightgrey-50);
     --action-button-background-active: var(--colors-lightgrey-60);
     --action-button-background-disabled: var(--colors-lightgrey-60);
+    --button-background-primary: var(--colors-lavender-80);
+    --button-background-primary-hover: var(--colors-lavender-120);
+    --button-background-primary-active: var(--colors-lavender-100);
 
     /* Border Colors */
     --notification-icon-border-color: var(--colors-lightgrey-30);
@@ -121,7 +124,7 @@
     --colors-warm-hover-02: #f0e6d5;
     --colors-warm-pressed-02: #ebdec7;
 
-    --colors-border-focus: #637cff;
+    --colors-border-focus: var(--colors-teal-90);
     --colors-quickactions-topsites-border: #e5e2e2;
     --colors-quickactions-topsites-background: white;
     --focus-outline-color: var(--colors-border-focus);

@@ -7,7 +7,9 @@
 @media not (prefers-contrast) {
   :root {
     --light-bg-color: #F0F0F4;
-    --in-content-primary-button-background: #0060DF;
+    --in-content-primary-button-background: var(--button-background-primary);
+    --in-content-primary-button-background-hover: var(--button-background-primary-hover);
+    --in-content-primary-button-background-active: var(--button-background-primary-active);
   }
 
   :root:-moz-lwtheme-brighttext {
