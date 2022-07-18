@@ -130,8 +130,6 @@ pref("browser.cache.offline.capacity",         512000);
 // Don't show "Open with" option on download dialog if true.
 pref("browser.download.forbid_open_with", false);
 
-// Whether or not indexedDB experimental features are enabled.
-pref("dom.indexedDB.experimental", false);
 // Enable indexedDB logging.
 pref("dom.indexedDB.logging.enabled", true);
 // Detailed output in log messages.
@@ -797,7 +795,7 @@ pref("view_source.editor.args", "");
 pref("nglayout.enable_drag_images", true);
 
 // URI fixup prefs
-pref("browser.fixup.alternate.enabled", true);
+pref("browser.fixup.alternate.enabled", false);
 pref("browser.fixup.alternate.prefix", "www.");
 pref("browser.fixup.alternate.protocol", "https");
 pref("browser.fixup.alternate.suffix", ".com");

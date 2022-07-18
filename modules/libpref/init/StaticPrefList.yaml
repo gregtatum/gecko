@@ -605,11 +605,6 @@
   value: 1.0f
   mirror: always
 
-- name: apz.minimap.enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 - name: apz.mvm.force-enabled
   type: RelaxedAtomicBool
   value: true
@@ -1459,6 +1454,24 @@
   type: RelaxedAtomicUint32
   value: 15000
   mirror: always
+
+# Platform collection of data for session store
+- name: browser.sessionstore.platform_collection
+  type: bool
+  value: @IS_NOT_ANDROID@
+  mirror: once
+
+# Platform collection of session storage data for session store
+- name: browser.sessionstore.collect_session_storage
+  type: bool
+  value: @IS_NOT_ANDROID@
+  mirror: once
+
+# Platform collection of zoom data for session store
+- name: browser.sessionstore.collect_zoom
+  type: bool
+  value: @IS_NOT_ANDROID@
+  mirror: once
 
 # Causes SessionStore to ignore non-final update messages from
 # browser tabs that were not caused by a flush from the parent.
@@ -2376,7 +2389,7 @@
 
 # Whether or not File Handle is enabled.
 - name: dom.fileHandle.enabled
-  type: bool
+  type: RelaxedAtomicBool
   value: false
   mirror: always
 
@@ -2535,12 +2548,6 @@
 #endif
   mirror: always
 
-# Enable passing the "storage" option to indexedDB.open.
-- name: dom.indexedDB.storageOption.enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
 # Enable indexedDB in private browsing mode with encryption
 - name: dom.indexedDB.privateBrowsing.enabled
   type: RelaxedAtomicBool
@@ -2551,6 +2558,24 @@
 - name: dom.indexedDB.hide_in_pbmode.enabled
   type: RelaxedAtomicBool
   value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
+# Whether or not indexedDB test mode is enabled.
+- name: dom.indexedDB.testing
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+# Whether or not indexedDB experimental features are enabled.
+- name: dom.indexedDB.experimental
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+# Whether or not indexedDB preprocessing is enabled.
+- name: dom.indexedDB.preprocessing
+  type: RelaxedAtomicBool
+  value: false
   mirror: always
 
 - name: dom.input_events.beforeinput.enabled
@@ -7254,16 +7279,6 @@
 - name: layers.gpu-process.crash-also-crashes-browser
   type: bool
   value: false
-  mirror: always
-
-- name: layers.low-precision-buffer
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-
-- name: layers.low-precision-resolution
-  type: AtomicFloat
-  value: 0.25f
   mirror: always
 
 # Whether to animate simple opacity and transforms on the compositor.
@@ -11991,6 +12006,12 @@
   value: true
   mirror: always
 
+# Always partition web storage APIs except cookies.
+- name: privacy.partition.always_partition_third_party_non_cookie_storage
+  type: RelaxedAtomicBool
+  value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
 - name: privacy.partition.bloburl_per_agent_cluster
   type: RelaxedAtomicBool
   value: false
@@ -12752,6 +12773,13 @@
 - name: svg.context-properties.content.enabled
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+# This pref controls whether the `prefers-color-scheme` value of SVG images
+# reacts to the embedder `color-scheme` in content.
+- name: svg.embedder-prefers-color-scheme.content.enabled
+  type: RelaxedAtomicBool
+  value: true
   mirror: always
 
 # Enables the 'context-fill' and 'context-stroke' keywords for particular
