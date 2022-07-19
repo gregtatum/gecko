@@ -32,7 +32,6 @@ this.TextRecognitionWidget = class {
     this.lastCanvasStyleWidth = null;
 
     console = this.window.console;
-    console.log("!!! constructor");
   }
 
   /*
@@ -186,7 +185,6 @@ this.TextRecognitionWidget = class {
     }
     this.isInitialized = true;
     try {
-      console.log(`!!! initialize`);
       const parser = new this.window.DOMParser();
       let parserDoc = parser.parseFromString(
         `<div class="textrecognition" xmlns="http://www.w3.org/1999/xhtml" role="none">
@@ -271,9 +269,18 @@ this.TextRecognitionWidget = class {
           span.remove();
         }
 
+        const distSq = new DistanceSquared(centers);
+        for (const percentile of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+          console.log(
+            `!!! percentile`,
+            percentile,
+            Math.sqrt(distSq.quantile(percentile))
+          );
+        }
+
         // The values are ranged 0 - 1. This value might be able to be determined
         // algorithmically.
-        const averageDistance = 0.1;
+        const averageDistance = Math.sqrt(distSq.quantile(0.2));
         const clusters = cluster(
           centers,
           // Neighborhood radius:
@@ -581,7 +588,7 @@ function cluster(points, distance, minPoints) {
 
   const clusters = [];
 
-  // Pre-populate the clusters
+  // Pre-populate the clusters.
   for (let i = 0; i < nextClusterIndex; i++) {
     clusters[i] = [];
   }
@@ -631,4 +638,79 @@ function getNeighborsWithinDistance(points, distance, index) {
   }
 
   return neighbors;
+}
+
+/**
+ * @param {number[]} sortedList
+ * @param {number} percentile - Ranged between 0 - 1
+ */
+function quantile(sortedList, percentile) {
+  // Calculate the vector index marking the quantile:
+  return sortedList[Math.round(sortedList.length * percentile)];
+}
+
+class DistanceSquared {
+  /** @type {Map<number>} */
+  #distances = new Map();
+  #list;
+  #distancesSorted;
+
+  /**
+   * @param {Vec2[]} list
+   */
+  constructor(list) {
+    this.#list = list;
+    for (let aIndex = 0; aIndex < list.length; aIndex++) {
+      for (let bIndex = aIndex + 1; bIndex < list.length; bIndex++) {
+        const id = this.#getTupleID(aIndex, bIndex);
+        const a = this.#list[aIndex];
+        const b = this.#list[bIndex];
+        const dx = a[0] - b[0];
+        const dy = a[1] - b[1];
+        this.#distances.set(id, dx * dx + dy * dy);
+      }
+    }
+  }
+
+  /**
+   * Returns a unique tuple ID to identify the relationship between two vectors.
+   */
+  #getTupleID(aIndex, bIndex) {
+    return aIndex < bIndex
+      ? aIndex * this.#list.length + bIndex
+      : bIndex * this.#list.length + aIndex;
+  }
+
+  /**
+   * Returns the distance squared between two vectors.
+   *
+   * @param {Index} aIndex
+   * @param {Index} bIndex
+   * @returns {number} The distance squared
+   */
+  get(aIndex, bIndex) {
+    return this.#distances.get(this.#getTupleID(aIndex, bIndex));
+  }
+
+  /**
+   * Returns the quantile squared.
+   *
+   * @param {number} percentile - Ranged between 0 - 1
+   * @returns {number}
+   */
+  quantile(percentile) {
+    if (!this.#distancesSorted) {
+      this.#distancesSorted = [...this.#distances.values()].sort(
+        (a, b) => a - b
+      );
+    }
+    const index = Math.max(
+      0,
+      Math.min(
+        this.#distancesSorted.length - 1,
+        Math.round(this.#distancesSorted.length * percentile)
+      )
+    );
+    return this.#distancesSorted[index];
+  }
 }
