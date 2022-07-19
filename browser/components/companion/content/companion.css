@@ -616,6 +616,12 @@ snapshot-group-list-detail {
   display: none;
 }
 
+@media not (prefers-contrast) {
+  #session-cleared-link {
+    color: var(--colors-lavender-90);
+  }
+}
+
 header {
   display: flex;
   margin: 10px 0;
