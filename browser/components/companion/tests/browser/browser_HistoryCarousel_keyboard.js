@@ -10,6 +10,31 @@ add_setup(async function() {
   });
 });
 
+async function focusAndPressBackButton(keyChar, backButton, win = window) {
+  let { gStageManager: stageManager } = win;
+  // If the back button is disabled, the viewChangedPromise will never resolve.
+  if (backButton.disabled) {
+    return;
+  }
+  let viewChangedPromise = BrowserTestUtils.waitForEvent(
+    stageManager,
+    "ViewChanged"
+  );
+  // toolbarbutton's are not focusable normally, unless the user begins
+  // using the keyboard to navigate. We temporarily force focusability
+  // here.
+  backButton.setAttribute("tabindex", "-1");
+  backButton.focus();
+  backButton.removeAttribute("tabindex");
+  EventUtils.synthesizeKey(keyChar, {}, win);
+  await viewChangedPromise;
+  // Let the event loop tick once more time to make sure there
+  // aren't any other calls to goBack() in the same tick.
+  await new Promise(resolve => {
+    executeSoon(resolve);
+  });
+}
+
 /**
  * Tests keyboard navigation and control from within the HistoryCarousel.
  */
@@ -157,35 +182,15 @@ add_task(async function test_back_button_keyboard_events() {
   let view3 = gStageManager.currentView;
   Assert.notEqual(view2, view3);
 
-  async function focusAndPressBackButton(keyChar) {
-    let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      gStageManager,
-      "ViewChanged"
-    );
-    // toolbarbutton's are not focusable normally, unless the user begins
-    // using the keyboard to navigate. We temporarily force focusability
-    // here.
-    backButton.setAttribute("tabindex", "-1");
-    backButton.focus();
-    backButton.removeAttribute("tabindex");
-    EventUtils.synthesizeKey(keyChar);
-    await viewChangedPromise;
-    // Let the event loop tick once more time to make sure there
-    // aren't any other calls to goBack() in the same tick.
-    await new Promise(resolve => {
-      executeSoon(resolve);
-    });
-  }
-
   for (let keyChar of ["KEY_Enter", " "]) {
-    await focusAndPressBackButton(keyChar);
+    await focusAndPressBackButton(keyChar, backButton);
     Assert.equal(gStageManager.currentView, view2);
     Assert.equal(
       document.activeElement,
       backButton,
       "Back button has focus after view has changed"
     );
-    await focusAndPressBackButton(keyChar);
+    await focusAndPressBackButton(keyChar, backButton);
     Assert.equal(gStageManager.currentView, view1);
     Assert.equal(
       document.activeElement,
@@ -194,4 +199,84 @@ add_task(async function test_back_button_keyboard_events() {
     );
     await PinebuildTestUtils.setCurrentView(view3);
   }
+});
+
+/**
+ * Ensures that the back button does not lose focus when activating the button via keyboard.
+ * Previously, focus could be stolen from the back button on tab restore, which can occur after
+ * restoring a session. (MR2-1608)
+ */
+add_task(async function test_back_button_doesnt_lose_focus_on_tab_restore() {
+  // Open a new browser window so that the prevent tasks don't impact this task
+  let win = await BrowserTestUtils.openNewBrowserWindow();
+  let { gBrowser, gStageManager, SessionManager } = win;
+  // Prevent megaback from appearing since we send many keypresses on the back button.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.megaback.click-count-threshold", 10000]],
+  });
+  await PinebuildTestUtils.loadViews(
+    [
+      "https://example.com/",
+      "https://example.com/browser/browser",
+      "https://example.org/browser",
+      "https://example.org/browser/browser/components",
+    ],
+    win
+  );
+  // Make sure focus does not leave back button when using
+  // the Enter key and the Space bar.
+  let keyChars = ["KEY_Enter", " "];
+  for (let keyChar of keyChars) {
+    // Set aside session so that we can restore the session
+    // and ensure focus does not leave the back button.
+    let sessionSetAside = SessionManager.once("session-set-aside");
+    let sessionReplaced = SessionManager.once("session-replaced");
+    let flowResetLoaded = BrowserTestUtils.waitForNewTab(
+      gBrowser,
+      "about:flow-reset",
+      true
+    );
+
+    win.document.getElementById("session-setaside-button").click();
+    await sessionSetAside;
+    await sessionReplaced;
+    await flowResetLoaded;
+
+    // Restore session
+    sessionReplaced = SessionManager.once("session-replaced");
+    await BrowserTestUtils.synthesizeMouseAtCenter(
+      "#restore",
+      {},
+      gBrowser.selectedBrowser
+    );
+    await sessionReplaced;
+
+    let backButton = win.document.getElementById("pinebuild-back-button");
+
+    let lastView = gStageManager.views.at(-1);
+    let views = gStageManager.views;
+    let viewLoaded;
+    // Click the back button three times and ensure the focus remains
+    // on the back button
+    for (let i = 2; i > 0; i--) {
+      viewLoaded = PinebuildTestUtils.waitForSelectedView(views[i], win);
+      await focusAndPressBackButton(keyChar, backButton, win);
+      await viewLoaded;
+      Assert.equal(
+        win.document.activeElement,
+        backButton,
+        `Back button has focus after view has changed`
+      );
+    }
+    viewLoaded = PinebuildTestUtils.waitForSelectedView(lastView, win);
+    await PinebuildTestUtils.setCurrentView(lastView, win);
+    await viewLoaded;
+    Assert.equal(
+      gStageManager.currentView,
+      lastView,
+      `current view was set correctly using ${keyChar}`
+    );
+  }
+  await BrowserTestUtils.closeWindow(win);
+  await SpecialPowers.popPrefEnv();
 });
