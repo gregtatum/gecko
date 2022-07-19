@@ -21,6 +21,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
+  Sounds: "resource:///modules/Sounds.jsm",
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
 
@@ -272,6 +273,7 @@ const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
     setAsideBtn.disabled = true;
+    lazy.Sounds.play(lazy.Sounds.SET_ASIDE);
     await this.replaceSession(window);
   }
 

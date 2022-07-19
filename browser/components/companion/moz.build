@@ -18,6 +18,7 @@ EXTRA_JS_MODULES += [
     "OnlineServicesHelper.jsm",
     "OnnxRuntimeService.jsm",
     "PyodideService.jsm",
+    "Sounds.jsm",
     "StageManager.jsm",
     "WorkshopBootstrap.jsm",
     "WorkshopParentAccess.jsm",

@@ -2811,4 +2811,5 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
   pref("extensions.pocket.enabled", false);
   pref("browser.urlbar.opencompanionsearch.enabled", true);
   pref("browser.pinebuild.pinning-apps.enabled", false);
+  pref("browser.pinebuild.sounds", true);
 #endif

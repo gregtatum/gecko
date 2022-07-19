@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 browser.jar:
+    content/browser/companion/begin.wav (content/begin.wav)
     content/browser/companion/breakTime.svg (content/breakTime.svg)
     content/browser/companion/breadcrumb.svg (content/breadcrumb.svg)
     content/browser/companion/browse.js (content/browse.js)
@@ -63,6 +64,7 @@ browser.jar:
     content/browser/companion/sessions.svg (content/sessions.svg)
     content/browser/companion/siteSecurity.js (content/siteSecurity.js)
     content/browser/companion/snapshots.js (content/snapshots.js)
+    content/browser/companion/setaside.wav (content/setaside.wav)
     content/browser/companion/snapshot-groups.js (content/snapshot-groups.js)
     content/browser/companion/snapshot-groups.svg (content/snapshot-groups.svg)
     content/browser/companion/next.svg (content/next.svg)

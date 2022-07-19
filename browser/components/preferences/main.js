@@ -190,6 +190,10 @@ if (AppConstants.MOZ_UPDATER) {
   if (AppConstants.MOZ_MAINTENANCE_SERVICE) {
     Preferences.addAll([{ id: "app.update.service.enabled", type: "bool" }]);
   }
+
+  if (AppConstants.PINEBUILD) {
+    Preferences.addAll([{ id: "browser.pinebuild.sounds", type: "bool" }]);
+  }
 }
 
 XPCOMUtils.defineLazyGetter(this, "gHasWinPackageId", () => {

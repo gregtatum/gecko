@@ -95,6 +95,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   ShellService: "resource:///modules/ShellService.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
   SnapshotMonitor: "resource:///modules/SnapshotMonitor.jsm",
+  Sounds: "resource:///modules/Sounds.jsm",
   SpecialMessageActions:
     "resource://messaging-system/lib/SpecialMessageActions.jsm",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.jsm",
@@ -1871,6 +1872,7 @@ BrowserGlue.prototype = {
       lazy.SessionManager.init();
       lazy.OnnxRuntimeService.init();
       lazy.PyodideService.init();
+      lazy.Sounds.play(lazy.Sounds.STARTUP);
     }
 
     this._firstWindowTelemetry(aWindow);
