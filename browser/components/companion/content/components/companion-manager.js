@@ -81,6 +81,7 @@ class CompanionManager extends MozXULElement {
   #updateVisibility() {
     let command = document.getElementById("Browser:ToggleCompanion");
     command.toggleAttribute("checked", this.#isOpen);
+    command.setAttribute("aria-pressed", this.#isOpen);
     document.l10n.setAttributes(
       command,
       this.#isOpen

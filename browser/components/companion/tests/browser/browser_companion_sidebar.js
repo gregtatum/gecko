@@ -25,6 +25,14 @@ add_task(async function test_open_companion() {
   info("waiting for the companion to initialize");
   await helper.companionReady;
 
+  is(
+    document
+      .getElementById("Browser:ToggleCompanion")
+      .getAttribute("aria-pressed"),
+    "true",
+    "The aria-pressed value is set to 'true' when the companion is open"
+  );
+
   await helper.runCompanionTask(() => {
     ok(
       content.document.querySelector(".companion-main"),
