@@ -55,6 +55,11 @@ const conferencingInfo = [
     domain: ".webex.com",
     icon: "chrome://browser/content/companion/webex.png",
   },
+  {
+    name: "Skype",
+    domain: ".skype.com",
+    icon: "chrome://browser/content/companion/skype.svg",
+  },
 ];
 
 function processLink(url, text) {

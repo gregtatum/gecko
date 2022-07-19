@@ -10277,6 +10277,11 @@ var WorkshopBackend = (() => {
           name: "WebEx",
           domain: ".webex.com",
           icon: "chrome://browser/content/companion/webex.png"
+        },
+        {
+          name: "Skype",
+          domain: ".skype.com",
+          icon: "chrome://browser/content/companion/skype.svg",
         }
       ];
       DOCS_PAT = new RegExp("/([^/]+)/(?:u/[^/]+/)?d/([^/]+)");

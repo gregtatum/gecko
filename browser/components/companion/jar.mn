@@ -71,6 +71,7 @@ browser.jar:
     content/browser/companion/gotomeeting.png (content/gotomeeting.png)
     content/browser/companion/jitsi.png (content/jitsi.png)
     content/browser/companion/meet.png (content/meet.png)
+    content/browser/companion/skype.svg (content/skype.svg)
     content/browser/companion/teams.png (content/teams.png)
     content/browser/companion/telemetry-helpers.js (content/telemetry-helpers.js)
     content/browser/companion/time_of_day_background.png (content/time_of_day_background.png)
