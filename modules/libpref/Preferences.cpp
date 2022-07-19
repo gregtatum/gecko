@@ -5896,7 +5896,10 @@ static const PrefListEntry sDynamicPrefOverrideList[]{
     PREF_LIST_ENTRY("media.video_loopback_dev"),
     PREF_LIST_ENTRY("media.webspeech.service.endpoint"),
     PREF_LIST_ENTRY("network.gio.supported-protocols"),
+<<<<<<< local
     PREF_LIST_ENTRY("pdfjs."),
+=======
+>>>>>>> graft
     PREF_LIST_ENTRY("print.printer_"),
     PREF_LIST_ENTRY("print_printer"),
     PREF_LIST_ENTRY("places.interactions.customBlocklist"),
@@ -5906,6 +5909,9 @@ static const PrefListEntry sDynamicPrefOverrideList[]{
                                                // user has it set as a string...
     PREF_LIST_ENTRY("spellchecker.dictionary"),
     PREF_LIST_ENTRY("test.char"),
+    PREF_LIST_ENTRY("Test.IPC."),
+    PREF_LIST_ENTRY("exists.thenDoesNot"),
+    PREF_LIST_ENTRY("type.String."),
     PREF_LIST_ENTRY("toolkit.mozprotocol.url"),
     PREF_LIST_ENTRY("toolkit.telemetry.log.level"),
     PREF_LIST_ENTRY("ui."),
