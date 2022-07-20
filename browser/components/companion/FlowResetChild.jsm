@@ -13,7 +13,6 @@ class FlowResetChild extends JSWindowActorChild {
 
   async handleEvent(event) {
     switch (event.type) {
-      case "ViewCompanionBrowseTab":
       case "RestoreLastSession":
         this.sendAsyncMessage(event.type);
         break;

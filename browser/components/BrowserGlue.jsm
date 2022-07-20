@@ -1214,7 +1214,6 @@ BrowserGlue.prototype = {
         child: {
           moduleURI: "resource:///actors/FlowResetChild.jsm",
           events: {
-            ViewCompanionBrowseTab: { wantUntrusted: true },
             RestoreLastSession: { wantUntrusted: true },
             DOMContentLoaded: {},
           },

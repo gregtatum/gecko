@@ -13,7 +13,6 @@ const { XPCOMUtils } = ChromeUtils.import(
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
-  CompanionParent: "resource:///actors/CompanionParent.jsm",
   SessionManager: "resource:///modules/SessionManager.jsm",
 });
 
@@ -21,12 +20,6 @@ class FlowResetParent extends JSWindowActorParent {
   async receiveMessage(message) {
     let window = this.browsingContext.topChromeWindow;
     switch (message.name) {
-      case "ViewCompanionBrowseTab":
-        let actor = lazy.CompanionParent.getCompanionActor(window);
-        if (actor) {
-          actor.viewTab("browse");
-        }
-        break;
       case "RestoreLastSession":
         lazy.SessionManager.restoreLastSession(window);
         break;

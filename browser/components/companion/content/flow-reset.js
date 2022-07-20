@@ -14,9 +14,6 @@ document.body.addEventListener("click", event => {
 
   if (msg == "RestoreLastSession") {
     event.target.disabled = true;
-  }
-
-  if (["ViewCompanionBrowseTab", "RestoreLastSession"].includes(msg)) {
     window.dispatchEvent(new CustomEvent(msg, { bubbles: true }));
   }
 });
