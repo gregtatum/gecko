@@ -91,9 +91,11 @@
       <menuitem id="context-openlink"
                 data-l10n-id="main-context-menu-open-link-new-window"
                 oncommand="gContextMenu.openLink();"/>
+#ifndef PINEBUILD
       <menuitem id="context-openlinkprivate"
                 data-l10n-id="main-context-menu-open-link-new-private-window"
                 oncommand="gContextMenu.openLinkInPrivateWindow();"/>
+#endif
       <menuseparator id="context-sep-open"/>
       <menuitem id="context-bookmarklink"
                 data-l10n-id="main-context-menu-bookmark-link"
