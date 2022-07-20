@@ -198,7 +198,10 @@ function init_all() {
   }
   register_module("panePrivacy", gPrivacyPane);
   register_module("paneContainers", gContainersPane);
-  if (Services.prefs.getBoolPref("browser.preferences.experimental")) {
+  if (
+    !AppConstants.PINEBUILD &&
+    Services.prefs.getBoolPref("browser.preferences.experimental")
+  ) {
     // Set hidden based on previous load's hidden value.
     document.getElementById(
       "category-experimental"
