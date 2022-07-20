@@ -158,10 +158,9 @@ class AsyncTabSwitcher {
     this.window.addEventListener("MozLayerTreeReady", this);
     this.window.addEventListener("MozLayerTreeCleared", this);
     this.window.addEventListener("TabRemotenessChange", this);
-    this.window.addEventListener("sizemodechange", this);
-    this.window.addEventListener("occlusionstatechange", this);
     this.window.addEventListener("SwapDocShells", this, true);
     this.window.addEventListener("EndSwapDocShells", this, true);
+    this.window.document.addEventListener("visibilitychange", this);
 
     let initialTab = this.requestedTab;
     let initialBrowser = initialTab.linkedBrowser;
@@ -175,7 +174,7 @@ class AsyncTabSwitcher {
     // browser. Let's clear it.
     initialBrowser.preserveLayers(false);
 
-    if (!this.minimizedOrFullyOccluded) {
+    if (!this.windowHidden) {
       this.log("Initial tab is loaded?: " + tabIsLoaded);
       this.setTabState(
         initialTab,
@@ -204,10 +203,9 @@ class AsyncTabSwitcher {
     this.window.removeEventListener("MozLayerTreeReady", this);
     this.window.removeEventListener("MozLayerTreeCleared", this);
     this.window.removeEventListener("TabRemotenessChange", this);
-    this.window.removeEventListener("sizemodechange", this);
-    this.window.removeEventListener("occlusionstatechange", this);
     this.window.removeEventListener("SwapDocShells", this, true);
     this.window.removeEventListener("EndSwapDocShells", this, true);
+    this.window.document.removeEventListener("visibilitychange", this);
 
     this.tabbrowser._switcher = null;
   }
@@ -273,7 +271,7 @@ class AsyncTabSwitcher {
     let browser = tab.linkedBrowser;
     let { remoteTab } = browser.frameLoader;
     if (state == this.STATE_LOADING) {
-      this.assert(!this.minimizedOrFullyOccluded);
+      this.assert(!this.windowHidden);
 
       // If we're not in the process of warming this tab, we
       // don't need to delay activating its DocShell.
@@ -320,11 +318,8 @@ class AsyncTabSwitcher {
     }
   }
 
-  get minimizedOrFullyOccluded() {
-    return (
-      this.window.windowState == this.window.STATE_MINIMIZED ||
-      this.window.isFullyOccluded
-    );
+  get windowHidden() {
+    return this.window.document.hidden;
   }
 
   get tabLayerCache() {
@@ -342,7 +337,7 @@ class AsyncTabSwitcher {
     this.assert(!this.loadingTab);
     this.assert(this.lastVisibleTab === this.requestedTab);
     this.assert(
-      this.minimizedOrFullyOccluded ||
+      this.windowHidden ||
         this.getTabState(this.requestedTab) == this.STATE_LOADED
     );
 
@@ -409,7 +404,7 @@ class AsyncTabSwitcher {
 
       let fl = requestedBrowser.frameLoader;
       shouldBeBlank =
-        !this.minimizedOrFullyOccluded &&
+        !this.windowHidden &&
         (!fl.remoteTab ||
           (!hasSufficientlyLoaded && !fl.remoteTab.hasPresented));
 
@@ -417,7 +412,7 @@ class AsyncTabSwitcher {
         let flag = shouldBeBlank ? "blank" : "nonblank";
         this.addLogFlag(
           flag,
-          this.minimizedOrFullyOccluded,
+          this.windowHidden,
           fl.remoteTab,
           isBusy,
           isLocalAbout,
@@ -463,7 +458,7 @@ class AsyncTabSwitcher {
     // Show or hide the spinner as needed.
     let needSpinner =
       this.getTabState(showTab) != this.STATE_LOADED &&
-      !this.minimizedOrFullyOccluded &&
+      !this.windowHidden &&
       !shouldBeBlank &&
       !this.loadTimer;
 
@@ -552,7 +547,7 @@ class AsyncTabSwitcher {
   // We've decided to try to load requestedTab.
   loadRequestedTab() {
     this.assert(!this.loadTimer);
-    this.assert(!this.minimizedOrFullyOccluded);
+    this.assert(!this.windowHidden);
 
     // loadingTab can be non-null here if we timed out loading the current tab.
     // In that case we just overwrite it with a different tab; it's had its chance.
@@ -580,7 +575,7 @@ class AsyncTabSwitcher {
       canCheckDocShellState &&
       state == this.STATE_LOADED &&
       !browser.docShellIsActive &&
-      !this.minimizedOrFullyOccluded
+      !this.windowHidden
     ) {
       browser.docShellIsActive = true;
       this.logState(
@@ -662,7 +657,7 @@ class AsyncTabSwitcher {
     let stateOfRequestedTab = this.getTabState(this.requestedTab);
     if (
       !this.loadTimer &&
-      !this.minimizedOrFullyOccluded &&
+      !this.windowHidden &&
       (stateOfRequestedTab == this.STATE_UNLOADED ||
         stateOfRequestedTab == this.STATE_UNLOADING ||
         this.warmingTabs.has(this.requestedTab))
@@ -881,8 +876,8 @@ class AsyncTabSwitcher {
     this.lastVisibleTab = null;
   }
 
-  onSizeModeOrOcclusionStateChange() {
-    if (this.minimizedOrFullyOccluded) {
+  onVisibilityChange() {
+    if (this.windowHidden) {
       for (let [tab, state] of this.tabState) {
         if (!this.shouldDeactivateDocShell(tab.linkedBrowser)) {
           continue;
@@ -989,7 +984,7 @@ class AsyncTabSwitcher {
     // crashed, already visible, or already requested, warming
     // up the tab makes no sense.
     if (
-      this.minimizedOrFullyOccluded ||
+      this.windowHidden ||
       !tab.linkedPanel ||
       tab.closing ||
       !tab.linkedBrowser.isRemoteBrowser ||
@@ -1145,9 +1140,8 @@ class AsyncTabSwitcher {
         case "TabRemotenessChange":
           this.onRemotenessChange(event.target);
           break;
-        case "sizemodechange":
-        case "occlusionstatechange":
-          this.onSizeModeOrOcclusionStateChange();
+        case "visibilitychange":
+          this.onVisibilityChange();
           break;
         case "SwapDocShells":
           this.onSwapDocShells(event.originalTarget, event.detail);

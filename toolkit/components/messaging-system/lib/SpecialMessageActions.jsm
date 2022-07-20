@@ -388,6 +388,9 @@ const SpecialMessageActions = {
       case "SHOW_SPOTLIGHT":
         lazy.Spotlight.showSpotlightDialog(browser, action.data);
         break;
+      case "BLOCK_MESSAGE":
+        await this.blockMessageById(action.data.id);
+        break;
       case "SET_PREF":
         this.setPref(action.data.pref);
         break;
