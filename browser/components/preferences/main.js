@@ -450,10 +450,12 @@ var gMainPane = {
       "change",
       gMainPane.updateBrowserStartupUI
     );
-    Preferences.get("browser.startup.homepage").on(
-      "change",
-      gMainPane.updateBrowserStartupUI
-    );
+    if (!AppConstants.PINEBUILD) {
+      Preferences.get("browser.startup.homepage").on(
+        "change",
+        gMainPane.updateBrowserStartupUI
+      );
+    }
     gMainPane.updateBrowserStartupUI();
 
     if (AppConstants.HAVE_SHELL_SERVICE) {

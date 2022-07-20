@@ -189,7 +189,9 @@ function init_all() {
   Services.telemetry.setEventRecordingEnabled("aboutpreferences", true);
 
   register_module("paneGeneral", gMainPane);
-  register_module("paneHome", gHomePane);
+  if (!AppConstants.PINEBUILD) {
+    register_module("paneHome", gHomePane);
+  }
   register_module("paneSearch", gSearchPane);
   if (AppConstants.PINEBUILD) {
     register_module("paneSimple", gSimplePane);
