@@ -483,7 +483,7 @@ var WinTaskbarJumpList = {
       return;
     }
 
-    if (lazy.PrivateBrowsingUtils.enabled) {
+    if (lazy.PrivateBrowsingUtils.enabled && !AppConstants.PINEBUILD) {
       tasksCfg.push(privateWindowTask);
     }
     // Store our task list config data
