@@ -1223,9 +1223,14 @@ class CompanionParent extends JSWindowActorParent {
     let { url } = message.data;
     let page = await lazy.PlacesUtils.history.fetch(url);
     if (!page || !page.title) {
-      // We have to throw so the promise rejects for the
-      // until in lit to work properly.
-      throw new Error("No title or empty title");
+      // Originally we threw here so that the rejected promise would show up
+      // for the "until" to work properly, but that caused an error on the
+      // console. Workaround is to return something that looks like a promise
+      // that still seems rejected, but doesn't display an error.
+      return {
+        then: () => undefined,
+        catch: errorCallback => errorCallback(),
+      };
     }
     return page.title;
   }

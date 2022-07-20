@@ -645,8 +645,14 @@ class CalendarEventWrapper extends CalendarEvent {
       this._cachedDocumentTitles.set(url, title);
       return title;
     }
-    // This is needed so the until works properly
-    throw new Error("Couldn't get a better document title");
+    // Originally we threw here so that the rejected promise would show up
+    // for the "until" to work properly, but that caused an error on the
+    // console. Workaround is to return something that looks like a promise
+    // that still seems rejected, but doesn't display an error.
+    return {
+      then: () => undefined,
+      catch: errorCallback => errorCallback(),
+    };
   }
 
   setTimeWarp(fakeNow) {

@@ -318,7 +318,11 @@ class GoogleService {
     let results = await response.json();
 
     if (results.error) {
-      lazy.log.error(JSON.stringify(results));
+      // 404 just means the user doesn't have access,
+      // so don't clutter up the console.
+      if (results.error.code != 404) {
+        lazy.log.error(JSON.stringify(results));
+      }
       return null;
     }
 
