@@ -102,8 +102,13 @@
     <command id="Tools:Downloads" oncommand="BrowserDownloadsUI();"/>
     <command id="Tools:Addons" oncommand="BrowserOpenAddonsMgr();"/>
     <command id="Tools:Sanitize" oncommand="Sanitizer.showUI(window);"/>
+#ifdef PINEBUILD
+    <command id="Tools:PrivateBrowsingComingSoon"
+      oncommand="PineBuildUIUtils.openPrivateWindowDialog()"/>
+#else
     <command id="Tools:PrivateBrowsing"
       oncommand="OpenBrowserWindow({private: true});"/>
+#endif
     <command id="Browser:Screenshot" oncommand="ScreenshotsUtils.notify(window, 'shortcut')"/>
     <command id="History:UndoCloseTab"
 #ifndef PINEBUILD
@@ -327,7 +332,13 @@
 
     <key id="key_switchTextDirection" data-l10n-id="bidi-switch-direction-shortcut" command="cmd_switchTextDirection" modifiers="accel,shift" />
 
-    <key id="key_privatebrowsing" command="Tools:PrivateBrowsing" data-l10n-id="private-browsing-shortcut"
+    <key id="key_privatebrowsing"
+#ifdef PINEBUILD
+         command="Tools:PrivateBrowsingComingSoon"
+#else
+         command="Tools:PrivateBrowsing"
+#endif
+         data-l10n-id="private-browsing-shortcut"
          modifiers="accel,shift" reserved="true"/>
     <key id="key_screenshot" data-l10n-id="screenshot-shortcut" command="Browser:Screenshot" modifiers="accel,shift"/>
     <key id="key_sanitize" command="Tools:Sanitize" keycode="VK_DELETE" modifiers="accel,shift"/>

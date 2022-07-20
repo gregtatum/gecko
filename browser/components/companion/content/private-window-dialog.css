@@ -1,0 +1,50 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#private-window-dialog {
+  height: 375px;
+  min-width: 600px;
+  overflow: hidden;
+}
+
+body {
+  background-image: url("chrome://browser/content/companion/private-browsing-dialog.png");
+  background-size: cover;
+}
+
+h1,
+p {
+  color: #FFFFFF;
+  position: relative;
+}
+
+h1 {
+  font-weight: 600;
+  font-size: 24px;
+  margin: 0;
+  top: 130px;
+}
+
+h1:first-of-type {
+  left: 90px;
+}
+
+h1:last-of-type {
+  left: 105px;
+}
+
+p {
+  font-size: 12px;
+  top: 135px;
+  left: 70px;
+}
+
+button {
+  position: relative;
+  top: 145px;
+  left: 130px;
+  background: #845BDC;
+  color: #FFFFFF;
+  border-radius: 8px;
+}

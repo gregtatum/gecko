@@ -95,6 +95,15 @@ var PineBuildUIUtils = {
     }
   },
 
+  /**
+   * Open the private window coming soon dialog.
+   */
+  openPrivateWindowDialog() {
+    window.gDialogBox.open(
+      "chrome://browser/content/companion/private-window-dialog.html"
+    );
+  },
+
   // A Set containing the currently displayed notifications so we can avoid
   // showing duplicates.
   activeNotifications: new Set(),

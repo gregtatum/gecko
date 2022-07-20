@@ -106,3 +106,10 @@ onboarding-flow-complete-title = You’re ready to go!
 
 onboarding-flow-button-next = Next
 onboarding-flow-button-complete = Start browsing
+
+# Pinebuild private browsing coming soon dialog strings
+private-window-coming-title = Private browsing
+private-window-coming-title2 = coming soon
+private-window-coming-soon-content = While we work to bring you this feature, <br>you can use private windows in { -brand-other-product-name }.
+private-window-coming-button-label = Got it
+private-window-coming-soon = Coming Soon: Private Browsing

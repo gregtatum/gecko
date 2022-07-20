@@ -59,14 +59,17 @@
                      command="Browser:StartNewWorkspace"
                      data-l10n-id="appmenuitem-start-new-workspace"/>
 #endif
-#ifndef PINEBUILD
       <toolbarbutton id="appMenu-new-private-window-button2"
                      class="subviewbutton"
+#ifdef PINEBUILD
+                     data-l10n-id="private-window-coming-soon"
+                     command="Tools:PrivateBrowsingComingSoon"
+#else
                      data-l10n-id="appmenuitem-new-private-window"
-                     key="key_privatebrowsing"
-                     command="Tools:PrivateBrowsing"/>
-      <toolbarseparator/>
+                     command="Tools:PrivateBrowsing"
 #endif
+                     key="key_privatebrowsing"/>
+      <toolbarseparator/>
       <toolbarbutton id="appMenu-bookmarks-button"
                      class="subviewbutton subviewbutton-nav"
                      data-l10n-id="library-bookmarks-menu"

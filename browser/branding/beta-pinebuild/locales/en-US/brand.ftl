@@ -23,4 +23,5 @@
 # remain unchanged across different versions (Nightly, Beta, etc.).
 -brand-product-name = Flowstate
 -vendor-short-name = Mozilla
+-brand-other-product-name = Firefox
 trademarkInfo = { " " }

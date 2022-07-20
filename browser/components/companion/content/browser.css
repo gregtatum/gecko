@@ -1116,3 +1116,11 @@ toolbar .toolbarbutton-1 {
   display: block;
   width: calc(var(--companion-width) - 32px);
 }
+
+#appMenu-new-private-window-button2 {
+  color: #B7B6B3;
+}
+
+#appMenu-new-private-window-button2.subviewbutton[shortcut]::after {
+  display: none;
+}
