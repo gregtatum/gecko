@@ -72,8 +72,8 @@ job-defaults:
         mar-channel-id:
             by-release-type:
                 nightly.*:
-                    by-project:
-                        pine-stable: flowstate-mozilla-central
+                    by-shipping-product:
+                        pinebuild: flowstate-mozilla-central
                         default: firefox-mozilla-central
                 beta:
                     by-shipping-product:
@@ -86,8 +86,8 @@ job-defaults:
         accepted-mar-channel-ids:
             by-release-type:
                 nightly.*:
-                    by-project:
-                        pine-stable: flowstate-mozilla-central
+                    by-shipping-product:
+                        pinebuild: flowstate-mozilla-central
                         default: firefox-mozilla-central
                 beta:
                     by-shipping-product:
