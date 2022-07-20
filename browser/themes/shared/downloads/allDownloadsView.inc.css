@@ -79,6 +79,39 @@
   #downloadsListBox .downloadButton > .button-box > .button-icon {
     color: var(--colors-darkgrey-30);
   }
+
+  @media (prefers-contrast) {
+    /** Unset the selected variables applied in common-shared.css. **/
+    richlistbox#downloadsListBox > richlistitem[selected] {
+      --in-content-button-background: unset;
+      --in-content-button-background-hover: unset;
+      --in-content-button-background-active: unset;
+      --in-content-button-text-color: unset;
+      --in-content-button-text-color-hover: unset;
+      --in-content-button-text-color-active: unset;
+      --in-content-focus-outline-color: unset;
+    }
+
+    #downloadsListBox > richlistitem {
+      box-shadow: unset;
+      border: 1px solid var(--in-content-button-border-color);
+    }
+
+    #downloadsListBox > richlistitem,
+    #downloadsListBox > richlistitem:hover {
+      background: var(--in-content-button-background);
+    }
+
+    #downloadsListBox > richlistitem .downloadButton > .button-box {
+      border: 1px solid var(--in-content-button-text-color);
+      color: var(--in-content-button-text-color);
+    }
+
+    #downloadsListBox > richlistitem .downloadButton:hover > .button-box {
+      background: var(--in-content-button-background-hover);
+      color: var(--in-content-button-text-color-hover);
+    }
+  }
 }
 
 /*** List items ***/
