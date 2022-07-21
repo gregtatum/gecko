@@ -125,8 +125,15 @@ add_task(async function test_last_session_card_keyboard_navigation() {
 /**
  * Ensure that the "Browse" link in the "Now" section is usable by a keyboard.
  * This link appears in the "Start fresh" illustration after setting aside a session.
- * */
+ *
+ * Note: this task does not run on Mac due to links
+ * not being keyboard focusable by default on Mac. (MR2-3033)
+ */
 add_task(async function test_browse_control_after_setting_aside_session() {
+  if (navigator.platform == "MacIntel") {
+    ok(true, "Not running task since we are on Mac");
+    return;
+  }
   // Run test in a new window to avoid affecting the main test window.
   let win = await BrowserTestUtils.openNewBrowserWindow({
     waitForTabURL: "about:flow-reset",
