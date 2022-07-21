@@ -1,0 +1,33 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src chrome:; object-src 'none'; img-src http: https: data: chrome:;">
+  <link rel="stylesheet" type="text/css"
+        href="chrome://global/skin/in-content/common.css">
+  <link rel="stylesheet" type="text/css"
+        href="chrome://browser/content/imagetools/imagetools.css">
+  <link rel="localization" href="branding/brand.ftl">
+  <link rel="localization" href="preview/imagetools.ftl">
+  <script type="module" src="chrome://browser/content/imagetools/imagetools.mjs"></script>
+  <title>Image Tools</title>
+</head>
+<body>
+  <div class="imageTools">
+    <div class="imageToolsImage"></div>
+    <div class="imageToolsSidebar">
+      <section>
+        <button type="button">Copy All Text</button>
+      </section>
+      <section>
+        <div class="imageToolsText"></div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

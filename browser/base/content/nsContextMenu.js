@@ -2348,6 +2348,18 @@ class nsContextMenu {
     );
   }
 
+  getImageText2() {
+    let dialogBox = gBrowser.getTabDialogBox(this.browser);
+    dialogBox.open(
+      "chrome://browser/content/imagetools/imagetools.html",
+      {
+        features: "resizable=no",
+        sizeTo: "available",
+      },
+      this.imageInfo
+    );
+  }
+
   drmLearnMore(aEvent) {
     let drmInfoURL =
       Services.urlFormatter.formatURLPref("app.support.baseURL") +
