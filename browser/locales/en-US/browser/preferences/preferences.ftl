@@ -879,6 +879,7 @@ containers-remove-button =
 
 sync-signedout-caption = Take Your Web With You
 sync-signedout-description2 = Synchronize your bookmarks, history, tabs, passwords, add-ons, and settings across all your devices.
+sync-signedout-description-pine = Synchronize your history and passwords across all your devices.
 
 sync-signedout-account-signin3 =
     .label = Sign in to sync…

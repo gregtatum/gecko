@@ -89,6 +89,20 @@ var gSyncPane = {
       this._populateComputerName(cachedComputerName);
     }
     this.page = maybeAcct ? FXA_PAGE_LOGGED_IN : FXA_PAGE_LOGGED_OUT;
+    if (this.page === FXA_PAGE_LOGGED_OUT) {
+      this._updateLoggedOutDescription();
+    }
+  },
+
+  // Change the description to reflect what we sync for pine builds.
+  _updateLoggedOutDescription() {
+    if (AppConstants.PINEBUILD) {
+      const description = document.getElementById("noFxaDescription");
+      description?.setAttribute(
+        "data-l10n-id",
+        "sync-signedout-description-pine"
+      );
+    }
   },
 
   _init() {
@@ -340,6 +354,7 @@ var gSyncPane = {
     let state = UIState.get();
     if (state.status == UIState.STATUS_NOT_CONFIGURED) {
       this.page = FXA_PAGE_LOGGED_OUT;
+      this._updateLoggedOutDescription();
       return;
     }
     this.page = FXA_PAGE_LOGGED_IN;
