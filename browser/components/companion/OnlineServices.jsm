@@ -872,6 +872,11 @@ const OnlineServices = {
   alreadyFetching: false,
 
   async fetchEvents() {
+    // Reset the auto refresh task to its full refresh time. This will also
+    // queue the first auto-refresh if this is the first time we load events.
+    this.refreshEventsTask.disarm();
+    this.refreshEventsTask.arm();
+
     let servicesData = this.getAllServices();
     if (!servicesData.length || this.alreadyFetching) {
       return;
@@ -895,10 +900,6 @@ const OnlineServices = {
       Services.obs.notifyObservers(events, "companion-services-refresh");
     }
 
-    // Reset the auto refresh task to its full refresh time. This will also
-    // queue the first auto-refresh if this is the first time we load events.
-    this.refreshEventsTask.disarm();
-    this.refreshEventsTask.arm();
     this.alreadyFetching = false;
   },
 
