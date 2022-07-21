@@ -137,13 +137,14 @@
 }
 
 @media (prefers-contrast) {
-  .snapshot.card:is(:hover, :focus-within):not(.prevent-hover-panel) .options-button,
-  .popupshowing .options-button {
+  .options-button {
+    -moz-context-properties: fill;
     fill: var(--in-content-button-text-color);
     background: var(--in-content-button-background) no-repeat center url("chrome://global/skin/icons/more.svg");
   }
 
   .options-button:hover {
+    -moz-context-properties: fill;
     fill: var(--in-content-button-text-color-hover);
     background: var(--in-content-button-background-hover) no-repeat center url("chrome://global/skin/icons/more.svg");
   }
