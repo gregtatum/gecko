@@ -2,8 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+ChromeUtils.defineESModuleGetters(this, {
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
+});
+
 XPCOMUtils.defineLazyModuleGetters(this, {
-  SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   sinon: "resource://testing-common/Sinon.jsm",
 });

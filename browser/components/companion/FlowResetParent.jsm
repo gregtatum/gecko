@@ -6,14 +6,10 @@
 
 var EXPORTED_SYMBOLS = ["FlowResetParent"];
 
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
-);
-
 const lazy = {};
 
-XPCOMUtils.defineLazyModuleGetters(lazy, {
-  SessionManager: "resource:///modules/SessionManager.jsm",
+ChromeUtils.defineESModuleGetters(lazy, {
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
 });
 
 class FlowResetParent extends JSWindowActorParent {

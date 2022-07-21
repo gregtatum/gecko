@@ -4,11 +4,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["SessionManager"];
-
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
-);
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const { EventEmitter } = ChromeUtils.import(
   "resource://gre/modules/EventEmitter.jsm"
@@ -120,7 +116,7 @@ const DEFAULT_WORKSPACE_ID = 0;
  *    - "CorruptDatabase"
  *        Generic database corruption.
  */
-const SessionManager = new (class SessionManager extends EventEmitter {
+export const SessionManager = new (class SessionManager extends EventEmitter {
   init() {
     if (!lazy.perWindowEnabled) {
       return;

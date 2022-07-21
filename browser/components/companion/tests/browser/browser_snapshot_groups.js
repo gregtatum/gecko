@@ -3,10 +3,10 @@
 
 "use strict";
 
-XPCOMUtils.defineLazyModuleGetters(this, {
-  Interactions: "resource:///modules/Interactions.jsm",
-  SnapshotGroups: "resource:///modules/SnapshotGroups.jsm",
-  SnapshotMonitor: "resource:///modules/SnapshotMonitor.jsm",
+ChromeUtils.defineESModuleGetters(this, {
+  Interactions: "resource:///modules/Interactions.sys.mjs",
+  SnapshotGroups: "resource:///modules/SnapshotGroups.sys.mjs",
+  SnapshotMonitor: "resource:///modules/SnapshotMonitor.sys.mjs",
 });
 
 let now = Date.now();

@@ -24,8 +24,8 @@ do_get_profile(true);
 // test_feed_parsers.js can cause Places to be created asynchronously in a way
 // that ends up racing the shutdown of xpcshell that induces assertions about
 // the shutdown phase.
-const { PlacesUtils } = ChromeUtils.import(
-  "resource://gre/modules/PlacesUtils.jsm"
+const { PlacesUtils } = ChromeUtils.importESModule(
+  "resource://gre/modules/PlacesUtils.sys.mjs"
 );
 PlacesUtils.favicons;
 

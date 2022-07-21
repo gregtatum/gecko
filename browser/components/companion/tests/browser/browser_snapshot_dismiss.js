@@ -9,8 +9,8 @@ const TEST_URLS = [
   { uri: "https://example.org/", title: "Page 2" },
 ];
 
-XPCOMUtils.defineLazyModuleGetters(this, {
-  Interactions: "resource:///modules/Interactions.jsm",
+ChromeUtils.defineESModuleGetters(this, {
+  Interactions: "resource:///modules/Interactions.sys.mjs",
 });
 
 let win;

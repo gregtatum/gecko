@@ -15,20 +15,23 @@ const { PageDataSchema } = ChromeUtils.import(
 
 const lazy = {};
 
+ChromeUtils.defineESModuleGetters(lazy, {
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.sys.mjs",
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
+  SnapshotGroups: "resource:///modules/SnapshotGroups.sys.mjs",
+  SnapshotSelector: "resource:///modules/SnapshotSelector.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
+});
+
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
   clearTimeout: "resource://gre/modules/Timer.jsm",
-  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   OAuth2: "resource:///modules/OAuth2.jsm",
   OnlineServices: "resource:///modules/OnlineServices.jsm",
   PageDataService: "resource:///modules/pagedata/PageDataService.jsm",
-  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   requestIdleCallback: "resource://gre/modules/Timer.jsm",
-  SessionManager: "resource:///modules/SessionManager.jsm",
-  SnapshotGroups: "resource:///modules/SnapshotGroups.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
-  Snapshots: "resource:///modules/Snapshots.jsm",
-  SnapshotSelector: "resource:///modules/SnapshotSelector.jsm",
 });
 
 XPCOMUtils.defineLazyPreferenceGetter(

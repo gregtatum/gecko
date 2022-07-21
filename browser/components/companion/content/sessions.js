@@ -4,8 +4,8 @@
 
 import { timeSince } from "./time-since.js";
 
-const { CommonNames } = ChromeUtils.import(
-  "resource:///modules/CommonNames.jsm"
+const { CommonNames } = ChromeUtils.importESModule(
+  "resource:///modules/CommonNames.sys.mjs"
 );
 
 const SESSIONS_ENABLED_PREF = "browser.places.perwindowsessions.enabled";

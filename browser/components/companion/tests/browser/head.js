@@ -44,11 +44,14 @@ let nsLoginInfo = new Components.Constructor(
 // Facilitates creating a server using XPCShellContentUtils.createHttpServer
 XPCShellContentUtils.initMochitest(this);
 
+ChromeUtils.defineESModuleGetters(this, {
+  PlacesTestUtils: "resource://testing-common/PlacesTestUtils.sys.mjs",
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
+});
+
 XPCOMUtils.defineLazyModuleGetters(this, {
   OnlineServices: "resource:///modules/OnlineServices.jsm",
-  PlacesTestUtils: "resource://testing-common/PlacesTestUtils.jsm",
-  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
-  Snapshots: "resource:///modules/Snapshots.jsm",
 });
 
 registerCleanupFunction(async () => {

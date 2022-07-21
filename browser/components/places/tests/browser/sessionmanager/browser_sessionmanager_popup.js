@@ -1,8 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
-const { SessionManager } = ChromeUtils.import(
-  "resource:///modules/SessionManager.jsm"
+const { SessionManager } = ChromeUtils.importESModule(
+  "resource:///modules/SessionManager.sys.mjs"
 );
 
 const TEST_URL = "https://example.com/";

@@ -10,8 +10,8 @@ const { Interactions } = ChromeUtils.importESModule(
 const { Snapshots } = ChromeUtils.importESModule(
   "resource:///modules/Snapshots.sys.mjs"
 );
-const { SessionManager } = ChromeUtils.import(
-  "resource:///modules/SessionManager.jsm"
+const { SessionManager } = ChromeUtils.importESModule(
+  "resource:///modules/SessionManager.sys.mjs"
 );
 const { PlacesUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/PlacesUtils.sys.mjs"

@@ -14,11 +14,11 @@ const TEST_URLS = [
 const { FilterAdult } = ChromeUtils.import(
   "resource://activity-stream/lib/FilterAdult.jsm"
 );
-const { Interactions } = ChromeUtils.import(
-  "resource:///modules/Interactions.jsm"
+const { Interactions } = ChromeUtils.importESModule(
+  "resource:///modules/Interactions.sys.mjs"
 );
-const { SnapshotSelector } = ChromeUtils.import(
-  "resource:///modules/SnapshotSelector.jsm"
+const { SnapshotSelector } = ChromeUtils.importESModule(
+  "resource:///modules/SnapshotSelector.sys.mjs"
 );
 
 let win;

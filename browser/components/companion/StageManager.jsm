@@ -13,11 +13,14 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 const lazy = {};
 
+ChromeUtils.defineESModuleGetters(lazy, {
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
+});
+
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
-  SessionManager: "resource:///modules/SessionManager.jsm",
-  Snapshots: "resource:///modules/Snapshots.jsm",
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
 
