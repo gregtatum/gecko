@@ -2292,7 +2292,15 @@ class nsContextMenu {
   }
 
   getImageText() {
-    this.actor.getImageText(this.targetIdentifier);
+    let dialogBox = gBrowser.getTabDialogBox(this.browser);
+    dialogBox.open(
+      "chrome://browser/content/imagetools/imagetools.html",
+      {
+        features: "resizable=no",
+        sizeTo: "available",
+      },
+      this.imageInfo
+    );
   }
 
   drmLearnMore(aEvent) {

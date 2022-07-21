@@ -1,0 +1,39 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.imageTools {
+  display: flex;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.imageToolsImage {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  text-align: center;
+  background-color: #f9f9fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  .imageToolsImage {
+    background-color: #2A2A2E;
+  }
+}
+
+.imageToolsImage img {
+  max-width: 100%;
+  height: auto;
+}
+
+.imageToolsSidebar {
+  width: 250px;
+  flex-shrink: 0;
+  height: 100vh;
+  overflow: scroll;
+}
+
+.imageToolsSidebar section {
+  margin: 16px;
+}
