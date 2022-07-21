@@ -4888,6 +4888,16 @@ var SessionStoreInternal = {
         aOptions.restoreContentReason || RESTORE_TAB_CONTENT_REASON.SET_STATE,
     });
 
+    // Do not focus the tab's content area if the Back button was focused
+    // in Pinebuild.
+    if (
+      AppConstants.PINEBUILD &&
+      window.document.activeElement ==
+        window.document.getElementById("pinebuild-back-button")
+    ) {
+      return;
+    }
+
     // Focus the tab's content area, unless the restore is for a new tab URL or
     // was triggered by a DocumentChannel process switch.
     if (

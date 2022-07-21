@@ -157,35 +157,15 @@ add_task(async function test_back_button_keyboard_events() {
   let view3 = gStageManager.currentView;
   Assert.notEqual(view2, view3);
 
-  async function focusAndPressBackButton(keyChar) {
-    let viewChangedPromise = BrowserTestUtils.waitForEvent(
-      gStageManager,
-      "ViewChanged"
-    );
-    // toolbarbutton's are not focusable normally, unless the user begins
-    // using the keyboard to navigate. We temporarily force focusability
-    // here.
-    backButton.setAttribute("tabindex", "-1");
-    backButton.focus();
-    backButton.removeAttribute("tabindex");
-    EventUtils.synthesizeKey(keyChar);
-    await viewChangedPromise;
-    // Let the event loop tick once more time to make sure there
-    // aren't any other calls to goBack() in the same tick.
-    await new Promise(resolve => {
-      executeSoon(resolve);
-    });
-  }
-
   for (let keyChar of ["KEY_Enter", " "]) {
-    await focusAndPressBackButton(keyChar);
+    await PinebuildTestUtils.focusAndPressBackButton(keyChar, backButton);
     Assert.equal(gStageManager.currentView, view2);
     Assert.equal(
       document.activeElement,
       backButton,
       "Back button has focus after view has changed"
     );
-    await focusAndPressBackButton(keyChar);
+    await PinebuildTestUtils.focusAndPressBackButton(keyChar, backButton);
     Assert.equal(gStageManager.currentView, view1);
     Assert.equal(
       document.activeElement,

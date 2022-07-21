@@ -1209,6 +1209,43 @@ var PinebuildTestUtils = {
   },
 
   /**
+   * Helper function that will focus and press the back button in the
+   * toolbar by synthesizing a keypress.
+   *
+   * @param {String} keyChar
+   *  String that is sent to synthesizeKey() such as "KEY_Enter" or " "
+   * @param {HTMLElement} backButton
+   *  The back button in the toolbar
+   * @param {Window?} win
+   *  The window where we want to focus and press the back button
+   * @return {*}
+   */
+  async focusAndPressBackButton(keyChar, backButton, win = window) {
+    let { gStageManager: stageManager } = win;
+    // If the back button is disabled, the viewChangedPromise will never resolve.
+    if (backButton.disabled) {
+      return;
+    }
+    let viewChangedPromise = BrowserTestUtils.waitForEvent(
+      stageManager,
+      "ViewChanged"
+    );
+    // toolbarbutton's are not focusable normally, unless the user begins
+    // using the keyboard to navigate. We temporarily force focusability
+    // here.
+    backButton.setAttribute("tabindex", "-1");
+    backButton.focus();
+    backButton.removeAttribute("tabindex");
+    EventUtils.synthesizeKey(keyChar, {}, win);
+    await viewChangedPromise;
+    // Let the event loop tick once more time to make sure there
+    // aren't any other calls to goBack() in the same tick.
+    await new Promise(resolve => {
+      executeSoon(resolve);
+    });
+  },
+
+  /**
    * Sends a window back a View.
    * @param {Window?} win
    *   The window to navigate, the current window is used by default
