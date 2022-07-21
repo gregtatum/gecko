@@ -164,7 +164,6 @@
           <image class="category-icon"/>
           <label class="category-name" flex="1" data-l10n-id="pane-experimental-title"></label>
         </richlistitem>
-        #endif
         <richlistitem id="category-more-from-mozilla"
                       class="category"
                       hidden="true"
@@ -175,6 +174,7 @@
           <image class="category-icon"/>
           <label class="category-name" flex="1" data-l10n-id="more-from-moz-title"></label>
         </richlistitem>
+        #endif
       </richlistbox>
 
       <spacer flex="1"/>
@@ -227,12 +227,12 @@
 #ifndef PINEBUILD
 #include home.inc.xhtml
 #include experimental.inc.xhtml
+#include moreFromMozilla.inc.xhtml
 #endif
 #include search.inc.xhtml
 #include privacy.inc.xhtml
 #include containers.inc.xhtml
 #include sync.inc.xhtml
-#include moreFromMozilla.inc.xhtml
         </vbox>
       </vbox>
     </vbox>
