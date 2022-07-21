@@ -307,12 +307,13 @@ add_task(async function testEmptyStateWithConnectedAccount() {
 
   await CompanionHelper.whenReady(async helper => {
     await helper.reload();
+    await helper.createAccount();
 
     let events = [];
     await setBrowseCalendarEvents(helper, events);
 
     // Ensure accounts are loaded before checking the empty state message.
-    await helper.loadWorkshopAccounts();
+    await helper.loadAccountData();
     info("Empty message should indicate there are no events.");
     await checkEmptyCalendarMessage(helper, "companion-calendar-no-items");
   });
@@ -328,7 +329,7 @@ add_task(async function testEmptyStateWithoutConnectedAccount() {
     await selectCalendarTab(helper);
 
     // Clear workshop data to delete any accounts.
-    await helper.clearWorkshopData();
+    await helper.clearAccountData();
     info("Empty message should indicate there are no connected accounts.");
     await checkEmptyCalendarMessage(helper, "companion-calendar-not-connected");
   });
@@ -455,7 +456,10 @@ add_task(async function testMessageHostButton() {
         summary: "Your Finished Meeting",
         startDate: start,
         endDate: end,
-        attendees: [{ email: "test123@gmail.com", isSelf: true }],
+        attendees: [
+          { email: "test123@gmail.com", isSelf: true },
+          { email: HOST_EMAIL, isSelf: true },
+        ],
         organizer: {
           email: HOST_EMAIL,
           isSelf: false,

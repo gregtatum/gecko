@@ -459,7 +459,7 @@ class CompanionHelper {
     // Ensure we are clearing the account and calendars between tests.
     // This enables us to start fresh with events.
     if (workshopEnabled) {
-      await helper.clearWorkshopData();
+      await helper.clearAccountData();
     }
   }
 
@@ -586,12 +586,23 @@ class CompanionHelper {
     );
   }
 
-  async clearWorkshopData() {
-    await this.workshopHelper.clearAccountAndCalendars();
+  async clearAccountData() {
+    if (this.workshopEnabled) {
+      await this.workshopHelper.clearAccountAndCalendars();
+    } else {
+      const connectedServices = OnlineServices.getAllServices();
+      await Promise.all(
+        connectedServices.map(service => OnlineServices.deleteService(service))
+      );
+    }
   }
 
-  async loadWorkshopAccounts() {
-    await this.workshopHelper.getConnectedAccounts();
+  async loadAccountData() {
+    if (this.workshopEnabled) {
+      await this.workshopHelper.getConnectedAccounts();
+    } else {
+      OnlineServices.getAllServices();
+    }
   }
 
   get companionReady() {
@@ -649,9 +660,10 @@ class CompanionHelper {
           );
           // Checking the event list based on the assumption that we're testing
           // the calendar UI whenever we set events, which seems reasonable for now.
-          const selector = options.listType
-            ? "#browse-event-list"
-            : "calendar-event-list";
+          const selector = {
+            browse: "#browse-event-list",
+            now: "calendar-event-list",
+          }[options.listType || "now"];
           let calendarEventList = content.document.querySelector(selector);
 
           await ContentTaskUtils.waitForEvent(
@@ -711,18 +723,20 @@ class CompanionHelper {
         })
         .sort((a, b) => a.startDate - b.startDate);
       await this.runCompanionTask(
-        async events => {
+        async (events, options) => {
           content.document.dispatchEvent(
             new content.CustomEvent("refresh-events", {
               detail: { events },
             })
           );
-          let calendarEventList = content.document.querySelector(
-            "calendar-event-list"
-          );
+          const selector = {
+            browse: "#browse-event-list",
+            now: "calendar-event-list",
+          }[options.listType || "now"];
+          let calendarEventList = content.document.querySelector(selector);
           await calendarEventList.updateComplete;
         },
-        [standardizedEvents]
+        [standardizedEvents, { expectedEventCount, listType }]
       );
     }
   }
