@@ -19,9 +19,13 @@ const { AppConstants } = ChromeUtils.import(
 );
 
 const lazy = {};
+
+ChromeUtils.defineESModuleGetters(lazy, {
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+});
+
 XPCOMUtils.defineLazyModuleGetters(lazy, {
   ObjectUtils: "resource://gre/modules/ObjectUtils.jsm",
-  PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   SkippableTimer: "resource:///modules/UrlbarUtils.jsm",
   UrlbarMuxer: "resource:///modules/UrlbarUtils.jsm",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
