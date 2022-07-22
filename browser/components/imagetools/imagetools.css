@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-.imageTools {
+ .imageTools {
   display: flex;
   overflow: hidden;
   height: 100vh;
@@ -14,6 +14,7 @@
   overflow-y: auto;
   text-align: center;
   background-color: #f9f9fa;
+  position: relative;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,6 +26,53 @@
 .imageToolsImage img {
   max-width: 100%;
   height: auto;
+}
+
+.imageToolsImage canvas {
+  position: absolute;
+  user-select: none;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.imageToolsImageSpan {
+  position: absolute;
+  transform-origin: 0 0;
+  color: transparent;
+  white-space: nowrap;
+  margin-bottom: 16px;
+}
+
+.imageToolsName {
+  font-weight: 600;
+  padding-bottom: 16px;
+  border-bottom: 1px #eee solid;
+  margin-bottom: 16px;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.imageToolsText {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.imageToolsTextClusters {
+  position: absolute;
+  top: 0;
+}
+
+.imageToolsImageCluster {
+  /* Clusters should not be used for positioning. */
+  position: absolute;
+  top: 0;
+  outline: 1px solid red;
+  margin: 0;
+  padding: 0;
+  display: block;
 }
 
 .imageToolsSidebar {
