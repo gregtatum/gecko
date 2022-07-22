@@ -683,8 +683,8 @@ const kIssuers = {
     endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenEndpoint: "https://oauth2.googleapis.com/token",
     clientId:
-      "290111995646-hrdpn27kp4jl0r6gej8540cg3cc4i0g6.apps.googleusercontent.com",
-    clientSecret: "mjlcpD5iiSNABCq_3PRtUglS",
+      "944367438010-bgarfm35hotueofbpga27snubn0e3urs.apps.googleusercontent.com",
+    clientSecret: "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",
   },
   "google-mozilla": {
     endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
