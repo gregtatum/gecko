@@ -40,10 +40,12 @@
                   tooltip="dynamic-shortcut-tooltip"
                   data-l10n-id="main-context-menu-stop"
                   command="Browser:Stop"/>
+#ifndef PINEBUILD
         <menuitem id="context-bookmarkpage"
                   class="menuitem-iconic"
                   data-l10n-id="main-context-menu-bookmark-add"
                   oncommand="gContextMenu.bookmarkThisPage();"/>
+#endif
       </menugroup>
 #endif
       <menuseparator id="context-sep-navigation"/>
@@ -97,9 +99,11 @@
                 oncommand="gContextMenu.openLinkInPrivateWindow();"/>
 #endif
       <menuseparator id="context-sep-open"/>
+#ifndef PINEBUILD
       <menuitem id="context-bookmarklink"
                 data-l10n-id="main-context-menu-bookmark-link"
                 oncommand="gContextMenu.bookmarkLink();"/>
+#endif
       <menuitem id="context-savelink"
                 data-l10n-id="main-context-menu-save-link"
                 oncommand="gContextMenu.saveLink();"/>
@@ -258,7 +262,7 @@
                 data-l10n-id="main-context-menu-plugin-hide"
                 oncommand="gContextMenu.hidePlugin();"/>
       <menuseparator id="context-sep-ctp"/>
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && !defined(PINEBUILD)
       <menuitem id="context-bookmarkpage"
                 data-l10n-id="main-context-menu-bookmark-add-mac"
                 oncommand="gContextMenu.bookmarkThisPage();"/>
@@ -374,9 +378,11 @@
                     data-l10n-id="main-context-menu-frame-reload"
                     oncommand="gContextMenu.reloadFrame(event);"/>
           <menuseparator/>
+#ifndef PINEBUILD
           <menuitem id="context-bookmarkframe"
                     data-l10n-id="main-context-menu-frame-bookmark"
                     oncommand="gContextMenu.addBookmarkForFrame();"/>
+#endif
           <menuitem id="context-saveframe"
                     data-l10n-id="main-context-menu-frame-save-as"
                     oncommand="gContextMenu.saveFrame();"/>

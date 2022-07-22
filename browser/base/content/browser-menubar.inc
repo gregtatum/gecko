@@ -144,13 +144,16 @@
 
             <menu id="view-menu" data-l10n-id="menu-view">
               <menupopup id="menu_viewPopup">
-                <menu id="viewToolbarsMenu" data-l10n-id="menu-view-toolbars-menu">
-                  <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);">
-#ifndef PINEBUILD
+                <menu id="viewToolbarsMenu"
+                      data-l10n-id="menu-view-toolbars-menu"
+#ifdef PINEBUILD
+                      hidden="true"
+#endif
+                      >
+                  <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);" >
                     <menuseparator/>
                     <menuitem id="menu_customizeToolbars"
                               command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
-#endif
                   </menupopup>
                 </menu>
 #ifndef PINEBUILD
@@ -305,6 +308,7 @@
               </menupopup>
             </menu>
 
+#ifndef PINEBUILD
   <menu id="bookmarksMenu"
         ondragenter="PlacesMenuDNDHandler.onDragEnter(event);"
         ondragover="PlacesMenuDNDHandler.onDragOver(event);"
@@ -383,6 +387,7 @@
       <!-- Bookmarks menu items -->
     </menupopup>
   </menu>
+#endif
 
             <menu id="tools-menu" data-l10n-id="menu-tools">
               <menupopup id="menu_ToolsPopup">

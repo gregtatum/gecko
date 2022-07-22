@@ -758,28 +758,33 @@ class nsContextMenu {
   initMiscItems() {
     // Use "Bookmark This Link" if on a link.
     let bookmarkPage = document.getElementById("context-bookmarkpage");
-    this.showItem(
-      bookmarkPage,
-      !(
-        this.isContentSelected ||
-        this.onTextInput ||
-        this.onLink ||
-        this.onImage ||
-        this.onVideo ||
-        this.onAudio ||
-        this.onCanvas ||
-        this.inWebExtBrowser
-      )
-    );
+    if (bookmarkPage) {
+      this.showItem(
+        bookmarkPage,
+        !(
+          this.isContentSelected ||
+          this.onTextInput ||
+          this.onLink ||
+          this.onImage ||
+          this.onVideo ||
+          this.onAudio ||
+          this.onCanvas ||
+          this.inWebExtBrowser
+        )
+      );
+    }
 
-    this.showItem(
-      "context-bookmarklink",
-      (this.onLink &&
-        !this.onMailtoLink &&
-        !this.onTelLink &&
-        !this.onMozExtLink) ||
-        this.onPlainTextLink
-    );
+    let bookmarkLink = document.getElementById("context-bookmarklink");
+    if (bookmarkLink) {
+      this.showItem(
+        bookmarkLink,
+        (this.onLink &&
+          !this.onMailtoLink &&
+          !this.onTelLink &&
+          !this.onMozExtLink) ||
+          this.onPlainTextLink
+      );
+    }
     this.showItem("context-keywordfield", this.shouldShowAddKeyword());
     this.showItem("frame", this.inFrame);
 
@@ -813,8 +818,9 @@ class nsContextMenu {
     this.showItem("context-showonlythisframe", !this.inSrcdocFrame);
     this.showItem("context-openframeintab", !this.inSrcdocFrame);
     this.showItem("context-openframe", !this.inSrcdocFrame);
-    this.showItem("context-bookmarkframe", !this.inSrcdocFrame);
-
+    if (!AppConstants.PINEBUILD) {
+      this.showItem("context-bookmarkframe", !this.inSrcdocFrame);
+    }
     // Hide menu entries for images, show otherwise
     if (this.inFrame) {
       this.viewFrameSourceElement.hidden = !BrowserUtils.mimeTypeIsTextBased(
