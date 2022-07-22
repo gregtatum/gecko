@@ -72,7 +72,7 @@ class GoogleService {
       this.getUnreadCountAtom.bind(this),
       60 * 1000
     );
-    this.getInboxURL();
+    this.setInboxURL();
   }
 
   async connect() {
@@ -183,6 +183,7 @@ class GoogleService {
         // auth scopes.
         if (result.primary) {
           this.emailAddress = result.id;
+          this.setInboxURL();
           OnlineServices.persist();
         }
         calendar.backgroundColor = result.backgroundColor;
@@ -269,7 +270,7 @@ class GoogleService {
     });
   }
 
-  async getInboxURL() {
+  async setInboxURL() {
     if (!this.inboxURL) {
       this.inboxURL = "https://mail.google.com/mail/";
       if (this.emailAddress) {
@@ -369,7 +370,7 @@ class MicrosoftService {
       this.getUnreadCount.bind(this),
       60 * 1000
     );
-    this.getInboxURL();
+    this.setInboxURL();
   }
 
   async connect() {
@@ -512,7 +513,7 @@ class MicrosoftService {
     );
   }
 
-  async getInboxURL() {
+  async setInboxURL() {
     // Hacky, buy I can't find anyway to get the inbox URL
     // without looking at an email.
     if (!this.inboxURL) {
@@ -631,8 +632,8 @@ class TestService {
     return [];
   }
 
-  async getInboxURL() {
-    return "https://example.com";
+  async setInboxURL() {
+    this.inboxURL = "https://example.com";
   }
 
   async getUnreadCount() {
