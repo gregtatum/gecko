@@ -11,7 +11,7 @@
       <html:h1 data-l10n-id="pane-search-title"/>
     </hbox>
 
-    <groupbox id="searchbarGroup" data-category="paneSearch" hidden="true">
+    <groupbox id="searchbarGroup" data-category="paneSearch" hidden="true" pine-supported="false">
       <label control="searchBarVisibleGroup"><html:h2 data-l10n-id="search-bar-header"/></label>
       <radiogroup id="searchBarVisibleGroup" preference="browser.search.widget.inNavBar" align="start">
         <radio id="searchBarHiddenRadio" value="false" data-l10n-id="search-bar-hidden"/>
@@ -64,7 +64,8 @@
                   data-l10n-id="search-show-suggestions-above-history-option"
                   preference="browser.urlbar.showSearchSuggestionsFirst"/>
         <checkbox id="showSearchSuggestionsPrivateWindows"
-                  data-l10n-id="search-show-suggestions-private-windows"/>
+                  data-l10n-id="search-show-suggestions-private-windows"
+                  pine-supported="false"/>
         <hbox id="urlBarSuggestionPermanentPBLabel"
               align="center" class="indent">
           <label flex="1" data-l10n-id="search-suggestions-cant-show" />
