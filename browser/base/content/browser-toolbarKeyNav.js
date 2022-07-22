@@ -103,13 +103,15 @@ ToolbarKeyboardNavigator = {
   init() {
     for (let id of this.kToolbars) {
       let toolbar = document.getElementById(id);
-      // When enabled, no toolbar buttons should themselves be tabbable.
-      // We manage toolbar focus completely. This attribute ensures that CSS
-      // doesn't set -moz-user-focus: normal.
-      toolbar.setAttribute("keyNav", "true");
-      this._initTabStops(toolbar);
-      toolbar.addEventListener("keydown", this);
-      toolbar.addEventListener("keypress", this);
+      if (toolbar) {
+        // When enabled, no toolbar buttons should themselves be tabbable.
+        // We manage toolbar focus completely. This attribute ensures that CSS
+        // doesn't set -moz-user-focus: normal.
+        toolbar.setAttribute("keyNav", "true");
+        this._initTabStops(toolbar);
+        toolbar.addEventListener("keydown", this);
+        toolbar.addEventListener("keypress", this);
+      }
     }
     CustomizableUI.addListener(this);
   },

@@ -1549,6 +1549,10 @@ var BookmarkingUI = {
   updateEmptyToolbarMessage() {
     let emptyMsg = document.getElementById("personal-toolbar-empty");
 
+    if (!this.toolbar) {
+      return;
+    }
+
     // If the bookmarks are here but it's early in startup, show the message.
     // It'll get made visibility: hidden early in startup anyway - it's just
     // to ensure the toolbar has height.

@@ -70,11 +70,13 @@
 #endif
                      key="key_privatebrowsing"/>
       <toolbarseparator/>
+#ifndef PINEBUILD
       <toolbarbutton id="appMenu-bookmarks-button"
                      class="subviewbutton subviewbutton-nav"
                      data-l10n-id="library-bookmarks-menu"
                      closemenu="none"
                      oncommand="BookmarkingUI.showSubView(this);"/>
+#endif
 #ifndef PINEBUILD
       <toolbarbutton id="appMenu-history-button"
                      class="subviewbutton subviewbutton-nav"
@@ -242,6 +244,7 @@
     <vbox id="PanelUI-helpItems" class="panel-subview-body"/>
   </panelview>
 
+#ifndef PINEBUILD
   <panelview id="PanelUI-bookmarks" flex="1" class="PanelUI-subView">
     <vbox class="panel-subview-body">
       <toolbarbutton id="panelMenuBookmarkThisPage"
@@ -278,6 +281,7 @@
                    command="Browser:ShowAllBookmarks"
                    />
   </panelview>
+#endif
 
   <panelview id="PanelUI-profiler" flex="1" descriptionheightworkaround="true">
     <vbox id="PanelUI-profiler-container">

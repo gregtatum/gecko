@@ -1629,12 +1629,11 @@ var gBrowserInit = {
 
   onBeforeInitialXULLayout() {
     BookmarkingUI.updateEmptyToolbarMessage();
-    setToolbarVisibility(
-      BookmarkingUI.toolbar,
-      gBookmarksToolbarVisibility,
-      false,
-      false
-    );
+
+    let toolbar = BookmarkingUI.toolbar;
+    if (toolbar) {
+      setToolbarVisibility(toolbar, gBookmarksToolbarVisibility, false, false);
+    }
 
     // Set a sane starting width/height for all resolutions on new profiles.
     if (Services.prefs.getBoolPref("privacy.resistFingerprinting")) {
@@ -5501,12 +5500,14 @@ var XULBrowserWindow = {
     // If we've actually changed document, update the toolbar visibility.
     if (!isSameDocument) {
       let bookmarksToolbar = gNavToolbox.querySelector("#PersonalToolbar");
-      setToolbarVisibility(
-        bookmarksToolbar,
-        gBookmarksToolbarVisibility,
-        false,
-        false
-      );
+      if (bookmarksToolbar) {
+        setToolbarVisibility(
+          bookmarksToolbar,
+          gBookmarksToolbarVisibility,
+          false,
+          false
+        );
+      }
     }
 
     let closeOpenPanels = selector => {
@@ -6627,8 +6628,10 @@ function onViewToolbarsPopupShowing(aEvent, aInsertPoint) {
     }
 
     if (toolbar.id == "PersonalToolbar") {
-      let menu = BookmarkingUI.buildBookmarksToolbarSubmenu(toolbar);
-      popup.insertBefore(menu, firstMenuItem);
+      if (!AppConstants.PINEBUILD) {
+        let menu = BookmarkingUI.buildBookmarksToolbarSubmenu(toolbar);
+        popup.insertBefore(menu, firstMenuItem);
+      }
     } else {
       let menuItem = document.createXULElement("menuitem");
       menuItem.setAttribute("id", "toggle_" + toolbar.id);

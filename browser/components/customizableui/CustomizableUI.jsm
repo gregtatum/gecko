@@ -989,6 +989,9 @@ var CustomizableUIInternal = {
   },
 
   registerToolbarNode(aToolbar) {
+    if (!aToolbar) {
+      return;
+    }
     let area = aToolbar.id;
     if (gBuildAreas.has(area) && gBuildAreas.get(area).has(aToolbar)) {
       return;
