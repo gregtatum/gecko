@@ -80,8 +80,14 @@ class OnboardingParent extends JSWindowActorParent {
         }
         break;
       case "OpenFxa":
+        this._onboardingView = window.gStageManager.currentView;
         doc.body.setAttribute("onboarding", "with-browsing");
         await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
+        window.gStageManager.setView(this._onboardingView);
+        // The promise above is resolved once the user signs into fxa so it's safe to
+        // reset the onboarding attribute now.
+        doc.body.setAttribute("onboarding", "no-browsing");
+
         Services.prefs.setIntPref(
           "browser.pinebuild.onboarding.progress",
           ONBOARDING_SCREEN_AFTER_FXA
@@ -92,9 +98,6 @@ class OnboardingParent extends JSWindowActorParent {
           prefValue: ONBOARDING_SCREEN_AFTER_FXA,
         });
 
-        // The promise above is resolved once the user signs into fxa so it's safe to
-        // reset the onboarding attribute now.
-        doc.body.setAttribute("onboarding", "no-browsing");
         break;
       case "GetOnboardingProgressPrefValue":
         return Services.prefs.getIntPref(
