@@ -2,9 +2,25 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const ourBrowser = window.docShell.chromeEventHandler;
+ourBrowser
+  .closest(".dialogBox")
+  ?.classList.add("imageToolsDialogBox", "noShadow");
+ourBrowser.closest(".dialogOverlay")?.classList.add("imageToolsDialogOverlay");
+ourBrowser.classList.add("imageToolsDialogFrame");
+const contentEl = ourBrowser
+  .closest(".browserStack")
+  .querySelector('browser[type="content"]');
+
+contentEl?.classList.add("imageToolsContentArea");
+
 window.addEventListener("DOMContentLoaded", () => {
   // The arguments are passed in as the final parameters to TabDialogBox.prototype.open.
   new ImageTools(...window.arguments);
+});
+
+window.addEventListener("unload", () => {
+  contentEl?.classList.remove("imageToolsContentArea");
 });
 
 /**
@@ -36,10 +52,10 @@ class ImageTools {
     this.imageInfo = imageInfo;
 
     /** @type {HTMLDivElement} */
-    this.imageEl = document.querySelector(".imageToolsImage");
+    this.imageWrapperEl = document.querySelector(".imageToolsImage");
 
     /** @type {HTMLCanvasElement} */
-    this.canvasEl = this.imageEl.querySelector("canvas");
+    this.canvasEl = this.imageWrapperEl.querySelector("canvas");
 
     /** @type {HTMLDivElement} */
     this.textEl = document.querySelector(".imageToolsText");
@@ -50,21 +66,31 @@ class ImageTools {
     /** @type {HTMLDivElement} */
     this.imageToolsName = document.querySelector(".imageToolsName");
 
+    this.loadingEL = document.querySelector(".imageToolsTextLoading");
+
     const parts = this.imageInfo.currentSrc.split("/");
-    this.imageToolsName.innerText = parts[parts.length - 1];
+    this.imageToolsName.innerText = decodeURIComponent(parts[parts.length - 1]);
 
     this.setupImage();
   }
 
   setupImage() {
-    const { imageInfo, imageEl } = this;
+    const { imageInfo, imageWrapperEl } = this;
     const img = document.createElement("img");
     img.onload = async () => {
+      if (img.width > img.height) {
+        img.classList.add("imageToolsHorizontal");
+      } else {
+        img.classList.add("imageToolsVertical");
+      }
+
       /** @type {TextRecognitionResult[]} */
       const results = await img.recognizeCurrentImageText();
 
       // TODO - Remove this. This is a hack to remove the shadow root functionality.
       img.openOrClosedShadowRoot.children[0].remove();
+
+      this.loadingEL.style.display = "none";
 
       const spans = this.runClustering(results);
       requestAnimationFrame(() => {
@@ -73,7 +99,7 @@ class ImageTools {
     };
     img.src = imageInfo.currentSrc;
     img.setAttribute("alt", imageInfo.imageText);
-    imageEl.prepend(img);
+    imageWrapperEl.prepend(img);
   }
 
   /**
@@ -84,19 +110,21 @@ class ImageTools {
   positionSpans(results, spans, img) {
     /** @type {Map<HTMLSpanElement, DOMRect>} */
     const spanRects = new Map();
+    const { textClustersEl, canvasEl, textEl } = this;
 
-    const imageWidth = this.imageEl.getBoundingClientRect().width;
-    // TODO - This is a hack to get it to lay out correctly.
-    const rect = {
-      width: imageWidth,
-      height: (imageWidth / img.width) * img.height,
-    };
-    this.textClustersEl.style.width = rect.width + "px";
-    this.textClustersEl.style.height = rect.height + "px";
-    this.canvasEl.style.width = rect.width + "px";
-    this.canvasEl.style.height = rect.height + "px";
-    this.canvasEl.style.opacity = 1;
-    this.textEl.style.opacity = 1;
+    const rect = this.imageWrapperEl
+      .querySelector("img")
+      .getBoundingClientRect();
+    textClustersEl.style.top = rect.top + "px";
+    textClustersEl.style.left = rect.left + "px";
+    textClustersEl.style.width = rect.width + "px";
+    textClustersEl.style.height = rect.height + "px";
+    canvasEl.style.top = rect.top + "px";
+    canvasEl.style.left = rect.left + "px";
+    canvasEl.style.width = rect.width + "px";
+    canvasEl.style.height = rect.height + "px";
+    canvasEl.style.opacity = 1;
+    textEl.style.opacity = 1;
 
     // The ctx is only available when redrawing the canvas. This is operation is only
     // done when necessary, as it can be expensive.

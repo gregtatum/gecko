@@ -2297,7 +2297,7 @@ class nsContextMenu {
       "chrome://browser/content/imagetools/imagetools.html",
       {
         features: "resizable=no",
-        sizeTo: "available",
+        modalType: Services.prompt.MODAL_TYPE_CONTENT,
       },
       this.imageInfo
     );

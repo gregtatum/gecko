@@ -2,30 +2,41 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
- .imageTools {
+:root {
+  background-color: transparent;
+}
+
+.imageTools {
   display: flex;
   overflow: hidden;
   height: 100vh;
 }
 
 .imageToolsImage {
+  --image-tools-margin: 80px;
+  --image-tools-border-radius: 3px;
   flex: 1;
   height: 100vh;
   overflow-y: auto;
-  text-align: center;
-  background-color: #f9f9fa;
   position: relative;
-}
-
-@media (prefers-color-scheme: dark) {
-  .imageToolsImage {
-    background-color: #2A2A2E;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .imageToolsImage img {
-  max-width: 100%;
+  box-shadow: 3px 0 15px 0 #0007;
+  border-radius: var(--image-tools-border-radius);
+}
+
+.imageToolsHorizontal {
+  max-width: calc(100% - var(--image-tools-margin));
   height: auto;
+}
+
+.imageToolsVertical {
+  max-height: calc(100% - var(--image-tools-margin));
+  width: auto;
 }
 
 .imageToolsImage canvas {
@@ -34,6 +45,7 @@
   inset: 0;
   opacity: 0;
   transition: opacity 200ms;
+  border-radius: var(--image-tools-border-radius);
 }
 
 .imageToolsImageSpan {
@@ -46,9 +58,6 @@
 
 .imageToolsName {
   font-weight: 600;
-  padding-bottom: 16px;
-  border-bottom: 1px #eee solid;
-  margin-bottom: 16px;
   max-width: 100%;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -56,6 +65,8 @@
 }
 
 .imageToolsText {
+  overflow-y: auto;
+  flex: 1;
   opacity: 0;
   transition: opacity 200ms;
 }
@@ -69,19 +80,34 @@
   /* Clusters should not be used for positioning. */
   position: absolute;
   top: 0;
-  outline: 1px solid red;
   margin: 0;
   padding: 0;
   display: block;
 }
 
 .imageToolsSidebar {
-  width: 250px;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--in-content-page-background);
+  width: 360px;
   height: 100vh;
   overflow: scroll;
 }
 
 .imageToolsSidebar section {
   margin: 16px;
+}
+
+hr {
+  margin-inline: 8px;
+  margin-block: 0;
+}
+
+.imageToolsButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.imageToolsButtons > button {
+  flex: 1;
 }
