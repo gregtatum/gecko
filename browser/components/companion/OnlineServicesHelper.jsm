@@ -35,10 +35,12 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 
 // Some common links provide nothing useful in the companion,
 // so we just ignore them.
-let linksToIgnore = [
-  // This link is in every Teams invite and just provides information
-  // on how to join a Teams meeting.
-  "https://aka.ms/JoinTeamsMeeting",
+// We also ignore some patterns (currently only protocols)
+let patternsToIgnore = [
+  /^tel:/,
+  /^https:\/\/aka.ms\/JoinTeamsMeeting/,
+  /^https:\/\/www.microsoft.com\/microsoft-teams\/join-a-meeting/,
+  /^https:\/\/www.microsoft.com\/.*\/microsoft-teams\/download-app/,
 ];
 
 function processLink(url, text) {
@@ -55,8 +57,10 @@ function processLink(url, text) {
       return null;
     }
   }
-  if (linksToIgnore.includes(url.href) || url.protocol === "tel:") {
-    return null;
+  for (let pattern of patternsToIgnore) {
+    if (url.href.match(pattern)) {
+      return null;
+    }
   }
   // Tag conferencing URLs in case we need them, but just return.
   if (conferencingInfo.find(info => url.host.endsWith(info.domain))) {

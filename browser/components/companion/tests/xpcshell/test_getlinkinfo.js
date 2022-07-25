@@ -25,6 +25,14 @@ const DESCRIPTION_TEST = [
     links: [],
   },
   {
+    description: `https://www.microsoft.com/en-us/microsoft-teams/download-app`,
+    links: [],
+  },
+  {
+    description: `https://www.microsoft.com/microsoft-teams/join-a-meeting`,
+    links: [],
+  },
+  {
     description: `
       <a href="http://example.com">An example</a>
       Some other text
