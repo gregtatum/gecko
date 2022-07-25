@@ -19,7 +19,6 @@ export default class River extends MozLitElement {
       viewGroups: { type: Array, attribute: false, state: true },
       overflowedViews: { type: Array, attribute: false },
       activeView: { type: Object, attribute: false },
-      keying: { type: Boolean, attribute: false, state: true },
     };
   }
 
@@ -38,8 +37,6 @@ export default class River extends MozLitElement {
     this.addEventListener("dragover", this.#onDragOver);
     this.addEventListener("drop", this.#onDrop);
     this.addEventListener("keyup", this.#onKeyUp);
-    this.addEventListener("focusin", this.#onFocusIn);
-    this.addEventListener("focusout", this.#onFocusOut);
   }
 
   isEmpty() {
@@ -118,18 +115,6 @@ export default class River extends MozLitElement {
     }
   }
 
-  #onFocusIn() {
-    if (
-      !(Services.focus.getLastFocusMethod(window) & Services.focus.FLAG_BYMOUSE)
-    ) {
-      this.keying = true;
-    }
-  }
-
-  #onFocusOut() {
-    this.keying = false;
-  }
-
   render() {
     let containsActive = this.hasView(this.activeView);
     // The base case is that the _displayedViewGroups is empty. In that case,
@@ -158,7 +143,6 @@ export default class River extends MozLitElement {
         <div
           class="view-groups-wrapper"
           ?topisactive=${topViewGroup?.includes(this.activeView)}
-          ?keying=${this.keying}
         >
           ${repeat(
             this.viewGroups,
