@@ -72,7 +72,27 @@ class ImageTools {
     this.imageToolsName.innerText = decodeURIComponent(parts[parts.length - 1]);
 
     this.setupImage();
+
+    document
+      .querySelector("#image-tools-copy")
+      .addEventListener("click", this.copy);
+
+    document
+      .querySelector("#image-tools-cancel")
+      .addEventListener("click", this.cancel);
   }
+
+  copy = () => {
+    const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
+      Ci.nsIClipboardHelper
+    );
+    clipboard.copyString(this.text);
+    window.close();
+  };
+
+  cancel = () => {
+    window.close();
+  };
 
   setupImage() {
     const { imageInfo, imageWrapperEl } = this;
@@ -289,6 +309,7 @@ class ImageTools {
       2
     );
 
+    this.text = "";
     for (const cluster of clusters) {
       const divCluster = document.createElement("div");
       divCluster.className = "imageToolsImageCluster";
@@ -313,6 +334,7 @@ class ImageTools {
           span.className = "imageToolsImageSpan";
           span.innerText += ending;
           divCluster.appendChild(span);
+          this.text += span.innerText;
         }
         {
           // Handle the span inside of the text-only area.
