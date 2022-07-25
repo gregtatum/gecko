@@ -280,7 +280,7 @@
                               class="content-blocking-checkbox" flex="1"
                               data-l10n-id="content-blocking-tracking-content-label"
                               aria-describedby="contentBlockingCustomDesc"/>
-                    <vbox>
+                    <vbox pine-supported="false">
                       <menulist id="trackingProtectionMenu">
                         <menupopup>
                           <menuitem data-l10n-id="content-blocking-option-private" value="private"/>
@@ -541,7 +541,7 @@
           data-subcategory="form-autofill" hidden="true"></groupbox>
 
 <!-- History -->
-<groupbox id="historyGroup" data-category="panePrivacy" hidden="true">
+<groupbox id="historyGroup" data-category="panePrivacy" hidden="true" pine-supported="false">
   <label><html:h2 data-l10n-id="history-header"/></label>
   <hbox align="center">
     <label id="historyModeLabel"
@@ -653,7 +653,8 @@
   <checkbox id="bookmarkSuggestion" data-l10n-id="addressbar-locbar-bookmarks-option"
             preference="browser.urlbar.suggest.bookmark"/>
   <checkbox id="openpageSuggestion" data-l10n-id="addressbar-locbar-openpage-option"
-            preference="browser.urlbar.suggest.openpage"/>
+            preference="browser.urlbar.suggest.openpage"
+            pine-supported="false"/>
   <checkbox id="topSitesSuggestion"
             data-l10n-id="addressbar-locbar-shortcuts-option"
             preference="browser.urlbar.suggest.topsites"/>
@@ -915,7 +916,7 @@
     </hbox>
   </hbox>
 
-  <hbox id="addonInstallBox">
+  <hbox id="addonInstallBox" pine-supported="false">
     <checkbox id="warnAddonInstall"
               data-l10n-id="permissions-addon-install-warning"
               preference="xpinstall.whitelist.required"
@@ -979,7 +980,7 @@
       <label id="FHRLearnMore"
              class="learnMore" is="text-link"
              data-l10n-id="collection-health-report-link"/>
-      <vbox class="indent">
+      <vbox class="indent" pine-supported="false">
         <hbox align="center">
           <checkbox id="addonRecommendationEnabled"
                     class="tail-with-learn-more"
