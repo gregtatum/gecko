@@ -134,7 +134,7 @@ let gGeneratedPasswordObserver = {
 
 Services.ppmm.addMessageListener("PasswordManager:findRecipes", message => {
   let formHost = new URL(message.data.formOrigin).host;
-  return gRecipeManager.getRecipesForHost(formHost);
+  return gRecipeManager?.getRecipesForHost(formHost) ?? [];
 });
 
 /**
