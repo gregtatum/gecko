@@ -5813,8 +5813,10 @@ static const PrefListEntry sParentOnlyPrefBranchList[] = {
     PREF_LIST_ENTRY("browser.download.lastDir"),
     PREF_LIST_ENTRY("browser.newtabpage.pinned"),
     PREF_LIST_ENTRY("browser.uiCustomization.state"),
+#ifndef PINEBUILD
     PREF_LIST_ENTRY("browser.urlbar"),
     PREF_LIST_ENTRY("browser.urlbar.resultGroups"),
+#endif
     PREF_LIST_ENTRY("devtools.debugger.pending-selected-location"),
     PREF_LIST_ENTRY("identity.fxaccounts.account.device.name"),
     PREF_LIST_ENTRY("identity.fxaccounts.account.telemetry.sanitized_uid"),
