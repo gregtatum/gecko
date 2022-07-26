@@ -19,6 +19,7 @@ export default class River extends MozLitElement {
       viewGroups: { type: Array, attribute: false, state: true },
       overflowedViews: { type: Array, attribute: false },
       activeView: { type: Object, attribute: false },
+      keying: { type: Boolean, attribute: false, state: true },
     };
   }
 
@@ -37,6 +38,8 @@ export default class River extends MozLitElement {
     this.addEventListener("dragover", this.#onDragOver);
     this.addEventListener("drop", this.#onDrop);
     this.addEventListener("keyup", this.#onKeyUp);
+    this.addEventListener("focusin", this.#onFocusIn);
+    this.addEventListener("focusout", this.#onFocusOut);
   }
 
   isEmpty() {
@@ -113,6 +116,18 @@ export default class River extends MozLitElement {
       });
       this.dispatchEvent(e);
     }
+  }
+
+  #onFocusIn() {
+    if (
+      !(Services.focus.getLastFocusMethod(window) & Services.focus.FLAG_BYMOUSE)
+    ) {
+      this.keying = true;
+    }
+  }
+
+  #onFocusOut() {
+    this.keying = false;
   }
 
   render() {
