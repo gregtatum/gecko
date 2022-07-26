@@ -2756,7 +2756,6 @@ pref("browser.browser.firefoxView.featureTour", "default, default, true");
     // headaches if you don't realize it's happening.
     pref("browser.startup.launchOnOSLogin", false);
   #endif
-  pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
   pref("browser.warnOnQuit", false);
   // Disable product promos delivered via messaging system
   pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
