@@ -110,6 +110,43 @@ class OnboardingParent extends JSWindowActorParent {
           "browser.pinebuild.onboarding.progress",
           newPrefValue
         );
+        break;
+      case "RecordEvent":
+        let { method, object, order, is_last } = message.data;
+
+        // Directly writing out the mapping seems simpler to maintain than
+        // cleverly converting arguments into function names.
+        const messageToGlean = {
+          welcome: {
+            shown: Glean.pinebuild.onboardingShownWelcome,
+            done: Glean.pinebuild.onboardingDoneWelcome,
+          },
+          connect_fxa: {
+            shown: Glean.pinebuild.onboardingShownConnectFxa,
+            done: Glean.pinebuild.onboardingDoneConnectFxa,
+          },
+          fxa_connected: {
+            shown: Glean.pinebuild.onboardingShownFxaConnected,
+            done: Glean.pinebuild.onboardingDoneFxaConnected,
+          },
+          data_prefs: {
+            shown: Glean.pinebuild.onboardingShownDataPrefs,
+            done: Glean.pinebuild.onboardingDoneDataPrefs,
+          },
+          congrats: {
+            shown: Glean.pinebuild.onboardingShownCongrats,
+            done: Glean.pinebuild.onboardingDoneCongrats,
+          },
+        };
+
+        const gleanEvent = messageToGlean[object][method];
+        if (!gleanEvent) {
+          console.log(
+            `Could not find Glean event for ${object} and ${method}.`
+          );
+          return null;
+        }
+        gleanEvent.record({ order, is_last });
     }
 
     return null;

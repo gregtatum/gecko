@@ -78,3 +78,166 @@ pinebuild:
       - dothayer@mozilla.com
     expires: never
     telemetry_mirror: PINEBUILD_CALENDAR_EVENT_COUNT
+  onboarding_shown_welcome:
+    type: event
+    description: >
+      Recorded when the welcome onboarding card is shown to the user.
+    extra_keys: &onboarding_extra
+      order:
+        description: >
+          The zero-indexed order of the card in the onboarding sequence.
+        type: string
+      is_last:
+        description: >
+          Records whether this was the last card shown in the onboarding
+          flow. Its value will be the string "true" or the string "false",
+          not the corresponding boolean values, due to limitations in the
+          extra_keys option offered by legacy Telemetry.
+        type: string
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Shown_Welcome
+  onboarding_shown_connect_fxa:
+    type: event
+    description: >
+      Recorded when the "connect account" onboarding card is shown to the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Shown_ConnectFxa
+  onboarding_shown_fxa_connected:
+    type: event
+    description: >
+      Recorded when the "account connected" onboarding card is shown to the
+      user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Shown_FxaConnected
+  onboarding_shown_data_prefs:
+    type: event
+    description: >
+      Recorded when the "data preferences" onboarding card is shown to the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Shown_DataPrefs
+  onboarding_shown_congrats:
+    type: event
+    description: >
+      Recorded when the "ready to go" onboarding card is shown to the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Shown_Congrats
+  onboarding_done_welcome:
+    type: event
+    description: >
+      Recorded when the welcome onboarding card is completed by the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Done_Welcome
+  onboarding_done_connect_fxa:
+    type: event
+    description: >
+      Recorded when the user submits their email on the "connect account"
+      onboarding card and is redirected to the Firefox Accounts website.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Done_ConnectFxa
+  onboarding_done_fxa_connected:
+    type: event
+    description: >
+      Recorded when the "account connected" card is completed by the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Done_FxaConnected
+  onboarding_done_data_prefs:
+    type: event
+    description: >
+      Recorded when the "data preferences" card is completed by the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Done_DataPrefs
+  onboarding_done_congrats:
+    type: event
+    description: >
+      Recorded when the "ready to go" card is completed by the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Done_Congrats
