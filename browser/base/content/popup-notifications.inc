@@ -139,6 +139,17 @@
       </popupnotificationcontent>
     </popupnotification>
 
+    <popupnotification id="text-recognition-notification" hidden="true">
+      <popupnotificationcontent orient="vertical">
+        <description class="popup-notification-description"/>
+        <html:div class="text-recognition-container">
+          <html:div class="text-recognition-results">
+            Results go here.
+          </html:div>
+        </html:div>
+      </popupnotificationcontent>
+    </popupnotification>
+
     <popupnotification id="contextual-feature-recommendation-notification"
                        buttonhighlight="true"
                        hidden="true">

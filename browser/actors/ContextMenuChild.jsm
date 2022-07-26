@@ -163,12 +163,18 @@ class ContextMenuChild extends JSWindowActorChild {
         break;
       }
 
+      case "ContextMenu:GetImageRect": {
+        let img = lazy.ContentDOMReference.resolve(
+          message.data.targetIdentifier
+        );
+        return Promise.resolve(img.getBoundingClientRect());
+      }
+
       case "ContextMenu:GetImageText": {
         let img = lazy.ContentDOMReference.resolve(
           message.data.targetIdentifier
         );
-        img.recognizeCurrentImageText();
-        break;
+        return img.recognizeCurrentImageText();
       }
 
       case "ContextMenu:ToggleRevealPassword": {

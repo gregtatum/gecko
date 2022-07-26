@@ -2291,8 +2291,82 @@ class nsContextMenu {
     clipboard.copyString(this.originalMediaURL);
   }
 
-  getImageText() {
-    this.actor.getImageText(this.targetIdentifier);
+  async getImageText() {
+    const browser = this.browser;
+    const doc = this.browser.ownerDocument;
+    const rect = await this.actor.getImageRect(this.targetIdentifier);
+    const browserContainer = gBrowser.getBrowserContainer(browser);
+
+    const iconWrapper = doc.createXULElement("html:div");
+    iconWrapper.style.position = "relative";
+
+    // Create a fake icon to attach the notification to.
+    const fakeIcon = doc.createXULElement("html:div");
+    fakeIcon.setAttribute(
+      "id",
+      "text-recognition-fake-iconpopupnotificationanchor"
+    );
+    fakeIcon.style.position = "absolute";
+    fakeIcon.style.marginTop = rect.top + "px";
+    fakeIcon.style.marginLeft = rect.left + "px";
+    iconWrapper.appendChild(fakeIcon);
+    browserContainer.prepend(iconWrapper);
+
+    browser["text-recognition-fake-iconpopupnotificationanchor"] = fakeIcon;
+
+    browser.ownerGlobal.focus();
+
+    const notification = PopupNotifications.show(
+      browser,
+      "text-recognition", // the unique id
+      "Searching image for text…", // the message
+      "text-recognition-fake-icon", // anchor id
+      // Main action:
+      {
+        label: "Close",
+        accessKey: "C",
+        callback() {},
+      },
+      [], // secondary action
+      // Options:
+      {
+        autofocus: true,
+        escAction: "buttoncommand",
+      }
+    );
+    window.focus();
+    console.log(`!!! notification`, notification);
+
+    doc.querySelector(".text-recognition-results").innerText = "";
+
+    function showErrorMessage() {
+      doc
+        .getElementById("text-recognition-notification")
+        .setAttribute(
+          "label",
+          "Sorry, we didn’t find any text. Try a different image."
+        );
+    }
+
+    this.actor.getImageText(this.targetIdentifier).then(
+      text => {
+        if (text.length === 0) {
+          showErrorMessage();
+          return;
+        }
+        const popupnotification = document.getElementById(
+          "text-recognition-notification"
+        );
+        popupnotification.setAttribute("label", "Text copied from image");
+
+        doc.querySelector(".text-recognition-results").innerText = text
+          .map(t => t.string)
+          .join("\n");
+      },
+      () => {
+        showErrorMessage();
+      }
+    );
   }
 
   drmLearnMore(aEvent) {

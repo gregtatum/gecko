@@ -782,6 +782,14 @@ popupnotificationcontent {
   list-style-image: url("chrome://global/skin/media/audio.svg");
 }
 
+.text-recognition-results {
+  user-select: text;
+}
+
+#text-recognition-notification .messageCloseButton {
+  display: none;
+}
+
 .popup-notification-body :is(description, label:not(.learnMore), checkbox, input) {
   margin-inline: 0;
 }

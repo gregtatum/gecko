@@ -39,8 +39,14 @@ class ContextMenuParent extends JSWindowActorParent {
     });
   }
 
+  getImageRect(targetIdentifier) {
+    return this.sendQuery("ContextMenu:GetImageRect", {
+      targetIdentifier,
+    });
+  }
+
   getImageText(targetIdentifier) {
-    this.sendAsyncMessage("ContextMenu:GetImageText", {
+    return this.sendQuery("ContextMenu:GetImageText", {
       targetIdentifier,
     });
   }
