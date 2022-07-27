@@ -4,8 +4,6 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["UrlbarProviderTopSitesButtons"];
-
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
@@ -198,4 +196,4 @@ class ProviderTopSitesButtons extends UrlbarProvider {
   }
 }
 
-var UrlbarProviderTopSitesButtons = new ProviderTopSitesButtons();
+export var UrlbarProviderTopSitesButtons = new ProviderTopSitesButtons();

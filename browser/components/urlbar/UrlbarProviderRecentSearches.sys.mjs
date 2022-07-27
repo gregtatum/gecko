@@ -4,10 +4,12 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["UrlbarProviderOpenCompanionSearch"];
-
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+const { FormHistory } = ChromeUtils.import(
+  "resource://gre/modules/FormHistory.jsm"
 );
 
 const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
@@ -17,44 +19,24 @@ const { UrlbarProvider, UrlbarUtils } = ChromeUtils.import(
 const lazy = {};
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
-  CompanionParent: "resource:///actors/CompanionParent.jsm",
-  UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   UrlbarResult: "resource:///modules/UrlbarResult.jsm",
-  UrlbarView: "resource:///modules/UrlbarView.jsm",
+  UrlbarSearchUtils: "resource:///modules/UrlbarSearchUtils.jsm",
 });
 
 /**
  * This module exports a provider returning the user's newtab Top Sites.
  */
-const ENABLED_PREF = "opencompanionsearch.enabled";
-const DYNAMIC_RESULT_TYPE = "companionSearchLink";
-
-const VIEW_TEMPLATE = {
-  attributes: {
-    selectable: true,
-  },
-  children: [
-    {
-      name: "icon",
-      tag: "img",
-      classList: ["urlbarView-favicon"],
-    },
-    {
-      name: "openCompanionSearchLink",
-      tag: "a",
-      classList: ["urlbarView-title"],
-    },
-  ],
-};
 
 /**
  * A provider that returns the Top Sites shown on about:newtab.
  */
-class ProviderOpenCompanionSearch extends UrlbarProvider {
+class ProviderRecentSearches extends UrlbarProvider {
   constructor() {
     super();
-    lazy.UrlbarResult.addDynamicResultType(DYNAMIC_RESULT_TYPE);
-    lazy.UrlbarView.addDynamicViewTemplate(DYNAMIC_RESULT_TYPE, VIEW_TEMPLATE);
+  }
+
+  get PRIORITY() {
+    return 1;
   }
 
   /**
@@ -62,7 +44,7 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
    * Not using a unique name will cause the newest registration to win.
    */
   get name() {
-    return "OpenCompanionSearch";
+    return "RecentSearches";
   }
 
   /**
@@ -80,7 +62,20 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
    * @returns {boolean} Whether this provider should be invoked for the search.
    */
   isActive(queryContext) {
-    return lazy.UrlbarPrefs.get(ENABLED_PREF) && queryContext.searchString;
+    return (
+      !queryContext.restrictSource &&
+      !queryContext.searchString &&
+      !queryContext.searchMode
+    );
+  }
+
+  /**
+   * Gets the provider's priority.
+   * @param {UrlbarQueryContext} queryContext The query context object
+   * @returns {number} The provider's priority for the given query.
+   */
+  getPriority(queryContext) {
+    return this.PRIORITY;
   }
 
   /**
@@ -92,39 +87,27 @@ class ProviderOpenCompanionSearch extends UrlbarProvider {
    *       is done searching AND returning results.
    */
   async startQuery(queryContext, addCallback) {
-    const result = new lazy.UrlbarResult(
-      UrlbarUtils.RESULT_TYPE.DYNAMIC,
-      UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
-      {
-        input: queryContext.searchString,
-        dynamicType: DYNAMIC_RESULT_TYPE,
-      }
+    let engine = lazy.UrlbarSearchUtils.getDefaultEngine(
+      queryContext.isPrivate
     );
-    result.suggestedIndex = -1;
-    addCallback(this, result);
-  }
-
-  getViewUpdate() {
-    return {
-      icon: {
-        attributes: {
-          src: "chrome://browser/skin/history.svg",
-        },
-      },
-      openCompanionSearchLink: {
-        l10n: {
-          id: "urlbar-open-search-companion",
-        },
-      },
-    };
-  }
-
-  pickResult(result) {
-    let actor = lazy.CompanionParent.getCompanionActor();
-    if (actor) {
-      actor.viewHistoryTab(result.payload.input);
+    let results = await FormHistory.search(
+      ["value", "lastUsed"],
+      { fieldname: "searchbar-history", source: engine.name },
+      false,
+      { limit: 5, order: "lastUsed DESC" }
+    );
+    for (let result of results) {
+      let res = new lazy.UrlbarResult(
+        UrlbarUtils.RESULT_TYPE.SEARCH,
+        UrlbarUtils.RESULT_SOURCE.HISTORY,
+        ...lazy.UrlbarResult.payloadAndSimpleHighlights(queryContext.tokens, {
+          engine: [engine.name, UrlbarUtils.HIGHLIGHT.TYPED],
+          suggestion: [result.value, UrlbarUtils.HIGHLIGHT.NONE],
+        })
+      );
+      addCallback(this, res);
     }
   }
 }
 
-var UrlbarProviderOpenCompanionSearch = new ProviderOpenCompanionSearch();
+export var UrlbarProviderRecentSearches = new ProviderRecentSearches();

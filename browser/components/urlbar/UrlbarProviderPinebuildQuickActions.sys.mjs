@@ -4,11 +4,6 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = [
-  "UrlbarProviderPinebuildQuickActionsFilter",
-  "UrlbarProviderPinebuildQuickActionsEmpty",
-];
-
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
@@ -811,5 +806,5 @@ class KeywordTree {
  */
 class ProviderQuickActionsFilter extends ProviderQuickActionsBase {}
 
-var UrlbarProviderPinebuildQuickActionsFilter = new ProviderQuickActionsFilter();
-var UrlbarProviderPinebuildQuickActionsEmpty = new ProviderQuickActionsEmpty();
+export var UrlbarProviderPinebuildQuickActionsFilter = new ProviderQuickActionsFilter();
+export var UrlbarProviderPinebuildQuickActionsEmpty = new ProviderQuickActionsEmpty();

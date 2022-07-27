@@ -81,17 +81,17 @@ var localProviderModules = {
 
 if (AppConstants.PINEBUILD) {
   localProviderModules.UrlbarProviderPinebuildQuickActionsEmpty =
-    "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm";
+    "resource:///modules/UrlbarProviderPinebuildQuickActions.sys.mjs";
   localProviderModules.UrlbarProviderPinebuildQuickActionsFilter =
-    "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm";
+    "resource:///modules/UrlbarProviderPinebuildQuickActions.sys.mjs";
   localProviderModules.UrlbarProviderTopSitesButtons =
-    "resource:///modules/UrlbarProviderTopSitesButtons.jsm";
+    "resource:///modules/UrlbarProviderTopSitesButtons.sys.mjs";
   localProviderModules.UrlbarProviderRecentSearches =
-    "resource:///modules/UrlbarProviderRecentSearches.jsm";
+    "resource:///modules/UrlbarProviderRecentSearches.sys.mjs";
   localProviderModules.UrlbarProviderContextualSearch =
-    "resource:///modules/UrlbarProviderContextualSearch.jsm";
+    "resource:///modules/UrlbarProviderContextualSearch.sys.mjs";
   localProviderModules.UrlbarProviderOpenCompanionSearch =
-    "resource:///modules/UrlbarProviderOpenCompanionSearch.jsm";
+    "resource:///modules/UrlbarProviderOpenCompanionSearch.sys.mjs";
   delete localProviderModules.UrlbarProviderTopSites;
 }
 

@@ -4,8 +4,6 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["UrlbarProviderContextualSearch"];
-
 const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
@@ -276,4 +274,4 @@ class ProviderContextualSearch extends UrlbarProvider {
   }
 }
 
-var UrlbarProviderContextualSearch = new ProviderContextualSearch();
+export var UrlbarProviderContextualSearch = new ProviderContextualSearch();

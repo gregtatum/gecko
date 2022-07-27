@@ -23,12 +23,13 @@ EXTRA_JS_MODULES += [
     "UrlbarProviderAutofill.sys.mjs",
     "UrlbarProviderBookmarkKeywords.sys.mjs",
     "UrlbarProviderCalculator.sys.mjs",
-    "UrlbarProviderContextualSearch.jsm",
+    "UrlbarProviderContextualSearch.sys.mjs",
     "UrlbarProviderExtension.sys.mjs",
     "UrlbarProviderHeuristicFallback.sys.mjs",
     "UrlbarProviderInputHistory.sys.mjs",
     "UrlbarProviderInterventions.sys.mjs",
     "UrlbarProviderOmnibox.sys.mjs",
+    "UrlbarProviderOpenCompanionSearch.sys.mjs",
     "UrlbarProviderOpenTabs.sys.mjs",
     "UrlbarProviderPlaces.sys.mjs",
     "UrlbarProviderPreloadedSites.sys.mjs",
@@ -55,9 +56,9 @@ EXTRA_JS_MODULES += [
 
 if CONFIG["PINEBUILD"]:
     EXTRA_JS_MODULES += [
-        "UrlbarProviderPinebuildQuickActions.jsm",
-        "UrlbarProviderRecentSearches.jsm",
-        "UrlbarProviderTopSitesButtons.jsm",
+        "UrlbarProviderPinebuildQuickActions.sys.mjs",
+        "UrlbarProviderRecentSearches.sys.mjs",
+        "UrlbarProviderTopSitesButtons.sys.mjs",
     ]
 
 TESTING_JS_MODULES += [
