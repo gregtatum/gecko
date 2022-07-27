@@ -136,6 +136,16 @@ button {
   margin-inline: 12px;
 }
 
+@media (prefers-contrast) {
+  button {
+    fill: var(--in-content-button-text-color);
+    border: 1px solid;
+  }
+  button:hover:not([disabled]) {
+    fill: var(--in-content-button-text-color-hover);
+  }
+}
+
 #previous,
 #next:dir(rtl) {
   background-image: url("chrome://global/skin/icons/arrow-left-12.svg");
@@ -190,6 +200,18 @@ button {
 
 #scrubber:hover:active::-moz-range-thumb {
   background-color: var(--in-content-primary-button-background-active);
+}
+
+@media (prefers-contrast) {
+  #scrubber:hover::-moz-range-track {
+    background-color: var(--in-content-button-background);
+  }
+  #scrubber:active::-moz-range-thumb {
+    background-color: var(--in-content-button-background-active);
+  }
+  #scrubber:hover::-moz-range-thumb, #scrubber:hover:active::-moz-range-thumb {
+    background-color: var(--in-content-button-background-hover);
+  }
 }
 
 li:not(:first-child) {
