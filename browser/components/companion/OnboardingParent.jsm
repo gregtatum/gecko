@@ -17,6 +17,9 @@ const ONBOARDING_SCREEN_AFTER_FXA = 2;
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
     let browser = this.browsingContext.embedderElement;
+    if (!browser) {
+      return;
+    }
     let window = browser.ownerGlobal;
     let doc = window.document;
 
