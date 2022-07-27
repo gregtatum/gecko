@@ -2231,12 +2231,6 @@ void PresShell::NotifyDestroyingFrame(nsIFrame* aFrame) {
       mCurrentEventFrame = nullptr;
     }
 
-#ifdef DEBUG
-    if (aFrame == mDrawEventTargetFrame) {
-      mDrawEventTargetFrame = nullptr;
-    }
-#endif
-
     for (unsigned int i = 0; i < mCurrentEventFrameStack.Length(); i++) {
       if (aFrame == mCurrentEventFrameStack.ElementAt(i)) {
         // One of our stack frames was deleted.  Get its content so that when we
@@ -7120,9 +7114,6 @@ nsresult PresShell::EventHandler::HandleEventUsingCoordinates(
   nsresult rv = eventHandler.HandleEventWithCurrentEventInfo(
       aGUIEvent, aEventStatus, true,
       MOZ_KnownLive(eventTargetData.mOverrideClickTarget));
-#ifdef DEBUG
-  eventTargetData.mPresShell->ShowEventTargetDebug();
-#endif
   return rv;
 }
 
@@ -7919,11 +7910,6 @@ nsresult PresShell::EventHandler::HandleEventAtFocusedContent(
 
   nsresult rv =
       HandleEventWithCurrentEventInfo(aGUIEvent, aEventStatus, true, nullptr);
-
-#ifdef DEBUG
-  mPresShell->ShowEventTargetDebug();
-#endif
-
   return rv;
 }
 
@@ -8025,10 +8011,6 @@ nsresult PresShell::EventHandler::HandleEventWithFrameForPresShell(
         HandleEventWithCurrentEventInfo(aGUIEvent, aEventStatus, true, nullptr);
   }
 
-#ifdef DEBUG
-  mPresShell->ShowEventTargetDebug();
-#endif
-
   return rv;
 }
 
@@ -8059,19 +8041,6 @@ Document* PresShell::GetPrimaryContentDocument() {
 
   return childDocShell->GetExtantDocument();
 }
-
-#ifdef DEBUG
-void PresShell::ShowEventTargetDebug() {
-  if (nsIFrame::GetShowEventTargetFrameBorder() && GetCurrentEventFrame()) {
-    if (mDrawEventTargetFrame) {
-      mDrawEventTargetFrame->InvalidateFrame();
-    }
-
-    mDrawEventTargetFrame = mCurrentEventFrame;
-    mDrawEventTargetFrame->InvalidateFrame();
-  }
-}
-#endif
 
 nsresult PresShell::EventHandler::HandleEventWithTarget(
     WidgetEvent* aEvent, nsIFrame* aNewEventFrame, nsIContent* aNewEventContent,
