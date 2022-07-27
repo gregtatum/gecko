@@ -276,7 +276,6 @@
       <button class="downloads" data-l10n-id="browse-list-downloads" is="named-deck-button" deck="companion-deck" name="downloads"></button>
       <button class="passwords" data-l10n-id="browse-list-passwords" data-pref="browser.companion.passwords.enabled" is="named-deck-button" deck="companion-deck" name="passwords"></button>
       <button class="calendar" data-l10n-id="browse-list-calendar" data-pref="browser.pinebuild.calendar.browseEnabled" is="named-deck-button" deck="companion-deck" name="calendar"></button>
-      <button class="history" data-l10n-id="browse-list-history" data-pref="browser.urlbar.opencompanionsearch.enabled" is="named-deck-button" deck="companion-deck" name="history"></button>
     </div>
   </template>
 
@@ -296,6 +295,7 @@
     <html:button-group class="tab-button-group">
       <html:button class="tab-button ghost-button" name="now" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-now"></span></html:button>
       <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-browse"></span></html:button>
+      <html:button class="tab-button ghost-button history" name="history" is="named-deck-button" deck="companion-deck" data-pref="browser.urlbar.opencompanionsearch.enabled"><img /><span data-l10n-id="companion-deck-history"></span></html:button>
     </html:button-group>
     <html:named-deck id="companion-deck">
       <template xmlns="http://www.w3.org/1999/xhtml" name="blank">

@@ -13,12 +13,6 @@ export class BrowseList extends HTMLElement {
     });
 
     this.appendChild(fragment);
-
-    // If the user manually chooses the "History" button, for now, we'll
-    // interpret this as a request for all recent history results.
-    this.querySelector("button.history").addEventListener("click", e => {
-      window.gHistorySearch.doQuery("");
-    });
   }
 }
 

@@ -46,6 +46,9 @@ window.gHistorySearch = {
    *   Resolves once the results have been displayed.
    */
   async doQuery(queryString, fromNavigationBar = false) {
+    let companionTabs = document.querySelector(".tab-button-group");
+    companionTabs.toggleAttribute("history-visible", true);
+
     let { results, limit, total } = await window.CompanionUtils.sendQuery(
       "Companion:BeginHistorySearch",
       {
