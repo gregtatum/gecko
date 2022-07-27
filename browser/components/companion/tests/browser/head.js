@@ -55,14 +55,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
 });
 
 registerCleanupFunction(async () => {
-  // Clear sessions data to ensure state doesn't leak between tests.
-  await PlacesUtils.withConnectionWrapper(
-    "head.js::clearSessionDatabase",
-    async db => {
-      await db.execute("DELETE FROM moz_session_metadata");
-    }
-  );
-
   // Reload the companion in the main window, in case tests have been using that.
   let helper = new CompanionHelper(window);
   await helper.reload();

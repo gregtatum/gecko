@@ -5,6 +5,16 @@ const { SessionManager } = ChromeUtils.importESModule(
   "resource:///modules/SessionManager.sys.mjs"
 );
 
+registerCleanupFunction(async () => {
+  // Clear sessions data to ensure state doesn't leak between tests.
+  await PlacesUtils.withConnectionWrapper(
+    "head.js::clearSessionDatabase",
+    async db => {
+      await db.execute("DELETE FROM moz_session_metadata");
+    }
+  );
+});
+
 add_task(async function test_session_change() {
   // Run test in a new window to avoid affecting the main test window.
   let win = await BrowserTestUtils.openNewBrowserWindow();
