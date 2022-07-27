@@ -2,73 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-:root {
-  background-color: transparent;
-}
-
-.imageTools {
-  display: flex;
-  overflow: hidden;
-  height: 100vh;
-}
-
-.imageToolsImage {
-  --image-tools-margin: 80px;
-  --image-tools-border-radius: 3px;
-  flex: 1;
-  height: 100vh;
-  overflow-y: auto;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.imageToolsImage img {
-  box-shadow: 3px 0 15px 0 #0007;
-  border-radius: var(--image-tools-border-radius);
-}
-
-.imageToolsHorizontal {
-  max-width: calc(100% - var(--image-tools-margin));
-  height: auto;
-}
-
-.imageToolsVertical {
-  max-height: calc(100% - var(--image-tools-margin));
-  width: auto;
-}
-
-.imageToolsImage canvas {
-  position: absolute;
-  user-select: none;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 200ms;
-  border-radius: var(--image-tools-border-radius);
-}
-
-.imageToolsImageSpan {
-  position: absolute;
-  transform-origin: 0 0;
-  color: transparent;
-  white-space: nowrap;
-  margin-bottom: 16px;
-}
-
-.imageToolsName {
-  font-weight: 600;
-  max-width: 100%;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
 
 .imageToolsText {
   overflow-y: auto;
+  max-height: 300px;
   flex: 1;
-  opacity: 0;
-  transition: opacity 200ms;
 }
 
 .imageToolsText p:first-child {
@@ -79,50 +17,22 @@
   margin-bottom: 0;
 }
 
-.imageToolsTextClusters {
-  position: absolute;
-  top: 0;
-}
-
-.imageToolsImageCluster {
-  /* Clusters should not be used for positioning. */
-  position: absolute;
-  top: 0;
-  margin: 0;
-  padding: 0;
-  display: block;
-}
-
-.imageToolsSidebar {
+.imageTools {
+  --gap: 16px;
   display: flex;
   flex-direction: column;
   background-color: var(--in-content-page-background);
-  width: 360px;
-  height: 100vh;
-  overflow: scroll;
+  width: 412px;
+  gap: var(--gap);
+  padding: var(--gap);
 }
 
-.imageToolsSidebar section {
-  margin: 16px;
+.imageToolsHeader {
+  font-weight: bold;
 }
 
-hr {
-  margin-inline: 8px;
-  margin-block: 0;
-}
-
-.imageToolsButtons {
-  display: flex;
-  gap: 8px;
-}
-
-.imageToolsButtons > button {
-  flex: 1;
-}
-
-.imageToolsTextLoading {
-  display: flex;
-  align-items: center;
+.imageToolsFooter {
+  text-align: end;
 }
 
 .imageToolsThrobber {

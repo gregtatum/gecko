@@ -2293,12 +2293,15 @@ class nsContextMenu {
 
   getImageText() {
     let dialogBox = gBrowser.getTabDialogBox(this.browser);
-    dialogBox.open(
+    const imageTextResult = this.actor.getImageText(this.targetIdentifier);
+    const { dialog } = dialogBox.open(
       "chrome://browser/content/imagetools/imagetools.html",
       {
         features: "resizable=no",
         modalType: Services.prompt.MODAL_TYPE_CONTENT,
       },
+      imageTextResult,
+      () => dialog.resizeVertically(),
       this.imageInfo
     );
   }

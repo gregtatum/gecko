@@ -1645,18 +1645,18 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
 }
 
 .imageToolsDialogBox {
-  border-radius: 0;
+  /* border-radius: 0; */
 }
 
-.imageToolsDialogOverlay, .imageToolsDialogBox, .imageToolsDialogBox > browser {
-  display: block;
+.imageToolsDialogOverlay,
+.imageToolsDialogBox,
+.imageToolsDialogBox > browser {
+  /* display: block;
   position: absolute;
-  inset: 0;
+  inset: 0; */
 }
 
 .imageToolsDialogFrame {
-  width: 100% !important; /* override element style */
-  height: 100% !important; /* override element style */
 }
 
 .imageToolsContentArea {

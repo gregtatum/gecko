@@ -8,6 +8,7 @@ ourBrowser
   ?.classList.add("imageToolsDialogBox", "noShadow");
 ourBrowser.closest(".dialogOverlay")?.classList.add("imageToolsDialogOverlay");
 ourBrowser.classList.add("imageToolsDialogFrame");
+
 const contentEl = ourBrowser
   .closest(".browserStack")
   .querySelector('browser[type="content"]');
@@ -42,241 +43,78 @@ class ImageTools {
   /** @type {null | string} */
   text = null;
 
-  /** @type {null | number} */
-  lastCanvasStyleWidth = null;
-
   /**
+   * @param {Promise<TextRecognitionResult[]>} results
+   * @param {() => {}} resizeVertically
    * @param {ImageInfo} imageInfo
    */
-  constructor(imageInfo) {
+  constructor(results, resizeVertically, imageInfo) {
     this.imageInfo = imageInfo;
 
-    /** @type {HTMLDivElement} */
-    this.imageWrapperEl = document.querySelector(".imageToolsImage");
-
-    /** @type {HTMLCanvasElement} */
-    this.canvasEl = this.imageWrapperEl.querySelector("canvas");
-
-    /** @type {HTMLDivElement} */
+    /** @type {HTMLElement} */
     this.textEl = document.querySelector(".imageToolsText");
 
-    /** @type {HTMLDivElement} */
-    this.textClustersEl = document.querySelector(".imageToolsTextClusters");
-
-    /** @type {HTMLDivElement} */
-    this.imageToolsName = document.querySelector(".imageToolsName");
-
+    /** @type {HTMLElement} */
     this.loadingEL = document.querySelector(".imageToolsTextLoading");
 
-    const parts = this.imageInfo.currentSrc.split("/");
-    this.imageToolsName.innerText = decodeURIComponent(parts[parts.length - 1]);
+    /** @type {NodeListOf<HTMLElement>} */
+    this.headerEls = document.querySelectorAll(".imageToolsHeader")
 
-    this.setupImage();
+    this.showHeaderByID("image-tools-header-loading");
+
+    results.then(
+      results => {
+        if (results.length === 0) {
+          this.showHeaderByID("image-tools-header-no-results");
+          return;
+        }
+        this.runClusteringAndUpdateUI(results)
+        this.showHeaderByID("image-tools-header-results");
+        resizeVertically();
+      },
+      error => {
+        console.error(error);
+        this.showHeaderByID("image-tools-header-no-results");
+      }
+    );
 
     document
-      .querySelector("#image-tools-copy")
-      .addEventListener("click", this.copy);
-
-    document
-      .querySelector("#image-tools-cancel")
-      .addEventListener("click", this.cancel);
+      .querySelector("#image-tools-close")
+      .addEventListener("click", () => {
+        window.close();
+      });
   }
 
-  copy = () => {
+  /**
+   * @param {string} id
+   */
+  showHeaderByID(id) {
+    for (const header of this.headerEls) {
+      header.hidden = true;
+    }
+
+    document.getElementById(id).hidden = false;
+  }
+
+  /**
+   * @param {string} text
+   */
+  copy(text) {
     const clipboard = Cc["@mozilla.org/widget/clipboardhelper;1"].getService(
       Ci.nsIClipboardHelper
     );
-    clipboard.copyString(this.text);
-    window.close();
+    clipboard.copyString(text);
   };
 
-  cancel = () => {
-    window.close();
-  };
-
-  setupImage() {
-    const { imageInfo, imageWrapperEl } = this;
-    const img = document.createElement("img");
-    img.onload = async () => {
-      if (img.width > img.height) {
-        img.classList.add("imageToolsHorizontal");
-      } else {
-        img.classList.add("imageToolsVertical");
-      }
-
-      /** @type {TextRecognitionResult[]} */
-      const results = await img.recognizeCurrentImageText();
-
-      // TODO - Remove this. This is a hack to remove the shadow root functionality.
-      img.openOrClosedShadowRoot.children[0].remove();
-
-      this.loadingEL.style.display = "none";
-
-      const spans = this.runClustering(results);
-      requestAnimationFrame(() => {
-        this.positionSpans(results, spans, img);
-      });
-    };
-    img.src = imageInfo.currentSrc;
-    img.setAttribute("alt", imageInfo.imageText);
-    imageWrapperEl.prepend(img);
-  }
-
   /**
-   * @param {TextRecognitionResult[]} results
-   * @param {HTMLSpanElement[]} spans
-   * @param {HTMLImageElement} img
-   */
-  positionSpans(results, spans, img) {
-    /** @type {Map<HTMLSpanElement, DOMRect>} */
-    const spanRects = new Map();
-    const { textClustersEl, canvasEl, textEl } = this;
-
-    const rect = this.imageWrapperEl
-      .querySelector("img")
-      .getBoundingClientRect();
-    textClustersEl.style.top = rect.top + "px";
-    textClustersEl.style.left = rect.left + "px";
-    textClustersEl.style.width = rect.width + "px";
-    textClustersEl.style.height = rect.height + "px";
-    canvasEl.style.top = rect.top + "px";
-    canvasEl.style.left = rect.left + "px";
-    canvasEl.style.width = rect.width + "px";
-    canvasEl.style.height = rect.height + "px";
-    canvasEl.style.opacity = 1;
-    textEl.style.opacity = 1;
-
-    // The ctx is only available when redrawing the canvas. This is operation is only
-    // done when necessary, as it can be expensive.
-    /** @type {null | CanvasRenderingContext2D} */
-    let ctx = null;
-
-    if (
-      // The canvas hasn't been drawn to yet.
-      this.lastCanvasStyleWidth === null ||
-      // Only redraw when the image has grown 25% larger. This percentage was chosen
-      // as it visually seemed to work well, with the canvas never appearing blurry
-      // when manually testing it.
-      rect.width > this.lastCanvasStyleWidth * 1.25
-    ) {
-      const dpr = window.devicePixelRatio;
-      this.canvasEl.width = rect.width * dpr;
-      this.canvasEl.height = rect.height * dpr;
-      this.lastCanvasStyleWidth = rect.width;
-
-      ctx = this.canvasEl.getContext("2d");
-      ctx.scale(dpr, dpr);
-      ctx.fillStyle = "#00000088";
-      ctx.fillRect(0, 0, rect.width, rect.height);
-
-      ctx.beginPath();
-    }
-
-    if (results.length !== spans.length) {
-      throw new Error("Expected results and spans to have the same length.");
-    }
-    for (let i = 0; i < results.length; i++) {
-      const span = spans[i];
-      const {
-        quad: { p1, p2, p3, p4 },
-      } = results[i];
-      let spanRect = spanRects.get(span);
-      if (!spanRect) {
-        // This only needs to happen once.
-        spanRect = span.getBoundingClientRect();
-        spanRects.set(span, spanRect);
-      }
-
-      let bottomLeftX = p1.x;
-      let bottomLeftY = 1 - p1.y; // Invert the Ys.
-      let topLeftX = p2.x;
-      let topLeftY = 1 - p2.y;
-      let topRightX = p3.x;
-      let topRightY = 1 - p3.y;
-      let bottomRightX = p4.x;
-      let bottomRightY = 1 - p4.y;
-
-      // Create a projection matrix to position the <span> relative to the bounds.
-      // prettier-ignore
-      const mat4 = projectPoints(
-        spanRect.width, spanRect.height,
-        rect.width * topLeftX, rect.height * topLeftY,
-        rect.width * topRightX, rect.height * topRightY,
-        rect.width * bottomLeftX, rect.height * bottomLeftY,
-        rect.width * bottomRightX, rect.height * bottomRightY
-      );
-
-      span.style.transform = "matrix3d(" + mat4.join(", ") + ")";
-
-      if (ctx) {
-        const inset = 3;
-        ctx.moveTo(
-          rect.width * bottomLeftX + inset,
-          rect.height * bottomLeftY - inset
-        );
-        ctx.lineTo(
-          rect.width * topLeftX + inset,
-          rect.height * topLeftY + inset
-        );
-        ctx.lineTo(
-          rect.width * topRightX - inset,
-          rect.height * topRightY + inset
-        );
-        ctx.lineTo(
-          rect.width * bottomRightX - inset,
-          rect.height * bottomRightY - inset
-        );
-        ctx.closePath();
-      }
-    }
-
-    if (ctx) {
-      // This composite operation will cut out the quads. The color is arbitrary.
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-
-      // Creating a round line will grow the selection slightly, and round the corners.
-      ctx.lineWidth = 10;
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
-    }
-  }
-
-  /**
+   * Cluster the text based on its visual position.
+   *
    * @param {TextRecognitionResult[]} results
    * @param {"ltr" | "rtl"} direction
-   * @returns {HTMLSpanElement[]}
    */
-  runClustering(results, direction = "ltr") {
-    // Cluster close groups of text to allow for better text selection.
-    //
-    // Before:
-    //
-    // <div>
-    //   <span /><span /><span /><span />...
-    // </div>
-    //
-    // After clustering:
-    //
-    // <div>
-    //   <div> <!-- Cluster -->
-    //     <span />
-    //     <span />
-    //   </div>>
-    //   <div> <!-- Cluster -->
-    //     <span />
-    //     <span />
-    //   </div>>
-    //   ...
-    // </div>
-
+  runClusteringAndUpdateUI(results, direction = "ltr") {
     /** @type {Vec2[]} */
     const centers = [];
-
-    /** @type {HTMLSpanElement[]} */
-    const spans = [];
 
     for (const result of results) {
       const p = result.quad;
@@ -289,11 +127,6 @@ class ImageTools {
         minOrMax(p.p1.x, p.p2.x, p.p3.x, p.p4.x),
         (p.p1.y, p.p2.y, p.p3.y, p.p4.y) / 4,
       ]);
-
-      // The span will be placed into a new cluster.
-      const span = document.createElement("span");
-      span.innerText = result.string;
-      spans.push(span);
     }
 
     const distSq = new DistanceSquared(centers);
@@ -309,11 +142,8 @@ class ImageTools {
       2
     );
 
-    this.text = "";
+    let text = "";
     for (const cluster of clusters) {
-      const divCluster = document.createElement("div");
-      divCluster.className = "imageToolsImageCluster";
-
       const pCluster = document.createElement("p");
       pCluster.className = "imageToolsTextCluster";
 
@@ -323,32 +153,16 @@ class ImageTools {
         // for better copying.
         const ending = i + 1 === cluster.length ? "\n" : " ";
 
-        {
-          // Handle the span inside of the image.
-          const span = spans[index];
-          if (!span) {
-            throw new Error(
-              "Logic error, expected to find a span at that index."
-            );
-          }
-          span.className = "imageToolsImageSpan";
-          span.innerText += ending;
-          divCluster.appendChild(span);
-          this.text += span.innerText;
-        }
-        {
-          // Handle the span inside of the text-only area.
-          const span = document.createElement("span");
-          const result = results[index];
-          span.innerText = result.string + ending;
-          pCluster.appendChild(span);
-        }
+        const span = document.createElement("span");
+        const result = results[index];
+        span.innerText = result.string + ending;
+        pCluster.appendChild(span);
+        text += this.text += span.innerText;
       }
-      this.textClustersEl.appendChild(divCluster);
       this.textEl.appendChild(pCluster);
     }
 
-    return spans;
+    this.copy(text);
   }
 }
 
@@ -357,152 +171,6 @@ class ImageTools {
  *
  * @typedef {[number, number]} Vec2
  */
-
-/**
- * A three dimensional vector.
- *
- * @typedef {[number, number, number]} Vec3
- */
-
-/**
- * A 3x3 matrix.
- *
- * @typedef {[number, number, number,
- *            number, number, number,
- *            number, number, number]} Matrix3
- */
-
-/**
- * A 4x4 matrix.
- *
- * @typedef {[number, number, number, number,
- *            number, number, number, number,
- *            number, number, number, number,
- *            number, number, number, number]} Matrix4
- */
-
-/**
- * Compute the adjugate matrix.
- * https://en.wikipedia.org/wiki/Adjugate_matrix
- *
- * @param {Matrix3} m
- * @returns {Matrix3}
- */
-function computeAdjugate(m) {
-  // prettier-ignore
-  return [
-    m[4] * m[8] - m[5] * m[7],
-    m[2] * m[7] - m[1] * m[8],
-    m[1] * m[5] - m[2] * m[4],
-    m[5] * m[6] - m[3] * m[8],
-    m[0] * m[8] - m[2] * m[6],
-    m[2] * m[3] - m[0] * m[5],
-    m[3] * m[7] - m[4] * m[6],
-    m[1] * m[6] - m[0] * m[7],
-    m[0] * m[4] - m[1] * m[3],
-  ];
-}
-
-/**
- * @param {Matrix3} a
- * @param {Matrix3} b
- * @returns {Matrix3}
- */
-function multiplyMat3(a, b) {
-  let out = [];
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      let sum = 0;
-      for (let k = 0; k < 3; k++) {
-        sum += a[3 * i + k] * b[3 * k + j];
-      }
-      out[3 * i + j] = sum;
-    }
-  }
-  return out;
-}
-
-/**
- * @param {Matrix3} m
- * @param {Vec3} v
- * @returns {Vec3}
- */
-function multiplyMat3Vec3(m, v) {
-  // prettier-ignore
-  return [
-    m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
-    m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
-    m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
-  ];
-}
-
-/**
- * @returns {Matrix3}
- */
-function basisToPoints(x1, y1, x2, y2, x3, y3, x4, y4) {
-  /** @type {Matrix3} */
-  let mat3 = [x1, x2, x3, y1, y2, y3, 1, 1, 1];
-  let vec3 = multiplyMat3Vec3(computeAdjugate(mat3), [x4, y4, 1]);
-  // prettier-ignore
-  return multiplyMat3(
-    mat3,
-    [
-      vec3[0], 0, 0,
-      0, vec3[1], 0,
-      0, 0, vec3[2]
-    ]
-  );
-}
-
-/**
- * @type {(...Matrix4) => Matrix3}
- */
-// prettier-ignore
-function general2DProjection(
-  x1s, y1s, x1d, y1d,
-  x2s, y2s, x2d, y2d,
-  x3s, y3s, x3d, y3d,
-  x4s, y4s, x4d, y4d
-) {
-  let s = basisToPoints(x1s, y1s, x2s, y2s, x3s, y3s, x4s, y4s);
-  let d = basisToPoints(x1d, y1d, x2d, y2d, x3d, y3d, x4d, y4d);
-  return multiplyMat3(d, computeAdjugate(s));
-}
-
-/**
- * Given a width and height, compute a projection matrix to points 1-4.
- *
- * The points (x1,y1) through (x4, y4) use the following ordering:
- *
- *         w
- *      ┌─────┐      project     1 ─────── 2
- *    h │     │       -->        │        /
- *      └─────┘                  │       /
- *                               3 ──── 4
- *
- * @returns {Matrix4}
- */
-function projectPoints(w, h, x1, y1, x2, y2, x3, y3, x4, y4) {
-  // prettier-ignore
-  const mat3 = general2DProjection(
-    0, 0, x1, y1,
-    w, 0, x2, y2,
-    0, h, x3, y3,
-    w, h, x4, y4
-  );
-
-  for (let i = 0; i < 9; i++) {
-    mat3[i] = mat3[i] / mat3[8];
-  }
-
-  // prettier-ignore
-  return [
-    mat3[0], mat3[3], 0, mat3[6],
-    mat3[1], mat3[4], 0, mat3[7],
-    0, 0, 1, 0,
-    mat3[2], mat3[5], 0, mat3[8],
-  ];
-}
 
 /**
  * @typedef {number} PointIndex
