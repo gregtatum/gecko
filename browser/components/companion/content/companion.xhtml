@@ -333,6 +333,20 @@
         </div>
       </template>
 
+      <template xmlns="http://www.w3.org/1999/xhtml" name="history">
+        <div class="history-panel">
+          <div class="history-panel-header">
+            <span class="history-panel-heading">
+              <h1 class="text-heading-m-med" data-l10n-id="history-section-header"></h1>
+            </span>
+            <button data-l10n-id="history-section-close-button" class="history-section-close ghost-button" />
+          </div>
+          <div class="history-panel-content">
+            <e-history-viewer id="history-viewer" />
+          </div>
+        </div>
+      </template>
+
       <template xmlns="http://www.w3.org/1999/xhtml" id="sessions" name="sessions">
         <section-panel heading-l10n-id="session-section-header">
           <full-session-list></full-session-list>
@@ -366,12 +380,6 @@
       <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups-detail">
         <section-panel>
           <snapshot-group-list-detail id="snapshot-groups-detail"></snapshot-group-list-detail>
-        </section-panel>
-      </template>
-
-      <template xmlns="http://www.w3.org/1999/xhtml" name="history">
-        <section-panel heading-l10n-id="history-section-header">
-          <e-history-viewer id="history-viewer" />
         </section-panel>
       </template>
     </html:named-deck>

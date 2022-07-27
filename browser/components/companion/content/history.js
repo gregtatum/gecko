@@ -26,8 +26,15 @@ window.gHistorySearch = {
   },
 
   handleEvent(event) {
-    if (event.type == "History:SetQuery") {
-      this.doQuery(event.detail.queryString);
+    switch (event.type) {
+      case "History:SetQuery": {
+        this.doQuery(event.detail.queryString);
+        break;
+      }
+      case "click": {
+        this.closeViewer();
+        break;
+      }
     }
   },
   /**
@@ -64,6 +71,18 @@ window.gHistorySearch = {
       cancelable: false,
     });
     window.dispatchEvent(e);
+
+    if (!this.closeButton) {
+      this.closeButton = document.querySelector(".history-section-close");
+      this.closeButton.addEventListener("click", this);
+    }
+  },
+
+  closeViewer() {
+    let companionTabs = document.querySelector(".tab-button-group");
+    companionTabs.toggleAttribute("history-visible", false);
+
+    document.getElementById("companion-deck").selectedViewName = "browse";
   },
 };
 

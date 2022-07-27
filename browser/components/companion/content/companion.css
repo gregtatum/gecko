@@ -547,10 +547,40 @@ e-global-nav-debugging h2 {
   background-image: url("calendar.svg");
 }
 
-section-panel[name="history"] {
-  height: 100%;
+.history-panel-content {
+  min-height: 0;
+}
+
+.history-panel-header {
   display: flex;
-  flex-direction: column;
+  margin-block: 12px 15px;
+}
+
+.history-panel-heading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.history-section-close {
+  background-image: url("chrome://global/skin/icons/close.svg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  -moz-context-properties: fill;
+  fill: currentColor;
+  height: 24px;
+  width: 24px;
+  padding: 0;
+  margin: 0;
+  min-height: unset;
+  min-width: unset;
+  position: absolute;
+  right: 16px;
+}
+
+.history-section-close:dir(rtl) {
+  left: 16px;
 }
 
 #history-viewer {

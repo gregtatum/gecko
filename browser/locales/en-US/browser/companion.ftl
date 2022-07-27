@@ -189,6 +189,9 @@ downloads-section-header = Downloads
 # Title of the History section.
 history-section-header = History
 
+history-section-close-button =
+    .aria-label = Close
+
 # The title of the tab buttons at the top of the companion.
 companion-deck-now = Now
 companion-deck-browse = Browse
