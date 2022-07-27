@@ -597,6 +597,7 @@ PopupNotifications.prototype = {
 
     if (isActiveBrowser) {
       if (isActiveWindow) {
+        console.log(`!!! isActiveBrowser, isActiveWindow`);
         // Autofocus if the notification requests focus.
         if (options && !options.dismissed && options.autofocus) {
           this.panel.removeAttribute("noautofocus");
@@ -611,6 +612,7 @@ PopupNotifications.prototype = {
           true
         );
       } else {
+        console.log(`!!! isActiveBrowser, not isActiveWindow`);
         // indicate attention and update the icon if necessary
         if (!notification.dismissed) {
           this.window.getAttention();
@@ -625,6 +627,7 @@ PopupNotifications.prototype = {
         this._notify("backgroundShow");
       }
     } else {
+      console.log(`!!! not isActiveBrowser`);
       // Notify observers that we're not showing the popup (useful for testing)
       this._notify("backgroundShow");
     }

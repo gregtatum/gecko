@@ -5,6 +5,6 @@
 ## Text recognition features that are currently in preview as they are experimental,
 ## and subject to change.
 
-main-context-menu-image-get-text =
-    .label = Get Text From Image
+main-context-menu-image-copy-text =
+    .label = Copy Text from Image
     .accesskey = T
