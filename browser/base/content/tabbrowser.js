@@ -77,6 +77,11 @@
         E10SUtils: "resource://gre/modules/E10SUtils.jsm",
         PictureInPicture: "resource://gre/modules/PictureInPicture.jsm",
       });
+      if (AppConstants.PINEBUILD) {
+        XPCOMUtils.defineLazyModuleGetters(this, {
+          Sounds: "resource:///modules/Sounds.jsm",
+        });
+      }
       XPCOMUtils.defineLazyServiceGetters(this, {
         MacSharingService: [
           "@mozilla.org/widget/macsharingservice;1",
@@ -6348,7 +6353,7 @@
      *
      * @returns {HideAnimationReturnType}
      */
-    doPinebuildSessionHideAnimation() {
+    doPinebuildSessionHideAnimation(newSession) {
       if (window.matchMedia("(prefers-reduced-motion)").matches) {
         return {
           animationCompletePromise: Promise.resolve(),
@@ -6371,6 +6376,11 @@
       this._delayDOMChange(() => {
         // This tracks when the animation is complete, and allows the caller
         // to start work before the full required animation time is up.
+        let self = this;
+        function transitionRun() {
+          tabpanels.removeEventListener("transitionrun", transitionRun);
+          self.Sounds.play(self.Sounds.SET_ASIDE);
+        }
         function transitionEnd() {
           tabpanels.removeEventListener("transitionend", transitionEnd);
           tabpanels.removeEventListener("transitioncancel", transitionEnd);
@@ -6382,6 +6392,9 @@
         // show animation does not happen until after `sessionChangeSwipeAnimationTime`,
         // so save that in a promise for the show animation function to await
         // upon.
+        if (newSession) {
+          tabpanels.addEventListener("transitionrun", transitionRun);
+        }
         tabpanels.addEventListener("transitionend", transitionEnd);
         tabpanels.addEventListener("transitioncancel", transitionEnd);
 
