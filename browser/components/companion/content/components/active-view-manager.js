@@ -147,7 +147,7 @@ export default class ActiveViewManager extends window.MozHTMLElement {
 
         if (event.type == "ViewChanged") {
           if (this.#focusedViewGroupEl?.isConnected) {
-            this.#focusedViewGroupEl.focus({ focusVisible: true });
+            this.#focusedViewGroupEl.focus();
           }
           this.#focusedViewGroupEl = null;
         }
