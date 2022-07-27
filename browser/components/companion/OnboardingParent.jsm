@@ -18,7 +18,7 @@ class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
     let browser = this.browsingContext.embedderElement;
     if (!browser) {
-      return;
+      return null;
     }
     let window = browser.ownerGlobal;
     let doc = window.document;
