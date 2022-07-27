@@ -74,7 +74,7 @@
       } else if (e.type == "click") {
         let { deck } = this;
         if (deck) {
-          deck.selectedViewName = this.name;
+          deck.changeViewByEvent(this.name, e);
         }
       }
     }
@@ -352,8 +352,19 @@
         this._setSelectedViewAttributes();
 
         // Notify that the selected view changed.
-        this.dispatchEvent(new CustomEvent("view-changed"));
+        this.dispatchEvent(
+          new CustomEvent("view-changed", {
+            detail: { isKeyboardSource: this.isKeyboardSource },
+          })
+        );
+        this.isKeyboardSource = null;
       }
+    }
+
+    changeViewByEvent(viewName, e) {
+      let isKeyboardEvent = e.mozInputSource == MouseEvent.MOZ_SOURCE_KEYBOARD;
+      this.isKeyboardSource = isKeyboardEvent;
+      this.selectedViewName = viewName;
     }
 
     get selectedViewName() {
