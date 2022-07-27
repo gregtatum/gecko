@@ -26,7 +26,7 @@ add_setup(async () => {
  */
 add_task(async function test_open_new_view() {
   let helper = new CompanionHelper();
-  await helper.selectHistoryTab();
+  await helper.revealHistoryTab();
   let { results } = await helper.getHistoryResultsDetails();
   // Let's choose to click on the first result in the list.
   const TARGET_INDEX = 0;
@@ -48,7 +48,7 @@ add_task(async function test_open_new_view() {
  */
 add_task(async function test_switch_to_view() {
   let helper = new CompanionHelper();
-  await helper.selectHistoryTab();
+  await helper.revealHistoryTab();
   let { results } = await helper.getHistoryResultsDetails();
   // Let's choose to click on the first result in the list.
   const TARGET_INDEX = 0;
@@ -84,7 +84,7 @@ add_task(async function test_switch_to_view() {
  */
 add_task(async function test_switch_current_view() {
   let helper = new CompanionHelper();
-  await helper.selectHistoryTab();
+  await helper.revealHistoryTab();
   let { results } = await helper.getHistoryResultsDetails();
   // Let's choose to click on the first result in the list.
   const TARGET_INDEX = 0;

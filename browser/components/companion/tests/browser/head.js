@@ -826,22 +826,18 @@ class CompanionHelper {
   }
 
   /**
-   * Selects the "History" section under "browse" and waits for the initial
-   * set of History results to appear.
+   * Reveals the History tab in the Companion and waits until search
+   * results have appeared for the empty string search query.
    *
    * @returns Promise
    * @resolves undefined
    */
-  async selectHistoryTab() {
-    await this.selectCompanionTab("browse");
+  async revealHistoryTab() {
     let initialResultsPromise = this.waitForHistoryResults();
-    await this.runCompanionTask(async () => {
-      let deck = content.document.getElementById("companion-deck");
-      let tabShown = ContentTaskUtils.waitForEvent(deck, "view-changed");
-      let button = content.document.querySelector("button.history");
-      button.click();
-      await tabShown;
-    });
+    let actor = this.browser.browsingContext.currentWindowGlobal.getActor(
+      "Companion"
+    );
+    actor.viewHistoryTab("");
     await initialResultsPromise;
   }
 
