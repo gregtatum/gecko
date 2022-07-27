@@ -13,25 +13,25 @@
   <link rel="stylesheet" type="text/css"
         href="chrome://browser/content/imagetools/imagetools.css">
   <link rel="localization" href="branding/brand.ftl">
-  <link rel="localization" href="preview/imagetools.ftl">
+  <link rel="localization" href="browser/textRecognition.ftl"/>
   <script type="module" src="chrome://browser/content/imagetools/imagetools.mjs"></script>
-  <title>Image Tools</title>
 </head>
 <body>
   <div class="imageTools">
     <header class="imageToolsHeader" id="image-tools-header-loading"">
       <span class="imageToolsThrobber"></span>
-      <span>Searching image for text…</span>
+      <span data-l10n-id="text-recognition-modal-searching-title"></span>
     </header>
     <header class="imageToolsHeader" id="image-tools-header-results">
-      <span>Text copied from image</span>
+      <img class="imageToolsSuccessIcon" src="chrome://global/skin/icons/check.svg" role="presentation"/>
+      <span data-l10n-id="text-recognition-modal-results-title"></span>
     </header>
     <header class="imageToolsHeader" id="image-tools-header-no-results">
-      <span>Sorry, we didn’t find any text. Try a different image.</span>
+      <span data-l10n-id="text-recognition-modal-no-results-title"></span>
     </header>
     <section class="imageToolsText"></section>
     <footer class="imageToolsFooter">
-      <button type="button" id="image-tools-close" class="primary">Close</button>
+      <button data-l10n-id="text-recognition-modal-close-button" type="button" id="image-tools-close" class="primary"></button>
     </footer>
   </div>
 </body>

@@ -90,10 +90,10 @@ class ImageTools {
    */
   showHeaderByID(id) {
     for (const header of this.headerEls) {
-      header.hidden = true;
+      header.style.display = 'none';
     }
 
-    document.getElementById(id).hidden = false;
+    document.getElementById(id).style.display = '';
   }
 
   /**
