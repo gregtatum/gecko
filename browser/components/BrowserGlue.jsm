@@ -73,7 +73,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   Normandy: "resource://normandy/Normandy.jsm",
   OnboardingMessageProvider:
     "resource://activity-stream/lib/OnboardingMessageProvider.jsm",
-  OnnxRuntimeService: "resource:///modules/OnnxRuntimeService.jsm",
   OsEnvironment: "resource://gre/modules/OsEnvironment.jsm",
   PageActions: "resource:///modules/PageActions.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
@@ -83,7 +82,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   ProcessHangMonitor: "resource:///modules/ProcessHangMonitor.jsm",
   PublicSuffixList: "resource://gre/modules/netwerk-dns/PublicSuffixList.jsm",
-  PyodideService: "resource:////modules/PyodideService.jsm",
   RemoteSettings: "resource://services-settings/remote-settings.js",
   RemoteSecuritySettings:
     "resource://gre/modules/psm/RemoteSecuritySettings.jsm",
@@ -1870,8 +1868,6 @@ BrowserGlue.prototype = {
 
     if (AppConstants.PINEBUILD) {
       lazy.SessionManager.init();
-      lazy.OnnxRuntimeService.init();
-      lazy.PyodideService.init();
       lazy.Sounds.play(lazy.Sounds.STARTUP);
     }
 
@@ -2197,16 +2193,6 @@ BrowserGlue.prototype = {
       () => lazy.RFPHelper.uninit(),
       () => lazy.ASRouterNewTabHook.destroy(),
       () => lazy.UpdateListener.reset(),
-      () => {
-        if (AppConstants.PINEBUILD) {
-          lazy.OnnxRuntimeService.uninit();
-        }
-      },
-      () => {
-        if (AppConstants.PINEBUILD) {
-          lazy.PyodideService.uninit();
-        }
-      },
     ];
 
     for (let task of tasks) {
