@@ -241,3 +241,17 @@ pinebuild:
       - jhirsch@mozilla.com
     expires: never
     telemetry_mirror: PinebuildOnboarding_Done_Congrats
+  set_aside_click_count:
+    type: counter
+    description: >
+      Number of times the session set aside button has been clicked.
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2902
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2902
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PINEBUILD_SET_ASIDE_CLICK_COUNT

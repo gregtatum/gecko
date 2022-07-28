@@ -267,6 +267,7 @@ export const SessionManager = new (class SessionManager extends EventEmitter {
     if (setAsideBtn.disabled) {
       return;
     }
+    Glean.pinebuild.setAsideClickCount.add(1);
     setAsideBtn.disabled = true;
     await this.replaceSession(window);
   }

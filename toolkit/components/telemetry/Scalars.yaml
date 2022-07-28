@@ -7530,6 +7530,19 @@ pinebuild:
       - 'firefox'
     record_in_processes:
       - main
+  set_aside_click_count:
+    bug_numbers:
+      - -1
+    description: >
+      Number of times the session set aside button has been clicked.
+    expires: never
+    kind: uint
+    notification_emails:
+      - jhirsch@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
 
 
 contextual.services.topsites:
