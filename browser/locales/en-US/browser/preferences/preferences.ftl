@@ -185,22 +185,22 @@ preferences-services-devices-label =
         [one] You have { $deviceCount } device connected
        *[other] You have { $deviceCount } devices connected
     }
-preferences-mozproducts-header = More from Mozilla
-preferences-mozproduct-vpn-name = Mozilla VPN
+preferences-mozproducts-header = More from { -vendor-brand-name }
+preferences-mozproduct-vpn-name = { -mozilla-vpn-brand-name }
 preferences-mozproduct-vpn-description = Security, reliability and speed — on every device. anywhere you go.
-preferences-mozproduct-rally-name = Mozilla Rally
+preferences-mozproduct-rally-name = { -rally-brand-name }
 preferences-mozproduct-rally-description = Donate your data to research studies for a better internet.
 preferences-mozproduct-foundation-name = Mozilla Foundation
 preferences-mozproduct-foundation-description = The not-for-profit that stands for a better web.
-preferences-mozproduct-pocket-name = Pocket
+preferences-mozproduct-pocket-name = { -pocket-brand-name }
 preferences-mozproduct-pocket-description = Discover, capture and savor content that fascinates you.
 preferences-mozproduct-view-more = View more
 preferences-mozproduct-get-vpn =
-    .label = Get VPN
+    .label = Get { -mozilla-vpn-brand-name }
 preferences-mozproduct-get-rally =
-    .label = Get Rally
+    .label = Get { -rally-short-name }
 preferences-mozproduct-get-pocket =
-    .label = Get Pocket
+    .label = Get { -pocket-brand-name }
 preferences-mozproduct-support =
     .label = Support
 
