@@ -15,9 +15,12 @@ ChromeUtils.import("resource://gre/modules/NotificationDB.jsm");
 
 ChromeUtils.defineESModuleGetters(this, {
   BrowserSearchTelemetry: "resource:///modules/BrowserSearchTelemetry.sys.mjs",
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.sys.mjs",
   PlacesTransactions: "resource://gre/modules/PlacesTransactions.sys.mjs",
   PlacesUIUtils: "resource:///modules/PlacesUIUtils.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
   UrlbarInput: "resource:///modules/UrlbarInput.sys.mjs",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.sys.mjs",
   UrlbarProviderSearchTips:
@@ -51,7 +54,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   HomePage: "resource:///modules/HomePage.jsm",
-  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   LightweightThemeConsumer:
     "resource://gre/modules/LightweightThemeConsumer.jsm",
   Log: "resource://gre/modules/Log.jsm",
@@ -79,13 +81,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Sanitizer: "resource:///modules/Sanitizer.jsm",
   SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
   ScreenshotsUtils: "resource:///modules/ScreenshotsUtils.jsm",
-  SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
   SiteDataManager: "resource:///modules/SiteDataManager.jsm",
   SitePermissions: "resource:///modules/SitePermissions.jsm",
-  Snapshots: "resource:///modules/Snapshots.jsm",
   StageManager: "resource:///modules/StageManager.jsm",
   SubDialog: "resource://gre/modules/SubDialog.jsm",
   SubDialogManager: "resource://gre/modules/SubDialog.jsm",
