@@ -980,7 +980,8 @@
       <label id="FHRLearnMore"
              class="learnMore" is="text-link"
              data-l10n-id="collection-health-report-link"/>
-      <vbox class="indent" pine-supported="false">
+      #ifndef PINEBUILD
+      <vbox class="indent">
         <hbox align="center">
           <checkbox id="addonRecommendationEnabled"
                     class="tail-with-learn-more"
@@ -990,6 +991,7 @@
                  data-l10n-id="addon-recommendations-link"/>
         </hbox>
       </vbox>
+      #endif
     </description>
 #ifndef MOZ_TELEMETRY_REPORTING
   <description id="TelemetryDisabledDesc"

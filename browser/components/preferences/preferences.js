@@ -409,6 +409,14 @@ async function gotoPref(
     return;
   }
 
+  // Hide settings that are incompatible with pinebuild
+  if (AppConstants.PINEBUILD) {
+    let hiddenSettings = document.querySelectorAll("[pine-supported='false']");
+    for (let element of hiddenSettings) {
+      element.setAttribute("data-hidden-from-search", "true");
+    }
+  }
+
   search(category, "data-category");
 
   if (aShowReason != "initial") {

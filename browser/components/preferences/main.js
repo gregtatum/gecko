@@ -808,11 +808,6 @@ var gMainPane = {
       () => this.readBrowserContainersCheckbox()
     );
 
-    // Hide settings that are incompatible with pinebuild
-    if (AppConstants.PINEBUILD) {
-      this.hideSettingsFromSearch();
-    }
-
     this.setInitialized();
   },
 
@@ -839,13 +834,6 @@ var gMainPane = {
         { once: true }
       );
     });
-  },
-
-  hideSettingsFromSearch() {
-    let hiddenSettings = document.querySelectorAll("[pine-supported='false']");
-    for (let element of hiddenSettings) {
-      element.setAttribute("data-hidden-from-search", "true");
-    }
   },
 
   // CONTAINERS
