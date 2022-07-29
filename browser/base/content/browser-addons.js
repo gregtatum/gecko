@@ -1109,6 +1109,11 @@ var BrowserAddonUI = {
   },
 
   async reportAddon(addonId, reportEntryPoint) {
+    let addon = addonId && (await AddonManager.getAddonByID(addonId));
+    if (!addon) {
+      return;
+    }
+
     const win = await BrowserOpenAddonsMgr("addons://list/extension");
 
     win.openAbuseReport({ addonId, reportEntryPoint });
@@ -1139,6 +1144,20 @@ var BrowserAddonUI = {
       }
     }
   },
+
+  async manageAddon(addonId) {
+    let addon = addonId && (await AddonManager.getAddonByID(addonId));
+    if (!addon) {
+      return;
+    }
+
+    BrowserOpenAddonsMgr("addons://detail/" + encodeURIComponent(addon.id));
+    AMTelemetry.recordActionEvent({
+      object: "browserAction",
+      action: "manage",
+      extra: { addonId: addon.id },
+    });
+  },
 };
 
 /**
@@ -1168,7 +1187,7 @@ customElements.define(
     }
 
     connectedCallback() {
-      if (this._openSubmenuButton) {
+      if (this._openMenuButton) {
         return;
       }
 
@@ -1177,14 +1196,34 @@ customElements.define(
       );
       this.appendChild(template.content.cloneNode(true));
 
-      this._openSubmenuButton = this.querySelector(
-        ".unified-extensions-item-open-submenu"
+      this._openMenuButton = this.querySelector(
+        ".unified-extensions-item-open-menu"
       );
-      this._openSubmenuButton.addEventListener("mouseover", () => {
+      this._openMenuButton.addEventListener("mouseover", () => {
         this.classList.add("no-hover");
       });
-      this._openSubmenuButton.addEventListener("mouseout", () => {
+      this._openMenuButton.addEventListener("mouseout", () => {
         this.classList.remove("no-hover");
+      });
+      this._openMenuButton.addEventListener("click", event => {
+        const { target } = event;
+
+        if (event.button !== 0) {
+          return;
+        }
+
+        const popup = target.ownerDocument.getElementById(
+          "unified-extensions-context-menu"
+        );
+        popup.openPopup(
+          target,
+          "after_end",
+          0,
+          0,
+          true /* isContextMenu */,
+          false /* attributesOverride */,
+          event
+        );
       });
 
       this.render();
@@ -1211,6 +1250,8 @@ customElements.define(
           iconURL
         );
       }
+
+      this._openMenuButton.dataset.extensionId = this.addon.id;
     }
   }
 );
@@ -1310,6 +1351,12 @@ var gUnifiedExtensions = {
         );
         this._listView.addEventListener("ViewShowing", this);
         this._listView.addEventListener("ViewHiding", this);
+
+        // Load context menu popup.
+        const template = document.getElementById("unified-extensions-template");
+        if (template) {
+          template.replaceWith(template.content);
+        }
       }
 
       if (this._button.open) {
@@ -1322,5 +1369,50 @@ var gUnifiedExtensions = {
 
     // We always dispatch an event (useful for testing purposes).
     window.dispatchEvent(new CustomEvent("UnifiedExtensionsTogglePanel"));
+  },
+
+  async updateContextMenu(menu) {
+    const id = this._getExtensionId(menu);
+    const addon = await AddonManager.getAddonByID(id);
+
+    const removeButton = menu.querySelector(
+      ".unified-extensions-context-menu-remove-extension"
+    );
+    const reportButton = menu.querySelector(
+      ".unified-extensions-context-menu-report-extension"
+    );
+
+    reportButton.hidden = !gAddonAbuseReportEnabled;
+    removeButton.disabled = !(
+      addon.permissions & AddonManager.PERM_CAN_UNINSTALL
+    );
+
+    ExtensionsUI.originControlsMenu(menu, id);
+  },
+
+  async manageExtension(menu) {
+    const id = this._getExtensionId(menu);
+
+    await this.togglePanel();
+    await BrowserAddonUI.manageAddon(id);
+  },
+
+  async removeExtension(menu) {
+    const id = this._getExtensionId(menu);
+
+    await this.togglePanel();
+    await BrowserAddonUI.removeAddon(id, "browserAction");
+  },
+
+  async reportExtension(menu) {
+    const id = this._getExtensionId(menu);
+
+    await this.togglePanel();
+    await BrowserAddonUI.reportAddon(id, "toolbar_context_menu");
+  },
+
+  _getExtensionId(menu) {
+    const { triggerNode } = menu;
+    return triggerNode.dataset.extensionId;
   },
 };
