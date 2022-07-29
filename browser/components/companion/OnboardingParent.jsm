@@ -6,13 +6,26 @@
 
 var EXPORTED_SYMBOLS = ["OnboardingParent"];
 
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
+
+const lazy = {};
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "ROOT_URL",
+  "identity.fxaccounts.remote.root"
+);
+
 const { AppConstants } = ChromeUtils.import(
   "resource://gre/modules/AppConstants.jsm"
 );
+
 const COMPANION_WIDTH_AFTER_ONBOARDING = "340";
 // This const is the index of the onboarding screen which the user should see
 // after successfully signing into FxA via web flow.
 const ONBOARDING_SCREEN_AFTER_FXA = 2;
+const RESET_PASSWORD_VERIFIED_PATH = "reset_password_verified";
 
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
@@ -85,11 +98,33 @@ class OnboardingParent extends JSWindowActorParent {
       case "OpenFxa":
         this._onboardingView = window.gStageManager.currentView;
         doc.body.setAttribute("onboarding", "with-browsing");
-        await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
-        window.gStageManager.setView(this._onboardingView);
-        // The promise above is resolved once the user signs into fxa so it's safe to
-        // reset the onboarding attribute now.
-        doc.body.setAttribute("onboarding", "no-browsing");
+
+        async function processFxaFlow(onboardingView) {
+          await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
+          window.gStageManager.setView(onboardingView);
+          doc.body.setAttribute("onboarding", "no-browsing");
+        }
+
+        const fxaListener = {
+          QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
+
+          onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
+            if (
+              aWebProgress.isTopLevel &&
+              aLocationURI.spec.startsWith(
+                lazy.ROOT_URL + RESET_PASSWORD_VERIFIED_PATH
+              )
+            ) {
+              processFxaFlow(this._onboardingView);
+              window.gBrowser.removeProgressListener(fxaListener);
+            }
+          },
+        };
+
+        fxaListener.onLocationChange = fxaListener.onLocationChange.bind(this);
+        window.gBrowser.addProgressListener(fxaListener);
+
+        processFxaFlow(this._onboardingView);
 
         Services.prefs.setIntPref(
           "browser.pinebuild.onboarding.progress",
