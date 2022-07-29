@@ -748,7 +748,7 @@ const OnlineServices = {
     // while and an account may have been created for this type already. If
     // there was another account created before this returned then abort.
     if ([...ServiceInstances].filter(item => item.app == type).length) {
-      lazy.setInterval.error(`Service ${type} already exists`);
+      lazy.log.error(`Service ${type} already exists`);
       return null;
     }
 
