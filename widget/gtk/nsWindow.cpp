@@ -559,19 +559,13 @@ void nsWindow::Destroy() {
 
   LOG("nsWindow::Destroy\n");
 
-  // Clear up WebRender queue
-  RevokeTransactionIdAllocator();
-
-  DisableRenderingToWindow();
-
   mIsDestroyed = true;
   mCreated = false;
 
-  /** Need to clean our LayerManager up while still alive */
-  if (mWindowRenderer) {
-    mWindowRenderer->Destroy();
+  if (mCompositorPauseTimeoutID) {
+    g_source_remove(mCompositorPauseTimeoutID);
+    mCompositorPauseTimeoutID = 0;
   }
-  mWindowRenderer = nullptr;
 
 #ifdef MOZ_WAYLAND
   // Shut down our local vsync source
@@ -583,17 +577,12 @@ void nsWindow::Destroy() {
   MozClearPointer(mXdgToken, xdg_activation_token_v1_destroy);
 #endif
 
-  if (mCompositorPauseTimeoutID) {
-    g_source_remove(mCompositorPauseTimeoutID);
-    mCompositorPauseTimeoutID = 0;
-  }
+  /** Need to clean our LayerManager up while still alive */
+  DestroyLayerManager();
 
-  // It is safe to call DestroyeCompositor several times (here and
-  // in the parent class) since it will take effect only once.
-  // The reason we call it here is because on gtk platforms we need
-  // to destroy the compositor before we destroy the gdk window (which
-  // destroys the the gl context attached to it).
-  DestroyCompositor();
+  if (mCompositorWidgetDelegate) {
+    mCompositorWidgetDelegate->DisableRendering();
+  }
 
   // Ensure any resources assigned to the window get cleaned up first
   // to avoid double-freeing.
@@ -1102,12 +1091,6 @@ void nsWindow::RemovePopupFromHierarchyList() {
   mWaylandPopupNext = mWaylandPopupPrev = nullptr;
 }
 
-void nsWindow::HideWaylandWindow() {
-  LOG("nsWindow::HideWaylandWindow: [%p]\n", this);
-  PauseCompositorHiddenWindow();
-  gtk_widget_hide(mShell);
-}
-
 // Gtk refuses to map popup window with x < 0 && y < 0 relative coordinates
 // see https://gitlab.gnome.org/GNOME/gtk/-/issues/4071
 // as a workaround just fool around and place the popup temporary to 0,0.
@@ -1135,13 +1118,9 @@ bool nsWindow::WaylandPopupRemoveNegativePosition(int* aX, int* aY) {
   return true;
 }
 
-void nsWindow::ShowWaylandWindow() {
-  LOG("nsWindow::ShowWaylandWindow: [%p]\n", this);
-  if (!IsWaylandPopup()) {
-    LOG("  toplevel, show it now");
-    gtk_widget_show(mShell);
-    return;
-  }
+void nsWindow::ShowWaylandPopupWindow() {
+  LOG("nsWindow::ShowWaylandPopupWindow: [%p]\n", this);
+  MOZ_ASSERT(IsWaylandPopup());
 
   if (!mPopupTrackInHierarchy) {
     LOG("  popup is not tracked in popup hierarchy, show it now");
@@ -1209,7 +1188,7 @@ void nsWindow::HideWaylandPopupWindow(bool aTemporaryHide,
 
   // Hide only visible popups or popups closed pernamently.
   if (visible) {
-    HideWaylandWindow();
+    gtk_widget_hide(mShell);
 
     // If there's pending Move-To-Rect callback and we hide the popup
     // the callback won't be called any more.
@@ -1217,11 +1196,6 @@ void nsWindow::HideWaylandPopupWindow(bool aTemporaryHide,
   }
 
   if (mPopupClosed) {
-    // Clear rendering transactions of closed window and disable rendering to it
-    // (see https://bugzilla.mozilla.org/show_bug.cgi?id=1717451#c27 for
-    // details).
-    RevokeTransactionIdAllocator();
-
     LOG("Clearing mMoveToRectPopupSize\n");
     mMoveToRectPopupSize = {};
   }
@@ -1238,11 +1212,18 @@ void nsWindow::HideWaylandToplevelWindow() {
       popup = prev;
     }
   }
-  HideWaylandWindow();
+  gtk_widget_hide(mShell);
+  WaylandStopVsync();
+}
+
+void nsWindow::ShowWaylandToplevelWindow() {
+  MOZ_ASSERT(!IsWaylandPopup());
+  LOG("nsWindow::ShowWaylandToplevelWindow");
+  gtk_widget_show(mShell);
 }
 
 void nsWindow::WaylandPopupRemoveClosedPopups() {
-  LOG("nsWindow::WaylandPopupRemoveClosedPopups: [%p]\n", this);
+  LOG("nsWindow::WaylandPopupRemoveClosedPopups()");
   nsWindow* popup = this;
   while (popup) {
     nsWindow* next = popup->mWaylandPopupNext;
@@ -1391,7 +1372,7 @@ void nsWindow::WaylandPopupHierarchyValidateByLayout(
 }
 
 void nsWindow::WaylandPopupHierarchyHideTemporary() {
-  LOG("nsWindow::WaylandPopupHierarchyHideTemporary() [%p]", this);
+  LOG("nsWindow::WaylandPopupHierarchyHideTemporary()");
   nsWindow* popup = WaylandPopupFindLast(this);
   while (popup && popup != this) {
     LOG("  temporary hidding popup [%p]", popup);
@@ -1409,7 +1390,7 @@ void nsWindow::WaylandPopupHierarchyShowTemporaryHidden() {
     if (popup->mPopupTemporaryHidden) {
       popup->mPopupTemporaryHidden = false;
       LOG("  showing temporary hidden popup [%p]", popup);
-      popup->ShowWaylandWindow();
+      popup->ShowWaylandPopupWindow();
     }
     popup = popup->mWaylandPopupNext;
   }
@@ -3260,7 +3241,8 @@ void* nsWindow::GetNativeData(uint32_t aDataType) {
             mContainer, FractionalScaleFactor());
       }
 #endif
-      LOG("Get NS_NATIVE_EGL_WINDOW window %p", eglWindow);
+      LOG("Get NS_NATIVE_EGL_WINDOW mGdkWindow %p returned eglWindow %p",
+          mGdkWindow, eglWindow);
       return eglWindow;
     }
     default:
@@ -5037,6 +5019,9 @@ gboolean nsWindow::OnTouchpadPinchEvent(GdkEventTouchpadPinch* aEvent) {
     case GDK_TOUCHPAD_GESTURE_PHASE_BEGIN:
       pinchGestureType = PinchGestureInput::PINCHGESTURE_START;
       currentSpan = aEvent->scale;
+      mCurrentTouchpadFocus = ViewAs<ScreenPixel>(
+          GetRefPoint(this, aEvent),
+          PixelCastJustification::LayoutDeviceIsScreenForUntransformedEvent);
 
       // Assign PreviousSpan --> 0.999 to make mDeltaY field of the
       // WidgetWheelEvent that this PinchGestureInput event will be converted
@@ -5047,6 +5032,7 @@ gboolean nsWindow::OnTouchpadPinchEvent(GdkEventTouchpadPinch* aEvent) {
 
     case GDK_TOUCHPAD_GESTURE_PHASE_UPDATE:
       pinchGestureType = PinchGestureInput::PINCHGESTURE_SCALE;
+      mCurrentTouchpadFocus += ScreenPoint(aEvent->dx, aEvent->dy);
       if (aEvent->scale == mLastPinchEventSpan) {
         return FALSE;
       }
@@ -5064,11 +5050,10 @@ gboolean nsWindow::OnTouchpadPinchEvent(GdkEventTouchpadPinch* aEvent) {
       return FALSE;
   }
 
-  LayoutDeviceIntPoint touchpadPoint = GetRefPoint(this, aEvent);
   PinchGestureInput event(
       pinchGestureType, PinchGestureInput::TRACKPAD, aEvent->time,
       GetEventTimeStamp(aEvent->time), ExternalPoint(0, 0),
-      ScreenPoint(touchpadPoint.x, touchpadPoint.y),
+      mCurrentTouchpadFocus,
       100.0 * ((aEvent->phase == GDK_TOUCHPAD_GESTURE_PHASE_END)
                    ? ScreenCoord(1.f)
                    : currentSpan),
@@ -5300,40 +5285,6 @@ static void GtkWidgetDisableUpdates(GtkWidget* aWidget) {
   g_signal_handlers_disconnect_by_data(frame_clock, window);
 }
 
-void nsWindow::EnableRenderingToWindow() {
-  LOG("nsWindow::EnableRenderingToWindow()");
-
-  if (mCompositorWidgetDelegate) {
-    mCompositorWidgetDelegate->EnableRendering(GetX11Window(),
-                                               GetShapedState());
-  }
-
-  if (GdkIsWaylandDisplay()) {
-#ifdef MOZ_WAYLAND
-    moz_container_wayland_add_or_fire_initial_draw_callback(
-        mContainer, [self = RefPtr{this}, this]() -> void {
-          LOG("moz_container_wayland initial create "
-              "ResumeCompositorHiddenWindow()");
-          self->ResumeCompositorHiddenWindow();
-          self->WaylandStartVsync();
-        });
-#endif
-  } else {
-    ResumeCompositorHiddenWindow();
-    WaylandStartVsync();
-  }
-}
-
-void nsWindow::DisableRenderingToWindow() {
-  LOG("nsWindow::DisableRenderingToWindow()");
-
-  PauseCompositorHiddenWindow();
-  WaylandStopVsync();
-  if (mCompositorWidgetDelegate) {
-    mCompositorWidgetDelegate->DisableRendering();
-  }
-}
-
 Window nsWindow::GetX11Window() {
 #ifdef MOZ_X11
   if (GdkIsX11Display()) {
@@ -5414,10 +5365,42 @@ void nsWindow::ConfigureGdkWindow() {
   RefreshWindowClass();
 
   if (mCompositorState == COMPOSITOR_PAUSED_INITIALLY) {
-    mCompositorState = COMPOSITOR_PAUSED_MISSING_WINDOW;
-  }
+    auto startCompositing = [self = RefPtr{this}, this]() -> void {
+      LOG("  moz_container_wayland_add_initial_draw_callback start initial "
+          "compositing");
 
-  EnableRenderingToWindow();
+      // Call GetWindowRenderer() to make sure we have
+      // mCompositorWidgetDelegate & mCompositorBridgeChild
+      // (a.k.a remoteRenderer).
+      (void)GetWindowRenderer();
+
+      CompositorBridgeChild* remoteRenderer = GetRemoteRenderer();
+      MOZ_ASSERT(mCompositorWidgetDelegate);
+      MOZ_ASSERT(remoteRenderer);
+
+      // If we're missing mCompositorWidgetDelegate here, EnableRendering()
+      // will be called later by SetCompositorWidgetDelegate(), which is
+      // fired by GetWindowRenderer()/CreateCompositor().
+      if (mCompositorWidgetDelegate) {
+        mCompositorWidgetDelegate->EnableRendering(GetX11Window(),
+                                                   GetShapedState());
+        WaylandStartVsync();
+      }
+
+      remoteRenderer->SendResumeAsync();
+      remoteRenderer->SendForcePresent(wr::RenderReasons::WIDGET);
+      mCompositorState = COMPOSITOR_ENABLED;
+    };
+
+    if (GdkIsWaylandDisplay()) {
+#ifdef MOZ_WAYLAND
+      moz_container_wayland_add_initial_draw_callback(mContainer,
+                                                      startCompositing);
+#endif
+    } else {
+      startCompositing();
+    }
+  }
 
   if (mHasMappedToplevel) {
     EnsureGrabs();
@@ -5429,8 +5412,10 @@ void nsWindow::ConfigureGdkWindow() {
 void nsWindow::ReleaseGdkWindow() {
   LOG("nsWindow::ReleaseGdkWindow() [%p]", this);
 
+  WaylandStopVsync();
   DestroyChildWindows();
-  DisableRenderingToWindow();
+
+  DestroyLayerManager();
 
   if (mGdkWindow) {
     g_object_set_data(G_OBJECT(mGdkWindow), "nsWindow", nullptr);
@@ -5740,9 +5725,6 @@ nsresult nsWindow::Create(nsIWidget* aParent, nsNativeWidget aNativeParent,
   // Create a container to hold child windows and child GtkWidgets.
   GtkWidget* container = moz_container_new();
   mContainer = MOZ_CONTAINER(container);
-
-  // Don't render to invisible window.
-  mCompositorState = COMPOSITOR_PAUSED_INITIALLY;
 
   // "csd" style is set when widget is realized so we need to call
   // it explicitly now.
@@ -6110,56 +6092,6 @@ void nsWindow::NativeMoveResize(bool aMoved, bool aResized) {
   }
 }
 
-void nsWindow::ResumeCompositorHiddenWindow() {
-  MOZ_RELEASE_ASSERT(NS_IsMainThread());
-
-  LOG("nsWindow::ResumeCompositorHiddenWindow\n");
-  if (mIsDestroyed || mCompositorState == COMPOSITOR_ENABLED) {
-    LOG("  early quit\n");
-    return;
-  }
-
-  if (CompositorBridgeChild* remoteRenderer = GetRemoteRenderer()) {
-    LOG("  resume\n");
-    MOZ_ASSERT(mCompositorWidgetDelegate);
-    if (mCompositorWidgetDelegate) {
-      mCompositorState = COMPOSITOR_ENABLED;
-      remoteRenderer->SendResumeAsync();
-    }
-    remoteRenderer->SendForcePresent(wr::RenderReasons::WIDGET);
-  } else {
-    LOG("  quit, failed to get remote renderer.\n");
-  }
-}
-
-// Because wl_egl_window is destroyed on moz_container_unmap(),
-// the current compositor cannot use it anymore. To avoid crash,
-// pause the compositor and destroy EGLSurface & resume the compositor
-// and re-create EGLSurface on next expose event.
-void nsWindow::PauseCompositorHiddenWindow() {
-  LOG("nsWindow::PauseCompositorHiddenWindow");
-
-  if (mCompositorState != COMPOSITOR_ENABLED) {
-    LOG("  quit early, compositor is disabled");
-    return;
-  }
-
-  mCompositorState = COMPOSITOR_PAUSED_MISSING_WINDOW;
-
-  // Without remote widget / renderer we can't pause compositor.
-  // So delete LayerManager to avoid EGLSurface access.
-  CompositorBridgeChild* remoteRenderer = GetRemoteRenderer();
-  if (!remoteRenderer || !mCompositorWidgetDelegate) {
-    LOG("  deleted layer manager");
-    DestroyLayerManager();
-    return;
-  }
-
-  // XXX slow sync IPC
-  LOG("  paused compositor");
-  remoteRenderer->SendPause();
-}
-
 static int WindowResumeCompositor(void* data) {
   nsWindow* window = static_cast<nsWindow*>(data);
   window->ResumeCompositor();
@@ -6245,18 +6177,18 @@ void nsWindow::WaylandStartVsync() {
 
   LOG_VSYNC("nsWindow::WaylandStartVsync");
 
-  if (mCompositorWidgetDelegate) {
-    if (RefPtr<layers::NativeLayerRoot> nativeLayerRoot =
-            mCompositorWidgetDelegate->AsGtkCompositorWidget()
-                ->GetNativeLayerRoot()) {
-      LOG_VSYNC("  use source NativeLayerRootWayland");
-      mWaylandVsyncSource->MaybeUpdateSource(
-          nativeLayerRoot->AsNativeLayerRootWayland());
-    } else {
-      LOG_VSYNC("  use source mContainer");
-      mWaylandVsyncSource->MaybeUpdateSource(mContainer);
-    }
+  MOZ_DIAGNOSTIC_ASSERT(mCompositorWidgetDelegate);
+  if (RefPtr<layers::NativeLayerRoot> nativeLayerRoot =
+          mCompositorWidgetDelegate->AsGtkCompositorWidget()
+              ->GetNativeLayerRoot()) {
+    LOG_VSYNC("  use source NativeLayerRootWayland");
+    mWaylandVsyncSource->MaybeUpdateSource(
+        nativeLayerRoot->AsNativeLayerRootWayland());
+  } else {
+    LOG_VSYNC("  use source mContainer");
+    mWaylandVsyncSource->MaybeUpdateSource(mContainer);
   }
+
   mWaylandVsyncSource->EnableMonitor();
 #endif
 }
@@ -6299,7 +6231,11 @@ void nsWindow::NativeShow(bool aAction) {
       SetUserTimeAndStartupIDForActivatedWindow(mShell);
     }
     if (GdkIsWaylandDisplay()) {
-      ShowWaylandWindow();
+      if (IsWaylandPopup()) {
+        ShowWaylandPopupWindow();
+      } else {
+        ShowWaylandToplevelWindow();
+      }
     } else {
       LOG("  calling gtk_widget_show(mShell)\n");
       gtk_widget_show(mShell);
@@ -6415,15 +6351,6 @@ void nsWindow::EnsureGrabs(void) {
   }
 }
 
-void nsWindow::CleanLayerManagerRecursive(void) {
-  if (mWindowRenderer) {
-    mWindowRenderer->Destroy();
-    mWindowRenderer = nullptr;
-  }
-
-  DestroyCompositor();
-}
-
 void nsWindow::SetTransparencyMode(nsTransparencyMode aMode) {
   bool isTransparent = aMode == eTransparencyTransparent;
 
@@ -6453,7 +6380,7 @@ void nsWindow::SetTransparencyMode(nsTransparencyMode aMode) {
     // The choice of layer manager depends on
     // GtkCompositorWidgetInitData::Shaped(), which will need to change, so
     // clean out the old layer manager.
-    CleanLayerManagerRecursive();
+    DestroyLayerManager();
   }
 }
 
@@ -8512,15 +8439,21 @@ void nsWindow::DidGetNonBlankPaint() {
 /* nsWindow::SetCompositorWidgetDelegate() sets remote GtkCompositorWidget
  * to render into with compositor.
  *
- * If we're already visible we need to recreate compositor/vsync state.
+ * SetCompositorWidgetDelegate(delegate) is called from
+ * nsBaseWidget::CreateCompositor(), i.e. nsWindow::GetWindowRenderer().
+ *
+ * SetCompositorWidgetDelegate(null) is called from
+ * nsBaseWidget::DestroyCompositor().
  */
 void nsWindow::SetCompositorWidgetDelegate(CompositorWidgetDelegate* delegate) {
-  LOG("nsWindow::SetCompositorWidgetDelegate %p\n", delegate);
+  LOG("nsWindow::SetCompositorWidgetDelegate %p mIsMapped %d "
+      "mCompositorWidgetDelegate %p\n",
+      delegate, mIsMapped, mCompositorWidgetDelegate);
 
-  // There's a change of remote widget - stop compositor and VSync as
-  // we're going re-init it.
-  if (mCompositorWidgetDelegate && mIsMapped) {
-    DisableRenderingToWindow();
+  // Remove reference to GdkWindow/XWindow from remote widget.
+  if (mCompositorWidgetDelegate) {
+    mCompositorWidgetDelegate->DisableRendering();
+    WaylandStopVsync();
   }
 
   if (delegate) {
@@ -8528,10 +8461,35 @@ void nsWindow::SetCompositorWidgetDelegate(CompositorWidgetDelegate* delegate) {
     MOZ_ASSERT(mCompositorWidgetDelegate,
                "nsWindow::SetCompositorWidgetDelegate called with a "
                "non-PlatformCompositorWidgetDelegate");
-    // This is called from nsBaseWidget::CreateCompositor() in which case
-    // we need to create a new EGL surface in RenderCompositorEGL on X11
+
+    // If we're mapped we only need to submit XWindow/shape to newly
+    // created compositor.
+    // If we're not mapped, leave compolete config to ConfigureGdkWindow().
     if (mIsMapped) {
-      EnableRenderingToWindow();
+      auto startCompositing = [self = RefPtr{this}, this]() -> void {
+        LOG("  moz_container_wayland_add_initial_draw_callback resume "
+            "compositor from SetCompositorWidgetDelegate()");
+        // Pass recent GdkWindow/XWindow to remote widget.
+        mCompositorWidgetDelegate->EnableRendering(GetX11Window(),
+                                                   GetShapedState());
+        // CompositorBridgeChild::Resume() creates a new surface
+        // based on GetX11Window()/GetShapedState() set above.
+        // Resume() is effective even without compositor pause.
+        if (mCompositorState == COMPOSITOR_ENABLED) {
+          CompositorBridgeChild* remoteRenderer = GetRemoteRenderer();
+          remoteRenderer->SendResumeAsync();
+          remoteRenderer->SendForcePresent(wr::RenderReasons::WIDGET);
+        }
+        WaylandStartVsync();
+      };
+      if (GdkIsWaylandDisplay()) {
+#ifdef MOZ_WAYLAND
+        moz_container_wayland_add_initial_draw_callback(mContainer,
+                                                        startCompositing);
+#endif
+      } else {
+        startCompositing();
+      }
     }
   } else {
     mCompositorWidgetDelegate = nullptr;
@@ -8971,11 +8929,23 @@ nsresult nsWindow::SynthesizeNativeTouchPadPinch(
       reinterpret_cast<GdkEventTouchpadPinch*>(&event);
   touchpad_event->type = GDK_TOUCHPAD_PINCH;
 
+  const LayoutDeviceIntPoint widgetToScreenOffset = WidgetToScreenOffset();
+
+  ScreenPoint pointInWindow = ViewAs<ScreenPixel>(
+      aPoint - widgetToScreenOffset,
+      PixelCastJustification::LayoutDeviceIsScreenForUntransformedEvent);
+
+  gdouble dx = 0, dy = 0;
+
   switch (aEventPhase) {
     case PHASE_BEGIN:
       touchpad_event->phase = GDK_TOUCHPAD_GESTURE_PHASE_BEGIN;
+      mCurrentSynthesizedTouchpadPinch = {pointInWindow, pointInWindow};
       break;
     case PHASE_UPDATE:
+      dx = pointInWindow.x - mCurrentSynthesizedTouchpadPinch.mCurrentFocus.x;
+      dy = pointInWindow.y - mCurrentSynthesizedTouchpadPinch.mCurrentFocus.y;
+      mCurrentSynthesizedTouchpadPinch.mCurrentFocus = pointInWindow;
       touchpad_event->phase = GDK_TOUCHPAD_GESTURE_PHASE_UPDATE;
       break;
     case PHASE_END:
@@ -8989,17 +8959,24 @@ nsresult nsWindow::SynthesizeNativeTouchPadPinch(
   touchpad_event->window = mGdkWindow;
   // We only set the fields of GdkEventTouchpadPinch which are
   // actually used in OnTouchpadPinchEvent().
-  // GdkEventTouchpadPinch has additional fields (for example, `dx` and `dy`).
+  // GdkEventTouchpadPinch has additional fields.
   // If OnTouchpadPinchEvent() is changed to use other fields, this function
   // will need to change to set them as well.
   touchpad_event->time = GDK_CURRENT_TIME;
   touchpad_event->scale = aScale;
-  touchpad_event->x_root = DevicePixelsToGdkCoordRoundDown(aPoint.x);
-  touchpad_event->y_root = DevicePixelsToGdkCoordRoundDown(aPoint.y);
+  touchpad_event->x_root = DevicePixelsToGdkCoordRoundDown(
+      mCurrentSynthesizedTouchpadPinch.mBeginFocus.x + widgetToScreenOffset.x);
+  touchpad_event->y_root = DevicePixelsToGdkCoordRoundDown(
+      mCurrentSynthesizedTouchpadPinch.mBeginFocus.y + widgetToScreenOffset.y);
 
-  LayoutDeviceIntPoint pointInWindow = aPoint - WidgetToScreenOffset();
-  touchpad_event->x = DevicePixelsToGdkCoordRoundDown(pointInWindow.x);
-  touchpad_event->y = DevicePixelsToGdkCoordRoundDown(pointInWindow.y);
+  touchpad_event->x = DevicePixelsToGdkCoordRoundDown(
+      mCurrentSynthesizedTouchpadPinch.mBeginFocus.x);
+  touchpad_event->y = DevicePixelsToGdkCoordRoundDown(
+      mCurrentSynthesizedTouchpadPinch.mBeginFocus.y);
+
+  touchpad_event->dx = dx;
+  touchpad_event->dy = dy;
+
   touchpad_event->state = aModifierFlags;
 
   gdk_event_put(&event);

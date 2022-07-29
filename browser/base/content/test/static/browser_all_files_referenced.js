@@ -77,6 +77,7 @@ if (AppConstants.platform == "macosx") {
 if (AppConstants.MOZ_BACKGROUNDTASKS) {
   // These preferences are active only when we're in background task mode.
   gExceptionPaths.push("resource://gre/defaults/backgroundtasks/");
+  gExceptionPaths.push("resource://app/defaults/backgroundtasks/");
   // `BackgroundTask_id.jsm` is loaded at runtime by `app --backgroundtask id ...`.
   gExceptionPaths.push("resource://gre/modules/backgroundtasks/");
 }
@@ -276,6 +277,10 @@ var whitelist = [
 
   // toolkit/xre/MacRunFromDmgUtils.mm
   { file: "resource://gre/localization/en-US/toolkit/global/run-from-dmg.ftl" },
+
+  // References to esm generated from jsm programatically
+  { file: "resource://gre/modules/LangPackMatcher.sys.mjs" },
+  { file: "resource://gre/modules/PluralForm.sys.mjs" },
 ];
 
 if (AppConstants.NIGHTLY_BUILD && AppConstants.platform != "win") {
@@ -291,13 +296,6 @@ if (AppConstants.platform == "android") {
   // Referenced by aboutGlean.html
   whitelist.push({
     file: "resource://gre/localization/en-US/toolkit/about/aboutGlean.ftl",
-  });
-}
-
-if (AppConstants.MOZ_BACKGROUNDTASKS && !AppConstants.MOZ_UPDATE_AGENT) {
-  // These utilities are for background tasks, not regular headed browsing.
-  whitelist.push({
-    file: "resource://gre/modules/BackgroundTasksUtils.jsm",
   });
 }
 

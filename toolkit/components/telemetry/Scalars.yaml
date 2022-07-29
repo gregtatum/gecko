@@ -1348,6 +1348,22 @@ security:
       - 'fennec'
     record_in_processes:
       - main
+  psm_ui_interaction:
+    bug_numbers:
+      - 1781466
+    description: >
+      Whether or not the identified PSM UI element has been interacted
+      with this session.
+    expires: "110"
+    kind: boolean
+    keyed: true
+    notification_emails:
+      - dkeeler@mozilla.com
+    release_channel_collection: opt-out
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
 
 pwmgr:
   potentially_breached_passwords:
@@ -2254,8 +2270,7 @@ mediarecorder:
     expires: "72"
     kind: uint
     notification_emails:
-      - bvandyk@mozilla.com
-      - nohlmeier@mozilla.com
+      - media-alerts@mozilla.com
     release_channel_collection: opt-in
     products:
       - 'firefox'
@@ -2276,8 +2291,7 @@ media:
     expires: never
     kind: uint
     notification_emails:
-      - alwu@mozilla.com
-      - nohlmeier@mozilla.com
+      - media-alerts@mozilla.com
     release_channel_collection: opt-out
     products:
       - 'firefox'
@@ -2293,8 +2307,7 @@ media:
     kind: uint
     keyed: true
     notification_emails:
-      - alwu@mozilla.com
-      - nohlmeier@mozilla.com
+      - media-alerts@mozilla.com
     release_channel_collection: opt-out
     products:
       - 'firefox'
@@ -2310,8 +2323,7 @@ media:
     kind: uint
     keyed: true
     notification_emails:
-      - alwu@mozilla.com
-      - bvandyk@mozilla.com
+      - media-alerts@mozilla.com
     release_channel_collection: opt-out
     products:
       - 'firefox'
@@ -2328,8 +2340,7 @@ media:
     kind: boolean
     keyed: true
     notification_emails:
-      - alwu@mozilla.com
-      - bvandyk@mozilla.com
+      - media-alerts@mozilla.com
     release_channel_collection: opt-out
     products:
       - 'firefox'
@@ -2347,8 +2358,7 @@ media:
     kind: boolean
     keyed: true
     notification_emails:
-      - alwu@mozilla.com
-      - bvandyk@mozilla.com
+      - media-alerts@mozilla.com
     release_channel_collection: opt-out
     products:
       - 'firefox'
@@ -7532,6 +7542,19 @@ pinebuild:
     kind: uint
     notification_emails:
       - dothayer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+  set_aside_click_count:
+    bug_numbers:
+      - -1
+    description: >
+      Number of times the session set aside button has been clicked.
+    expires: never
+    kind: uint
+    notification_emails:
+      - jhirsch@mozilla.com
     products:
       - 'firefox'
     record_in_processes:

@@ -58,7 +58,7 @@
 
 <!-- Tab preferences -->
 <groupbox data-category="paneGeneral"
-          hidden="true">
+          hidden="true" pine-supported="false">
     <label><html:h2 data-l10n-id="tabs-group-header"/></label>
 
     <checkbox id="ctrlTabRecentlyUsedOrder" data-l10n-id="ctrl-tab-recently-used-order"
@@ -168,7 +168,7 @@
         </div>
       </label>
     </form>
-    <html:div data-l10n-id="preferences-web-appearance-footer">
+    <html:div data-l10n-id="preferences-web-appearance-footer" pine-supported="false">
       <html:a id="web-appearance-manage-themes-link" class="text-link" data-l10n-name="themes-link" href="about:addons" target="_blank" />
     </html:div>
   </html:div>
@@ -738,14 +738,14 @@
             preference="media.hardwaremediakeys.enabled"/>
     <label id="mediaControlLearnMore" class="learnMore" data-l10n-id="browsing-media-control-learn-more" is="text-link"/>
   </hbox>
-  <hbox align="center" data-subcategory="cfraddons">
+  <hbox align="center" data-subcategory="cfraddons" pine-supported="false">
     <checkbox id="cfrRecommendations"
             class="tail-with-learn-more"
             data-l10n-id="browsing-cfr-recommendations"
             preference="browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons"/>
     <label id="cfrLearnMore" class="learnMore" data-l10n-id="browsing-cfr-recommendations-learn-more" is="text-link"/>
   </hbox>
-  <hbox align="center" data-subcategory="cfrfeatures">
+  <hbox align="center" data-subcategory="cfrfeatures" pine-supported="false">
     <checkbox id="cfrRecommendations-features"
             class="tail-with-learn-more"
             data-l10n-id="browsing-cfr-features"

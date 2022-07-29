@@ -29,7 +29,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PlacesUIUtils: "resource:///modules/PlacesUIUtils.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   SearchSERPTelemetry: "resource:///modules/SearchSERPTelemetry.sys.mjs",
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
   SnapshotMonitor: "resource:///modules/SnapshotMonitor.sys.mjs",
+  UrlbarPrefs: "resource:///modules/UrlbarPrefs.sys.mjs",
+  UrlbarQuickSuggest: "resource:///modules/UrlbarQuickSuggest.sys.mjs",
 });
 
 XPCOMUtils.defineLazyModuleGetters(lazy, {
@@ -71,7 +74,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   Normandy: "resource://normandy/Normandy.jsm",
   OnboardingMessageProvider:
     "resource://activity-stream/lib/OnboardingMessageProvider.jsm",
-  OnnxRuntimeService: "resource:///modules/OnnxRuntimeService.jsm",
   OsEnvironment: "resource://gre/modules/OsEnvironment.jsm",
   PageActions: "resource:///modules/PageActions.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
@@ -81,7 +83,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
   ProcessHangMonitor: "resource:///modules/ProcessHangMonitor.jsm",
   PublicSuffixList: "resource://gre/modules/netwerk-dns/PublicSuffixList.jsm",
-  PyodideService: "resource:////modules/PyodideService.jsm",
   RemoteSettings: "resource://services-settings/remote-settings.js",
   RemoteSecuritySettings:
     "resource://gre/modules/psm/RemoteSecuritySettings.jsm",
@@ -90,7 +91,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   Sanitizer: "resource:///modules/Sanitizer.jsm",
   SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
   ScreenshotsUtils: "resource:///modules/ScreenshotsUtils.jsm",
-  SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
@@ -104,8 +104,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   TRRRacer: "resource:///modules/TRRPerformance.jsm",
   UIState: "resource://services-sync/UIState.jsm",
   UpdateListener: "resource://gre/modules/UpdateListener.jsm",
-  UrlbarQuickSuggest: "resource:///modules/UrlbarQuickSuggest.jsm",
-  UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
   WebChannel: "resource://gre/modules/WebChannel.jsm",
   WindowsRegistry: "resource://gre/modules/WindowsRegistry.jsm",
 });
@@ -583,6 +581,7 @@ let JSWINDOWACTORS = {
       "chrome://browser/content/syncedtabs/sidebar.xhtml",
       "chrome://browser/content/places/historySidebar.xhtml",
       "chrome://browser/content/places/bookmarksSidebar.xhtml",
+      "about:firefoxview",
     ],
   },
 
@@ -1231,6 +1230,7 @@ BrowserGlue.prototype = {
           events: {
             OnboardingCompleted: { wantUntrusted: true },
             OpenFxa: { wantUntrusted: true },
+            RecordEvent: { wantUntrusted: true },
             GetOnboardingProgressPrefValue: { wantUntrusted: true },
             SetOnboardingProgressPrefValue: { wantUntrusted: true },
           },
@@ -1869,8 +1869,6 @@ BrowserGlue.prototype = {
 
     if (AppConstants.PINEBUILD) {
       lazy.SessionManager.init();
-      lazy.OnnxRuntimeService.init();
-      lazy.PyodideService.init();
       lazy.Sounds.play(lazy.Sounds.STARTUP);
     }
 
@@ -2196,16 +2194,6 @@ BrowserGlue.prototype = {
       () => lazy.RFPHelper.uninit(),
       () => lazy.ASRouterNewTabHook.destroy(),
       () => lazy.UpdateListener.reset(),
-      () => {
-        if (AppConstants.PINEBUILD) {
-          lazy.OnnxRuntimeService.uninit();
-        }
-      },
-      () => {
-        if (AppConstants.PINEBUILD) {
-          lazy.PyodideService.uninit();
-        }
-      },
     ];
 
     for (let task of tasks) {
@@ -3000,7 +2988,7 @@ BrowserGlue.prototype = {
         task: () => {
           // Use an increasing number to keep track of the current feature
           // onboarding version.
-          const ONBOARDING_VERSION = 25;
+          const ONBOARDING_VERSION = 26;
 
           // Show the onboarding content, if we have something new to show.
           const prefBranch = Services.prefs.getBranch(

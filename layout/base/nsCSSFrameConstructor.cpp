@@ -1423,6 +1423,10 @@ static void EnsureAutoPageName(nsFrameConstructorState& aState,
   // When building the entire document, this should only happen for the
   // root, which will mean the loop will immediately end. Either way, this will
   // only happen once for each time the frame constructor is run.
+  if (aState.mAutoPageNameValue) {
+    return;
+  }
+
   for (const nsContainerFrame* frame = aFrame; frame;
        frame = frame->GetParent()) {
     const StylePageName& pageName = frame->StylePage()->mPage;
@@ -9637,7 +9641,7 @@ inline void nsCSSFrameConstructor::ConstructFramesFromItemList(
 void nsCSSFrameConstructor::AddFCItemsForAnonymousContent(
     nsFrameConstructorState& aState, nsContainerFrame* aFrame,
     const nsTArray<nsIAnonymousContentCreator::ContentInfo>& aAnonymousItems,
-    FrameConstructionItemList& aItemsToConstruct, ItemFlags aExtraFlags) {
+    FrameConstructionItemList& aItemsToConstruct) {
   AutoFrameConstructionPageName pageName(*this, aState, aItemsToConstruct,
                                          aFrame);
   for (const auto& info : aAnonymousItems) {
@@ -9657,11 +9661,9 @@ void nsCSSFrameConstructor::AddFCItemsForAnonymousContent(
 
     RefPtr<ComputedStyle> computedStyle = ResolveComputedStyle(content);
 
-    ItemFlags flags = aExtraFlags;
-    flags += ItemFlag::AllowPageBreak;
-
     AddFrameConstructionItemsInternal(aState, content, aFrame, true,
-                                      computedStyle, flags, aItemsToConstruct);
+                                      computedStyle, {ItemFlag::AllowPageBreak},
+                                      aItemsToConstruct);
   }
 }
 

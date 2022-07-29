@@ -64,7 +64,7 @@ function maybeInitializeUI() {
     document.dispatchEvent(new Event("browse-panel-hidden"));
     companionDeck.selectedViewName = "browse";
     const focusEl = document.querySelector(`button.${previousViewName}`);
-    let focusVisible = e?.detail?.showKeyboardFocus;
+    let focusVisible = e?.detail?.isKeyboardSource;
     focusEl?.focus({
       focusVisible,
     });
@@ -73,7 +73,7 @@ function maybeInitializeUI() {
   window.addEventListener("section-panel-back", goBack);
   window.addEventListener("Companion:BrowsePanel", goBack);
 
-  companionDeck.addEventListener("view-changed", () => {
+  companionDeck.addEventListener("view-changed", e => {
     // Clumsily wait for the iframes in the passwords and downloads
     // browse submenu items to load, before focusing their back
     // buttons. We would eventually like to do this in a cleaner, more
@@ -99,7 +99,7 @@ function maybeInitializeUI() {
           ? currentView.shadowRoot.querySelector("button.back-button")
           : currentView.querySelector("button.back-button");
       }
-      backBtn?.focus();
+      backBtn?.focus({ focusVisible: e.detail.isKeyboardSource });
     }, 100);
   });
 

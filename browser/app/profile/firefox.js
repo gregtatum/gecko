@@ -774,7 +774,11 @@ pref("security.allow_eval_in_parent_process", false);
 pref("security.allow_parent_unrestricted_js_loads", false);
 
 // Unload tabs when available memory is running low
-pref("browser.tabs.unloadOnLowMemory", true);
+#if defined(XP_MACOSX) || defined(XP_WIN)
+    pref("browser.tabs.unloadOnLowMemory", true);
+#else
+    pref("browser.tabs.unloadOnLowMemory", false);
+#endif
 
 // Tab Unloader does not unload tabs whose last inactive period is longer than
 // this value (in milliseconds).
@@ -1635,6 +1639,7 @@ pref("messaging-system.log", "warn");
 pref("messaging-system.rsexperimentloader.enabled", true);
 pref("messaging-system.rsexperimentloader.collection_id", "nimbus-desktop-experiments");
 pref("nimbus.debug", false);
+pref("nimbus.validation.enabled", true);
 
 // Enable the DOM fullscreen API.
 pref("full-screen-api.enabled", true);
@@ -2705,6 +2710,10 @@ pref("browser.places.snapshots.expiration.days", 210);
 // For user managed snapshots we use more than a year, to support yearly tasks.
 pref("browser.places.snapshots.expiration.userManaged.days", 420);
 
+// If the user has seen the Firefox View feature tour this value reflects the tour
+// message id, the id of the last screen they saw, and whether they completed the tour
+pref("browser.browser.firefoxView.featureTour", "default, default, true");
+
 #ifdef PINEBUILD
   pref("browser.contentblocking.category", "strict");
   pref("privacy.trackingprotection.enabled", true);
@@ -2751,7 +2760,6 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
     // headaches if you don't realize it's happening.
     pref("browser.startup.launchOnOSLogin", false);
   #endif
-  pref("browser.crashReports.unsubmittedCheck.autoSubmit2", true);
   pref("browser.warnOnQuit", false);
   // Disable product promos delivered via messaging system
   pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);

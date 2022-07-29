@@ -7566,15 +7566,20 @@ class _DSCard extends (external_React_default()).PureComponent {
     }
 
     const {
+      isRecentSave,
+      DiscoveryStream
+    } = this.props;
+    const {
+      pocketButtonEnabled,
       saveToPocketCard,
       hideDescriptions,
       compactImages,
       imageGradient,
+      newSponsoredLabel,
       titleLines = 3,
       descLines = 3,
-      displayReadTime,
-      isRecentSave
-    } = this.props;
+      readTime: displayReadTime
+    } = DiscoveryStream;
     const excerpt = !hideDescriptions ? this.props.excerpt : "";
     let timeToRead;
 
@@ -7605,7 +7610,7 @@ class _DSCard extends (external_React_default()).PureComponent {
       source: this.props.source,
       title: this.props.title,
       excerpt: excerpt,
-      newSponsoredLabel: this.props.newSponsoredLabel,
+      newSponsoredLabel: newSponsoredLabel,
       timeToRead: timeToRead,
       context: this.props.context,
       context_type: this.props.context_type,
@@ -7654,7 +7659,7 @@ class _DSCard extends (external_React_default()).PureComponent {
       onMenuUpdate: this.onMenuUpdate,
       onMenuShow: this.onMenuShow,
       saveToPocketCard: saveToPocketCard,
-      pocket_button_enabled: this.props.pocket_button_enabled,
+      pocket_button_enabled: pocketButtonEnabled,
       isRecentSave: isRecentSave
     }))), !saveToPocketCard && /*#__PURE__*/external_React_default().createElement(DSLinkMenu, {
       id: this.props.id,
@@ -7672,7 +7677,7 @@ class _DSCard extends (external_React_default()).PureComponent {
       hostRef: this.contextMenuButtonHostRef,
       onMenuUpdate: this.onMenuUpdate,
       onMenuShow: this.onMenuShow,
-      pocket_button_enabled: this.props.pocket_button_enabled,
+      pocket_button_enabled: pocketButtonEnabled,
       isRecentSave: isRecentSave
     }));
   }
@@ -7683,7 +7688,8 @@ _DSCard.defaultProps = {
 
 };
 const DSCard = (0,external_ReactRedux_namespaceObject.connect)(state => ({
-  App: state.App
+  App: state.App,
+  DiscoveryStream: state.DiscoveryStream
 }))(_DSCard);
 const PlaceholderDSCard = props => /*#__PURE__*/external_React_default().createElement(DSCard, {
   placeholder: true
@@ -8082,32 +8088,20 @@ class _CardGrid extends (external_React_default()).PureComponent {
   renderCards() {
     var _widgets$positions, _widgets$data, _essentialReadsCards, _editorsPicksCards;
 
-    const {
-      DiscoveryStream
-    } = this.props;
     const prefs = this.props.Prefs.values;
-    const {
-      recentSavesEnabled
-    } = DiscoveryStream;
-    const showRecentSaves = prefs.showRecentSaves && recentSavesEnabled;
     const {
       items,
       hybridLayout,
       hideCardBackground,
       fourCardLayout,
-      hideDescriptions,
-      saveToPocketCard,
       compactGrid,
-      compactImages,
-      imageGradient,
-      newSponsoredLabel,
-      titleLines,
-      descLines,
-      readTime,
       essentialReadsHeader,
       editorsPicksHeader,
-      widgets
+      widgets,
+      recentSavesEnabled,
+      hideDescriptions
     } = this.props;
+    const showRecentSaves = prefs.showRecentSaves && recentSavesEnabled;
     const recs = this.props.data.recommendations.slice(0, items);
     const cards = [];
     let essentialReadsCards = [];
@@ -8125,7 +8119,6 @@ class _CardGrid extends (external_React_default()).PureComponent {
         raw_image_src: rec.raw_image_src,
         word_count: rec.word_count,
         time_to_read: rec.time_to_read,
-        displayReadTime: readTime,
         title: rec.title,
         excerpt: rec.excerpt,
         url: rec.url,
@@ -8140,14 +8133,6 @@ class _CardGrid extends (external_React_default()).PureComponent {
         pocket_id: rec.pocket_id,
         context_type: rec.context_type,
         bookmarkGuid: rec.bookmarkGuid,
-        pocket_button_enabled: this.props.pocket_button_enabled,
-        hideDescriptions: hideDescriptions,
-        saveToPocketCard: saveToPocketCard,
-        compactImages: compactImages,
-        imageGradient: imageGradient,
-        newSponsoredLabel: newSponsoredLabel,
-        titleLines: titleLines,
-        descLines: descLines,
         is_collection: this.props.is_collection
       }));
     }
@@ -8201,16 +8186,14 @@ class _CardGrid extends (external_React_default()).PureComponent {
       if (essentialReadsHeader && editorsPicksHeader) {
         editorsPicksCards = [...cards.splice(0, cards.length)];
       }
-    } // Used for CSS overrides to default styling (eg: "hero")
+    }
 
-
-    const variantClass = this.props.display_variant ? `ds-card-grid-${this.props.display_variant}` : ``;
     const hideCardBackgroundClass = hideCardBackground ? `ds-card-grid-hide-background` : ``;
     const fourCardLayoutClass = fourCardLayout ? `ds-card-grid-four-card-variant` : ``;
     const hideDescriptionsClassName = !hideDescriptions ? `ds-card-grid-include-descriptions` : ``;
     const compactGridClassName = compactGrid ? `ds-card-grid-compact` : ``;
     const hybridLayoutClassName = hybridLayout ? `ds-card-grid-hybrid-layout` : ``;
-    const gridClassName = `ds-card-grid ds-card-grid-${this.props.border} ${variantClass} ${hybridLayoutClassName} ${hideCardBackgroundClass} ${fourCardLayoutClass} ${hideDescriptionsClassName} ${compactGridClassName}`;
+    const gridClassName = `ds-card-grid ds-card-grid-border ${hybridLayoutClassName} ${hideCardBackgroundClass} ${fourCardLayoutClass} ${hideDescriptionsClassName} ${compactGridClassName}`;
     return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, ((_essentialReadsCards = essentialReadsCards) === null || _essentialReadsCards === void 0 ? void 0 : _essentialReadsCards.length) > 0 && /*#__PURE__*/external_React_default().createElement("div", {
       className: gridClassName
     }, essentialReadsCards), showRecentSaves && /*#__PURE__*/external_React_default().createElement(RecentSavesContainer, {
@@ -8261,14 +8244,11 @@ class _CardGrid extends (external_React_default()).PureComponent {
 
 }
 _CardGrid.defaultProps = {
-  border: `border`,
-  items: 4,
-  // Number of stories to display
-  saveToPocketCard: false
+  items: 4 // Number of stories to display
+
 };
 const CardGrid = (0,external_ReactRedux_namespaceObject.connect)(state => ({
-  Prefs: state.Prefs,
-  DiscoveryStream: state.DiscoveryStream
+  Prefs: state.Prefs
 }))(_CardGrid);
 ;// CONCATENATED MODULE: ./content-src/components/DiscoveryStreamComponents/DSDismiss/DSDismiss.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -8451,7 +8431,6 @@ class CollectionCardGrid extends (external_React_default()).PureComponent {
       context: sponsoredByMessage,
       data: recsData,
       feed: feed,
-      border: this.props.border,
       type: type,
       is_collection: true,
       dispatch: this.props.dispatch,
@@ -10867,7 +10846,16 @@ function DiscoveryStream(prevState = INITIAL_STATE.DiscoveryStream, action) {
 
     case actionTypes.DISCOVERY_STREAM_PREFS_SETUP:
       return { ...prevState,
-        recentSavesEnabled: action.data.recentSavesEnabled
+        recentSavesEnabled: action.data.recentSavesEnabled,
+        pocketButtonEnabled: action.data.pocketButtonEnabled,
+        saveToPocketCard: action.data.saveToPocketCard,
+        hideDescriptions: action.data.hideDescriptions,
+        compactImages: action.data.compactImages,
+        imageGradient: action.data.imageGradient,
+        newSponsoredLabel: action.data.newSponsoredLabel,
+        titleLines: action.data.titleLines,
+        descLines: action.data.descLines,
+        readTime: action.data.readTime
       };
 
     case actionTypes.DISCOVERY_STREAM_RECENT_SAVES:
@@ -13586,7 +13574,6 @@ class _DiscoveryStreamBase extends (external_React_default()).PureComponent {
           links: component.properties.links,
           extraLinks: component.properties.extraLinks,
           alignment: component.properties.alignment,
-          display_variant: component.properties.display_variant,
           explore_topics: component.properties.explore_topics,
           header: component.header,
           locale: this.props.App.locale,
@@ -13603,10 +13590,8 @@ class _DiscoveryStreamBase extends (external_React_default()).PureComponent {
           feed: component.feed,
           spocs: DiscoveryStream.spocs,
           placement: component.placement,
-          border: component.properties.border,
           type: component.type,
           items: component.properties.items,
-          pocket_button_enabled: component.pocketButtonEnabled,
           dismissible: this.props.DiscoveryStream.isCollectionDismissible,
           dispatch: this.props.dispatch
         });
@@ -13614,29 +13599,20 @@ class _DiscoveryStreamBase extends (external_React_default()).PureComponent {
       case "CardGrid":
         return /*#__PURE__*/external_React_default().createElement(CardGrid, {
           title: component.header && component.header.title,
-          display_variant: component.properties.display_variant,
           data: component.data,
           feed: component.feed,
           widgets: component.widgets,
-          border: component.properties.border,
           type: component.type,
           dispatch: this.props.dispatch,
           items: component.properties.items,
           hybridLayout: component.properties.hybridLayout,
           hideCardBackground: component.properties.hideCardBackground,
           fourCardLayout: component.properties.fourCardLayout,
-          hideDescriptions: component.properties.hideDescriptions,
           compactGrid: component.properties.compactGrid,
-          compactImages: component.properties.compactImages,
-          imageGradient: component.properties.imageGradient,
-          newSponsoredLabel: component.properties.newSponsoredLabel,
-          titleLines: component.properties.titleLines,
-          descLines: component.properties.descLines,
           essentialReadsHeader: component.properties.essentialReadsHeader,
           editorsPicksHeader: component.properties.editorsPicksHeader,
-          readTime: component.properties.readTime,
-          saveToPocketCard: component.saveToPocketCard,
-          pocket_button_enabled: component.pocketButtonEnabled
+          recentSavesEnabled: this.props.DiscoveryStream.recentSavesEnabled,
+          hideDescriptions: this.props.DiscoveryStream.hideDescriptions
         });
 
       case "HorizontalRule":
@@ -14653,7 +14629,7 @@ const external_Redux_namespaceObject = Redux;
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-env mozilla/frame-script */
+/* eslint-env mozilla/remote-page */
 
 
 const MERGE_STORE_ACTION = "NEW_TAB_INITIAL_STATE";

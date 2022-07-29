@@ -612,10 +612,9 @@ static IntrinsicSize ComputeIntrinsicSize(imgIContainer* aImage,
                                           bool aUseMappedRatio,
                                           nsImageFrame::Kind aKind,
                                           const nsImageFrame& aFrame) {
-  const ComputedStyle& style = *aFrame.Style();
-  const auto containAxes = style.StyleDisplay()->GetContainSizeAxes();
+  const auto containAxes = aFrame.StyleDisplay()->GetContainSizeAxes();
   if (containAxes.IsBoth()) {
-    return IntrinsicSize(0, 0);
+    return containAxes.ContainIntrinsicSize(IntrinsicSize(0, 0), aFrame);
   }
 
   nsSize size;
@@ -640,26 +639,24 @@ static IntrinsicSize ComputeIntrinsicSize(imgIContainer* aImage,
       ScaleIntrinsicSizeForDensity(intrinsicSize,
                                    aFrame.GetImageFromStyle()->GetResolution());
     }
-    return containAxes.ContainIntrinsicSize(intrinsicSize,
-                                            aFrame.GetWritingMode());
+    return containAxes.ContainIntrinsicSize(intrinsicSize, aFrame);
   }
 
   if (aKind == nsImageFrame::Kind::ListStyleImage) {
     // Note: images are handled above, this handles gradients etc.
     nscoord defaultLength = ListImageDefaultLength(aFrame);
     return containAxes.ContainIntrinsicSize(
-        IntrinsicSize(defaultLength, defaultLength), aFrame.GetWritingMode());
+        IntrinsicSize(defaultLength, defaultLength), aFrame);
   }
 
   if (aFrame.ShouldShowBrokenImageIcon()) {
     nscoord edgeLengthToUse = nsPresContext::CSSPixelsToAppUnits(
         ICON_SIZE + (2 * (ICON_PADDING + ALT_BORDER_WIDTH)));
     return containAxes.ContainIntrinsicSize(
-        IntrinsicSize(edgeLengthToUse, edgeLengthToUse),
-        aFrame.GetWritingMode());
+        IntrinsicSize(edgeLengthToUse, edgeLengthToUse), aFrame);
   }
 
-  if (aUseMappedRatio && style.StylePosition()->mAspectRatio.HasRatio()) {
+  if (aUseMappedRatio && aFrame.StylePosition()->mAspectRatio.HasRatio()) {
     return IntrinsicSize();
   }
 
@@ -1136,10 +1133,13 @@ bool nsImageFrame::IsForMarkerPseudo() const {
 }
 
 void nsImageFrame::EnsureIntrinsicSizeAndRatio() {
-  if (StyleDisplay()->GetContainSizeAxes().IsBoth()) {
-    // If we have 'contain:size', then our intrinsic size and ratio are 0,0
+  const auto containAxes = StyleDisplay()->GetContainSizeAxes();
+  if (containAxes.IsBoth()) {
+    // If we have 'contain:size', then we have no intrinsic aspect ratio,
+    // and the intrinsic size is determined by contain-intrinsic-size,
     // regardless of what our underlying image may think.
-    mIntrinsicSize = IntrinsicSize(0, 0);
+    mIntrinsicSize =
+        containAxes.ContainIntrinsicSize(IntrinsicSize(0, 0), *this);
     mIntrinsicRatio = AspectRatio();
     return;
   }
@@ -1330,7 +1330,6 @@ void nsImageFrame::Reflow(nsPresContext* aPresContext, ReflowOutput& aMetrics,
 
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS, ("exit nsImageFrame::Reflow: size=%d,%d",
                                         aMetrics.Width(), aMetrics.Height()));
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowInput, aMetrics);
 }
 
 bool nsImageFrame::ReflowFinished() {
@@ -1938,21 +1937,6 @@ ImgDrawResult nsImageFrame::DisplayAltFeedbackWithoutLayer(
   return textDrawResult ? ImgDrawResult::SUCCESS : ImgDrawResult::NOT_READY;
 }
 
-#ifdef DEBUG
-static void PaintDebugImageMap(nsIFrame* aFrame, DrawTarget* aDrawTarget,
-                               const nsRect& aDirtyRect, nsPoint aPt) {
-  nsImageFrame* f = static_cast<nsImageFrame*>(aFrame);
-  nsRect inner = f->GetContentRectRelativeToSelf() + aPt;
-  gfxPoint devPixelOffset = nsLayoutUtils::PointToGfxPoint(
-      inner.TopLeft(), aFrame->PresContext()->AppUnitsPerDevPixel());
-  AutoRestoreTransform autoRestoreTransform(aDrawTarget);
-  aDrawTarget->SetTransform(
-      aDrawTarget->GetTransform().PreTranslate(ToPoint(devPixelOffset)));
-  f->GetImageMap()->Draw(aFrame, *aDrawTarget,
-                         ColorPattern(ToDeviceColor(sRGBColor::OpaqueBlack())));
-}
-#endif
-
 // We want to sync-decode in this case, as otherwise we either need to flash
 // white while waiting to decode the new image, or paint the old image with a
 // different aspect-ratio, which would be bad as it'd be stretched.
@@ -2296,14 +2280,6 @@ void nsImageFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
         gIconLoad->RemoveIconObserver(this);
         mDisplayingIcon = false;
       }
-
-#ifdef DEBUG
-      if (GetShowFrameBorders() && GetImageMap()) {
-        aLists.Outlines()->AppendNewToTop<nsDisplayGeneric>(
-            aBuilder, this, PaintDebugImageMap, "DebugImageMap",
-            DisplayItemType::TYPE_DEBUG_IMAGE_MAP);
-      }
-#endif
     }
   }
 

@@ -7,9 +7,9 @@
 
 "use strict";
 
-XPCOMUtils.defineLazyModuleGetters(this, {
+ChromeUtils.defineESModuleGetters(this, {
   UrlbarProviderQuickActions:
-    "resource:///modules/UrlbarProviderQuickActions.jsm",
+    "resource:///modules/UrlbarProviderQuickActions.sys.mjs",
 });
 
 let testActionCalled = 0;
@@ -96,4 +96,98 @@ add_task(async function enter_search_mode_key() {
     entry: "typed",
   });
   await UrlbarTestUtils.promisePopupClose(window);
+  EventUtils.synthesizeKey("KEY_Escape");
+});
+
+add_task(async function test_disabled() {
+  testActionCalled = 0;
+  UrlbarProviderQuickActions.addAction("disabledaction", {
+    commands: ["disabledaction"],
+    isActive: () => false,
+    label: "quickactions-restart",
+    onPick: () => testActionCalled++,
+  });
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "disabled",
+  });
+  Assert.equal(
+    UrlbarTestUtils.getResultCount(window),
+    2,
+    "The action is displayed"
+  );
+
+  EventUtils.synthesizeKey("KEY_ArrowDown");
+  Assert.equal(
+    UrlbarTestUtils.getSelectedElementIndex(window),
+    -1,
+    "No results should be selected."
+  );
+
+  let disabledButton = window.document.querySelector(
+    ".urlbarView-row[dynamicType=quickactions]"
+  );
+  EventUtils.synthesizeMouseAtCenter(disabledButton, {});
+  Assert.equal(
+    testActionCalled,
+    0,
+    "onPick for disabled action was not called"
+  );
+
+  await UrlbarTestUtils.promisePopupClose(window);
+  EventUtils.synthesizeKey("KEY_Escape");
+  UrlbarProviderQuickActions.removeAction("disabledaction");
+});
+
+add_task(async function test_screenshot_disabled() {
+  let onLoaded = BrowserTestUtils.browserLoaded(
+    gBrowser.selectedBrowser,
+    false,
+    "about:blank"
+  );
+  BrowserTestUtils.loadURI(gBrowser.selectedBrowser, "about:blank");
+  await onLoaded;
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "screenshot",
+  });
+  Assert.equal(
+    UrlbarTestUtils.getResultCount(window),
+    2,
+    "The action is displayed"
+  );
+  let screenshotButton = window.document.querySelector(
+    ".urlbarView-row[dynamicType=quickactions] .urlbarView-quickaction-row"
+  );
+  Assert.equal(
+    screenshotButton.getAttribute("disabled"),
+    "disabled",
+    "Screenshot button is disabled on about pages"
+  );
+
+  await UrlbarTestUtils.promisePopupClose(window);
+  EventUtils.synthesizeKey("KEY_Escape");
+});
+
+add_task(async function match_in_phrase() {
+  UrlbarProviderQuickActions.addAction("newtestaction", {
+    commands: ["matchingstring"],
+    label: "quickactions-downloads",
+  });
+
+  info("The action is matched when at end of input");
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "Test we match at end of matchingstring",
+  });
+  Assert.equal(
+    UrlbarTestUtils.getResultCount(window),
+    2,
+    "We matched the action"
+  );
+  await UrlbarTestUtils.promisePopupClose(window);
+  EventUtils.synthesizeKey("KEY_Escape");
+  UrlbarProviderQuickActions.removeAction("newtestaction");
 });

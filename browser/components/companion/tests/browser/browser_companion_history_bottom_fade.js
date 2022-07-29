@@ -31,7 +31,7 @@ add_setup(async () => {
 
 add_task(async function test_fade_applied_and_removed() {
   let helper = new CompanionHelper();
-  await helper.selectHistoryTab();
+  await helper.revealHistoryTab();
 
   let {
     searchInputValue,

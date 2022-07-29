@@ -437,6 +437,14 @@ e-global-nav-debugging h2 {
   border-radius: 42px;
 }
 
+.tab-button-group:not([history-visible]) > #companion-deck-button-history {
+  display: none;
+}
+
+.tab-button-group[history-visible] {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .tab-button {
   /* Overwrite the generic button styles */
   border-radius: 0;
@@ -467,6 +475,10 @@ e-global-nav-debugging h2 {
 
 #companion-deck-button-now img {
   background: center center no-repeat url(chrome://browser/skin/trending.svg);
+}
+
+#companion-deck-button-history img {
+  background: center center no-repeat url("chrome://browser/skin/history.svg");
 }
 
 .browse {
@@ -535,14 +547,40 @@ e-global-nav-debugging h2 {
   background-image: url("calendar.svg");
 }
 
-.browse button.history {
-  background-image: url("chrome://browser/skin/history.svg");
+.history-panel-content {
+  min-height: 0;
 }
 
-section-panel[name="history"] {
-  height: 100%;
+.history-panel-header {
   display: flex;
-  flex-direction: column;
+  margin-block: 12px 15px;
+}
+
+.history-panel-heading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.history-section-close {
+  background-image: url("chrome://global/skin/icons/close.svg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  -moz-context-properties: fill;
+  fill: currentColor;
+  height: 24px;
+  width: 24px;
+  padding: 0;
+  margin: 0;
+  min-height: unset;
+  min-width: unset;
+  position: absolute;
+  right: 16px;
+}
+
+.history-section-close:dir(rtl) {
+  left: 16px;
 }
 
 #history-viewer {
@@ -651,31 +689,36 @@ header h2 {
 /* NOTE: these border radii on the now/browse buttons are not final styles;
    they're just a stopgap while lavender is being worked on. */
 #companion-deck-button-browse,
-#companion-deck-button-now {
+#companion-deck-button-now,
+#companion-deck-button-history {
   border-radius: 16px;
 }
 
 @media (prefers-contrast) {
   #companion-deck-button-browse[aria-selected="true"],
-  #companion-deck-button-now[aria-selected="true"] {
+  #companion-deck-button-now[aria-selected="true"],
+  #companion-deck-button-history[aria-selected="true"] {
     background-color: SelectedItem;
     color: SelectedItemText;
   }
 
   #companion-deck-button-browse[aria-selected="true"] img,
-  #companion-deck-button-now[aria-selected="true"] img {
+  #companion-deck-button-now[aria-selected="true"] img,
+  #companion-deck-button-history[aria-selected="true"] img {
     fill: SelectedItemText;
     -moz-context-properties: fill;
   }
 
   #companion-deck-button-browse:hover,
-  #companion-deck-button-now:hover {
+  #companion-deck-button-now:hover,
+  #companion-deck-button-history:hover {
     background-color: var(--in-content-button-background-hover);
     color: var(--in-content-button-text-color-hover);
   }
 
   #companion-deck-button-browse:hover img,
-  #companion-deck-button-now:hover img {
+  #companion-deck-button-now:hover img,
+  #companion-deck-button-history:hover img {
     fill: var(--in-content-button-text-color-hover);
     -moz-context-properties: fill;
   }

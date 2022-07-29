@@ -31,8 +31,10 @@ __webpack_require__.r(__webpack_exports__);
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-// If we're in a subdialog, then this is a spotlight modal
-const page = document.querySelector(":root[dialogroot=true]") ? "spotlight" : "about:welcome";
+// If we're in a subdialog, then this is a spotlight modal.
+// Otherwise, this is about:welcome or a Feature Callout
+// in another "about" page and we should return the current page.
+const page = document.querySelector(":root[dialogroot=true]") ? "spotlight" : document.location.href;
 const AboutWelcomeUtils = {
   handleUserAction(action) {
     window.AWSendToParent("SPECIAL_ACTION", action);
@@ -196,23 +198,27 @@ const MultiStageAboutWelcome = props => {
       }
     }); // Remember that a new screen has loaded for browser navigation
 
-    if (index > window.history.state) {
+    if (props.updateHistory && index > window.history.state) {
       window.history.pushState(index, "");
     }
   }, [index]);
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-    // Switch to the screen tracked in state (null for initial state)
-    // or last screen index if a user navigates by pressing back
-    // button from about:home
-    const handler = ({
-      state
-    }) => setScreenIndex(Math.min(state, screens.length - 1)); // Handle page load, e.g., going back to about:welcome from about:home
+    if (props.updateHistory) {
+      // Switch to the screen tracked in state (null for initial state)
+      // or last screen index if a user navigates by pressing back
+      // button from about:home
+      const handler = ({
+        state
+      }) => setScreenIndex(Math.min(state, screens.length - 1)); // Handle page load, e.g., going back to about:welcome from about:home
 
 
-    handler(window.history); // Watch for browser back/forward button navigation events
+      handler(window.history); // Watch for browser back/forward button navigation events
 
-    window.addEventListener("popstate", handler);
-    return () => window.removeEventListener("popstate", handler);
+      window.addEventListener("popstate", handler);
+      return () => window.removeEventListener("popstate", handler);
+    }
+
+    return false;
   }, []);
   const [flowParams, setFlowParams] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
   const {
@@ -363,7 +369,8 @@ const StepsIndicator = props => {
     let className = `${i === props.order ? "current" : ""} ${i < props.order ? "complete" : ""}`;
     steps.push( /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       key: i,
-      className: `indicator ${className}`
+      className: `indicator ${className}`,
+      role: "presentation"
     }));
   }
 
@@ -812,14 +819,18 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
     })), content.secondary_button ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__.SecondaryCTA, {
       content: content,
       handleAction: this.props.handleAction
-    }) : null)), hideStepsIndicator ? null : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("nav", {
+    }) : null)), hideStepsIndicator ? null : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: `steps ${content.progress_bar ? "progress-bar" : ""}`,
-      "data-l10n-id": "onboarding-welcome-steps-indicator",
+      "data-l10n-id": "onboarding-welcome-steps-indicator2",
       "data-l10n-args": JSON.stringify({
         current: this.props.order,
         total
-      })
-    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("br", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__.StepsIndicator, {
+      }),
+      role: "meter",
+      "aria-valuenow": this.props.order,
+      "aria-valuemin": 1,
+      "aria-valuemax": total
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_5__.StepsIndicator, {
       order: this.props.stepOrder,
       totalNumberOfScreens: total
     })))));
@@ -1711,6 +1722,7 @@ class AboutWelcome extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_3__.MultiStageAboutWelcome, {
       message_id: props.messageId,
       screens: props.screens,
+      updateHistory: !props.disableHistoryUpdates,
       metricsFlowUri: this.state.metricsFlowUri,
       utm_term: props.UTMTerm,
       transitions: props.transitions,

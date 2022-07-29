@@ -27,13 +27,11 @@ class JS_PUBLIC_API ContextOptions {
         wasmVerbose_(false),
         wasmBaseline_(true),
         wasmIon_(true),
-        wasmCranelift_(false),
 #define WASM_DEFAULT_FEATURE(NAME, ...) wasm##NAME##_(true),
 #define WASM_EXPERIMENTAL_FEATURE(NAME, ...) wasm##NAME##_(false),
         JS_FOR_WASM_FEATURES(WASM_DEFAULT_FEATURE, WASM_DEFAULT_FEATURE, WASM_EXPERIMENTAL_FEATURE)
 #undef WASM_DEFAULT_FEATURE
 #undef WASM_EXPERIMENTAL_FEATURE
-        wasmSimdWormhole_(false),
         testWasmAwaitTier2_(false),
         throwOnAsmJSValidationFailure_(false),
         disableIon_(false),
@@ -103,10 +101,6 @@ class JS_PUBLIC_API ContextOptions {
     return *this;
   }
 
-  bool wasmCranelift() const { return wasmCranelift_; }
-  // Defined out-of-line because it depends on a compile-time option
-  ContextOptions& setWasmCranelift(bool flag);
-
   bool testWasmAwaitTier2() const { return testWasmAwaitTier2_; }
   ContextOptions& setTestWasmAwaitTier2(bool flag) {
     testWasmAwaitTier2_ = flag;
@@ -121,10 +115,6 @@ class JS_PUBLIC_API ContextOptions {
   }
   JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE, WASM_FEATURE)
 #undef WASM_FEATURE
-
-  bool wasmSimdWormhole() const { return wasmSimdWormhole_; }
-  // Defined out-of-line because it depends on a compile-time option
-  ContextOptions& setWasmSimdWormhole(bool flag);
 
   bool throwOnAsmJSValidationFailure() const {
     return throwOnAsmJSValidationFailure_;
@@ -256,11 +246,9 @@ class JS_PUBLIC_API ContextOptions {
   bool wasmVerbose_ : 1;
   bool wasmBaseline_ : 1;
   bool wasmIon_ : 1;
-  bool wasmCranelift_ : 1;
 #define WASM_FEATURE(NAME, ...) bool wasm##NAME##_ : 1;
   JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE, WASM_FEATURE)
 #undef WASM_FEATURE
-  bool wasmSimdWormhole_ : 1;
   bool testWasmAwaitTier2_ : 1;
   bool throwOnAsmJSValidationFailure_ : 1;
   bool disableIon_ : 1;

@@ -24,6 +24,9 @@ class OnboardingChild extends JSWindowActorChild {
       case "SetOnboardingProgressPrefValue":
         this.sendAsyncMessage(event.type, event.detail.newPrefValue);
         break;
+      case "RecordEvent":
+        this.sendAsyncMessage(event.type, event.detail);
+        break;
       case "OpenFxa":
       case "OnboardingCompleted":
       default:

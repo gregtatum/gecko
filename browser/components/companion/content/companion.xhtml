@@ -276,7 +276,6 @@
       <button class="downloads" data-l10n-id="browse-list-downloads" is="named-deck-button" deck="companion-deck" name="downloads"></button>
       <button class="passwords" data-l10n-id="browse-list-passwords" data-pref="browser.companion.passwords.enabled" is="named-deck-button" deck="companion-deck" name="passwords"></button>
       <button class="calendar" data-l10n-id="browse-list-calendar" data-pref="browser.pinebuild.calendar.browseEnabled" is="named-deck-button" deck="companion-deck" name="calendar"></button>
-      <button class="history" data-l10n-id="browse-list-history" data-pref="browser.urlbar.opencompanionsearch.enabled" is="named-deck-button" deck="companion-deck" name="history"></button>
     </div>
   </template>
 
@@ -296,6 +295,7 @@
     <html:button-group class="tab-button-group">
       <html:button class="tab-button ghost-button" name="now" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-now"></span></html:button>
       <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-browse"></span></html:button>
+      <html:button class="tab-button ghost-button history" name="history" is="named-deck-button" deck="companion-deck" data-pref="browser.urlbar.opencompanionsearch.enabled"><img /><span data-l10n-id="companion-deck-history"></span></html:button>
     </html:button-group>
     <html:named-deck id="companion-deck">
       <template xmlns="http://www.w3.org/1999/xhtml" name="blank">
@@ -333,6 +333,20 @@
         </div>
       </template>
 
+      <template xmlns="http://www.w3.org/1999/xhtml" name="history">
+        <div class="history-panel">
+          <div class="history-panel-header">
+            <span class="history-panel-heading">
+              <h1 class="text-heading-m-med" data-l10n-id="history-section-header"></h1>
+            </span>
+            <button data-l10n-id="history-section-close-button" class="history-section-close ghost-button" />
+          </div>
+          <div class="history-panel-content">
+            <e-history-viewer id="history-viewer" />
+          </div>
+        </div>
+      </template>
+
       <template xmlns="http://www.w3.org/1999/xhtml" id="sessions" name="sessions">
         <section-panel heading-l10n-id="session-section-header">
           <full-session-list></full-session-list>
@@ -366,12 +380,6 @@
       <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups-detail">
         <section-panel>
           <snapshot-group-list-detail id="snapshot-groups-detail"></snapshot-group-list-detail>
-        </section-panel>
-      </template>
-
-      <template xmlns="http://www.w3.org/1999/xhtml" name="history">
-        <section-panel heading-l10n-id="history-section-header">
-          <e-history-viewer id="history-viewer" />
         </section-panel>
       </template>
     </html:named-deck>

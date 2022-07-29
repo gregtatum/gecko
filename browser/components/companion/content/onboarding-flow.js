@@ -25,6 +25,11 @@ class OnboardingFlowElement extends HTMLElement {
     "complete-onboarding",
   ];
 
+  // Sequence of steps in the onboarding flow, with names shortened to fit
+  // the byte length limits of Glean events. If this sequence is changed, the
+  // corresponding metrics events and tests should also be updated. MR2-2885
+  STEPS = ["welcome", "connect_fxa", "fxa_connected", "data_prefs", "congrats"];
+
   constructor() {
     super();
 
@@ -67,8 +72,6 @@ class OnboardingFlowElement extends HTMLElement {
       this._cards.push(thisCard);
       i++;
     }
-
-    this.changePage(this._currentIndex);
   }
 
   changePage(newPageIndex) {
@@ -86,6 +89,8 @@ class OnboardingFlowElement extends HTMLElement {
 
     this._forwardNavButton.disabled = cardToShow.forwardNav === "false";
     this._backwardNavButton.disabled = cardToShow.backwardNav === "false";
+
+    this.recordCardShown(this._currentIndex);
 
     this.setProgressPref(this._currentIndex);
   }
@@ -111,6 +116,28 @@ class OnboardingFlowElement extends HTMLElement {
     );
   }
 
+  _recordEvent(eventName, idx) {
+    document.dispatchEvent(
+      new CustomEvent("RecordEvent", {
+        bubbles: true,
+        detail: {
+          method: eventName,
+          object: this.STEPS[idx],
+          order: idx,
+          is_last: idx == this.STEPS.length - 1,
+        },
+      })
+    );
+  }
+
+  recordCardShown(idx) {
+    this._recordEvent("shown", idx);
+  }
+
+  recordCardCompleted(idx) {
+    this._recordEvent("done", idx);
+  }
+
   handleEvent(event) {
     if (event.type === "OnboardingProgressPrefValue") {
       let newPage = event.detail.prefValue;
@@ -120,14 +147,17 @@ class OnboardingFlowElement extends HTMLElement {
 
     switch (event.target.dataset.action) {
       case "complete-onboarding":
+        this.recordCardCompleted(this._currentIndex);
         document.dispatchEvent(
           new CustomEvent("OnboardingCompleted", { bubbles: true })
         );
         break;
       case "initiate-fxa-flow":
+        this.recordCardCompleted(this._currentIndex);
         document.dispatchEvent(new CustomEvent("OpenFxa", { bubbles: true }));
         break;
       case "navigate-forward":
+        this.recordCardCompleted(this._currentIndex);
         let nextCard = this._currentIndex + 1;
         this.changePage(nextCard);
         break;

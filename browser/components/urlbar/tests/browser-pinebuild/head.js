@@ -3,9 +3,9 @@
 
 "use strict";
 
-XPCOMUtils.defineLazyModuleGetters(this, {
-  Interactions: "resource:///modules/Interactions.jsm",
-  Snapshots: "resource:///modules/Snapshots.jsm",
+ChromeUtils.defineESModuleGetters(this, {
+  Interactions: "resource:///modules/Interactions.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
 });
 
 let sandbox;

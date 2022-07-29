@@ -27,12 +27,7 @@ describe("<CardGrid>", () => {
   let wrapper;
 
   beforeEach(() => {
-    wrapper = shallow(
-      <CardGrid
-        DiscoveryStream={INITIAL_STATE.DiscoveryStream}
-        Prefs={INITIAL_STATE.Prefs}
-      />
-    );
+    wrapper = shallow(<CardGrid Prefs={INITIAL_STATE.Prefs} />);
   });
 
   it("should render an empty div", () => {
@@ -52,15 +47,6 @@ describe("<CardGrid>", () => {
         .type(),
       DSCard
     );
-  });
-
-  it("should add hero classname to card grid", () => {
-    wrapper.setProps({
-      display_variant: "hero",
-      data: { recommendations: [{}, {}] },
-    });
-
-    assert.ok(wrapper.find(".ds-card-grid-hero").exists());
   });
 
   it("should add 4 card classname to card grid", () => {
@@ -89,7 +75,6 @@ describe("<CardGrid>", () => {
       data: {
         recommendations: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}],
       },
-      DiscoveryStream: INITIAL_STATE.DiscoveryStream,
       Prefs: INITIAL_STATE.Prefs,
     };
     wrapper = mount(

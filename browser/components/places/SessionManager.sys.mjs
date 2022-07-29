@@ -17,7 +17,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   setTimeout: "resource://gre/modules/Timer.jsm",
-  Sounds: "resource:///modules/Sounds.jsm",
   TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.jsm",
 });
 
@@ -268,8 +267,8 @@ export const SessionManager = new (class SessionManager extends EventEmitter {
     if (setAsideBtn.disabled) {
       return;
     }
+    Glean.pinebuild.setAsideClickCount.add(1);
     setAsideBtn.disabled = true;
-    lazy.Sounds.play(lazy.Sounds.SET_ASIDE);
     await this.replaceSession(window);
   }
 
@@ -311,7 +310,7 @@ export const SessionManager = new (class SessionManager extends EventEmitter {
     let {
       animationCompletePromise,
       timerCompletePromise,
-    } = window.gBrowser.doPinebuildSessionHideAnimation();
+    } = window.gBrowser.doPinebuildSessionHideAnimation(!restoreSessionGuid);
 
     // If this fails, the function will not complete and the existing session
     // will remain. This allows the user to take appropriate action.

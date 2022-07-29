@@ -167,7 +167,6 @@ export class _DiscoveryStreamBase extends React.PureComponent {
             links={component.properties.links}
             extraLinks={component.properties.extraLinks}
             alignment={component.properties.alignment}
-            display_variant={component.properties.display_variant}
             explore_topics={component.properties.explore_topics}
             header={component.header}
             locale={this.props.App.locale}
@@ -183,10 +182,8 @@ export class _DiscoveryStreamBase extends React.PureComponent {
             feed={component.feed}
             spocs={DiscoveryStream.spocs}
             placement={component.placement}
-            border={component.properties.border}
             type={component.type}
             items={component.properties.items}
-            pocket_button_enabled={component.pocketButtonEnabled}
             dismissible={this.props.DiscoveryStream.isCollectionDismissible}
             dispatch={this.props.dispatch}
           />
@@ -195,29 +192,20 @@ export class _DiscoveryStreamBase extends React.PureComponent {
         return (
           <CardGrid
             title={component.header && component.header.title}
-            display_variant={component.properties.display_variant}
             data={component.data}
             feed={component.feed}
             widgets={component.widgets}
-            border={component.properties.border}
             type={component.type}
             dispatch={this.props.dispatch}
             items={component.properties.items}
             hybridLayout={component.properties.hybridLayout}
             hideCardBackground={component.properties.hideCardBackground}
             fourCardLayout={component.properties.fourCardLayout}
-            hideDescriptions={component.properties.hideDescriptions}
             compactGrid={component.properties.compactGrid}
-            compactImages={component.properties.compactImages}
-            imageGradient={component.properties.imageGradient}
-            newSponsoredLabel={component.properties.newSponsoredLabel}
-            titleLines={component.properties.titleLines}
-            descLines={component.properties.descLines}
             essentialReadsHeader={component.properties.essentialReadsHeader}
             editorsPicksHeader={component.properties.editorsPicksHeader}
-            readTime={component.properties.readTime}
-            saveToPocketCard={component.saveToPocketCard}
-            pocket_button_enabled={component.pocketButtonEnabled}
+            recentSavesEnabled={this.props.DiscoveryStream.recentSavesEnabled}
+            hideDescriptions={this.props.DiscoveryStream.hideDescriptions}
           />
         );
       case "HorizontalRule":

@@ -30,6 +30,8 @@ const xpcshellTestPaths = [
   "**/test*/unit*/**/",
   "**/test*/*/unit*/",
   "**/test*/xpcshell/**/",
+  // Special case for xpcshell harness.
+  "testing/xpcshell/example/unit/",
 ];
 
 const browserTestPaths = ["**/test*/**/browser*/"];
@@ -203,7 +205,6 @@ module.exports = {
       excludedFiles: [
         // These are suitable as good first bugs, take one or two related lines
         // per bug.
-        "caps/tests/unit/test_origin.js",
         "extensions/permissions/**",
         "image/test/unit/**",
         "intl/uconv/tests/unit/test_bug340714.js",
@@ -224,7 +225,6 @@ module.exports = {
         "dom/**",
         "netwerk/**",
         "security/manager/ssl/tests/unit/**",
-        "testing/xpcshell/**",
         "toolkit/components/**",
         "toolkit/modules/**",
       ],

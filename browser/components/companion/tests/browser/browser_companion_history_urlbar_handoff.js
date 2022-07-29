@@ -10,8 +10,8 @@ const TEST_URLS = [
 ];
 
 XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
-  const { UrlbarTestUtils: module } = ChromeUtils.import(
-    "resource://testing-common/UrlbarTestUtils.jsm"
+  const { UrlbarTestUtils: module } = ChromeUtils.importESModule(
+    "resource://testing-common/UrlbarTestUtils.sys.mjs"
   );
   module.init(this);
   registerCleanupFunction(() => module.uninit());
@@ -35,7 +35,7 @@ add_setup(async () => {
  *    handoff item.
  * 3. Chooses that item via keyboard navigation.
  * 4. Makes sure that this puts the Companion into the visible state.
- * 5. Checks that the History section is selected in the Companion
+ * 5. Checks that the History tab is revealed in the Companion and selected.
  * 6. Checks that the query string has been placed into the search input
  * 7. Checks that the shown history result matches the expected result.
  *
@@ -83,9 +83,12 @@ async function testUrlbarHandoff(helper, queryString, expectedHistoryResult) {
 
     let deck = content.document.querySelector("#companion-deck");
     Assert.equal(deck.selectedViewName, "history");
-    let historyPane = content.document.querySelector(
-      "section-panel[name='history']"
+    let historyTab = content.document.querySelector(".tab-button.history");
+    Assert.ok(
+      !ContentTaskUtils.is_hidden(historyTab),
+      "History tab button is not hidden."
     );
+    let historyPane = content.document.querySelector(".history-panel");
     Assert.ok(
       !ContentTaskUtils.is_hidden(historyPane),
       "History pane is not hidden."
@@ -106,8 +109,8 @@ async function testUrlbarHandoff(helper, queryString, expectedHistoryResult) {
 
 /**
  * Tests that the UrlbarProviderOpenCompanionSearch provider will
- * switch the Companion to showing the History section with the
- * query transferred over if the Companion starts closed.
+ * cause the Companion to reveal the History tab with the query
+ * transferred over if the Companion starts closed.
  */
 add_task(async function test_companion_starts_closed() {
   // Start with the Companion sidebar closed.
@@ -126,8 +129,8 @@ add_task(async function test_companion_starts_closed() {
 
 /**
  * Tests that the UrlbarProviderOpenCompanionSearch provider will
- * switch the Companion to showing the History section with the
- * query transferred over if the Companion is already open.
+ * cause the Companion to reveal the History tab with the query
+ * transferred over if the Companion is already open.
  */
 add_task(async function test_companion_starts_open() {
   // Start with the Companion sidebar open.

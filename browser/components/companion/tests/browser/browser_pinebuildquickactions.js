@@ -1,13 +1,15 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
-const { UrlbarProviderPinebuildQuickActionsFilter } = ChromeUtils.import(
-  "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm"
+const {
+  UrlbarProviderPinebuildQuickActionsFilter,
+} = ChromeUtils.importESModule(
+  "resource:///modules/UrlbarProviderPinebuildQuickActions.sys.mjs"
 );
 
 XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
-  const { UrlbarTestUtils: module } = ChromeUtils.import(
-    "resource://testing-common/UrlbarTestUtils.jsm"
+  const { UrlbarTestUtils: module } = ChromeUtils.importESModule(
+    "resource://testing-common/UrlbarTestUtils.sys.mjs"
   );
   module.init(this);
   registerCleanupFunction(() => module.uninit());

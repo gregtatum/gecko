@@ -175,6 +175,7 @@
 #include "vm/ArgumentsObject.h"
 #include "vm/Compression.h"
 #include "vm/ErrorObject.h"
+#include "vm/ErrorReporting.h"
 #include "vm/HelperThreads.h"
 #include "vm/JSAtom.h"
 #include "vm/JSContext.h"
@@ -615,9 +616,6 @@ JS_FOR_WASM_FEATURES(WASM_DEFAULT_FEATURE, WASM_DEFAULT_FEATURE,
 #undef WASM_DEFAULT_FEATURE
 #undef WASM_EXPERIMENTAL_FEATURE
 
-#ifdef ENABLE_WASM_SIMD_WORMHOLE
-bool shell::enableWasmSimdWormhole = false;
-#endif
 bool shell::enableWasmVerbose = false;
 bool shell::enableTestWasmAwaitTier2 = false;
 bool shell::enableSourcePragmas = true;
@@ -5314,7 +5312,8 @@ static bool ParseModule(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  RootedObject module(cx, frontend::CompileModule(cx, options, srcBuf));
+  MainThreadErrorContext ec(cx);
+  RootedObject module(cx, frontend::CompileModule(cx, &ec, options, srcBuf));
   if (!module) {
     return false;
   }
@@ -5586,6 +5585,14 @@ static bool RegisterModule(JSContext* cx, unsigned argc, Value* vp) {
   return true;
 }
 
+static bool ClearModules(JSContext* cx, unsigned argc, Value* vp) {
+  CallArgs args = CallArgsFromVp(argc, vp);
+  ShellContext* sc = GetShellContext(cx);
+  sc->moduleLoader->clearModules(cx);
+  args.rval().setUndefined();
+  return true;
+}
+
 static bool ModuleLink(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
 
@@ -5757,7 +5764,8 @@ static bool DumpAST(JSContext* cx, const JS::ReadOnlyCompileOptions& options,
                     js::frontend::ParseGoal goal) {
   using namespace js::frontend;
 
-  Parser<FullParseHandler, Unit> parser(cx, options, units, length,
+  MainThreadErrorContext ec(cx);
+  Parser<FullParseHandler, Unit> parser(cx, &ec, options, units, length,
                                         /* foldConstants = */ false,
                                         compilationState,
                                         /* syntaxParser = */ nullptr);
@@ -5808,12 +5816,14 @@ template <typename Unit>
     return false;
   }
 
+  MainThreadErrorContext ec(cx);
   UniquePtr<frontend::ExtensibleCompilationStencil> stencil;
   if (goal == frontend::ParseGoal::Script) {
     stencil = frontend::CompileGlobalScriptToExtensibleStencil(
-        cx, input.get(), srcBuf, ScopeKind::Global);
+        cx, &ec, input.get(), srcBuf, ScopeKind::Global);
   } else {
-    stencil = frontend::ParseModuleToExtensibleStencil(cx, input.get(), srcBuf);
+    stencil =
+        frontend::ParseModuleToExtensibleStencil(cx, &ec, input.get(), srcBuf);
   }
 
   if (!stencil) {
@@ -5976,11 +5986,12 @@ static bool FrontendTest(JSContext* cx, unsigned argc, Value* vp,
             return false;
           }
 
+          MainThreadErrorContext ec(cx);
           Rooted<frontend::CompilationInput> input(
               cx, frontend::CompilationInput(options));
           UniquePtr<frontend::ExtensibleCompilationStencil> stencil;
           if (!Smoosh::tryCompileGlobalScriptToExtensibleStencil(
-                  cx, input.get(), srcBuf, stencil)) {
+                  cx, &ec, input.get(), srcBuf, stencil)) {
             return false;
           }
           if (!stencil) {
@@ -6119,8 +6130,9 @@ static bool SyntaxParse(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
+  MainThreadErrorContext ec(cx);
   Parser<frontend::SyntaxParseHandler, char16_t> parser(
-      cx, options, chars, length,
+      cx, &ec, options, chars, length,
       /* foldConstants = */ false, compilationState,
       /* syntaxParser = */ nullptr);
   if (!parser.checkOptions()) {
@@ -8790,9 +8802,7 @@ static bool WasmLoop(JSContext* cx, unsigned argc, Value* vp) {
 
     Rooted<TypedArrayObject*> typedArray(cx, &ret->as<TypedArrayObject>());
     Rooted<WasmInstanceObject*> instanceObj(cx);
-    // No additional compile options here, we don't need them for this use case.
-    RootedValue maybeOptions(cx);
-    if (!wasm::Eval(cx, typedArray, importObj, maybeOptions, &instanceObj)) {
+    if (!wasm::Eval(cx, typedArray, importObj, &instanceObj)) {
       // Clear any pending exceptions, we don't care about them
       cx->clearPendingException();
     }
@@ -9393,6 +9403,10 @@ static const JSFunctionSpecWithHelp shell_functions[] = {
 "registerModule(specifier, module)",
 "  Register a module with the module loader, so that subsequent import from\n"
 "  |specifier| will resolve to |module|.  Returns |module|."),
+
+    JS_FN_HELP("clearModules", ClearModules, 0, 0,
+"clearModules()",
+"  Clear knowledge of all loaded modules."),
 
     JS_FN_HELP("moduleLink", ModuleLink, 1, 0,
 "moduleLink(moduleOjbect)",
@@ -11054,21 +11068,12 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
                strcmp(str, "baseline+optimized") == 0) {
       MOZ_ASSERT(enableWasmBaseline);
       MOZ_ASSERT(enableWasmOptimizing);
-#ifdef ENABLE_WASM_CRANELIFT
-    } else if (strcmp(str, "cranelift") == 0) {
-      enableWasmBaseline = false;
-      enableWasmOptimizing = true;
-    } else if (strcmp(str, "baseline+cranelift") == 0) {
-      MOZ_ASSERT(enableWasmBaseline);
-      enableWasmOptimizing = true;
-#else
     } else if (strcmp(str, "ion") == 0) {
       enableWasmBaseline = false;
       enableWasmOptimizing = true;
     } else if (strcmp(str, "baseline+ion") == 0) {
       MOZ_ASSERT(enableWasmBaseline);
       enableWasmOptimizing = true;
-#endif
     } else {
       return OptionFailure("wasm-compiler", str);
     }
@@ -11085,9 +11090,6 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
 #undef WASM_DEFAULT_FEATURE
 #undef WASM_EXPERIMENTAL_FEATURE
 
-#ifdef ENABLE_WASM_SIMD_WORMHOLE
-  enableWasmSimdWormhole = op.getBoolOption("wasm-simd-wormhole");
-#endif
   enableWasmVerbose = op.getBoolOption("wasm-verbose");
   enableTestWasmAwaitTier2 = op.getBoolOption("test-wasm-await-tier2");
   enableSourcePragmas = !op.getBoolOption("no-source-pragmas");
@@ -11118,21 +11120,12 @@ static bool SetContextOptions(JSContext* cx, const OptionParser& op) {
       .setWasm(enableWasm)
       .setWasmForTrustedPrinciples(enableWasm)
       .setWasmBaseline(enableWasmBaseline)
-#if defined(ENABLE_WASM_CRANELIFT)
-      .setWasmCranelift(enableWasmOptimizing)
-      .setWasmIon(false)
-#else
-      .setWasmCranelift(false)
       .setWasmIon(enableWasmOptimizing)
-#endif
 
 #define WASM_FEATURE(NAME, ...) .setWasm##NAME(enableWasm##NAME)
           JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE, WASM_FEATURE)
 #undef WASM_FEATURE
 
-#ifdef ENABLE_WASM_SIMD_WORMHOLE
-      .setWasmSimdWormhole(enableWasmSimdWormhole)
-#endif
       .setWasmVerbose(enableWasmVerbose)
       .setTestWasmAwaitTier2(enableTestWasmAwaitTier2)
       .setSourcePragmas(enableSourcePragmas)
@@ -11528,20 +11521,11 @@ static void SetWorkerContextOptions(JSContext* cx) {
       .setAsmJS(enableAsmJS)
       .setWasm(enableWasm)
       .setWasmBaseline(enableWasmBaseline)
-#if defined(ENABLE_WASM_CRANELIFT)
-      .setWasmCranelift(enableWasmOptimizing)
-      .setWasmIon(false)
-#else
-      .setWasmCranelift(false)
       .setWasmIon(enableWasmOptimizing)
-#endif
 #define WASM_FEATURE(NAME, ...) .setWasm##NAME(enableWasm##NAME)
           JS_FOR_WASM_FEATURES(WASM_FEATURE, WASM_FEATURE, WASM_FEATURE)
 #undef WASM_FEATURE
 
-#ifdef ENABLE_WASM_SIMD_WORMHOLE
-      .setWasmSimdWormhole(enableWasmSimdWormhole)
-#endif
       .setWasmVerbose(enableWasmVerbose)
       .setTestWasmAwaitTier2(enableTestWasmAwaitTier2)
       .setSourcePragmas(enableSourcePragmas);
@@ -12063,13 +12047,8 @@ int main(int argc, char** argv) {
       !op.addStringOption(
           '\0', "wasm-compiler", "[option]",
           "Choose to enable a subset of the wasm compilers, valid options are "
-          "'none', 'baseline', 'ion', 'cranelift', 'optimizing', "
-          "'baseline+ion', "
-          "'baseline+cranelift', 'baseline+optimizing'. Choosing 'ion' when "
-          "Ion is "
-          "not available or 'cranelift' when Cranelift is not available will "
-          "fail; "
-          "use 'optimizing' for cross-compiler compatibility.") ||
+          "'none', 'baseline', 'ion', 'optimizing', "
+          "'baseline+ion', 'baseline+optimizing'.") ||
       !op.addBoolOption('\0', "wasm-verbose",
                         "Enable WebAssembly verbose logging") ||
       !op.addBoolOption('\0', "disable-wasm-huge-memory",
@@ -12095,14 +12074,8 @@ int main(int argc, char** argv) {
 #undef WASM_DEFAULT_FEATURE
 #undef WASM_TENTATIVE_FEATURE
 #undef WASM_EXPERIMENTAL_FEATURE
-#ifdef ENABLE_WASM_SIMD_WORMHOLE
-          !op.addBoolOption('\0', "wasm-simd-wormhole",
-                            "Enable wasm SIMD wormhole (UTSL)") ||
-#else
-          !op.addBoolOption('\0', "wasm-simd-wormhole", "No-op") ||
-#endif
-      !op.addBoolOption('\0', "no-native-regexp",
-                        "Disable native regexp compilation") ||
+          !op.addBoolOption('\0', "no-native-regexp",
+                            "Disable native regexp compilation") ||
       !op.addIntOption(
           '\0', "regexp-warmup-threshold", "COUNT",
           "Wait for COUNT invocations before compiling regexps to native code "
@@ -12832,10 +12805,9 @@ int main(int argc, char** argv) {
                            WASM_EXPERIMENTAL_FEATURE)
 #  undef WASM_DEFAULT_FEATURE
 #  undef WASM_EXPERIMENTAL_FEATURE
-      // Feature selection options
-      "--wasm-simd-wormhole",
       // Compiler selection options
-      "--test-wasm-await-tier2", NULL};
+      "--test-wasm-await-tier2",
+      NULL};
   for (const char** p = &to_propagate[0]; *p; p++) {
     if (op.getBoolOption(&(*p)[2] /* 2 => skip the leading '--' */)) {
       if (!sCompilerProcessFlags.append(*p)) {
@@ -12858,9 +12830,8 @@ int main(int argc, char** argv) {
     static char buf[n_avail];
     // `n_needed` depends on the compiler name specified.  However, it can't
     // be arbitrarily long, since previous flag-checking should have limited
-    // it to a set of known possibilities: "baseline", "ion", "cranelift",
-    // "baseline+ion", "baseline+cranelift", etc.  Still, assert this for
-    // safety.
+    // it to a set of known possibilities: "baseline", "ion",
+    // "baseline+ion",  Still, assert this for safety.
     MOZ_RELEASE_ASSERT(n_needed < n_avail);
     memset(buf, 0, sizeof(buf));
     SprintfBuf(buf, n_avail, "--%s=%s", "wasm-compiler", wasm_compiler);

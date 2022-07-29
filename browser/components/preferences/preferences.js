@@ -63,6 +63,10 @@ XPCOMUtils.defineLazyServiceGetters(this, {
 
 ChromeUtils.defineESModuleGetters(this, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  UrlbarPrefs: "resource:///modules/UrlbarPrefs.sys.mjs",
+  UrlbarProviderQuickSuggest:
+    "resource:///modules/UrlbarProviderQuickSuggest.sys.mjs",
+  UrlbarUtils: "resource:///modules/UrlbarUtils.sys.mjs",
 });
 
 XPCOMUtils.defineLazyModuleGetters(this, {
@@ -87,10 +91,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   TransientPrefs: "resource:///modules/TransientPrefs.jsm",
   UpdateUtils: "resource://gre/modules/UpdateUtils.jsm",
   UIState: "resource://services-sync/UIState.jsm",
-  UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProviderQuickSuggest:
-    "resource:///modules/UrlbarProviderQuickSuggest.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
 });
 
 XPCOMUtils.defineLazyGetter(this, "gSubDialog", function() {
@@ -407,6 +407,14 @@ async function gotoPref(
     gLastCategory.subcategory !== subcategory
   ) {
     return;
+  }
+
+  // Hide settings that are incompatible with pinebuild
+  if (AppConstants.PINEBUILD) {
+    let hiddenSettings = document.querySelectorAll("[pine-supported='false']");
+    for (let element of hiddenSettings) {
+      element.setAttribute("data-hidden-from-search", "true");
+    }
   }
 
   search(category, "data-category");

@@ -586,7 +586,7 @@ bool nsHTMLScrollFrame::TryLayout(ScrollReflowInput& aState,
   // XXXldb Can we depend more on ComputeSize here?
   nsSize kidSize =
       aState.mReflowInput.mStyleDisplay->GetContainSizeAxes().ContainSize(
-          aKidMetrics->PhysicalSize(), wm);
+          aKidMetrics->PhysicalSize(), *aState.mReflowInput.mFrame);
   const nsSize desiredInsideBorderSize = kidSize + scrollbarGutterSize;
   aState.mInsideBorderSize =
       ComputeInsideBorderSize(aState, desiredInsideBorderSize);
@@ -999,7 +999,7 @@ void nsHTMLScrollFrame::ReflowContents(ScrollReflowInput& aState,
       aState.mHScrollbar != ShowScrollbar::Always) {
     nsSize kidSize =
         aState.mReflowInput.mStyleDisplay->GetContainSizeAxes().ContainSize(
-            kidDesiredSize.PhysicalSize(), desiredWm);
+            kidDesiredSize.PhysicalSize(), *aState.mReflowInput.mFrame);
     nsSize insideBorderSize = ComputeInsideBorderSize(aState, kidSize);
     nsRect scrolledRect = mHelper.GetUnsnappedScrolledRectInternal(
         kidDesiredSize.ScrollableOverflow(), insideBorderSize);
@@ -1520,7 +1520,6 @@ void nsHTMLScrollFrame::Reflow(nsPresContext* aPresContext,
   mHelper.UpdatePrevScrolledRect();
 
   aStatus.Reset();  // This type of frame can't be split.
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowInput, aDesiredSize);
   mHelper.PostOverflowEvent();
 }
 
@@ -7936,8 +7935,7 @@ nsMargin ScrollFrameHelper::GetScrollPadding() const {
                                    GetScrollPortRect().Size());
 }
 
-layers::ScrollSnapInfo ScrollFrameHelper::ComputeScrollSnapInfo(
-    SnapTargetSet* aSnapTargets) {
+layers::ScrollSnapInfo ScrollFrameHelper::ComputeScrollSnapInfo() {
   ScrollSnapInfo result;
 
   nsIFrame* scrollSnapFrame = GetFrameForStyle();
@@ -7961,7 +7959,7 @@ layers::ScrollSnapInfo ScrollFrameHelper::ComputeScrollSnapInfo(
   result.mSnapportSize = snapport.Size();
   CollectScrollPositionsForSnap(mScrolledFrame, mScrolledFrame,
                                 GetScrolledRect(), scrollPadding, writingMode,
-                                result, aSnapTargets);
+                                result, &mSnapTargets);
   return result;
 }
 
@@ -7974,14 +7972,14 @@ Maybe<SnapTarget> ScrollFrameHelper::GetSnapPointForDestination(
     ScrollUnit aUnit, ScrollSnapFlags aFlags, const nsPoint& aStartPos,
     const nsPoint& aDestination) {
   // We can release the strong references for the previous snap target
-  // elements here since calling this ComputeScrollSnapInfo with
-  // |aSnapTargets| means we are going to evaluate new snap points, thus
-  // there's no chance to generating nsIContent instances in between this
-  // function call and the function call for the (re-)evaluation.
+  // elements here since calling this ComputeScrollSnapInfo means we are going
+  // to evaluate new snap points, thus there's no chance to generating
+  // nsIContent instances in between this function call and the function call
+  // for the (re-)evaluation.
   mSnapTargets.Clear();
   return ScrollSnapUtils::GetSnapPointForDestination(
-      ComputeScrollSnapInfo(&mSnapTargets), aUnit, aFlags,
-      GetLayoutScrollRange(), aStartPos, aDestination);
+      ComputeScrollSnapInfo(), aUnit, aFlags, GetLayoutScrollRange(), aStartPos,
+      aDestination);
 }
 
 Maybe<SnapTarget> ScrollFrameHelper::GetSnapPointForResnap() {
@@ -7991,8 +7989,8 @@ Maybe<SnapTarget> ScrollFrameHelper::GetSnapPointForResnap() {
   nsIContent* focusedContent =
       mOuter->GetContent()->GetComposedDoc()->GetUnretargetedFocusedContent();
   return ScrollSnapUtils::GetSnapPointForResnap(
-      ComputeScrollSnapInfo(&mSnapTargets), GetLayoutScrollRange(),
-      GetScrollPosition(), mLastSnapTargetIds, focusedContent);
+      ComputeScrollSnapInfo(), GetLayoutScrollRange(), GetScrollPosition(),
+      mLastSnapTargetIds, focusedContent);
 }
 
 bool ScrollFrameHelper::NeedsResnap() {

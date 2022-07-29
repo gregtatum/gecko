@@ -1049,7 +1049,7 @@ void MacroAssemblerMIPS64::ma_push(FloatRegister f) {
 bool MacroAssemblerMIPS64Compat::buildOOLFakeExitFrame(void* fakeReturnAddr) {
   asMasm().PushFrameDescriptor(FrameType::IonJS);  // descriptor_
   asMasm().Push(ImmPtr(fakeReturnAddr));
-
+  asMasm().Push(FramePointer);
   return true;
 }
 
@@ -1890,7 +1890,7 @@ void MacroAssemblerMIPS64Compat::handleFailureWithHandlerTail(
     Label skipProfilingInstrumentation;
     // Test if profiler enabled.
     AbsoluteAddress addressOfEnabled(
-        GetJitContext()->runtime->geckoProfiler().addressOfEnabled());
+        asMasm().runtime()->geckoProfiler().addressOfEnabled());
     asMasm().branch32(Assembler::Equal, addressOfEnabled, Imm32(0),
                       &skipProfilingInstrumentation);
     jump(profilerExitTail);
@@ -1965,7 +1965,7 @@ void MacroAssemblerMIPS64Compat::profilerEnterFrame(Register framePtr,
 }
 
 void MacroAssemblerMIPS64Compat::profilerExitFrame() {
-  jump(GetJitContext()->runtime->jitRuntime()->getProfilerExitFrameTail());
+  jump(asMasm().runtime()->jitRuntime()->getProfilerExitFrameTail());
 }
 
 void MacroAssembler::subFromStackPtr(Imm32 imm32) {

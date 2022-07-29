@@ -13,16 +13,42 @@ criteria = "safe-to-deploy"
 version = "0.1.2"
 notes = "I wrote this crate, reviewed by jimb. It is mostly a Rust port of some C++ code we already ship."
 
+[[audits.app_units]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+version = "0.7.1"
+notes = """
+I'm pretty familiar with this crate. It provides a fixed-point numeric type.
+The code is pretty straight-forward, there's no unsafe code at all.
+"""
+
 [[audits.arbitrary]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-run"
 delta = "1.1.0 -> 1.1.1"
+
+[[audits.ashmem]]
+who = "Matthew Gregan <kinetik@flim.org>"
+criteria = "safe-to-deploy"
+version = "0.1.2"
+notes = """
+Small unsafe wrapper around Android 8.0's ASharedMemory native API that falls
+back to older private ioctl-based API at runtime on earlier OS releases.  The
+shim code is small and doesn't inspect the API arguments, so is unlikely to
+expose any safety issues beyond those presented by the native OS API.
+"""
 
 [[audits.atomic_refcell]]
 who = "Bobby Holley <bholley@mozilla.com>"
 criteria = "safe-to-deploy"
 version = "0.1.8"
 notes = "I maintain this crate and have reviewed every line."
+
+[[audits.bindgen]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+version = "0.59.2"
+notes = "I'm the primary author and maintainer of the crate."
 
 [[audits.bit-set]]
 who = "Aria Beingessner <a.beingessner@gmail.com>"
@@ -36,10 +62,25 @@ criteria = "safe-to-deploy"
 version = "0.6.3"
 notes = "Another crate I own via contain-rs that is ancient and in maintenance mode but otherwise perfectly fine."
 
+[[audits.build-parallel]]
+who = "Jeff Muizelaar <jmuizelaar@mozilla.com>"
+criteria = "safe-to-deploy"
+version = "0.1.2"
+
 [[audits.clap_lex]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
 delta = "0.2.0 -> 0.2.2"
+
+[[audits.cstr]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+version = "0.2.10"
+notes = """
+I've reviewed the code of the crate thoroughly. It generates an unsafe block
+which is statically guaranteed to be safe. Inputs to the macro have to be
+static so there's no uncontrolled input whatsoever.
+"""
 
 [[audits.derive_arbitrary]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -51,6 +92,12 @@ who = "Sammy Khamis <skhamis@mozilla.com>"
 criteria = "safe-to-deploy"
 delta = "0.4.0 -> 0.5.0"
 notes = "The repository for this crate belongs in the Mozilla org."
+
+[[audits.flagset]]
+who = "Ryan Hunt <rhunt@eqrion.net>"
+criteria = "safe-to-deploy"
+version = "0.4.3"
+notes = "Uses no ambient capabilities, vetted the one instance of unsafe."
 
 [[audits.getrandom]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -69,6 +116,12 @@ criteria = "safe-to-deploy"
 version = "50.1.2"
 notes = "Maintained by the Glean team at Mozilla"
 
+[[audits.glean]]
+who = "Jan-Erik Rediger <jrediger@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "50.1.2 -> 50.1.3"
+notes = "Unchanged from last version"
+
 [[audits.glean-core]]
 who = "Jan-Erik Rediger <jrediger@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -80,6 +133,12 @@ who = "Travis Long <tlong@mozilla.com>"
 criteria = "safe-to-deploy"
 version = "50.1.2"
 notes = "Maintained by the Glean team at Mozilla"
+
+[[audits.glean-core]]
+who = "Jan-Erik Rediger <jrediger@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "50.1.2 -> 50.1.3"
+notes = "Bug fix release with minimal changes, changes done by myself"
 
 [[audits.linked-hash-map]]
 who = "Aria Beingessner <a.beingessner@gmail.com>"
@@ -126,6 +185,18 @@ criteria = "safe-to-deploy"
 version = "1.0.4"
 notes = "This is a trivial crate."
 
+[[audits.origin-trial-token]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+version = "0.1.1"
+notes = """
+I'm the author of the crate. The only unsafe code is a view over a byte array
+which is properly validated.
+
+Cryptography shenanigans are delegated to the caller so there's no possible
+unsoundness there.
+"""
+
 [[audits.precomputed-hash]]
 who = "Bobby Holley <bobbyholley@gmail.com>"
 criteria = "safe-to-deploy"
@@ -152,6 +223,15 @@ notes = "I own this crate, and most of its versions were codeveloped and reviewe
 who = "Glenn Watson <git@intuitionlibrary.com>"
 criteria = "safe-to-deploy"
 version = "0.1.2"
+
+[[audits.uluru]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+version = "3.0.0"
+notes = """
+I've reviewed multiple patches in this crate, including the initial
+implementation back in the day. It has no unsafe code at all nowadays.
+"""
 
 [[audits.unicode-ident]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -193,6 +273,36 @@ who = "Bobby Holley <bobbyholley@gmail.com>"
 criteria = "safe-to-deploy"
 version = "1.0.2"
 notes = "Very small crate, just hosts the Void type for easier cross-crate interfacing."
+
+[[audits.wasm-encoder]]
+who = "Ryan Hunt <rhunt@eqrion.net>"
+criteria = "safe-to-deploy"
+version = "0.7.0"
+notes = "Maintained by the Bytecode Alliance, with contributions from Mozilla. This has no unsafe code and uses no ambient capabilities."
+
+[[audits.wasm-encoder]]
+who = "Ryan Hunt <rhunt@eqrion.net>"
+criteria = "safe-to-deploy"
+delta = "0.7.0 -> 0.14.0"
+notes = "wasm-encoder has no unsafe code and uses no ambient capabilities."
+
+[[audits.wasm-smith]]
+who = "Ryan Hunt <rhunt@eqrion.net>"
+criteria = "safe-to-deploy"
+version = "0.11.2"
+notes = "Maintained by the Bytecode Alliance, with contributions from Mozilla. I've vetted the one instance of unsafe code."
+
+[[audits.wasmparser]]
+who = "Ryan Hunt <rhunt@eqrion.net>"
+criteria = "safe-to-deploy"
+version = "0.87.0"
+notes = "Maintained by the Bytecode Alliance, with contributions from Mozilla. I've vetted the one instance of unsafe code."
+
+[[audits.wast]]
+who = "Ryan Hunt <rhunt@eqrion.net>"
+criteria = "safe-to-deploy"
+version = "44.0.0"
+notes = "Maintained by the Bytecode Alliance, with contributions from Mozilla. wast has no unsafe code and the only ambient capability it uses is to read the full contents of a file that is given to it."
 
 [[audits.webdriver]]
 who = "Henrik Skupin <mail@hskupin.info>"

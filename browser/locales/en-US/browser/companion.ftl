@@ -175,7 +175,6 @@ browse-list-sessions = Sessions
 browse-list-downloads = Downloads
 browse-list-passwords = Passwords
 browse-list-calendar = Calendar
-browse-list-history = History
 
 # Titles of the browse sections.
 session-section-header = Sessions
@@ -190,9 +189,13 @@ downloads-section-header = Downloads
 # Title of the History section.
 history-section-header = History
 
+history-section-close-button =
+    .aria-label = Close
+
 # The title of the tab buttons at the top of the companion.
 companion-deck-now = Now
 companion-deck-browse = Browse
+companion-deck-history = History
 
 # The < back arrow to go back to the root Browse view.
 companion-header-back-button =

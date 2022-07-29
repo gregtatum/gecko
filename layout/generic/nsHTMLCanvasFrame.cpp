@@ -442,7 +442,7 @@ IntrinsicSize nsHTMLCanvasFrame::GetIntrinsicSize() {
     return IntrinsicSize(0, 0);
   }
   return containAxes.ContainIntrinsicSize(
-      IntrinsicSizeFromCanvasSize(GetCanvasSize()), GetWritingMode());
+      IntrinsicSizeFromCanvasSize(GetCanvasSize()), *this);
 }
 
 /* virtual */
@@ -506,7 +506,6 @@ void nsHTMLCanvasFrame::Reflow(nsPresContext* aPresContext,
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                  ("exit nsHTMLCanvasFrame::Reflow: size=%d,%d",
                   aMetrics.ISize(wm), aMetrics.BSize(wm)));
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowInput, aMetrics);
 }
 
 bool nsHTMLCanvasFrame::UpdateWebRenderCanvasData(

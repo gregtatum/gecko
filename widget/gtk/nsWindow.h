@@ -434,9 +434,6 @@ class nsWindow final : public nsBaseWidget {
     COMPOSITOR_ENABLED,
     // WebRender compositor is paused after window creation.
     COMPOSITOR_PAUSED_INITIALLY,
-    // WebRender compositor is paused because GtkWindow is hidden,
-    // we can't draw into GL context.
-    COMPOSITOR_PAUSED_MISSING_WINDOW,
     // WebRender compositor is paused as we're repainting whole window and
     // we're waiting for content process to update page content.
     COMPOSITOR_PAUSED_FLICKERING
@@ -483,10 +480,6 @@ class nsWindow final : public nsBaseWidget {
 
   void TryToShowNativeWindowMenu(GdkEventButton* aEvent);
 
-  void EnableRenderingToWindow();
-  void DisableRenderingToWindow();
-  void ResumeCompositorHiddenWindow();
-  void PauseCompositorHiddenWindow();
   void WaylandStartVsync();
   void WaylandStopVsync();
   void DestroyChildWindows();
@@ -532,7 +525,7 @@ class nsWindow final : public nsBaseWidget {
   GdkWindow* mGdkWindow = nullptr;
   PlatformCompositorWidgetDelegate* mCompositorWidgetDelegate = nullptr;
   mozilla::Atomic<WindowCompositorState, mozilla::Relaxed> mCompositorState{
-      COMPOSITOR_ENABLED};
+      COMPOSITOR_PAUSED_INITIALLY};
   // This is used in COMPOSITOR_PAUSED_FLICKERING mode only to resume compositor
   // in some reasonable time when page content is not updated.
   int mCompositorPauseTimeoutID = 0;
@@ -555,6 +548,20 @@ class nsWindow final : public nsBaseWidget {
   // This field omits duplicate scroll events caused by GNOME bug 726878.
   guint32 mLastScrollEventTime = GDK_CURRENT_TIME;
   mozilla::ScreenCoord mLastPinchEventSpan;
+
+  struct TouchpadPinchGestureState {
+    // Focus point of the PHASE_BEGIN event
+    ScreenPoint mBeginFocus;
+
+    // Focus point of the most recent PHASE_UPDATE event
+    ScreenPoint mCurrentFocus;
+  };
+
+  // Used for handling touchpad pinch gestures
+  ScreenPoint mCurrentTouchpadFocus;
+
+  // Used for synthesizing touchpad pinch gestures
+  TouchpadPinchGestureState mCurrentSynthesizedTouchpadPinch;
 
   // for touch event handling
   nsRefPtrHashtable<nsPtrHashKey<GdkEventSequence>, mozilla::dom::Touch>
@@ -768,8 +775,6 @@ class nsWindow final : public nsBaseWidget {
 
   void SetCompositorWidgetDelegate(CompositorWidgetDelegate* delegate) override;
 
-  void CleanLayerManagerRecursive();
-
   int32_t RoundsWidgetCoordinatesTo() override;
 
   void UpdateMozWindowActive();
@@ -791,9 +796,9 @@ class nsWindow final : public nsBaseWidget {
   bool WaylandPopupIsPermanent();
   bool IsWidgetOverflowWindow();
   void RemovePopupFromHierarchyList();
-  void ShowWaylandWindow();
-  void HideWaylandWindow();
+  void ShowWaylandPopupWindow();
   void HideWaylandPopupWindow(bool aTemporaryHidden, bool aRemoveFromPopupList);
+  void ShowWaylandToplevelWindow();
   void HideWaylandToplevelWindow();
   void WaylandPopupHideTooltips();
   void AppendPopupToHierarchyList(nsWindow* aToplevelWindow);

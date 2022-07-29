@@ -284,8 +284,8 @@ CompositorBridgeChild* nsDOMWindowUtils::GetCompositorBridge() {
 }
 
 NS_IMETHODIMP
-nsDOMWindowUtils::GetLastOverWindowMouseLocationInCSSPixels(float* aX,
-                                                            float* aY) {
+nsDOMWindowUtils::GetLastOverWindowPointerLocationInCSSPixels(float* aX,
+                                                              float* aY) {
   const PresShell* presShell = GetPresShell();
   const nsPresContext* presContext = GetPresContext();
 
@@ -293,18 +293,18 @@ nsDOMWindowUtils::GetLastOverWindowMouseLocationInCSSPixels(float* aX,
     return NS_ERROR_FAILURE;
   }
 
-  const nsPoint& lastOverWindowMouseLocation =
-      presShell->GetLastOverWindowMouseLocation();
+  const nsPoint& lastOverWindowPointerLocation =
+      presShell->GetLastOverWindowPointerLocation();
 
-  if (lastOverWindowMouseLocation.X() == NS_UNCONSTRAINEDSIZE &&
-      lastOverWindowMouseLocation.Y() == NS_UNCONSTRAINEDSIZE) {
+  if (lastOverWindowPointerLocation.X() == NS_UNCONSTRAINEDSIZE &&
+      lastOverWindowPointerLocation.Y() == NS_UNCONSTRAINEDSIZE) {
     *aX = 0;
     *aY = 0;
   } else {
-    const CSSPoint lastOverWindowMouseLocationInCSSPixels =
-        CSSPoint::FromAppUnits(lastOverWindowMouseLocation);
-    *aX = lastOverWindowMouseLocationInCSSPixels.X();
-    *aY = lastOverWindowMouseLocationInCSSPixels.Y();
+    const CSSPoint lastOverWindowPointerLocationInCSSPixels =
+        CSSPoint::FromAppUnits(lastOverWindowPointerLocation);
+    *aX = lastOverWindowPointerLocationInCSSPixels.X();
+    *aY = lastOverWindowPointerLocationInCSSPixels.Y();
   }
 
   return NS_OK;
@@ -4709,6 +4709,18 @@ nsDOMWindowUtils::IsCssPropertyRecordedInUseCounter(const nsACString& aPropName,
   *aRecorded = Servo_IsCssPropertyRecordedInUseCounter(
       doc->GetStyleUseCounters(), &aPropName, &knownProp);
   return knownProp ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsDOMWindowUtils::IsCoepCredentialless(bool* aResult) {
+  Document* doc = GetDocument();
+  if (!doc) {
+    return NS_ERROR_FAILURE;
+  }
+
+  *aResult = IsCoepCredentiallessEnabled(
+      doc->Trials().IsEnabled(OriginTrial::CoepCredentialless));
+  return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -25,7 +25,7 @@ rev = "3bfc47d9a571d0842676043ba60716318e946c06"
 [source."https://github.com/mozilla/midir.git"]
 git = "https://github.com/mozilla/midir.git"
 replace-with = "vendored-sources"
-rev = "4c11f0ffb5d6a10de4aff40a7b81218b33b94e6f"
+rev = "e1b4dcb767f9e69afe95a860374aaa9635d81e3d"
 
 [source."https://github.com/mozilla/cubeb-pulse-rs"]
 git = "https://github.com/mozilla/cubeb-pulse-rs"
@@ -60,7 +60,7 @@ rev = "21c26326f5f45f415c49eac4ba5bc41a2f961321"
 [source."https://github.com/kinetiknz/audioipc-2"]
 git = "https://github.com/kinetiknz/audioipc-2"
 replace-with = "vendored-sources"
-rev = "85e9839059f4bf8f68130825b8fd02c39a6a51b9"
+rev = "499b95580c8b276e52bd9757d735249504202e5c"
 
 [source."https://github.com/jfkthame/mapped_hyph.git"]
 git = "https://github.com/jfkthame/mapped_hyph.git"

@@ -3271,8 +3271,7 @@ void ContentChild::CreateGetFilesRequest(const nsAString& aDirectoryPath,
   MOZ_ASSERT(aChild);
   MOZ_ASSERT(!mGetFilesPendingRequests.Contains(aUUID));
 
-  Unused << SendGetFilesRequest(aUUID, nsString(aDirectoryPath),
-                                aRecursiveFlag);
+  Unused << SendGetFilesRequest(aUUID, aDirectoryPath, aRecursiveFlag);
   mGetFilesPendingRequests.InsertOrUpdate(aUUID, RefPtr{aChild});
 }
 
@@ -4633,8 +4632,7 @@ IPCResult ContentChild::RecvFlushFOGData(FlushFOGDataResolver&& aResolver) {
 }
 
 IPCResult ContentChild::RecvUpdateMediaCodecsSupported(
-    RemoteDecodeIn aLocation,
-    const PDMFactory::MediaCodecsSupported& aSupported) {
+    RemoteDecodeIn aLocation, const media::MediaCodecsSupported& aSupported) {
   RemoteDecoderManagerChild::SetSupported(aLocation, aSupported);
 
   return IPC_OK();

@@ -146,7 +146,7 @@
               <menupopup id="menu_viewPopup">
                 <menu id="viewToolbarsMenu"
                       data-l10n-id="menu-view-toolbars-menu"
-#ifdef PINEBUILD
+#if defined(PINEBUILD) && defined(XP_MACOSX)
                       hidden="true"
 #endif
                       >

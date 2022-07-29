@@ -601,6 +601,8 @@
     "browser/components/customizableui/SearchWidgetTracker.jsm",
   "resource:///modules/SelectionChangedMenulist.jsm":
     "browser/modules/SelectionChangedMenulist.jsm",
+  "resource:///modules/SessionManager.jsm":
+    "browser/components/places/SessionManager.jsm",
   "resource:///modules/ShellService.jsm":
     "browser/components/shell/ShellService.jsm",
   "resource:///modules/SiteDataManager.jsm":
@@ -658,6 +660,8 @@
     "browser/components/urlbar/UrlbarProviderBookmarkKeywords.jsm",
   "resource:///modules/UrlbarProviderCalculator.jsm":
     "browser/components/urlbar/UrlbarProviderCalculator.jsm",
+  "resource:///modules/UrlbarProviderContextualSearch.jsm":
+    "browser/components/urlbar/UrlbarProviderContextualSearch.jsm",
   "resource:///modules/UrlbarProviderExtension.jsm":
     "browser/components/urlbar/UrlbarProviderExtension.jsm",
   "resource:///modules/UrlbarProviderHeuristicFallback.jsm":
@@ -670,6 +674,8 @@
     "browser/components/urlbar/UrlbarProviderOmnibox.jsm",
   "resource:///modules/UrlbarProviderOpenTabs.jsm":
     "browser/components/urlbar/UrlbarProviderOpenTabs.jsm",
+  "resource:///modules/UrlbarProviderPinebuildQuickActions.jsm":
+    "browser/components/urlbar/UrlbarProviderPinebuildQuickActions.jsm",
   "resource:///modules/UrlbarProviderPlaces.jsm":
     "browser/components/urlbar/UrlbarProviderPlaces.jsm",
   "resource:///modules/UrlbarProviderPreloadedSites.jsm":
@@ -2380,6 +2386,49 @@
     "browser/components/urlbar/UrlbarProviderQuickActions.jsm",
   "resource://gre/modules/UrlClassifierRemoteSettingsService.jsm":
     "toolkit/components/url-classifier/UrlClassifierRemoteSettingsService.jsm",
+
+  "resource:///actors/CompanionChild.jsm":
+    "browser/components/companion/CompanionChild.jsm",
+  "resource:///actors/CompanionParent.jsm":
+    "browser/components/companion/CompanionParent.jsm",
+  "resource:///actors/ContentfulPaintTrackerChild.jsm":
+    "browser/components/companion/ContentfulPaintTrackerChild.jsm",
+  "resource:///actors/ContentfulPaintTrackerParent.jsm":
+    "browser/components/companion/ContentfulPaintTrackerParent.jsm",
+  "resource:///actors/FlowResetChild.jsm":
+    "browser/components/companion/FlowResetChild.jsm",
+  "resource:///actors/FlowResetParent.jsm":
+    "browser/components/companion/FlowResetParent.jsm",
+  "resource:///actors/HistoryCarouselChild.jsm":
+    "browser/components/companion/HistoryCarouselChild.jsm",
+  "resource:///actors/HistoryCarouselParent.jsm":
+    "browser/components/companion/HistoryCarouselParent.jsm",
+  "resource:///modules/HParser.jsm":
+    "browser/components/companion/HParser.jsm",
+  "resource:///modules/LaunchOnOSLogin.jsm":
+    "browser/components/companion/LaunchOnOSLogin.jsm",
+  "resource:///modules/OAuth2.jsm":
+    "browser/components/companion/OAuth2.jsm",
+  "resource:///actors/OnboardingChild.jsm":
+    "browser/components/companion/OnboardingChild.jsm",
+  "resource:///actors/OnboardingParent.jsm":
+    "browser/components/companion/OnboardingParent.jsm",
+  "resource:///modules/OnlineServices.jsm":
+    "browser/components/companion/OnlineServices.jsm",
+  "resource:///modules/OnlineServicesHelper.jsm":
+    "browser/components/companion/OnlineServicesHelper.jsm",
+  "resource:///modules/Sounds.jsm":
+    "browser/components/companion/Sounds.jsm",
+  "resource:///modules/StageManager.jsm":
+    "browser/components/companion/StageManager.jsm",
+  "resource:///actors/ViewActivationChild.jsm":
+    "browser/components/companion/ViewActivationChild.jsm",
+  "resource:///actors/ViewActivationParent.jsm":
+    "browser/components/companion/ViewActivationParent.jsm",
+  "resource:///modules/WorkshopBootstrap.jsm":
+    "browser/components/companion/WorkshopBootstrap.jsm",
+  "resource:///modules/WorkshopParentAccess.jsm":
+    "browser/components/companion/WorkshopParentAccess.jsm",
 
   "resource:///modules/BrowserUsageTelemetry.jsm": [
     "browser/modules/BrowserUsageTelemetry.jsm",

@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { XPCOMUtils } = ChromeUtils.import(
-  "resource://gre/modules/XPCOMUtils.jsm"
-);
-
 const lazy = {};
 
 /**
@@ -13,9 +9,9 @@ const lazy = {};
  * behaviour for the History result titles when there is a search query
  * string to match against.
  */
-XPCOMUtils.defineLazyModuleGetters(lazy, {
-  UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
+ChromeUtils.defineESModuleGetters(lazy, {
+  UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.sys.mjs",
+  UrlbarUtils: "resource:///modules/UrlbarUtils.sys.mjs",
 });
 
 import { timeSince } from "./time-since.js";
@@ -26,8 +22,15 @@ window.gHistorySearch = {
   },
 
   handleEvent(event) {
-    if (event.type == "History:SetQuery") {
-      this.doQuery(event.detail.queryString);
+    switch (event.type) {
+      case "History:SetQuery": {
+        this.doQuery(event.detail.queryString);
+        break;
+      }
+      case "click": {
+        this.closeViewer();
+        break;
+      }
     }
   },
   /**
@@ -46,6 +49,9 @@ window.gHistorySearch = {
    *   Resolves once the results have been displayed.
    */
   async doQuery(queryString, fromNavigationBar = false) {
+    let companionTabs = document.querySelector(".tab-button-group");
+    companionTabs.toggleAttribute("history-visible", true);
+
     let { results, limit, total } = await window.CompanionUtils.sendQuery(
       "Companion:BeginHistorySearch",
       {
@@ -61,6 +67,18 @@ window.gHistorySearch = {
       cancelable: false,
     });
     window.dispatchEvent(e);
+
+    if (!this.closeButton) {
+      this.closeButton = document.querySelector(".history-section-close");
+      this.closeButton.addEventListener("click", this);
+    }
+  },
+
+  closeViewer() {
+    let companionTabs = document.querySelector(".tab-button-group");
+    companionTabs.toggleAttribute("history-visible", false);
+
+    document.getElementById("companion-deck").selectedViewName = "browse";
   },
 };
 

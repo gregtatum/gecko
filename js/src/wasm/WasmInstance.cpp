@@ -1266,22 +1266,6 @@ bool Instance::initElems(uint32_t tableIndex, const ElemSegment& seg,
   return int32_t(ref->isRuntimeSubtype(rtt));
 }
 
-/* static */ void* Instance::rttSub(Instance* instance, void* rttParentPtr,
-                                    void* rttSubCanonPtr) {
-  MOZ_ASSERT(SASigRttSub.failureMode == FailureMode::FailOnNullPtr);
-  JSContext* cx = instance->cx();
-
-  ASSERT_ANYREF_IS_JSOBJECT;
-  Rooted<RttValue*> parentRtt(
-      cx, &AnyRef::fromCompiledCode(rttParentPtr).asJSObject()->as<RttValue>());
-  Rooted<RttValue*> subCanonRtt(
-      cx,
-      &AnyRef::fromCompiledCode(rttSubCanonPtr).asJSObject()->as<RttValue>());
-
-  Rooted<RttValue*> subRtt(cx, RttValue::rttSub(cx, parentRtt, subCanonRtt));
-  return AnyRef::fromJSObject(subRtt.get()).forCompiledCode();
-}
-
 /* static */ int32_t Instance::intrI8VecMul(Instance* instance, uint32_t dest,
                                             uint32_t src1, uint32_t src2,
                                             uint32_t len, uint8_t* memBase) {
@@ -1385,7 +1369,7 @@ bool Instance::init(JSContext* cx, const JSFunctionVector& funcImports,
   memoryBase_ =
       memory_ ? memory_->buffer().dataPointerEither().unwrap() : nullptr;
   size_t limit = memory_ ? memory_->boundsCheckLimit() : 0;
-#if !defined(JS_64BIT) || defined(ENABLE_WASM_CRANELIFT)
+#if !defined(JS_64BIT)
   // We assume that the limit is a 32-bit quantity
   MOZ_ASSERT(limit <= UINT32_MAX);
 #endif
@@ -1762,13 +1746,6 @@ uintptr_t Instance::traceFrame(JSTracer* trc, const wasm::WasmFrameIter& wfi,
   // This is so as to ensure there are no areas of stack inadvertently ignored
   // by a stackmap, nor covered by two stackmaps.  Hence any failure of this
   // assertion is serious and should be investigated.
-
-  // This condition isn't kept for Cranelift
-  // (https://github.com/bytecodealliance/wasmtime/issues/2281), but this is ok
-  // to disable this assertion because when CL compiles a function, in the
-  // prologue, it (generates code) copies all of the in-memory arguments into
-  // registers. So, because of that, none of the in-memory argument words are
-  // actually live.
 #ifndef JS_CODEGEN_ARM64
   MOZ_ASSERT_IF(highestByteVisitedInPrevFrame != 0,
                 highestByteVisitedInPrevFrame + 1 == scanStart);
@@ -2248,38 +2225,6 @@ bool Instance::constantRefFunc(uint32_t funcIndex,
   return true;
 }
 
-bool Instance::constantRttCanon(JSContext* cx, uint32_t sourceTypeIndex,
-                                MutableHandle<RttValue*> result) {
-  // Get the renumbered type index from the source type index
-  uint32_t renumberedTypeIndex = metadata().typesRenumbering[sourceTypeIndex];
-  // The original type definition cannot have been a function type, so it
-  // could not have been an immediate type
-  MOZ_ASSERT(renumberedTypeIndex != UINT32_MAX);
-  // Get the TypeIdDesc to find the canonical RttValue
-  const TypeDefWithId& typeDef = metadata().types[renumberedTypeIndex];
-  MOZ_ASSERT(typeDef.isStructType() || typeDef.isArrayType());
-  // Cast from untyped storage to RttValue
-  result.set(*(RttValue**)addressOfTypeId(typeDef.id));
-  return true;
-}
-
-bool Instance::constantRttSub(JSContext* cx, Handle<RttValue*> parentRtt,
-                              uint32_t sourceChildTypeIndex,
-                              MutableHandle<RttValue*> result) {
-  Rooted<RttValue*> subCanonRtt(cx, nullptr);
-  // Get the canonical rtt value from the child type index, this is used to
-  // memoize results of rtt.sub
-  if (!constantRttCanon(cx, sourceChildTypeIndex, &subCanonRtt)) {
-    return false;
-  }
-  result.set(RttValue::rttSub(cx, parentRtt, subCanonRtt));
-  if (!result) {
-    ReportOutOfMemory(cx);
-    return false;
-  }
-  return true;
-}
-
 JSAtom* Instance::getFuncDisplayAtom(JSContext* cx, uint32_t funcIndex) const {
   // The "display name" of a function is primarily shown in Error.stack which
   // also includes location, so use getFuncNameBeforeLocation.
@@ -2302,7 +2247,7 @@ void Instance::onMovingGrowMemory() {
   ArrayBufferObject& buffer = memory_->buffer().as<ArrayBufferObject>();
   memoryBase_ = buffer.dataPointer();
   size_t limit = memory_->boundsCheckLimit();
-#if !defined(JS_64BIT) || defined(ENABLE_WASM_CRANELIFT)
+#if !defined(JS_64BIT)
   // We assume that the limit is a 32-bit quantity
   MOZ_ASSERT(limit <= UINT32_MAX);
 #endif

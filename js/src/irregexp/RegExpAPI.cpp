@@ -178,11 +178,11 @@ static void ReportSyntaxError(TokenStreamAnyChars& ts,
                               size_t length, ...) {
   MOZ_ASSERT(line.isSome() == column.isSome());
 
-  gc::AutoSuppressGC suppressGC(ts.context());
+  gc::AutoSuppressGC suppressGC(ts.jsContext());
   uint32_t errorNumber = ErrorNumber(result.error);
 
   if (errorNumber == JSMSG_OVER_RECURSED) {
-    ReportOverRecursed(ts.context());
+    ReportOverRecursed(ts.jsContext());
     return;
   }
 
@@ -238,7 +238,7 @@ static void ReportSyntaxError(TokenStreamAnyChars& ts,
 
   // Create the windowed string, not including the potential line
   // terminator.
-  StringBuffer windowBuf(ts.context());
+  StringBuffer windowBuf(ts.jsContext());
   if (!windowBuf.append(windowStart, windowEnd)) {
     return;
   }
@@ -467,6 +467,7 @@ enum class AssembleResult {
     bool useNativeCode, bool isLatin1) {
   // Because we create a StackMacroAssembler, this function is not allowed
   // to GC. If needed, we allocate and throw errors in the caller.
+  jit::TempAllocator temp(&cx->tempLifoAlloc());
   Maybe<jit::JitContext> jctx;
   Maybe<js::jit::StackMacroAssembler> stack_masm;
   UniquePtr<RegExpMacroAssembler> masm;
@@ -476,8 +477,8 @@ enum class AssembleResult {
                  : NativeRegExpMacroAssembler::UC16;
     // If we are compiling native code, we need a macroassembler,
     // which needs a jit context.
-    jctx.emplace(cx, nullptr);
-    stack_masm.emplace();
+    jctx.emplace(cx);
+    stack_masm.emplace(cx, temp);
 #ifdef DEBUG
     // It would be much preferable to use `class AutoCreatedBy` here, but we
     // may be operating without an assembler at all if `useNativeCode` is
@@ -598,8 +599,9 @@ bool CompilePattern(JSContext* cx, MutableHandleRegExpShared re,
     FlatStringReader patternBytes(cx, pattern);
     if (!RegExpParser::ParseRegExp(cx->isolate, &zone, &patternBytes, flags,
                                    &data)) {
+      MainThreadErrorContext ec(cx);
       JS::CompileOptions options(cx);
-      DummyTokenStream dummyTokenStream(cx, options);
+      DummyTokenStream dummyTokenStream(cx, &ec, options);
       ReportSyntaxError(dummyTokenStream, data, pattern);
       return false;
     }

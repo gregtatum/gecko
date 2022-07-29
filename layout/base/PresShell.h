@@ -237,10 +237,10 @@ class PresShell final : public nsStubDocumentObserver,
 #endif  // #ifdef ACCESSIBILITY
 
   /**
-   * See `mLastOverWindowMouseLocation`.
+   * See `mLastOverWindowPointerLocation`.
    */
-  const nsPoint& GetLastOverWindowMouseLocation() const {
-    return mLastOverWindowMouseLocation;
+  const nsPoint& GetLastOverWindowPointerLocation() const {
+    return mLastOverWindowPointerLocation;
   }
 
   void Init(nsPresContext*, nsViewManager*);
@@ -1731,10 +1731,6 @@ class PresShell final : public nsStubDocumentObserver,
    */
   void NotifyDestroyingFrame(nsIFrame* aFrame);
 
-#ifdef DEBUG
-  nsIFrame* GetDrawEventTargetFrame() { return mDrawEventTargetFrame; }
-#endif
-
   bool GetZoomableByAPZ() const;
 
  private:
@@ -1979,9 +1975,15 @@ class PresShell final : public nsStubDocumentObserver,
     bool IsKeyPressEvent() override;
   };
 
+  /**
+   * return the nsPoint represents the location of the mouse event relative to
+   * the root document in visual coordinates
+   */
+  nsPoint GetEventLocation(const WidgetMouseEvent& aEvent) const;
+
   // Check if aEvent is a mouse event and record the mouse location for later
   // synth mouse moves.
-  void RecordMouseLocation(WidgetGUIEvent* aEvent);
+  void RecordPointerLocation(WidgetGUIEvent* aEvent);
   inline bool MouseLocationWasSetBySynthesizedMouseEventForTests() const;
   class nsSynthMouseMoveEvent final : public nsARefreshObserver {
    public:
@@ -2827,14 +2829,11 @@ class PresShell final : public nsStubDocumentObserver,
   MOZ_CAN_RUN_SCRIPT_BOUNDARY bool VerifyIncrementalReflow();
   MOZ_CAN_RUN_SCRIPT_BOUNDARY void DoVerifyReflow();
   void VerifyHasDirtyRootAncestor(nsIFrame* aFrame);
-  void ShowEventTargetDebug();
 
   bool mInVerifyReflow = false;
   // The reflow root under which we're currently reflowing.  Null when
   // not in reflow.
   nsIFrame* mCurrentReflowRoot = nullptr;
-
-  nsIFrame* mDrawEventTargetFrame = nullptr;
 #endif  // #ifdef DEBUG
 
   // Send, and reset, the current per tick telemetry. This includes:
@@ -3005,8 +3004,9 @@ class PresShell final : public nsStubDocumentObserver,
   // NS_UNCONSTRAINEDSIZE) if the mouse isn't over our window or there is no
   // last observed mouse location for some reason.
   nsPoint mMouseLocation;
-  // The last mouse location (see `mMouseLocation`) which was over the window.
-  nsPoint mLastOverWindowMouseLocation;
+  // The last observed pointer location relative to that root document in visual
+  // coordinates.
+  nsPoint mLastOverWindowPointerLocation;
   // This is an APZ state variable that tracks the target guid for the last
   // mouse event that was processed (corresponding to mMouseLocation). This is
   // needed for the synthetic mouse events.

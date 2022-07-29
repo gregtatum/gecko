@@ -5813,8 +5813,10 @@ static const PrefListEntry sParentOnlyPrefBranchList[] = {
     PREF_LIST_ENTRY("browser.download.lastDir"),
     PREF_LIST_ENTRY("browser.newtabpage.pinned"),
     PREF_LIST_ENTRY("browser.uiCustomization.state"),
+#ifndef PINEBUILD
     PREF_LIST_ENTRY("browser.urlbar"),
     PREF_LIST_ENTRY("browser.urlbar.resultGroups"),
+#endif
     PREF_LIST_ENTRY("devtools.debugger.pending-selected-location"),
     PREF_LIST_ENTRY("identity.fxaccounts.account.device.name"),
     PREF_LIST_ENTRY("identity.fxaccounts.account.telemetry.sanitized_uid"),
@@ -5871,6 +5873,9 @@ static const PrefListEntry sDynamicPrefOverrideList[]{
     PREF_LIST_ENTRY("browser.translation.yandex.apiKeyOverride"),
     PREF_LIST_ENTRY("browser.translation.yandex.translateURLOverride"),
     PREF_LIST_ENTRY("browser.uitour.testingOrigins"),
+    PREF_LIST_ENTRY("browser.urlbar.loglevel"),
+    PREF_LIST_ENTRY("browser.urlbar.opencompanionsearch.enabled"),
+    PREF_LIST_ENTRY("capability.policy.policynames"),
     PREF_LIST_ENTRY("dom.securecontext.allowlist"),
     PREF_LIST_ENTRY("extensions.foobaz"),
     PREF_LIST_ENTRY("general.appname.override"),
@@ -5903,6 +5908,9 @@ static const PrefListEntry sDynamicPrefOverrideList[]{
                                                // user has it set as a string...
     PREF_LIST_ENTRY("spellchecker.dictionary"),
     PREF_LIST_ENTRY("test.char"),
+    PREF_LIST_ENTRY("Test.IPC."),
+    PREF_LIST_ENTRY("exists.thenDoesNot"),
+    PREF_LIST_ENTRY("type.String."),
     PREF_LIST_ENTRY("toolkit.mozprotocol.url"),
     PREF_LIST_ENTRY("toolkit.telemetry.log.level"),
     PREF_LIST_ENTRY("ui."),

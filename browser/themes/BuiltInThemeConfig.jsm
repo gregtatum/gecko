@@ -462,7 +462,7 @@ const BuiltInThemeConfig = new Map([
   [
     "innovator-balanced-colorway@mozilla.org",
     {
-      version: "1.1",
+      version: "1.1.1",
       path: "resource://builtin-themes/colorways/2022innovator/balanced/",
       collection: "independent-voices",
       l10nId: {
@@ -497,16 +497,10 @@ const ColorwayCollections = [
   {
     id: "life-in-color",
     expiry: "2022-02-08",
-    l10nId: {
-      title: "colorway-collection-life-in-color",
-    },
   },
   {
     id: "true-colors",
     expiry: "2022-05-03",
-    l10nId: {
-      title: "colorway-collection-true-colors",
-    },
   },
   {
     id: "independent-voices",

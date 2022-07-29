@@ -337,7 +337,6 @@ class FunctionCompiler {
         case ValType::F64:
           ins = MConstant::New(alloc(), DoubleValue(0.0), MIRType::Double);
           break;
-        case ValType::Rtt:
         case ValType::Ref:
           ins = MWasmNullConstant::New(alloc());
           break;
@@ -816,8 +815,8 @@ class FunctionCompiler {
   // About Wasm SIMD as supported by Ion:
   //
   // The expectation is that Ion will only ever support SIMD on x86 and x64,
-  // since Cranelift will be the optimizing compiler for Arm64, ARMv7 will cease
-  // to be a tier-1 platform soon, and MIPS64 will never implement SIMD.
+  // since ARMv7 will cease to be a tier-1 platform soon, and MIPS64 will never
+  // implement SIMD.
   //
   // The division of the operations into MIR nodes reflects that expectation,
   // and is a good fit for x86/x64.  Should the expectation change we'll
@@ -1939,7 +1938,6 @@ class FunctionCompiler {
             def = MWasmFloatRegisterResult::New(alloc(), MIRType::Double,
                                                 result.fpr());
             break;
-          case wasm::ValType::Rtt:
           case wasm::ValType::Ref:
             def = MWasmRegisterResult::New(alloc(), MIRType::RefOrNull,
                                            result.gpr());
@@ -5553,29 +5551,6 @@ static bool EmitShuffleSimd128(FunctionCompiler& f) {
     return false;
   }
 
-#  ifdef ENABLE_WASM_SIMD_WORMHOLE
-  if (f.moduleEnv().simdWormholeEnabled() && IsWormholeTrigger(control)) {
-    switch (control.bytes[15]) {
-      case 0:
-        f.iter().setResult(
-            f.binarySimd128(v1, v2, false, wasm::SimdOp::MozWHSELFTEST));
-        return true;
-#    if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
-      case 1:
-        f.iter().setResult(
-            f.binarySimd128(v1, v2, false, wasm::SimdOp::MozWHPMADDUBSW));
-        return true;
-      case 2:
-        f.iter().setResult(
-            f.binarySimd128(v1, v2, false, wasm::SimdOp::MozWHPMADDWD));
-        return true;
-#    endif
-      default:
-        return f.iter().fail("Unrecognized wormhole opcode");
-    }
-  }
-#  endif
-
   f.iter().setResult(f.shuffleSimd128(v1, v2, control));
   return true;
 }
@@ -6848,7 +6823,7 @@ bool wasm::IonCompileFunctions(const ModuleEnvironment& moduleEnv,
   MOZ_ASSERT(compilerEnv.optimizedBackend() == OptimizedBackend::Ion);
 
   TempAllocator alloc(&lifo);
-  JitContext jitContext(&alloc);
+  JitContext jitContext;
   MOZ_ASSERT(IsCompilingWasm());
   WasmMacroAssembler masm(alloc, moduleEnv);
 #if defined(JS_CODEGEN_ARM64)

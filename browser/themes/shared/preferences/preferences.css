@@ -362,6 +362,12 @@ checkbox {
   visibility: hidden;
 }
 
+/* Work around bug 560067 - animated images in visibility: hidden
+ * still eat CPU. */
+#updateDeck > *:not(.selected) > .update-throbber {
+  display: none;
+}
+
 #updateDeck > hbox > button {
   margin-block: 0;
   margin-inline-end: 0;
@@ -659,7 +665,7 @@ richlistitem[selected] .actionsMenu:focus-visible {
 
 .fxaPairDeviceIcon .close-icon {
   margin-top: 10px;
-  }
+}
 
 .close-icon {
   border: none;
@@ -1463,6 +1469,14 @@ richlistitem .text-link:hover {
 
 .web-appearance-choice input {
   margin-top: 0.4em;
+}
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+  *[pine-supported="false"] {
+    visibility: hidden !important;
+    display: none !important;
+  }
 }
 
 /* Platform-specific tweaks & overrides */

@@ -123,7 +123,7 @@ add_setup(async () => {
  */
 add_task(async () => {
   let helper = new CompanionHelper();
-  await helper.selectHistoryTab();
+  await helper.revealHistoryTab();
 
   // Start by ensuring we get to see MAX_RESULTS results for our
   // History, since we haven't done any refining yet.

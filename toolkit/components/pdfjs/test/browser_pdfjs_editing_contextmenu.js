@@ -213,7 +213,12 @@ async function addFreeText(browser, text, box) {
   const { x, y, width, height } = box;
   await clickAt(browser, x + 0.1 * width, y + 0.5 * height);
   await write(browser, text);
-  await clickAt(browser, x + 0.1 * width, y + 2 * height);
+
+  // Commit.
+  EventUtils.synthesizeKey("KEY_Escape");
+
+  // Unselect.
+  EventUtils.synthesizeKey("KEY_Escape");
 }
 
 /**
@@ -225,7 +230,11 @@ async function addFreeText(browser, text, box) {
 async function countElements(browser, selector) {
   return SpecialPowers.spawn(browser, [selector], async function(selector) {
     const { document } = content;
-    return document.querySelectorAll(selector).length;
+    return new Promise(resolve => {
+      content.setTimeout(() => {
+        resolve(document.querySelectorAll(selector).length);
+      }, 0);
+    });
   });
 }
 
@@ -362,10 +371,10 @@ add_task(async function test() {
         "The FreeText editor must have been pasted"
       );
 
-      await clickOn(browser, "#pdfjs_internal_editor_2");
+      await clickOn(browser, "#pdfjs_internal_editor_1");
       menuitems = await getContextMenuItemsOn(
         browser,
-        "#pdfjs_internal_editor_2"
+        "#pdfjs_internal_editor_1"
       );
 
       assertMenuitems(menuitems, [
@@ -396,10 +405,10 @@ add_task(async function test() {
         "The FreeText editor must have been pasted"
       );
 
-      await clickOn(browser, "#pdfjs_internal_editor_3");
+      await clickOn(browser, "#pdfjs_internal_editor_2");
       menuitems = await getContextMenuItemsOn(
         browser,
-        "#pdfjs_internal_editor_3"
+        "#pdfjs_internal_editor_2"
       );
       menuitems.get("context-pdfjs-copy").click();
       menuitems.get("context-pdfjs-paste").click();

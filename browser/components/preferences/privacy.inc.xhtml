@@ -280,7 +280,7 @@
                               class="content-blocking-checkbox" flex="1"
                               data-l10n-id="content-blocking-tracking-content-label"
                               aria-describedby="contentBlockingCustomDesc"/>
-                    <vbox>
+                    <vbox pine-supported="false">
                       <menulist id="trackingProtectionMenu">
                         <menupopup>
                           <menuitem data-l10n-id="content-blocking-option-private" value="private"/>
@@ -541,7 +541,7 @@
           data-subcategory="form-autofill" hidden="true"></groupbox>
 
 <!-- History -->
-<groupbox id="historyGroup" data-category="panePrivacy" hidden="true">
+<groupbox id="historyGroup" data-category="panePrivacy" hidden="true" pine-supported="false">
   <label><html:h2 data-l10n-id="history-header"/></label>
   <hbox align="center">
     <label id="historyModeLabel"
@@ -593,6 +593,7 @@
         <vbox>
           <checkbox id="privateBrowsingAutoStart"
                     data-l10n-id="history-private-browsing-permanent"
+                    pine-supported="false"
                     preference="browser.privatebrowsing.autostart"/>
           <vbox class="indent">
             <checkbox id="rememberHistory"
@@ -652,7 +653,8 @@
   <checkbox id="bookmarkSuggestion" data-l10n-id="addressbar-locbar-bookmarks-option"
             preference="browser.urlbar.suggest.bookmark"/>
   <checkbox id="openpageSuggestion" data-l10n-id="addressbar-locbar-openpage-option"
-            preference="browser.urlbar.suggest.openpage"/>
+            preference="browser.urlbar.suggest.openpage"
+            pine-supported="false"/>
   <checkbox id="topSitesSuggestion"
             data-l10n-id="addressbar-locbar-shortcuts-option"
             preference="browser.urlbar.suggest.topsites"/>
@@ -914,7 +916,7 @@
     </hbox>
   </hbox>
 
-  <hbox id="addonInstallBox">
+  <hbox id="addonInstallBox" pine-supported="false">
     <checkbox id="warnAddonInstall"
               data-l10n-id="permissions-addon-install-warning"
               preference="xpinstall.whitelist.required"
@@ -978,6 +980,7 @@
       <label id="FHRLearnMore"
              class="learnMore" is="text-link"
              data-l10n-id="collection-health-report-link"/>
+      #ifndef PINEBUILD
       <vbox class="indent">
         <hbox align="center">
           <checkbox id="addonRecommendationEnabled"
@@ -988,6 +991,7 @@
                  data-l10n-id="addon-recommendations-link"/>
         </hbox>
       </vbox>
+      #endif
     </description>
 #ifndef MOZ_TELEMETRY_REPORTING
   <description id="TelemetryDisabledDesc"
@@ -1136,6 +1140,7 @@
                value="enabled"/>
         <radio id="httpsOnlyRadioEnabledPBM"
                data-l10n-id="httpsonly-radio-enabled-pbm"
+               pine-supported="false"
                value="privateOnly"/>
         <radio id="httpsOnlyRadioDisabled"
                data-l10n-id="httpsonly-radio-disabled"

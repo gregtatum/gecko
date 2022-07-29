@@ -158,7 +158,6 @@ export default class River extends MozLitElement {
         <div
           class="view-groups-wrapper"
           ?topisactive=${topViewGroup?.includes(this.activeView)}
-          ?keying=${this.keying}
         >
           ${repeat(
             this.viewGroups,

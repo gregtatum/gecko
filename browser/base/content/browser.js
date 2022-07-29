@@ -15,9 +15,19 @@ ChromeUtils.import("resource://gre/modules/NotificationDB.jsm");
 
 ChromeUtils.defineESModuleGetters(this, {
   BrowserSearchTelemetry: "resource:///modules/BrowserSearchTelemetry.sys.mjs",
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.sys.mjs",
   PlacesTransactions: "resource://gre/modules/PlacesTransactions.sys.mjs",
   PlacesUIUtils: "resource:///modules/PlacesUIUtils.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
+  UrlbarInput: "resource:///modules/UrlbarInput.sys.mjs",
+  UrlbarPrefs: "resource:///modules/UrlbarPrefs.sys.mjs",
+  UrlbarProviderSearchTips:
+    "resource:///modules/UrlbarProviderSearchTips.sys.mjs",
+  UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.sys.mjs",
+  UrlbarUtils: "resource:///modules/UrlbarUtils.sys.mjs",
+  UrlbarValueFormatter: "resource:///modules/UrlbarValueFormatter.sys.mjs",
 });
 
 XPCOMUtils.defineLazyModuleGetters(this, {
@@ -44,7 +54,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   HomePage: "resource:///modules/HomePage.jsm",
-  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.jsm",
   LightweightThemeConsumer:
     "resource://gre/modules/LightweightThemeConsumer.jsm",
   Log: "resource://gre/modules/Log.jsm",
@@ -72,13 +81,11 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Sanitizer: "resource:///modules/Sanitizer.jsm",
   SaveToPocket: "chrome://pocket/content/SaveToPocket.jsm",
   ScreenshotsUtils: "resource:///modules/ScreenshotsUtils.jsm",
-  SessionManager: "resource:///modules/SessionManager.jsm",
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.jsm",
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
   SiteDataManager: "resource:///modules/SiteDataManager.jsm",
   SitePermissions: "resource:///modules/SitePermissions.jsm",
-  Snapshots: "resource:///modules/Snapshots.jsm",
   StageManager: "resource:///modules/StageManager.jsm",
   SubDialog: "resource://gre/modules/SubDialog.jsm",
   SubDialogManager: "resource://gre/modules/SubDialog.jsm",
@@ -88,12 +95,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   Translation: "resource:///modules/translation/TranslationParent.jsm",
   UITour: "resource:///modules/UITour.jsm",
   UpdateUtils: "resource://gre/modules/UpdateUtils.jsm",
-  UrlbarInput: "resource:///modules/UrlbarInput.jsm",
-  UrlbarPrefs: "resource:///modules/UrlbarPrefs.jsm",
-  UrlbarProviderSearchTips: "resource:///modules/UrlbarProviderSearchTips.jsm",
-  UrlbarTokenizer: "resource:///modules/UrlbarTokenizer.jsm",
-  UrlbarUtils: "resource:///modules/UrlbarUtils.jsm",
-  UrlbarValueFormatter: "resource:///modules/UrlbarValueFormatter.jsm",
   Weave: "resource://services-sync/main.js",
   WebNavigationFrames: "resource://gre/modules/WebNavigationFrames.jsm",
   webrtcUI: "resource:///modules/webrtcUI.jsm",
@@ -7561,31 +7562,17 @@ var ToolbarContextMenu = {
 
   async removeExtensionForContextAction(popup) {
     let id = this._getExtensionId(popup);
-
     await BrowserAddonUI.removeAddon(id, "browserAction");
   },
 
   async reportExtensionForContextAction(popup, reportEntryPoint) {
     let id = this._getExtensionId(popup);
-    let addon = id && (await AddonManager.getAddonByID(id));
-    if (!addon) {
-      return;
-    }
-
-    await BrowserAddonUI.reportAddon(addon.id, reportEntryPoint);
+    await BrowserAddonUI.reportAddon(id, reportEntryPoint);
   },
 
-  openAboutAddonsForContextAction(popup) {
+  async openAboutAddonsForContextAction(popup) {
     let id = this._getExtensionId(popup);
-    if (id) {
-      let viewID = "addons://detail/" + encodeURIComponent(id);
-      BrowserOpenAddonsMgr(viewID);
-      AMTelemetry.recordActionEvent({
-        object: "browserAction",
-        action: "manage",
-        extra: { addonId: id },
-      });
-    }
+    await BrowserAddonUI.manageAddon(id);
   },
 };
 

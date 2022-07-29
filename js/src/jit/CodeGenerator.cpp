@@ -2550,7 +2550,9 @@ JitCode* JitRealm::generateRegExpMatcherStub(JSContext* cx) {
   MOZ_ASSERT(ObjectElements::VALUES_PER_HEADER + RegExpObject::MaxPairCount ==
              gc::GetGCKindSlots(templateObj.getAllocKind()));
 
-  StackMacroAssembler masm(cx);
+  TempAllocator temp(&cx->tempLifoAlloc());
+  JitContext jcx(cx);
+  StackMacroAssembler masm(cx, temp);
   AutoCreatedBy acb(masm, "JitRealm::generateRegExpMatcherStub");
 
 #ifdef JS_USE_LINK_REGISTER
@@ -2929,7 +2931,9 @@ JitCode* JitRealm::generateRegExpSearcherStub(JSContext* cx) {
   Register temp2 = regs.takeAny();
   Register temp3 = regs.takeAny();
 
-  StackMacroAssembler masm(cx);
+  TempAllocator temp(&cx->tempLifoAlloc());
+  JitContext jcx(cx);
+  StackMacroAssembler masm(cx, temp);
   AutoCreatedBy acb(masm, "JitRealm::generateRegExpSearcherStub");
 
 #ifdef JS_USE_LINK_REGISTER
@@ -3102,7 +3106,9 @@ JitCode* JitRealm::generateRegExpTesterStub(JSContext* cx) {
   Register lastIndex = RegExpTesterLastIndexReg;
   Register result = ReturnReg;
 
-  StackMacroAssembler masm(cx);
+  TempAllocator temp(&cx->tempLifoAlloc());
+  JitContext jcx(cx);
+  StackMacroAssembler masm(cx, temp);
   AutoCreatedBy acb(masm, "JitRealm::generateRegExpTesterStub");
 
 #ifdef JS_USE_LINK_REGISTER
@@ -8072,6 +8078,8 @@ void CodeGenerator::visitWasmCall(LWasmCall* lir) {
           callBase->builtinMethodFailureMode());
       switchRealm = false;
       break;
+    case wasm::CalleeDesc::FuncRef:
+      MOZ_CRASH("NYI");
   }
 
   // Note the assembler offset for the associated LSafePoint.
@@ -10511,7 +10519,9 @@ void CodeGenerator::visitSubstr(LSubstr* lir) {
 JitCode* JitRealm::generateStringConcatStub(JSContext* cx) {
   JitSpew(JitSpew_Codegen, "# Emitting StringConcat stub");
 
-  StackMacroAssembler masm(cx);
+  TempAllocator temp(&cx->tempLifoAlloc());
+  JitContext jcx(cx);
+  StackMacroAssembler masm(cx, temp);
   AutoCreatedBy acb(masm, "JitRealm::generateStringConcatStub");
 
   Register lhs = CallTempReg0;
@@ -11959,7 +11969,7 @@ void CodeGenerator::visitArrayJoin(LArrayJoin* lir) {
     // Check for length == 0
     Label notEmpty;
     masm.branch32(Assembler::NotEqual, length, Imm32(0), &notEmpty);
-    const JSAtomState& names = GetJitContext()->runtime->names();
+    const JSAtomState& names = gen->runtime->names();
     masm.movePtr(ImmGCPtr(names.empty), output);
     masm.jump(&skipCall);
 
@@ -16785,7 +16795,6 @@ void CodeGenerator::emitIonToWasmCallBase(LIonToWasmCallBase<NumDefs>* lir) {
       case wasm::ValType::F64:
         argMir = ToMIRType(sig.args()[i]);
         break;
-      case wasm::ValType::Rtt:
       case wasm::ValType::V128:
         MOZ_CRASH("unexpected argument type when calling from ion to wasm");
       case wasm::ValType::Ref:
@@ -16860,7 +16869,6 @@ void CodeGenerator::emitIonToWasmCallBase(LIonToWasmCallBase<NumDefs>* lir) {
         MOZ_ASSERT(lir->mir()->type() == MIRType::Double);
         MOZ_ASSERT(ToFloatRegister(lir->output()) == ReturnDoubleReg);
         break;
-      case wasm::ValType::Rtt:
       case wasm::ValType::V128:
         MOZ_CRASH("unexpected return type when calling from ion to wasm");
       case wasm::ValType::Ref:
