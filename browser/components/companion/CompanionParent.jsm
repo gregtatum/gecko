@@ -597,8 +597,10 @@ class CompanionParent extends JSWindowActorParent {
         break;
       }
       case "companion-dismiss-event": {
+        const eventData = subj.wrappedJSObject;
         this.sendAsyncMessage("Companion:DismissedEvent", {
-          eventId: data,
+          serviceType: eventData.serviceType,
+          eventId: eventData.eventId,
         });
         break;
       }
@@ -612,6 +614,7 @@ class CompanionParent extends JSWindowActorParent {
               : lazy.OnlineServices.connectedServiceTypes,
           });
         } else if (topic == "companion-signout") {
+          lazy.OnlineServices.clearDismissedEvents(data);
           this.sendAsyncMessage("Companion:SignOut", {
             service: data,
             connectedServices: workshopEnabled
@@ -804,12 +807,11 @@ class CompanionParent extends JSWindowActorParent {
   async receiveMessage(message) {
     switch (message.name) {
       case "Companion:DismissEvent": {
-        lazy.OnlineServices.storeDismissedEvent(message.data.eventId);
-        Services.obs.notifyObservers(
-          null,
-          "companion-dismiss-event",
+        lazy.OnlineServices.storeDismissedEvent(
+          message.data.serviceType,
           message.data.eventId
         );
+        Services.obs.notifyObservers(message.data, "companion-dismiss-event");
         break;
       }
       case "Companion:Subscribe": {

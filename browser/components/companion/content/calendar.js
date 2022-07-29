@@ -227,6 +227,7 @@ export class CalendarEventList extends MozLitElement {
     document.addEventListener("refresh-events", this);
     document.addEventListener("hide-event", this);
     window.addEventListener("Companion:DismissedEvent", this);
+    window.addEventListener("Companion:SignOut", this);
 
     if (workshopEnabled) {
       this.createCalendarListView();
@@ -333,7 +334,10 @@ export class CalendarEventList extends MozLitElement {
           startDate <= oneHourFromNow &&
           endDate >= now &&
           !event.isAllDay &&
-          !this.dismissedEventStore.isDismissed(event.originalId)
+          !this.dismissedEventStore.isDismissed(
+            event.serviceType,
+            event.originalId
+          )
         );
       });
     }
@@ -357,10 +361,16 @@ export class CalendarEventList extends MozLitElement {
     } else if (e.type === "hide-event") {
       window.CompanionUtils.sendAsyncMessage("Companion:DismissEvent", {
         eventId: e.detail.eventId,
+        serviceType: e.detail.serviceType,
       });
     } else if (e.type == "Companion:DismissedEvent") {
-      this.dismissedEventStore.dismissEvent(e.detail.eventId);
+      this.dismissedEventStore.dismissEvent(
+        e.detail.serviceType,
+        e.detail.eventId
+      );
       this.onEventsUpdated({}, "event-hidden");
+    } else if (e.type === "Companion:SignOut") {
+      this.dismissedEventStore.clearService(e.detail.service);
     }
   }
 
@@ -562,7 +572,10 @@ class CalendarEventWrapper extends CalendarEvent {
   hideEvent() {
     document.dispatchEvent(
       new CustomEvent("hide-event", {
-        detail: { eventId: this.event.originalId },
+        detail: {
+          eventId: this.event.originalId,
+          serviceType: this.event.serviceType,
+        },
       })
     );
   }

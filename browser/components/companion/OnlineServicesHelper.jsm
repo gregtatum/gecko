@@ -459,15 +459,16 @@ function isAllDayEvent(startDate, endDate, upperBound = 12) {
 
 class DismissedEventStore {
   #cleanupTimeout;
-  #store = new Set();
+  #store = new Map();
 
-  dismissEvent(id) {
+  dismissEvent(serviceType, eventId) {
     this.#prepareCleanup();
-    this.#store.add(id);
+    const dismissedIds = this.#store.get(serviceType) || new Set();
+    this.#store.set(serviceType, dismissedIds.add(eventId));
   }
 
-  isDismissed(id) {
-    return this.#store.has(id);
+  isDismissed(serviceType, id) {
+    return this.#store.get(serviceType)?.has(id);
   }
 
   load(prevStore) {
@@ -475,11 +476,15 @@ class DismissedEventStore {
       lazy.clearTimeout(this.#cleanupTimeout);
     }
     this.#prepareCleanup();
-    this.#store = new Set(prevStore.values());
+    this.#store = new Map(prevStore);
+  }
+
+  clearService(serviceType) {
+    this.#store.delete(serviceType);
   }
 
   get store() {
-    return new Set(this.#store.values());
+    return new Map(this.#store);
   }
 
   // Clear the store when midnight rolls around. This will un-hide events that
@@ -496,7 +501,7 @@ class DismissedEventStore {
       now.getDate() + 1
     );
     this.#cleanupTimeout = lazy.setTimeout(() => {
-      this.#store = new Set();
+      this.#store = new Map();
       this.#cleanupTimeout = null;
     }, tomorrow - now);
   }

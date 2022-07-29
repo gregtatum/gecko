@@ -246,6 +246,7 @@ class GoogleService {
             event.calendar = {
               id: calendar.id,
             };
+            event.serviceType = this.app;
             event.serviceId = this.id;
             if (allEvents.has(result.id)) {
               // If an event is duplicated, use
@@ -500,6 +501,7 @@ class MicrosoftService {
             event.calendar = {
               id: calendar.id,
             };
+            event.serviceType = this.app;
             event.serviceId = this.id;
             allEvents.set(result.id, event);
           } catch (e) {
@@ -905,13 +907,17 @@ const OnlineServices = {
   },
 
   _dismissedEventStore: new DismissedEventStore(),
-  storeDismissedEvent(id) {
-    this._dismissedEventStore.dismissEvent(id);
+  storeDismissedEvent(serviceType, eventId) {
+    this._dismissedEventStore.dismissEvent(serviceType, eventId);
   },
   getDismissedEvents() {
     return this._dismissedEventStore.store;
   },
-  clearDismissedEvents() {
-    this._dismissedEventStore.load([]);
+  clearDismissedEvents(serviceType) {
+    if (serviceType) {
+      this._dismissedEventStore.clearService(serviceType);
+    } else {
+      this._dismissedEventStore.load([]);
+    }
   },
 };
