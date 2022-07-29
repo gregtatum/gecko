@@ -2888,6 +2888,11 @@ var gPrivacyPane = {
   },
 
   initAddonRecommendationsCheckbox() {
+    // Not currently enabled for pine builds.
+    if (AppConstants.PINEBUILD) {
+      return;
+    }
+
     // Setup the learn more link.
     const url =
       Services.urlFormatter.formatURLPref("app.support.baseURL") +
