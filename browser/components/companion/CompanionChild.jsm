@@ -50,6 +50,7 @@ class CompanionChild extends JSWindowActorChild {
           _tabs: new Map(),
           _initialRecommendationData: [],
           _initialSessionData: [],
+          stageManager: [],
 
           tabs() {
             return this._tabs.values();

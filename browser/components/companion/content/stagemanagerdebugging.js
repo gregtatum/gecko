@@ -77,4 +77,4 @@ export class StageManagerDebugging extends HTMLElement {
   }
 }
 
-customElements.define("e-global-nav-debugging", StageManagerDebugging);
+customElements.define("stagemanager-debugging", StageManagerDebugging);
