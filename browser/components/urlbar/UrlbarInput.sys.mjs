@@ -812,6 +812,11 @@ export class UrlbarInput {
     let where = this._whereToOpen(event);
     let openParams = {
       allowInheritPrincipal: false,
+      globalHistoryOptions: {
+        triggeringSponsoredURL: result.payload?.isSponsored
+          ? result.payload.url
+          : undefined,
+      },
     };
 
     if (
