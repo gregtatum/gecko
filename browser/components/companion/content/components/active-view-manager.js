@@ -477,14 +477,17 @@ export default class ActiveViewManager extends window.MozHTMLElement {
     // showing the full registrable domain first. If there's extra space, we
     // will prioritize showing the full hostname, scheme + hostname,
     // scheme + hostname + path i.e the complete URL, in that order.
-    let baseDomain = Services.eTLD.getBaseDomain(view.url);
+    let baseDomain;
+    try {
+      baseDomain = Services.eTLD.getBaseDomain(view.url);
+    } catch (e) {}
     let startIndex = view.url.spec.indexOf(baseDomain);
 
     // ELLIPSIS_SPILL_CHARS is how many additional characters we want to move a long
     // URL past the end of the base domain in order to make sure that the last part of the
     // base domain is not truncated by a text overflow ellipsis.
     const ELLIPSIS_SPILL_CHARS = 3;
-    let endIndex = startIndex + baseDomain.length + ELLIPSIS_SPILL_CHARS;
+    let endIndex = startIndex + baseDomain?.length + ELLIPSIS_SPILL_CHARS;
 
     pageActionUrlEl.selectionStart = startIndex;
     pageActionUrlEl.selectionEnd = endIndex;
