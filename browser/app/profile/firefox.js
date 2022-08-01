@@ -2827,4 +2827,5 @@ pref("browser.browser.firefoxView.featureTour", "default, default, true");
   pref("browser.urlbar.opencompanionsearch.enabled", true);
   pref("browser.pinebuild.pinning-apps.enabled", false);
   pref("browser.pinebuild.sounds", true);
+  pref("browser.shell.checkDefaultBrowser", false);
 #endif
