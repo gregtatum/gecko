@@ -104,6 +104,11 @@ browser.jar:
     content/browser/companion/components/view-group-element.inc.css (content/components/view-group-element.inc.css)
     content/browser/companion/onboarding-flow-img/flowstate-onboarding-1.png (content/onboarding-flow-img/flowstate-onboarding-1.png)
     content/browser/companion/onboarding-flow-img/flowstate-onboarding-2.png (content/onboarding-flow-img/flowstate-onboarding-2.png)
+    content/browser/companion/onboarding-flow-img/flowstate-onboarding-3.png (content/onboarding-flow-img/flowstate-onboarding-3.png)
+    content/browser/companion/onboarding-flow-img/flowstate-logo.png (content/onboarding-flow-img/flowstate-logo.png)
+    content/browser/companion/onboarding-flow-img/moz-logo.png (content/onboarding-flow-img/moz-logo.png)
+    content/browser/companion/onboarding-flow-img/sync.png (content/onboarding-flow-img/sync.png)
+    content/browser/companion/onboarding-flow-img/synced.png (content/onboarding-flow-img/synced.png)
 #ifdef XP_MACOSX
     content/browser/companion/components/view-group-element.css (content/components/view-group-element-macos.css)
 #elifdef XP_WIN

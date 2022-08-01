@@ -24,10 +24,14 @@
         class="onboarding-flow-card onboarding-bg-1 onboarding-welcome-card"
         >
         <div class="onboarding-card-text-container">
+          <img
+            src="chrome://browser/content/companion/onboarding-flow-img/flowstate-logo.png"
+            width="64px" />
           <h2 data-l10n-id="onboarding-flow-welcome-title"></h2>
           <p class="center-text" data-l10n-id="onboarding-flow-welcome-text-1"></p>
           <p data-l10n-id="onboarding-flow-welcome-text-2"></p>
           <button
+            class="primary"
             data-action="navigate-forward"
             data-l10n-id="onboarding-flow-button-next"></button>
         </div>
@@ -40,12 +44,17 @@
         class="onboarding-flow-card onboarding-bg-1 onboarding-connect-account-card"
         hidden>
         <div class="onboarding-card-text-container">
+          <img
+            src="chrome://browser/content/companion/onboarding-flow-img/sync.png"
+            width="54px" />
           <h2 data-l10n-id="onboarding-flow-connect-title"></h2>
           <p class="center-text" data-l10n-id="onboarding-flow-connect-text"></p>
-            <input type="email" id="email" name="email" placeholder="Email">
+            <input
+              type="email" id="fxa-email" name="fxa-email" placeholder="Email" required>
             <button
+              class="primary"
               data-action="initiate-fxa-flow"
-              data-l10n-id="onboarding-flow-button-next"></button>
+              data-l10n-id="onboarding-flow-button-continue"></button>
         </div>
       </section>
       <section
@@ -56,9 +65,13 @@
         class="onboarding-flow-card onboarding-bg-1 onboarding-account-connected-card"
         hidden>
         <div class="onboarding-card-text-container">
+          <img
+            src="chrome://browser/content/companion/onboarding-flow-img/synced.png"
+            width="54px" />
           <h2 data-l10n-id="onboarding-flow-connected-title"></h2>
           <p data-l10n-id="onboarding-flow-connected-text"></p>
           <button
+            class="primary"
             data-action="navigate-forward"
             data-l10n-id="onboarding-flow-button-next"></button>
         </div>
@@ -71,22 +84,50 @@
         class="onboarding-flow-card onboarding-bg-3 onboarding-data-prefs-card"
         hidden>
         <div class="onboarding-card-text-halvsies">
+          <img
+            src="chrome://browser/content/companion/onboarding-flow-img/moz-logo.png"
+            width="85px" />
           <h2 data-l10n-id="onboarding-flow-data-prefs-title"></h2>
           <p data-l10n-id="onboarding-flow-data-prefs-text"><a href="#" target="_blank" data-l10n-name="link-learn-more"></a></p>
           <fieldset>
             <label>
-              <span data-l10n-id="onboarding-flow-data-prefs-label-firefox-suggest"></span> <input type="checkbox" name="firefox-suggest" />
+              <input type="checkbox" name="firefox-suggest" />
+              <span
+                class="onboarding-data-prefs-label-heading"
+                data-l10n-id="onboarding-flow-data-prefs-label-firefox-suggest"></span>
+              <span
+                class="onboarding-data-prefs-label-detail"
+                data-l10n-id="onboarding-flow-data-prefs-label-firefox-suggest-detail"></span>
             </label>
             <label>
-              <span data-l10n-id="onboarding-flow-data-prefs-label-better-browsing"></span> <input type="checkbox" name="better-browsing" />
+              <input type="checkbox" name="better-browsing" />
+              <span
+                class="onboarding-data-prefs-label-heading"
+                data-l10n-id="onboarding-flow-data-prefs-label-better-browsing"></span>
+              <span
+                class="onboarding-data-prefs-label-detail"
+                data-l10n-id="onboarding-flow-data-prefs-label-better-browsing-detail"></span>
             </label>
             <label>
-              <span data-l10n-id="onboarding-flow-data-prefs-label-usage-statistics"></span> <input type="checkbox" name="usage-statistics" />
+              <input type="checkbox" name="usage-statistics" />
+              <span
+                class="onboarding-data-prefs-label-heading"
+                data-l10n-id="onboarding-flow-data-prefs-label-usage-statistics"></span>
+              <span
+                class="onboarding-data-prefs-label-detail"
+                data-l10n-id="onboarding-flow-data-prefs-label-usage-statistics-detail"></span>
             </label>
           </fieldset>
-          <button
-            data-action="navigate-forward"
-            data-l10n-id="onboarding-flow-button-next"></button>
+          <div class="onboarding-buttons-row">
+            <button
+              class="secondary"
+              data-action="navigate-backward"
+              data-l10n-id="onboarding-flow-button-back"></button>
+            <button
+              class="primary"
+              data-action="navigate-forward"
+              data-l10n-id="onboarding-flow-button-next"></button>
+          </div>
         </div>
       </section>
       <section
@@ -98,18 +139,21 @@
         hidden>
         <div class="onboarding-card-text-container">
           <h2 data-l10n-id="onboarding-flow-complete-title"></h2>
-          <button data-action="complete-onboarding" data-l10n-id="onboarding-flow-button-complete"></button>
+          <button
+            class="primary"
+            data-action="complete-onboarding"
+            data-l10n-id="onboarding-flow-button-complete"></button>
         </div>
       </section>
       <div class="onboarding-flow-breadcrumbs" aria-role="tablist"></div>
       <button
         class="onboarding-backward-nav"
         data-action="navigate-backward"
-        aria-label="Go Back to Previous Card">&lt;</button>
+        aria-label="Go Back to Previous Card"></button>
       <button
         class="onboarding-forward-nav"
         data-action="navigate-forward"
-        aria-label="Go Forward to Next Card">&gt;</button>
+        aria-label="Go Forward to Next Card"></button>
     </onboarding-flow>
   </body>
 </html>

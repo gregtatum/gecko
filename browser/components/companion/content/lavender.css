@@ -103,6 +103,10 @@
     --button-background-primary: var(--colors-lavender-80);
     --button-background-primary-hover: var(--colors-lavender-120);
     --button-background-primary-active: var(--colors-lavender-100);
+    --button-background-secondary: var(--colors-lavender-20);
+    --button-background-secondary-hover: var(--colors-lavender-40);
+    --button-background-secondary-active: var(--colors-lavender-60);
+    --button-background-secondary-focus: var(--colors-lavender-60);
 
     /* Border Colors */
     --notification-icon-border-color: var(--colors-lightgrey-30);
@@ -110,6 +114,17 @@
     --action-button-border-color: var(--colors-lightgrey-30);
     --action-button-border-color-hover: var(--colors-lightgrey-110);
     --calendar-divider-border-color: var(--colors-lightgrey-30);
+    --button-border-secondary: var(--colors-lavender-70);
+    --button-border-secondary-hover: var(--colors-lavender-120);
+    --button-border-secondary-active: var(--colors-lavender-120);
+    --button-border-secondary-focus: var(--colors-lavender-100);
+
+    /* Text Colors */
+    --button-text-primary: var(--colors-white);
+    --button-text-secondary: var(--colors-lavender-90);
+    --button-text-secondary-hover: var(--colors-lavender-120);
+    --button-text-secondary-active: var(--colors-lavender-120);
+    --button-text-secondary-focus: var(--colors-lavender-100);
 
     /* Icon Colors */
     --icon-color-default: var(--colors-darkgrey-30);
@@ -229,6 +244,11 @@
     --pine-onboarding-header-text-color: #5b5b66;
     --pine-onboarding-dates-text-color: #15141a;
     --pine-onboarding-footer-border-color: #e0e0e6;
+    --pine-onboarding-input-border-color: #8f8f9d;
+    --pine-onboarding-breadcrumb-color: var(--colors-white);
+    --pine-onboarding-breadcrumb-active-color: var(--colors-lavender-120);
+    --pine-onboarding-breadcrumb-inactive-opacity: 30%;
+    --pine-onboarding-nav-button-background-color: var(--colors-cafe-10);
 
     --toolbar-field-focus-background-color: var(--colors-lightgrey-20);
 
@@ -276,5 +296,18 @@
     --flowreset-button-background-color: ButtonFace;
     --flowreset-button-text-color: ButtonText;
     --flowreset-textshadow-color: unset;
+
+    --button-background-secondary: ButtonFace;
+    --button-background-secondary-hover: ButtonFace;
+    --button-background-secondary-active: ButtonFace;
+    --button-background-secondary-focus: ButtonFace;
+    --button-border-secondary: ButtonShadow;
+    --button-border-secondary-hover: ButtonShadow;
+    --button-border-secondary-active: ButtonShadow;
+    --button-border-secondary-focus: ButtonShadow;
+    --button-text-secondary: ButtonText;
+    --button-text-secondary-hover: ButtonText;
+    --button-text-secondary-active: ButtonText;
+    --button-text-secondary-focus: ButtonText;
   }
 }

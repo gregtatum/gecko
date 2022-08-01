@@ -9,10 +9,10 @@
  * card object:
  * {
  *  el: node,
+ *  breadcrumbEl: node,
  *  page: 0,
  *  forwardNav: true,
  *  backwardNav: false,
- *  buttonAction: "navigate-forward"
  * }
  */
 class OnboardingFlowElement extends HTMLElement {
@@ -45,6 +45,7 @@ class OnboardingFlowElement extends HTMLElement {
       ".onboarding-backward-nav"
     );
     this._forwardNavButton = document.querySelector(".onboarding-forward-nav");
+    this._breadcrumbs = document.querySelector(".onboarding-flow-breadcrumbs");
     this._backwardNavButton.addEventListener("click", this);
     this._forwardNavButton.addEventListener("click", this);
 
@@ -61,13 +62,16 @@ class OnboardingFlowElement extends HTMLElement {
       const buttons = section.getElementsByTagName("button");
 
       if (buttons.length) {
-        thisCard.buttonAction = buttons[0].dataset.action;
-        buttons[0].addEventListener("click", this);
+        for (let button of buttons) {
+          button.addEventListener("click", this);
+        }
       }
 
-      if (buttons.length > 1) {
-        console.log("onboarding-flow cards only support one button per card");
-      }
+      let thisBreadcrumb = document.createElement("span");
+      thisBreadcrumb.classList.add(`onboarding-breadcrumb-${i + 1}`);
+      thisBreadcrumb.setAttribute("aria-role", "tab");
+      thisBreadcrumb.setAttribute("data-active", "false");
+      this._breadcrumbs.append(thisBreadcrumb);
 
       this._cards.push(thisCard);
       i++;
@@ -89,10 +93,21 @@ class OnboardingFlowElement extends HTMLElement {
 
     this._forwardNavButton.disabled = cardToShow.forwardNav === "false";
     this._backwardNavButton.disabled = cardToShow.backwardNav === "false";
+    this._forwardNavButton.hidden =
+      this._currentIndex === this._cards.length - 1;
+    this._backwardNavButton.hidden = this._currentIndex === 0;
 
     this.recordCardShown(this._currentIndex);
-
+    this.setBreadcrumb(this._currentIndex);
     this.setProgressPref(this._currentIndex);
+  }
+
+  setBreadcrumb(activeIndex) {
+    let i = 0;
+    for (let crumb of this._breadcrumbs.children) {
+      crumb.setAttribute("data-active", i === activeIndex);
+      i++;
+    }
   }
 
   // This sends up the request for the value of browser.pinebuild.onboarding.progress

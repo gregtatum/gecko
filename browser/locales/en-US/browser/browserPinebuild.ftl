@@ -98,13 +98,18 @@ onboarding-flow-connected-text = Your account has been verified. Just one more s
 
 onboarding-flow-data-prefs-title = Choose what data to share with { -brand-short-name }
 onboarding-flow-data-prefs-text = { -brand-short-name }’s data protection policy puts your privacy first. We will never collect data without your permission. <a data-l10n-name="link-learn-more">Learn more</a>
-onboarding-flow-data-prefs-label-firefox-suggest = Enable { -firefox-suggest-brand-name }
-onboarding-flow-data-prefs-label-better-browsing = Make browsing and searching better
-onboarding-flow-data-prefs-label-usage-statistics = Automatically send usage statistics
+onboarding-flow-data-prefs-label-firefox-suggest = Improved { -firefox-suggest-brand-name }
+onboarding-flow-data-prefs-label-firefox-suggest-detail = A richer search experience by allowing { -vendor-short-name } to process your search queries.
+onboarding-flow-data-prefs-label-better-browsing = Make recommendations better
+onboarding-flow-data-prefs-label-better-browsing-detail = Sends websites you visit anonymously to { -vendor-short-name } to improve snapshot suggestions and other features
+onboarding-flow-data-prefs-label-usage-statistics = Send usage data and telemetry
+onboarding-flow-data-prefs-label-usage-statistics-detail = { -brand-short-name } sends technical and interaction data to { -vendor-short-name }.
 
 onboarding-flow-complete-title = You’re ready to go!
 
 onboarding-flow-button-next = Next
+onboarding-flow-button-continue = Continue
+onboarding-flow-button-back = Go back
 onboarding-flow-button-complete = Start browsing
 
 # Pinebuild private browsing coming soon dialog strings
