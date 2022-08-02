@@ -28,6 +28,8 @@ class OnboardingChild extends JSWindowActorChild {
         this.sendAsyncMessage(event.type, event.detail);
         break;
       case "OpenFxa":
+        this.sendAsyncMessage(event.type, event.detail.email);
+        break;
       case "OnboardingCompleted":
       default:
         this.sendAsyncMessage(event.type);

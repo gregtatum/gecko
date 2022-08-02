@@ -171,7 +171,13 @@ class OnboardingFlowElement extends HTMLElement {
         const emailInput = document.getElementById("fxa-email");
         if (emailInput.checkValidity()) {
           this.recordCardCompleted(this._currentIndex);
-          document.dispatchEvent(new CustomEvent("OpenFxa", { bubbles: true }));
+          let email = document.getElementById("fxa-email").value;
+          document.dispatchEvent(
+            new CustomEvent("OpenFxa", {
+              bubbles: true,
+              detail: { email },
+            })
+          );
         } else {
           emailInput.reportValidity();
         }

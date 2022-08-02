@@ -75,6 +75,11 @@ const OAuthConnect = {
         url.searchParams.set("prompt", "select_account");
       }
 
+      // Hinting the email to FxA helpfully skips to the password input screen.
+      if (oauth.serviceType == "fxa" && oauth.email) {
+        url.searchParams.set("email", oauth.email);
+      }
+
       let tab = win.gBrowser.addTrustedTab("about:blank");
       tab.setAttribute("pinebuild-oauth-flow", oauth.serviceType || "true");
 

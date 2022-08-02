@@ -96,11 +96,15 @@ class OnboardingParent extends JSWindowActorParent {
         }
         break;
       case "OpenFxa":
+        let email = message.data;
         this._onboardingView = window.gStageManager.currentView;
         doc.body.setAttribute("onboarding", "with-browsing");
 
         async function processFxaFlow(onboardingView) {
-          await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding");
+          await window.gSync.openFxAEmailFirstPage(
+            "pinebuild-onboarding",
+            email
+          );
           window.gStageManager.setView(onboardingView);
           doc.body.setAttribute("onboarding", "no-browsing");
         }

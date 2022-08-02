@@ -1195,7 +1195,7 @@ var gSync = {
     }
   },
 
-  async openFxAEmailFirstPage(entryPoint) {
+  async openFxAEmailFirstPage(entryPoint, email) {
     const url = await FxAccounts.config.promiseConnectAccountURI(entryPoint);
     if (AppConstants.PINEBUILD) {
       // The regular flow leaves a tab laying around that doesn't make sense in
@@ -1205,11 +1205,15 @@ var gSync = {
         "https://accounts.firefox.com/pair",
         "https://accounts.firefox.com/connect_another_device",
       ];
-      await OAuthConnect.connect({
+      let params = {
         url,
         redirectionEndpoints,
         serviceType: "fxa",
-      });
+      };
+      if (email) {
+        params.email = email;
+      }
+      await OAuthConnect.connect(params);
     } else {
       switchToTabHavingURI(url, true, { replaceQueryString: true });
     }
