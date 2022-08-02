@@ -36,7 +36,7 @@ export default class ViewGroupElement extends MozLitElement {
     this.activeView = null;
     this.busyAnimationTimeout = null;
     this.addEventListener("click", this.#onViewGroupSelected);
-    this.addEventListener("keydown", this.#onKeyDown);
+    this.addEventListener("keyup", this.#onKeyUp);
     this.addEventListener("auxclick", this.#onAuxClick);
     this.#slidingWindowIndex = -1;
   }
@@ -70,7 +70,7 @@ export default class ViewGroupElement extends MozLitElement {
     this.dispatchEvent(closeEvent);
   }
 
-  #onKeyDown(event) {
+  #onKeyUp(event) {
     switch (event.keyCode) {
       case KeyEvent.DOM_VK_DOWN: {
         if (this.keying && this.active && this.viewGroup.length > 1) {

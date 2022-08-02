@@ -204,7 +204,15 @@ export default class River extends MozLitElement {
 
   updated() {
     if (this.#focusedChild) {
-      this.#focusedChild.focus();
+      let focusedElement = Services.focus.focusedElement;
+
+      // We only want to shift focus to the focusedChild if focus
+      // has been set on something within it already.
+      if (
+        focusedElement?.containingShadowRoot != this.#focusedChild.shadowRoot
+      ) {
+        this.#focusedChild.focus();
+      }
     }
     this.#focusedChild = null;
   }
