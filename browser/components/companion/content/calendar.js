@@ -70,7 +70,9 @@ window.gCalendarEventListener = {
   handleEvent({ type, detail }) {
     switch (type) {
       case "Companion:RegisterCalendarEvents": {
-        this.lastCalendarEvents = detail.events;
+        this.lastCalendarEvents = detail.events.sort(
+          (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        );
         if (!workshopEnabled) {
           this.dispatchRefreshEventsEvent();
         }
