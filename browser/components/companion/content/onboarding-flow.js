@@ -167,10 +167,16 @@ class OnboardingFlowElement extends HTMLElement {
           new CustomEvent("OnboardingCompleted", { bubbles: true })
         );
         break;
-      case "initiate-fxa-flow":
-        this.recordCardCompleted(this._currentIndex);
-        document.dispatchEvent(new CustomEvent("OpenFxa", { bubbles: true }));
+      case "initiate-fxa-flow": {
+        const emailInput = document.getElementById("fxa-email");
+        if (emailInput.checkValidity()) {
+          this.recordCardCompleted(this._currentIndex);
+          document.dispatchEvent(new CustomEvent("OpenFxa", { bubbles: true }));
+        } else {
+          emailInput.reportValidity();
+        }
         break;
+      }
       case "navigate-forward":
         this.recordCardCompleted(this._currentIndex);
         let nextCard = this._currentIndex + 1;
