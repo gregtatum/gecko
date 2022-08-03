@@ -8,9 +8,13 @@
             oncommandupdate="PlacesUIUtils.updateCommands(window);">
   <command id="Browser:ShowAllBookmarks"
            oncommand="PlacesCommandHook.showPlacesOrganizer('UnfiledBookmarks');"/>
+#ifdef PINEBUILD
+  <command id="Browser:ShowAllHistory"
+           oncommand="PineBuildUIUtils.openHistoryUI();"/>
+#else
   <command id="Browser:ShowAllHistory"
            oncommand="PlacesCommandHook.showPlacesOrganizer('History');"/>
-
+#endif
   <command id="placesCmd_open"
            oncommand="PlacesUIUtils.doCommand(window, 'placesCmd_open');"/>
   <command id="placesCmd_open:window"

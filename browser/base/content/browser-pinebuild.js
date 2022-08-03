@@ -269,6 +269,15 @@ var PineBuildUIUtils = {
       }
     }
   },
+
+  openHistoryUI() {
+    let actor = document
+      .getElementById("companion-browser")
+      .browsingContext.currentWindowGlobal.getActor("Companion");
+    if (actor) {
+      actor.viewHistoryTab();
+    }
+  },
 };
 
 PineBuildUIUtils.init();

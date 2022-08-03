@@ -678,7 +678,7 @@ class CompanionParent extends JSWindowActorParent {
     this.ensureCompanionVisible();
   }
 
-  viewHistoryTab(queryString) {
+  viewHistoryTab(queryString = "") {
     this.sendAsyncMessage("Companion:ViewHistoryTab", { queryString });
     this.ensureCompanionVisible();
   }
