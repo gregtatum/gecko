@@ -389,6 +389,21 @@ var MigrationWizard = {
         if (!this._itemsFlags || this._itemsFlags & itemValue) {
           checkbox.checked = true;
         }
+        // Disable importing bookmarks
+        if (AppConstants.PINEBUILD && itemType === "bookmarks") {
+          checkbox.setAttribute("hidden", true);
+          checkbox.checked = false;
+        }
+      }
+    }
+
+    if (AppConstants.PINEBUILD) {
+      // If the only import item is hidden (bookmarks), prevent advancing.
+      if (
+        dataSources.childNodes.length === 1 &&
+        dataSources.firstChild.getAttribute("hidden")
+      ) {
+        this._wiz.canAdvance = false;
       }
     }
   },
@@ -440,6 +455,7 @@ var MigrationWizard = {
     // Safari, prompt for the bookmarks file.
     // We may add other browser/OS combos here in future.
     if (
+      !AppConstants.PINEBUILD &&
       this._source == "safari" &&
       AppConstants.isPlatformAndVersionAtLeast("macosx", "18") &&
       (this._itemsFlags & Ci.nsIBrowserProfileMigrator.BOOKMARKS ||
