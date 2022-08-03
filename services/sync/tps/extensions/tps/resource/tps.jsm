@@ -943,7 +943,7 @@ var TPS = {
       if (this._currentAction >= this._phaselist[this._currentPhase].length) {
         // Run necessary validations and then finish up
         lazy.Logger.logInfo("No more actions - running validations...");
-        if (this.shouldValidateBookmarks) {
+        if (this.shouldValidateBookmarks && !AppConstants.PINEBUILD) {
           await this.ValidateBookmarks();
         }
         if (this.shouldValidatePasswords) {
