@@ -1016,10 +1016,6 @@ pref("accessibility.typeaheadfind.timeout", 5000);
 pref("accessibility.typeaheadfind.linksonly", false);
 pref("accessibility.typeaheadfind.flashBar", 1);
 
-// Accessibility indicator preferences such as support URL, enabled flag.
-pref("accessibility.support.url", "https://support.mozilla.org/%LOCALE%/kb/accessibility-services");
-pref("accessibility.indicator.enabled", false);
-
 pref("plugins.testmode", false);
 
 // Should plugins that are hidden show the infobar UI?
@@ -1118,8 +1114,6 @@ pref("browser.sessionstore.upgradeBackup.maxUpgradeBackups", 3);
 pref("browser.sessionstore.debug", false);
 // Forget closed windows/tabs after two weeks
 pref("browser.sessionstore.cleanup.forget_closed_after", 1209600000);
-// Platform collects data for session store
-pref("browser.sessionstore.platform_collection", true);
 // Platform collects session storage data for session store
 pref("browser.sessionstore.collect_session_storage", true);
 

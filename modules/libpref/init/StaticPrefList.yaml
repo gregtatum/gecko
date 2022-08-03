@@ -1458,7 +1458,11 @@
 # Platform collection of data for session store
 - name: browser.sessionstore.platform_collection
   type: bool
-  value: @IS_NOT_ANDROID@
+#if defined(ANDROID) || defined(MOZ_THUNDERBIRD)
+  value: false
+#else
+  value: true
+#endif
   mirror: once
 
 # Platform collection of session storage data for session store
@@ -1479,6 +1483,16 @@
 - name: browser.sessionstore.debug.no_auto_updates
   type: RelaxedAtomicBool
   value: false
+  mirror: always
+
+#
+- name: browser.swipe.navigation-icon-move-distance
+  type: uint32_t
+#ifdef XP_WIN
+  value: 100
+#else
+  value: 0
+#endif
   mirror: always
 
 # Whether we should draw the tabs on top of the titlebar.
@@ -4514,6 +4528,12 @@
 #endif
   mirror: always
 
+# Controls if a content script will be aborted on child process shutdown.
+- name: dom.abort_script_on_child_shutdown
+  type: bool
+  value: false
+  mirror: always
+
 - name: dom.max_chrome_script_run_time
   type: int32_t
   value: 0
@@ -5276,8 +5296,8 @@
 
 - name: gfx.canvas.accelerated
   type: RelaxedAtomicBool
-#if defined(XP_LINUX) && !defined(ANDROID) && defined(NIGHTLY_BUILD)
-  value: true
+#if defined(XP_MACOSX) || defined(XP_LINUX) && !defined(ANDROID)
+  value: @IS_NIGHTLY_BUILD@
 #else
   value: false
 #endif
@@ -5680,6 +5700,13 @@
   type: RelaxedAtomicBool
   value: false
   mirror: always
+
+#ifdef MOZ_WIDGET_GTK
+-   name: gfx.font_rendering.fontconfig.max_generic_substitutions
+    type: RelaxedAtomicUint32
+    value: 3
+    mirror: always
+#endif
 
 #if defined(XP_WIN)
 # Whether the DirectWrite bold simulation should be used when a bold font-weight
@@ -7105,6 +7132,13 @@
     mirror: always  # LoadStartupJSPrefs
     do_not_use_directly: true
 #endif  // !defined(JS_CODEGEN_MIPSXX)
+
+# Separate pref to override the values of the Spectre-related prefs above for
+# isolated web content processes, where we don't need these mitigations.
+- name: javascript.options.spectre.disable_for_isolated_content
+  type: bool
+  value: false
+  mirror: always
 
 # Whether to use the XPCOM thread pool for JS helper tasks.
 - name: javascript.options.external_thread_pool
