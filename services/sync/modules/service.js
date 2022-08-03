@@ -85,6 +85,7 @@ const fxAccounts = getFxAccountsSingleton();
 
 function getEngineModules() {
   let result = {
+    Bookmarks: { module: "bookmarks.js", symbol: "BookmarksEngine" },
     Form: { module: "forms.js", symbol: "FormEngine" },
     History: { module: "history.js", symbol: "HistoryEngine" },
     Password: { module: "passwords.js", symbol: "PasswordEngine" },
@@ -101,10 +102,6 @@ function getEngineModules() {
     result.Tab = {
       module: "tabs.js",
       symbol: "TabEngine",
-    };
-    result.Bookmarks = {
-      module: "bookmarks.js",
-      symbol: "BookmarksEngine",
     };
   }
   if (Svc.Prefs.get("engine.addresses.available", false)) {
