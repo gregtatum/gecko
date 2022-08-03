@@ -49,12 +49,20 @@ class GoogleService {
     this.id = ++nextServiceId;
     this.hasConnectionError = false;
     this.listeners = new Map([["status", new Set()]]);
-    this.emailAddress = config.emailAddress;
+    this.inboxURL = "https://mail.google.com/mail/";
+    if (config.emailAddress) {
+      this.emailAddress = config.emailAddress;
+      this.inboxURL += `u/?authuser=${encodeURIComponent(config.emailAddress)}`;
+    }
 
     let scopes = [
-      "https://www.googleapis.com/auth/gmail.readonly",
+      // For getting the email address
+      "https://www.googleapis.com/auth/userinfo.email",
+      // For getting calendar events
       "https://www.googleapis.com/auth/calendar.events.readonly",
+      // For getting the list of calendars
       "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+      // For getting titles of documents
       "https://www.googleapis.com/auth/drive.metadata.readonly",
     ];
 
@@ -72,7 +80,6 @@ class GoogleService {
       this.getUnreadCountAtom.bind(this),
       60 * 1000
     );
-    this.setInboxURL();
   }
 
   async connect() {
@@ -178,14 +185,6 @@ class GoogleService {
         }
         let calendar = {};
         calendar.id = result.primary ? "primary" : result.id;
-        // The ID of the primary calendar is the user's email
-        // address. By storing it here, we don't need extra
-        // auth scopes.
-        if (result.primary) {
-          this.emailAddress = result.id;
-          this.setInboxURL();
-          OnlineServices.persist();
-        }
         calendar.backgroundColor = result.backgroundColor;
         calendar.foregroundColor = result.foregroundColor;
         calendarList.push(calendar);
@@ -271,12 +270,31 @@ class GoogleService {
     });
   }
 
-  async setInboxURL() {
-    if (!this.inboxURL) {
-      this.inboxURL = "https://mail.google.com/mail/";
-      if (this.emailAddress) {
-        this.inboxURL += `u/?authuser=${encodeURIComponent(this.emailAddress)}`;
-      }
+  async getEmailInfo() {
+    let token = await this.getToken();
+
+    let apiTarget = new URL("https://www.googleapis.com/oauth2/v3/userinfo");
+
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    let response = await fetch(apiTarget, {
+      headers,
+    });
+
+    let results = await response.json();
+    lazy.log.debug(JSON.stringify(results));
+
+    if (results.error) {
+      lazy.log.error(results.error.message);
+    }
+
+    if (results.email) {
+      this.emailAddress = results.email;
+      this.inboxURL = `https://mail.google.com/mail/u/?authuser=${encodeURIComponent(
+        results.email
+      )}`;
     }
   }
 
@@ -349,12 +367,18 @@ class MicrosoftService {
     this.id = ++nextServiceId;
     this.hasConnectionError = false;
     this.listeners = new Map([["status", new Set()]]);
+    this.inboxURL = config.inboxURL || "https://outlook.live.com/mail/";
+    this.emailAddress = config.emailAddress;
 
     let scopes = [
       // This is required or we don't get a refreshToken
       "offline_access",
+      // For calendars
       "https://graph.microsoft.com/Calendars.Read",
+      // For unread count
       "https://graph.microsoft.com/Mail.Read",
+      // For determining the type of account and email address
+      "https://graph.microsoft.com/User.Read",
     ];
 
     this.auth = new lazy.OAuth2(
@@ -371,7 +395,6 @@ class MicrosoftService {
       this.getUnreadCount.bind(this),
       60 * 1000
     );
-    this.setInboxURL();
   }
 
   async connect() {
@@ -410,7 +433,7 @@ class MicrosoftService {
     }
   }
 
-  getToken() {
+  async getToken() {
     return this.auth.getToken();
   }
 
@@ -515,41 +538,45 @@ class MicrosoftService {
     );
   }
 
-  async setInboxURL() {
-    // Hacky, buy I can't find anyway to get the inbox URL
-    // without looking at an email.
-    if (!this.inboxURL) {
-      let token = await this.getToken();
+  async getEmailInfo() {
+    let token = await this.getToken();
 
-      let apiTarget = new URL(
-        "https://graph.microsoft.com/v1.0/me/messages?$top=1&$select=webLink"
-      );
+    let apiTarget = new URL("https://graph.microsoft.com/v1.0/me");
 
-      let headers = {
-        Authorization: `Bearer ${token}`,
-      };
+    let headers = {
+      Authorization: `Bearer ${token}`,
+    };
 
-      let response = await fetch(apiTarget, {
-        headers,
-      });
+    let response = await fetch(apiTarget, {
+      headers,
+    });
 
-      let results = await response.json();
-      lazy.log.debug(JSON.stringify(results));
+    let results = await response.json();
+    lazy.log.debug(JSON.stringify(results));
 
-      if (results.error) {
-        lazy.log.error(results.error.message);
-      }
-      if (results.error || !results.value?.length) {
-        this.inboxURL = "https://outlook.com";
-      } else {
-        this.inboxURL = results.value[0].webLink.split("?")[0];
-      }
+    if (results.error) {
+      lazy.log.error(results.error.message);
+      return;
+    }
+
+    this.emailAddress = results.userPrincipalName;
+
+    // Consumer accounts are a hexadecimal number;
+    // Office365 accounts are a UUID.
+    if (`0x{results.id}` == parseInt(results.id)) {
+      this.inboxURL = "https://outlook.live.com/mail/";
+    } else {
+      this.inboxURL = `https://outlook.office.com/owa/{this.emailAddress}`;
     }
   }
 
   async getUnreadCount() {
     let token = await this.getToken();
-
+    if (!token) {
+      // This might get called before we have a token.
+      // Just bail, we'll get called again.
+      return;
+    }
     // By just selecting the ID, we're getting as little data as we need.
     // I couldn't find a way to just get the count.
     let apiTarget = new URL(
@@ -578,6 +605,8 @@ class MicrosoftService {
     return {
       type: this.app,
       auth: this.auth,
+      inboxURL: this.inboxURL,
+      emailAddress: this.emailAddress,
     };
   }
 }
@@ -634,7 +663,8 @@ class TestService {
     return [];
   }
 
-  async setInboxURL() {
+  async getEmailInfo() {
+    this.emailAddress = "user@example.com";
     this.inboxURL = "https://example.com";
   }
 
@@ -753,6 +783,14 @@ const OnlineServices = {
     }
 
     ServiceInstances.add(service);
+    // We have a token, so we can get email specific information.
+    // For Google, this is the email address.
+    // For Microsoft, this is the inbox URL.
+    try {
+      await service.getEmailInfo();
+    } catch (e) {
+      lazy.log.error(`Unable to get email info for ${type}`);
+    }
     this.persist();
     // grab events for this service and put them in the cache
     let meetingResults = await service.getNextMeetings();
