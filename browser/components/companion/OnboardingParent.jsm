@@ -26,6 +26,8 @@ const COMPANION_WIDTH_AFTER_ONBOARDING = "340";
 // after successfully signing into FxA via web flow.
 const ONBOARDING_SCREEN_AFTER_FXA = 2;
 const RESET_PASSWORD_VERIFIED_PATH = "reset_password_verified";
+const CONNECT_ANOTHER_DEVICE_PATH = "connect_another_device";
+const ONBOARDING_URL = "about:onboarding";
 
 class OnboardingParent extends JSWindowActorParent {
   async receiveMessage(message) {
@@ -35,6 +37,7 @@ class OnboardingParent extends JSWindowActorParent {
     }
     let window = browser.ownerGlobal;
     let doc = window.document;
+    let fxaListener;
 
     switch (message.name) {
       case "OnboardingCompleted":
@@ -44,6 +47,7 @@ class OnboardingParent extends JSWindowActorParent {
         );
 
         doc.body.removeAttribute("onboarding");
+        window.gBrowser.removeProgressListener(fxaListener);
 
         doc.body.setAttribute("flow-reset", true);
         window.gStageManager.reset({
@@ -97,30 +101,46 @@ class OnboardingParent extends JSWindowActorParent {
         break;
       case "OpenFxa":
         let email = message.data;
-        this._onboardingView = window.gStageManager.currentView;
         doc.body.setAttribute("onboarding", "with-browsing");
 
-        async function processFxaFlow(onboardingView) {
-          await window.gSync.openFxAEmailFirstPage(
-            "pinebuild-onboarding",
-            email
-          );
-          window.gStageManager.setView(onboardingView);
+        function concludeFxaFlow(obj) {
           doc.body.setAttribute("onboarding", "no-browsing");
+          window.gStageManager.reset({ url: ONBOARDING_URL });
+          Services.prefs.setIntPref(
+            "browser.pinebuild.onboarding.progress",
+            ONBOARDING_SCREEN_AFTER_FXA
+          );
+
+          // Message child with updated pref value to pass on to component
+          obj.sendAsyncMessage("OnboardingProgressPrefValueUpdated", {
+            prefValue: ONBOARDING_SCREEN_AFTER_FXA,
+          });
         }
 
-        const fxaListener = {
+        // This progress listener listens to location changes to help get users who are deviating
+        // from the original onboarding fxa flow, for e.g. when a user resets password instead of
+        // signing in directly, back onto the fxa sign in page and subsequently back to about:onboarding.
+        fxaListener = {
           QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
 
           onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
-            if (
-              aWebProgress.isTopLevel &&
-              aLocationURI.spec.startsWith(
-                lazy.ROOT_URL + RESET_PASSWORD_VERIFIED_PATH
-              )
-            ) {
-              processFxaFlow(this._onboardingView);
-              window.gBrowser.removeProgressListener(fxaListener);
+            if (aWebProgress.isTopLevel) {
+              if (
+                aLocationURI.spec.startsWith(
+                  lazy.ROOT_URL + RESET_PASSWORD_VERIFIED_PATH
+                )
+              ) {
+                window.gSync.openFxAEmailFirstPage(
+                  "pinebuild-onboarding",
+                  email
+                );
+              } else if (
+                aLocationURI.spec.startsWith(
+                  lazy.ROOT_URL + CONNECT_ANOTHER_DEVICE_PATH
+                )
+              ) {
+                concludeFxaFlow(this);
+              }
             }
           },
         };
@@ -128,18 +148,8 @@ class OnboardingParent extends JSWindowActorParent {
         fxaListener.onLocationChange = fxaListener.onLocationChange.bind(this);
         window.gBrowser.addProgressListener(fxaListener);
 
-        processFxaFlow(this._onboardingView);
-
-        Services.prefs.setIntPref(
-          "browser.pinebuild.onboarding.progress",
-          ONBOARDING_SCREEN_AFTER_FXA
-        );
-
-        // Message child with updated pref value to pass on to component
-        this.sendAsyncMessage("OnboardingProgressPrefValueUpdated", {
-          prefValue: ONBOARDING_SCREEN_AFTER_FXA,
-        });
-
+        await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding", email);
+        concludeFxaFlow(this);
         break;
       case "GetOnboardingProgressPrefValue":
         return Services.prefs.getIntPref(
