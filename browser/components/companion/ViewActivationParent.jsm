@@ -9,11 +9,11 @@ var EXPORTED_SYMBOLS = ["ViewActivationParent"];
 class ViewActivationParent extends JSWindowActorParent {
   async receiveMessage(message) {
     if (message.name == "RequestActivation") {
-      if (!this.browsingContext.embedderElement) {
+      if (!this.browsingContext.topChromeWindow) {
         return;
       }
 
-      let { gStageManager } = this.browsingContext.embedderElement.ownerGlobal;
+      let { gStageManager } = this.browsingContext.topChromeWindow;
       if (gStageManager) {
         gStageManager.clearActivationTimer();
         gStageManager.activateCurrentView();

@@ -166,4 +166,55 @@ add_task(async function test_activate_activated_View() {
     lastUpdatedPromise,
     "River should have the same updateComplete Promise."
   );
+
+  gStageManager.reset();
+});
+
+/**
+ * Tests that we will activate a View when an iteraction occurs within
+ * an out-of-process subframe.
+ */
+add_task(async function test_activate_oop_iframe() {
+  const BUILDER_URL = "https://example.com/document-builder.sjs?html=";
+  const SUBFRAME_MARKUP = `
+  <html>
+    <button id="test-button">Click me</button>
+  </html>
+  `;
+  const SUBFRAME_URL = BUILDER_URL + encodeURI(SUBFRAME_MARKUP);
+  const VIEW_1_MARKUP = `
+  <html>
+    <iframe id="iframe" src="${SUBFRAME_URL}" />
+  </html>
+  `;
+
+  const VIEW_1_URL = BUILDER_URL + encodeURI(VIEW_1_MARKUP);
+
+  let [view1, view2] = await PinebuildTestUtils.loadViews([
+    VIEW_1_URL,
+    "https://example.org/",
+  ]);
+
+  await assertActiveView(view2);
+  await PinebuildTestUtils.setCurrentView(view1);
+
+  // View 2 is still active despite View 1 being made current.
+  await assertActiveView(view2);
+
+  // Now interact with the iframe.
+  await shouldActivate(view1, async () => {
+    let browser = gBrowser.selectedBrowser;
+    let iframeBC = browser.browsingContext.children[0];
+
+    await BrowserTestUtils.synthesizeMouse(
+      "#test-button",
+      0,
+      0,
+      {},
+      iframeBC,
+      true
+    );
+  });
+
+  gStageManager.reset();
 });
