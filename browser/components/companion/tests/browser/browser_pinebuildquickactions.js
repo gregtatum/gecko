@@ -16,6 +16,25 @@ XPCOMUtils.defineLazyGetter(this, "UrlbarTestUtils", () => {
   return module;
 });
 
+add_setup(async function setup() {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      [
+        "browser.pinebuild.companion.test-services",
+        JSON.stringify([
+          {
+            icon: "chrome://browser/content/companion/googleAccount.png",
+            name: "Test service",
+            services: "Test connected accounts",
+            domains: ["www.example.com", "test2.example.com"],
+            type: "testservice",
+          },
+        ]),
+      ],
+    ],
+  });
+});
+
 async function validateAuthenticatedQuickAction(action) {
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
     await SpecialPowers.pushPrefEnv({
@@ -134,18 +153,6 @@ add_task(async function test_connectedAccountNavigation() {
         [
           "browser.pinebuild.quickactions.testURL",
           "https://example.com/help?authuser={email}",
-        ],
-        [
-          "browser.pinebuild.companion.test-services",
-          JSON.stringify([
-            {
-              icon: "chrome://browser/content/companion/googleAccount.png",
-              name: "Test service",
-              services: "Test connected accounts",
-              domains: ["www.example.com", "test2.example.com"],
-              type: "testservice",
-            },
-          ]),
         ],
       ],
     });
