@@ -32,13 +32,14 @@ talos-bcv:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|macosx1015|windows10)-64-shippable-qr/opt: [mozilla-beta, trunk, pine]
-                    (windows10-64|macosx1015-64).*-qr.*: [trunk, pine]
+                    windows10-64(?:-shippable)(?:-pinebuild)(?:-qr)?/opt: [pine]
+                    linux1804-64-(?:shippable)(?:-pinebuild)(?:-qr)?/opt: [pine]
+                    macosx.*64(?:-shippable)(?:-pinebuild)/opt: [pine]
                     default: []
             default:
                 by-test-platform:
                     windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
+                    (linux|windows10-64|macos)(?!.*pinebuild).*: []
                     (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 1800
@@ -67,7 +68,7 @@ talos-chrome:
     run-on-projects:
         by-test-platform:
             windows.*-32.*: []
-            (linux|windows10-64|macos)(?!.*shippable).*: []
+            (linux|windows10-64|macos)(?!.*pinebuild).*: []
             (linux|windows10-64|macosx1015)(?!.*-qr).*: []
             default: [mozilla-beta, trunk, pine]
     max-run-time: 1800
@@ -98,12 +99,12 @@ talos-damp-inspector:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx1015)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32-shippable.*/.*: []
-                    (linux|windows|macos)(?!.*shippable).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
                     (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     mozharness:
@@ -121,12 +122,12 @@ talos-damp-webconsole:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx1015)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32-shippable.*/.*: []
-                    (linux|windows|macos)(?!.*shippable).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
                     (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     mozharness:
@@ -144,12 +145,12 @@ talos-damp-other:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx1015)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32-shippable.*/.*: []
-                    (linux|windows|macos)(?!.*shippable).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
                     (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     mozharness:
@@ -200,7 +201,7 @@ talos-dromaeojs:
     run-on-projects:
         by-test-platform:
             windows.*-32.*: []
-            (linux|windows10-64|macos)(?!.*shippable).*: []
+            (linux|windows10-64|macos)(?!.*pinebuild).*: []
             (linux|windows10-64|macosx1015)(?!.*-qr).*: []
             default: [mozilla-beta, trunk, pine]
     mozharness:
@@ -261,13 +262,13 @@ talos-g1:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time:
         by-test-platform:
@@ -302,13 +303,13 @@ talos-g3:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 900
     mozharness:
@@ -337,12 +338,12 @@ talos-g4:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx1015)-64-shippable-qr/opt: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
                     (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time:
@@ -381,13 +382,13 @@ talos-g5:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time:
         by-test-platform:
@@ -483,13 +484,13 @@ talos-other:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 1500
     mozharness:
@@ -553,13 +554,13 @@ talos-perf-reftest:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 1200
     mozharness:
@@ -615,13 +616,13 @@ talos-svgr:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 1800
     mozharness:
@@ -650,13 +651,13 @@ talos-tp5o:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 1800
     mozharness:
@@ -685,13 +686,13 @@ talos-tabswitch:
         by-variant:
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx.*)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
-                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 1800
     mozharness:
@@ -721,16 +722,18 @@ talos-webgl:
         by-variant:
             webgl-ipc:
                 by-test-platform:
-                    (linux1804|windows10|macosx1015)-64.*: [trunk, pine]
-                    default: []
+                    windows.*-32.*: []
+                    (linux|windows10-64|macos)(?!.*pinebuild).*: []
+                    (linux|windows10-64|macosx1015)(?!.*-qr).*: []
+                    default: [mozilla-beta, trunk, pine]
             webrender-sw:
                 by-test-platform:
-                    (linux1804|windows10|macosx1015)-64-shippable-qr.*: [mozilla-beta, trunk, pine]
+                    (linux1804-64|windows10-64-2004|macosx1015-64)-pinebuild-qr.*: [mozilla-beta, trunk, pine]
                     default: []
             default:
                 by-test-platform:
-                    windows.*-32.*: []
-                    (linux|windows10-64|macos)(?!.*shippable).*: []
+                    windows.*-32-pinebuild.*/.*: []
+                    (linux|windows|macos)(?!.*pinebuild).*: []
                     (linux|windows10-64|macos)(?!.*-qr).*: []
                     default: [mozilla-beta, trunk, pine]
     max-run-time: 2100

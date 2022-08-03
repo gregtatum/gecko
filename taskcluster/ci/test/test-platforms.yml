@@ -115,6 +115,7 @@ linux1804-64-pinebuild-qr/opt:
     build-platform: linux64-pinebuild/opt
     test-sets:
         - pinebuild
+        - talos
 
 ##
 # Windows platforms (matching /windows.*/)
@@ -265,6 +266,7 @@ windows10-64-2004-pinebuild-qr/opt:
     build-platform: win64-pinebuild/opt
     test-sets:
         - pinebuild
+        - talos
 
 ##
 # MacOS X platforms (matching /macosx.*/)
@@ -336,6 +338,7 @@ macosx1015-64-pinebuild-qr/opt:
     build-platform: macosx64-pinebuild/opt
     test-sets:
         - pinebuild
+        - talos
 
 ##
 # Android platforms (matching /android-em.*/)
