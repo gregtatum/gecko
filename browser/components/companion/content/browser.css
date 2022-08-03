@@ -229,7 +229,7 @@ body:not([browser-ready]) .browserStack > browser {
   border-bottom: none;
 }
 
-#titlebar:not([hidden]) + #nav-bar > #pinebuild-window-controls {
+#titlebar:not([hidden="true"]) + #nav-bar > #pinebuild-window-controls {
   display: none;
 }
 
