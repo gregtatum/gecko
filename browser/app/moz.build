@@ -73,9 +73,13 @@ if CONFIG["CC_TYPE"] == "clang-cl":
     WIN32_EXE_LDFLAGS += ["-ENTRY:wmainCRTStartup"]
 
 if CONFIG["OS_ARCH"] == "WINNT":
+    if not CONFIG["PINEBUILD"]:
+        DIRS += [
+            "pbproxy"
+        ]
+
     RCINCLUDE = "splash.rc"
     DIRS += [
-        "pbproxy",
         "winlauncher",
     ]
     USE_LIBS += [
