@@ -29,7 +29,7 @@ add_task(async function test_companion_history_open_from_menu() {
     );
 
     if (AppConstants.platform == "win") {
-      EventUtils.synthesizeKey("y", { accelKey: true, shiftKey: true }, win);
+      EventUtils.synthesizeKey("h", { accelKey: true, shiftKey: true }, win);
     } else {
       EventUtils.synthesizeKey("y", { accelKey: true }, win);
     }
