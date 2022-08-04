@@ -453,6 +453,12 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
   color: var(--pinebuild-panel-item-hover-color);
 }
 
+@media (prefers-constrast) {
+  .panel-footer {
+    --button-hover-bgcolor: color-mix(in srgb, currentColor 17%, transparent);
+  }
+}
+
 #pinebuild-back-button > .toolbarbutton-icon {
   background-image: url("chrome://browser/skin/back.svg");
 }
