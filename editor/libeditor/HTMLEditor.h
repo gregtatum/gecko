@@ -1230,13 +1230,6 @@ class HTMLEditor final : public EditorBase,
   }
 
   /**
-   * Try to get parent list element at `Selection`.  This returns first find
-   * parent list element of common ancestor of ranges (looking for it from
-   * first range to last range).
-   */
-  Element* GetParentListElementAtSelection() const;
-
-  /**
    * GetRangeExtendedToHardLineEdgesForBlockEditAction() returns an extended
    * range if aRange should be extended before handling a block level editing.
    * If aRange start and/or end point <br> or something non-editable point, they
@@ -1307,14 +1300,15 @@ class HTMLEditor final : public EditorBase,
    * @param aTag                        The name of element to be inserted
    *                                    after calling this method.
    * @param aStartOfDeepestRightNode    The start point of deepest right node.
-   *                                    This point must be descendant of
-   *                                    active editing host.
+   *                                    This point must be in aEditingHost.
+   * @param aEditingHost                The editing host.
    * @return                            When succeeded, SplitPoint() returns
    *                                    the point to insert the element.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT SplitNodeResult
   MaybeSplitAncestorsForInsertWithTransaction(
-      nsAtom& aTag, const EditorDOMPoint& aStartOfDeepestRightNode);
+      nsAtom& aTag, const EditorDOMPoint& aStartOfDeepestRightNode,
+      const Element& aEditingHost);
 
   /**
    * InsertElementWithSplittingAncestorsWithTransaction() is a wrapper of
@@ -1396,10 +1390,12 @@ class HTMLEditor final : public EditorBase,
    * @param aArrayOfContents    Nodes which will be moved into created
    *                            <blockquote> elements.
    * @param aEditingHost        The editing host.
-   * @return                    A suggest of caret position if succeeded.  It
-   *                            may be unset if there is no suggestion.
+   * @return                    A blockquote element which is created at last
+   *                            and a suggest of caret position if succeeded.
+   *                            The caret suggestion may be unset if there is
+   *                            no suggestion.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT CreateElementResult
   WrapContentsInBlockquoteElementsWithTransaction(
       const nsTArray<OwningNonNull<nsIContent>>& aArrayOfContents,
       const Element& aEditingHost);
@@ -1435,9 +1431,10 @@ class HTMLEditor final : public EditorBase,
    * @param aArrayOfContents    Must be descendants of a node.
    * @param aBlockTag           The element name of new block elements.
    * @param aEditingHost        The editing host.
-   * @return                    May suggest a point to put caret if succeeded.
+   * @return                    The latest created new block element and a
+   *                            suggest point to put caret.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT CreateElementResult
   CreateOrChangeBlockContainerElement(
       nsTArray<OwningNonNull<nsIContent>>& aArrayOfContents, nsAtom& aBlockTag,
       const Element& aEditingHost);
@@ -1460,10 +1457,13 @@ class HTMLEditor final : public EditorBase,
    *                    Otherwise, CreateOrChangeBlockContainerElement() will be
    *                    called.
    * @param aEditingHost        The editing host.
+   * @return                    If selection should be finally collapsed in a
+   *                            created block element, this returns the element.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult FormatBlockContainerWithTransaction(
-      AutoRangeArray& aSelectionRanges, nsAtom& aBlockType,
-      const Element& aEditingHost);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<RefPtr<Element>, nsresult>
+  FormatBlockContainerWithTransaction(AutoRangeArray& aSelectionRanges,
+                                      nsAtom& aBlockType,
+                                      const Element& aEditingHost);
 
   /**
    * InsertBRElementIfHardLineIsEmptyAndEndsWithBlockBoundary() determines if
@@ -2611,14 +2611,6 @@ class HTMLEditor final : public EditorBase,
    * `Selection` is not collapsed.
    */
   void SetSelectionInterlinePosition();
-
-  /**
-   * EnsureSelectionInBlockElement() may move caret into aElement or its
-   * parent block if caret is outside of them.  Don't call this when
-   * `Selection` is not collapsed.
-   */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
-  EnsureCaretInBlockElement(dom::Element& aElement);
 
   /**
    * Called by `HTMLEditor::OnEndHandlingTopLevelEditSubAction()`.  This may
