@@ -515,6 +515,9 @@ talos-sessionrestore-many-windows:
     treeherder-symbol: T(smw)
     variants:
         - webrender-sw
+    limit-platforms:
+        # Prevent this test from running on pinebuild platforms
+        - .*shippable.*
     run-on-projects:
         by-variant:
             webrender-sw:
@@ -795,6 +798,9 @@ talos-realworld-webextensions:
             (linux|windows10-64|macos)(?!.*shippable).*: []
             (linux|windows10-64|macosx1015)(?!.*-qr).*: []
             default: [mozilla-beta, trunk]
+    limit-platforms:
+        # Prevent this test from running on pinebuild platforms
+        - .*shippable.*
     max-run-time: 1500
     mozharness:
         extra-options:
