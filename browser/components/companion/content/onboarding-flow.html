@@ -6,6 +6,7 @@
   <head>
     <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'">
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/toggle-button.css">
     <link rel="stylesheet" href="chrome://browser/content/companion/companion.css">
     <link rel="stylesheet" href="chrome://browser/content/companion/onboarding-flow.css">
     <link rel="localization" href="branding/brand.ftl" />
@@ -91,7 +92,7 @@
           <p data-l10n-id="onboarding-flow-data-prefs-text"><a href="#" target="_blank" data-l10n-name="link-learn-more"></a></p>
           <fieldset>
             <label>
-              <input type="checkbox" name="firefox-suggest" checked/>
+              <input type="checkbox" class="toggle-button" name="firefox-suggest" checked/>
               <span
                 class="onboarding-data-prefs-label-heading"
                 data-l10n-id="onboarding-flow-data-prefs-label-firefox-suggest"></span>
@@ -100,7 +101,7 @@
                 data-l10n-id="onboarding-flow-data-prefs-label-firefox-suggest-detail"></span>
             </label>
             <label>
-              <input type="checkbox" name="better-browsing" checked/>
+              <input type="checkbox" class="toggle-button" name="better-browsing" checked/>
               <span
                 class="onboarding-data-prefs-label-heading"
                 data-l10n-id="onboarding-flow-data-prefs-label-better-browsing"></span>
@@ -109,7 +110,7 @@
                 data-l10n-id="onboarding-flow-data-prefs-label-better-browsing-detail"></span>
             </label>
             <label>
-              <input type="checkbox" name="usage-statistics" checked/>
+              <input type="checkbox" class="toggle-button" name="usage-statistics" checked/>
               <span
                 class="onboarding-data-prefs-label-heading"
                 data-l10n-id="onboarding-flow-data-prefs-label-usage-statistics"></span>

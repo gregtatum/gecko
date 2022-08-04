@@ -194,17 +194,24 @@ body {
   text-align: left;
 }
 
-  .onboarding-flow-card fieldset label {
-    clear: both;
-    display: block;
-    margin-block-end: 1em;
-  }
+.onboarding-flow-card fieldset label {
+  clear: both;
+  display: block;
+  margin-block-end: 1em;
+}
 
-  .onboarding-data-prefs-card input[type="checkbox"] {
-    float: right;
-    margin-block: 1.5em;
-    margin-inline-start: 3em;
-  }
+.onboarding-data-prefs-card input[type="checkbox"] {
+  float: right;
+  margin-block: 1.5em;
+  margin-inline-start: 3em;
+}
+
+.onboarding-data-prefs-card input[type="checkbox"].toggle-button {
+  --dot-size: 12px;
+  --button-width: 30px;
+  --dot-transform-x: 14px;
+  border: none;
+}
 
 .onboarding-flow-card input[type="email"] {
   box-sizing: border-box;
