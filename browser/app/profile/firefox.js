@@ -2294,7 +2294,7 @@ pref("devtools.browsertoolbox.fission", true);
 //   All processes, all documents, all workers, all add-ons.
 // - "parent-process" will restrict debugging to the parent process
 //   All privileged javascript, documents and workers running in the parent process.
-pref("devtools.browsertoolbox.scope", "everything");
+pref("devtools.browsertoolbox.scope", "parent-process");
 
 // This preference will enable watching top-level targets from the server side.
 pref("devtools.target-switching.server.enabled", true);
@@ -2705,7 +2705,7 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
 
 // If the user has seen the Firefox View feature tour this value reflects the tour
 // message id, the id of the last screen they saw, and whether they completed the tour
-pref("browser.browser.firefoxView.featureTour", "default, default, true");
+pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"complete\":true}");
 
 #ifdef PINEBUILD
   pref("browser.contentblocking.category", "strict");
