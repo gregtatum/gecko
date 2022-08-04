@@ -182,22 +182,16 @@ class OnboardingFlowElement extends HTMLElement {
           new CustomEvent("OnboardingCompleted", { bubbles: true })
         );
         break;
-      case "initiate-fxa-flow": {
-        const emailInput = document.getElementById("fxa-email");
-        if (emailInput.checkValidity()) {
-          this.recordCardCompleted(this._currentIndex);
-          let email = document.getElementById("fxa-email").value;
-          document.dispatchEvent(
-            new CustomEvent("OpenFxa", {
-              bubbles: true,
-              detail: { email },
-            })
-          );
-        } else {
-          emailInput.reportValidity();
-        }
+      case "initiate-fxa-flow":
+        this.recordCardCompleted(this._currentIndex);
+        let email = document.getElementById("fxa-email").value;
+        document.dispatchEvent(
+          new CustomEvent("OpenFxa", {
+            bubbles: true,
+            detail: { email },
+          })
+        );
         break;
-      }
       case "navigate-forward":
         const DATA_PREFS_PAGE_ID = 3;
         if (this._currentIndex === DATA_PREFS_PAGE_ID) {
