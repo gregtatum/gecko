@@ -156,6 +156,16 @@ class OnboardingParent extends JSWindowActorParent {
           "browser.pinebuild.onboarding.progress",
           0
         );
+      case "SaveDataPrefs":
+        Services.prefs.setBoolPref(
+          "browser.urlbar.quicksuggest.dataCollection.enabled",
+          message.data.suggestPrefChecked
+        );
+        Services.prefs.setBoolPref(
+          "datareporting.healthreport.uploadEnabled",
+          message.data.usageStatsPrefChecked
+        );
+        break;
       case "SetOnboardingProgressPrefValue":
         let newPrefValue = message.data;
         Services.prefs.setIntPref(

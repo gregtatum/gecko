@@ -1232,6 +1232,7 @@ BrowserGlue.prototype = {
             OnboardingCompleted: { wantUntrusted: true },
             OpenFxa: { wantUntrusted: true },
             RecordEvent: { wantUntrusted: true },
+            SaveDataPrefs: { wantUntrusted: true },
             GetOnboardingProgressPrefValue: { wantUntrusted: true },
             SetOnboardingProgressPrefValue: { wantUntrusted: true },
           },

@@ -120,6 +120,21 @@ class OnboardingFlowElement extends HTMLElement {
     );
   }
 
+  saveDataPrefs() {
+    let suggestPrefChecked = document.querySelector(
+      "input[name='firefox-suggest']"
+    ).checked;
+    let usageStatsPrefChecked = document.querySelector(
+      "input[name='usage-statistics']"
+    ).checked;
+    document.dispatchEvent(
+      new CustomEvent("SaveDataPrefs", {
+        bubbles: true,
+        detail: { suggestPrefChecked, usageStatsPrefChecked },
+      })
+    );
+  }
+
   setProgressPref(value) {
     document.dispatchEvent(
       new CustomEvent("SetOnboardingProgressPrefValue", {
@@ -184,6 +199,10 @@ class OnboardingFlowElement extends HTMLElement {
         break;
       }
       case "navigate-forward":
+        const DATA_PREFS_PAGE_ID = 3;
+        if (this._currentIndex === DATA_PREFS_PAGE_ID) {
+          this.saveDataPrefs();
+        }
         this.recordCardCompleted(this._currentIndex);
         let nextCard = this._currentIndex + 1;
         this.changePage(nextCard);
