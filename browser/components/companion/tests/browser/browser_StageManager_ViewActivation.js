@@ -190,10 +190,11 @@ add_task(async function test_activate_oop_iframe() {
 
   const VIEW_1_URL = BUILDER_URL + encodeURI(VIEW_1_MARKUP);
 
-  let [view1, view2] = await PinebuildTestUtils.loadViews([
-    VIEW_1_URL,
-    "https://example.org/",
-  ]);
+  let [view1] = await PinebuildTestUtils.loadViews([VIEW_1_URL]);
+
+  await BrowserTestUtils.openNewForegroundTab(gBrowser, "https://example.com/");
+  Assert.equal(gStageManager.views.length, 2);
+  let view2 = gStageManager.views[1];
 
   await assertActiveView(view2);
   await PinebuildTestUtils.setCurrentView(view1);
