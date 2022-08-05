@@ -7583,7 +7583,7 @@ var ToolbarContextMenu = {
 
   async openAboutAddonsForContextAction(popup) {
     let id = this._getExtensionId(popup);
-    await BrowserAddonUI.manageAddon(id);
+    await BrowserAddonUI.manageAddon(id, "browserAction");
   },
 };
 
