@@ -26,7 +26,7 @@ export default class ViewGroupElement extends MozLitElement {
       activeView: { type: Object },
       active: { type: Boolean },
       busyAnimating: { type: Boolean },
-      keying: { type: Boolean },
+      keying: { type: Boolean, reflect: true },
     };
   }
 

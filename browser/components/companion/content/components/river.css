@@ -139,11 +139,11 @@ view-group[active]:not(:last-of-type) {
   }
 }
 
-view-group:focus-within::part(history) {
+view-group[keying]:focus-within::part(history) {
   display: flex;
 }
 
-view-group:focus-within::part(domain) {
+view-group[keying]:focus-within::part(domain) {
   display: none;
 }
 

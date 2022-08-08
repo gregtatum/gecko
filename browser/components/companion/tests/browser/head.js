@@ -1240,12 +1240,12 @@ var PinebuildTestUtils = {
       stageManager,
       "ViewChanged"
     );
+
     // toolbarbutton's are not focusable normally, unless the user begins
     // using the keyboard to navigate. We temporarily force focusability
     // here.
-    backButton.setAttribute("tabindex", "-1");
-    backButton.focus();
-    backButton.removeAttribute("tabindex");
+    this.forceFocus(backButton);
+
     EventUtils.synthesizeKey(keyChar, {}, win);
     await viewChangedPromise;
     // Let the event loop tick once more time to make sure there
@@ -1766,5 +1766,20 @@ var PinebuildTestUtils = {
     } finally {
       await BrowserTestUtils.closeWindow(win);
     }
+  },
+
+  /**
+   * Focuses an element that might not be focusable by default, for
+   * example xul:toolbarbutton's. It is assumed that no tabindex attribute
+   * is set on the element, as it'll be set and cleared after this function
+   * exits.
+   *
+   * @param {Element} element
+   *   The element to force focus on.
+   */
+  forceFocus(element) {
+    element.setAttribute("tabindex", "-1");
+    element.focus();
+    element.removeAttribute("tabindex");
   },
 };
