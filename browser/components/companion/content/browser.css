@@ -453,7 +453,7 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
   color: var(--pinebuild-panel-item-hover-color);
 }
 
-@media (prefers-constrast) {
+@media (prefers-contrast) {
   .panel-footer {
     --button-hover-bgcolor: color-mix(in srgb, currentColor 17%, transparent);
   }
