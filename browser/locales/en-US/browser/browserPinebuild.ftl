@@ -118,3 +118,10 @@ private-window-coming-title2 = coming soon
 private-window-coming-soon-content = While we work to bring you this feature, <br>you can use private windows in { -brand-other-product-name }.
 private-window-coming-button-label = Got it
 private-window-coming-soon = Coming Soon: Private Browsing
+
+# Pinebuild migration strings
+pinebuild-import-from =
+    { PLATFORM() ->
+        [windows] Import Options, History, Passwords and other data from:
+       *[other] Import Preferences, History, Passwords and other data from:
+    }
