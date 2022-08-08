@@ -188,6 +188,10 @@ class HistoryCarousel {
       return;
     }
 
+    if (this.#window.top.gStageManager.currentView.pinned) {
+      return;
+    }
+
     if (lazy.PAGETHUMBNAILS_CAPTURING_DISABLED) {
       throw new Error(
         "Cannot enter history carousel if thumbnail generation is disabled."
