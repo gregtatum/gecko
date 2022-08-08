@@ -6740,6 +6740,13 @@ function onViewToolbarsPopupShowing(aEvent, aInsertPoint) {
     menuSeparator.hidden = !showTabStripItems;
   }
 
+  if (AppConstants.platform == "win" && AppConstants.PINEBUILD) {
+    let viewToolbarsSeparator = document.getElementById(
+      "viewToolbarsMenuSeparator"
+    );
+    viewToolbarsSeparator.hidden = true;
+  }
+
   if (showTabStripItems) {
     let multipleTabsSelected = !!gBrowser.multiSelectedTabsCount;
     document.getElementById(

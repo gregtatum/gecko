@@ -151,7 +151,7 @@
 #endif
                       >
                   <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);" >
-#if defined(PINEBUILD) && !defined(XP_MACOSX)
+#ifndef PINEBUILD
                     <menuseparator/>
 #endif
                     <menuitem id="menu_customizeToolbars"
