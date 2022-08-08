@@ -116,12 +116,7 @@ add_task(async function test_companion_starts_closed() {
   // Start with the Companion sidebar closed.
   let helper = new CompanionHelper();
   await helper.companionReady;
-  helper.closeCompanion();
-
-  Assert.ok(
-    BrowserTestUtils.is_hidden(helper.browser),
-    "Companion browser should be hidden"
-  );
+  await helper.closeCompanion();
 
   // We'll search for the result with the title "This is the first page".
   await testUrlbarHandoff(helper, "first", TEST_URLS[0]);

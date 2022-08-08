@@ -97,13 +97,9 @@ add_task(async function test_keyboard_open() {
       "Companion is in browse tab by default"
     );
 
-    helper.closeCompanion();
+    await helper.closeCompanion();
 
     let companionBrowser = win.document.getElementById("companion-browser");
-    ok(
-      BrowserTestUtils.is_hidden(companionBrowser),
-      "Companion browser should be hidden"
-    );
 
     if (AppConstants.platform == "linux") {
       EventUtils.synthesizeKey("y", { accelKey: true, shiftKey: true }, win);

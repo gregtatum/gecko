@@ -20,13 +20,9 @@ add_task(async function test_companion_history_open_from_menu() {
       "Companion is in browse tab by default"
     );
 
-    helper.closeCompanion();
+    await helper.closeCompanion();
 
     let companionBrowser = win.document.getElementById("companion-browser");
-    ok(
-      BrowserTestUtils.is_hidden(companionBrowser),
-      "Companion browser should be hidden"
-    );
 
     if (AppConstants.platform == "win") {
       EventUtils.synthesizeKey("h", { accelKey: true, shiftKey: true }, win);

@@ -487,18 +487,20 @@ class CompanionHelper {
       .click();
   }
 
-  closeCompanion() {
+  async closeCompanion() {
     let companionBox = this.companionBox;
-    if (!companionBox.isOpen) {
-      return;
-    }
 
     // We intentionally click the button here rather than call
     // companionBox.toggleVisible. This is so that we can test that the button
     // is working properly.
-    this.browserWindow.document
-      .getElementById("companion-sidebar-button")
-      .click();
+    if (companionBox.isOpen) {
+      this.browserWindow.document
+        .getElementById("companion-sidebar-button")
+        .click();
+    }
+    return BrowserTestUtils.waitForCondition(() =>
+      BrowserTestUtils.is_hidden(companionBox)
+    );
   }
 
   async reload() {
