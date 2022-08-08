@@ -86,6 +86,7 @@
   padding: 4px;
   box-sizing: border-box;
   background-color: var(--avm-view-group-element-icon-bgcolor);
+  overflow: hidden;
 }
 
 .view-icon-overlay,
