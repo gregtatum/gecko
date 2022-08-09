@@ -24,10 +24,10 @@ add_task(async function test_companion_history_open_from_menu() {
 
     let companionBrowser = win.document.getElementById("companion-browser");
 
-    if (AppConstants.platform == "win") {
-      EventUtils.synthesizeKey("h", { accelKey: true, shiftKey: true }, win);
-    } else {
+    if (AppConstants.platform == "macosx") {
       EventUtils.synthesizeKey("y", { accelKey: true }, win);
+    } else {
+      EventUtils.synthesizeKey("h", { accelKey: true, shiftKey: true }, win);
     }
 
     await BrowserTestUtils.waitForCondition(
