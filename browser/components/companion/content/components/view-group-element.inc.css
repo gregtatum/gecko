@@ -95,11 +95,6 @@
   border-radius: 100px;
 }
 
-:host([top][active])) .view-icon-container {
-  margin-inline-end: 5px;
-  background-color: var(--avm-view-group-element-active-icon-bgcolor);
-}
-
 .view-icon:not([src]) {
   visibility: hidden;
 }
@@ -129,7 +124,6 @@
 
 .view-title {
   font-size: 1.20rem;
-  height: 16px;
 }
 
 .view-domain-container {
