@@ -1001,7 +1001,7 @@ class InternalView {
   }
 
   get title() {
-    return this.#userTitle || this.#title;
+    return this.#userTitle || this.#title || this.url.spec;
   }
 
   /** @type {boolean} */
