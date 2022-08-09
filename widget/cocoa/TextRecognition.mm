@@ -21,6 +21,10 @@ auto TextRecognition::DoFindText(gfx::DataSourceSurface& aSurface,
                                  const nsTArray<nsCString>& aLanguages) -> RefPtr<NativePromise> {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
   if (@available(macOS 10.15, *)) {
+    printf("!!! TextRecognition::DoFindText\n");
+    for (const auto& language : aLanguages) {
+      printf("!!! language %s\n", language.get());
+    }
     // TODO - Is this the most efficient path? Maybe we can write a new
     // CreateCGImageFromXXX that enables more efficient marshalling of the data.
     CGImageRef imageRef = NULL;
