@@ -3,6 +3,10 @@
 
 "use strict";
 
+const { TabStateFlusher } = ChromeUtils.import(
+  "resource:///modules/sessionstore/TabStateFlusher.jsm"
+);
+
 const PAGE_1 = "https://example.com/";
 const PAGE_2 = "https://example.org/";
 const PAGE_3 = "http://mochi.test:8888/";
@@ -41,6 +45,11 @@ add_task(async function test_destroyed_shentry() {
   // Go back to the original View, and then load a new View within that
   // browser to overwrite the SHEntry for View 2.
   await PinebuildTestUtils.setCurrentView(view1);
+
+  // Caching a destroyed SHEntry relies on the parent process having
+  // an up-to-date idea of what the history state is, so we flush the
+  // state to the parent process here before destroying any entries.
+  await TabStateFlusher.flush(browser);
 
   newViewCreated = PinebuildTestUtils.waitForNewView(browser, PAGE_3);
   BrowserTestUtils.loadURI(browser, PAGE_3);
@@ -92,6 +101,11 @@ add_task(async function test_destroyed_shentry() {
     3,
     "Should still have 3 Views in the River"
   );
+
+  // Caching a destroyed SHEntry relies on the parent process having
+  // an up-to-date idea of what the history state is, so we flush the
+  // state to the parent process here before destroying any entries.
+  await TabStateFlusher.flush(browser);
 
   // Having gone back to View 2, navigating forward should destroy
   // the SHEntry associated with View 3 while keeping View 3 around.
