@@ -41,6 +41,15 @@ async function navigateToNextPage(dataAction) {
   currentPage++;
 }
 
+add_setup(async () => {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["identity.fxaccounts.allowHttp", true],
+      ["identity.fxaccounts.remote.root", "http://example.com/"],
+    ],
+  });
+});
+
 add_task(async function test_onboarding_to_fxa() {
   await SpecialPowers.pushPrefEnv({
     set: [[ONBOARDING_COMPLETE_PREF, false]],
@@ -50,6 +59,7 @@ add_task(async function test_onboarding_to_fxa() {
   });
   // Run test in a new window to avoid affecting the main test window.
   win = await BrowserTestUtils.openNewBrowserWindow();
+
   browser = win.gBrowser.selectedBrowser;
   BrowserTestUtils.loadURI(browser, "about:onboarding");
   await BrowserTestUtils.browserLoaded(browser, false, "about:onboarding");
@@ -60,9 +70,23 @@ add_task(async function test_onboarding_to_fxa() {
     currentPage,
     "Reached page 2 of onboarding"
   );
+  // We expect this next step to open up the OAuthConnect tab
+  let loadPromise = BrowserTestUtils.waitForNewTab(win.gBrowser, null, true);
   await checkForNextButton("initiate-fxa-flow");
   await navigateToNextPage("initiate-fxa-flow");
-  // Bypass Fxa and end test as there's currently no way to simulate Fxa login
+  let oauthTab = await loadPromise;
+
+  // Compute the redirect URL that the OAuth module expects, and send the browser
+  // there, to pretend that the user completed the sign-in. This will automatically
+  // cause the underlying OAuth tab to close, which we wait for.
+  let state = new URLSearchParams(oauthTab.linkedBrowser.currentURI.spec).get(
+    "state"
+  );
+  let redirectURL = await win.FxAccounts.config.promisePairingURI({ state });
+  let tabClose = BrowserTestUtils.waitForTabClosing(oauthTab);
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, redirectURL);
+  await tabClose;
+
   await BrowserTestUtils.closeWindow(win);
 });
 
