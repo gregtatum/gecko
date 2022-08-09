@@ -563,10 +563,10 @@ class MicrosoftService {
 
     // Consumer accounts are a hexadecimal number;
     // Office365 accounts are a UUID.
-    if (`0x{results.id}` == parseInt(results.id)) {
+    if (`0x${results.id}` == parseInt(results.id, 16)) {
       this.inboxURL = "https://outlook.live.com/mail/";
     } else {
-      this.inboxURL = `https://outlook.office.com/owa/{this.emailAddress}`;
+      this.inboxURL = `https://outlook.office.com/owa/${this.emailAddress}`;
     }
   }
 

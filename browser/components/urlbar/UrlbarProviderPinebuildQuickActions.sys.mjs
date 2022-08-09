@@ -32,6 +32,19 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   WorkshopParentAccess: "resource:///modules/WorkshopParentAccess.jsm",
 });
 
+XPCOMUtils.defineLazyGetter(lazy, "log", () => {
+  let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
+  return new ConsoleAPI({
+    prefix: "QuickActions",
+    maxLogLevel: Services.prefs.getBoolPref(
+      "browser.pinebuild.quickactions.log",
+      false
+    )
+      ? "debug"
+      : "error",
+  });
+});
+
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "extraActions",
@@ -115,6 +128,7 @@ const COMMANDS = {
       return hasUnreadMessages("google");
     },
     callback: ({ inboxUrl } = {}) => {
+      lazy.log.debug(`Google Inbox URL: ${inboxUrl}`);
       UrlbarUtils.openUrl(inboxUrl);
     },
   },
@@ -131,6 +145,7 @@ const COMMANDS = {
       return hasUnreadMessages("microsoft");
     },
     callback: ({ inboxUrl } = {}) => {
+      lazy.log.debug(`Microsoft Inbox URL: ${inboxUrl}`);
       UrlbarUtils.openUrl(inboxUrl);
     },
   },
