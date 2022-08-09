@@ -45,6 +45,13 @@ const workshopEnabled = Services.prefs.getBoolPref(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "SPECULATIVELY_CREATE_VIEWS",
+  "browser.pinebuild.speculatively-create-views",
+  false
+);
+
 const PLACES_CACHE_EVICT_AFTER = 60 * 6 * 1000; // 6 minutes
 // Give ourselves a little bit of a buffer when calling setTimeout to evict
 // things from the places cache, otherwise we might end up scheduling
@@ -732,26 +739,42 @@ class CompanionParent extends JSWindowActorParent {
   sessionSetAside() {
     this.viewTab("now");
     this.sendAsyncMessage("Companion:ResetFlowEntered");
+    let companionParent = this;
     let win = this.browsingContext.topChromeWindow;
     win.document.body.setAttribute("flow-reset", true);
 
     const listener = {
       QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
 
-      onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
-        // Wait for the first location change away from the about:flow-reset page,
-        // loading about:flow-reset includes load events for about:blank and there
+      maybeClearFlowReset(aWebProgress, aFlags, aUriString) {
+        // Wait for the first location change away from the about:flow-reset page.
+        // Loading about:flow-reset includes load events for about:blank and there
         // is no problem with being in flow reset state over about:blank.
-        let ignored = ["about:flow-reset", "about:blank"];
-        if (!aWebProgress.isTopLevel || ignored.includes(aLocationURI.spec)) {
+        let ignored = ["about:flow-reset", "about:blank", "about:newtab"];
+        if (!aWebProgress.isTopLevel || ignored.includes(aUriString)) {
           return;
         }
         win.document.body.removeAttribute("flow-reset");
-        this.sendAsyncMessage("Companion:ResetFlowExited");
+        companionParent.sendAsyncMessage("Companion:ResetFlowExited");
         win.gBrowser.removeProgressListener(listener);
       },
+
+      onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
+        this.maybeClearFlowReset(aWebProgress, aFlags, aLocationURI.spec);
+      },
+
+      onStateChange(aWebProgress, aRequest, aFlags, aStatus) {
+        if (!lazy.SPECULATIVELY_CREATE_VIEWS) {
+          return;
+        }
+
+        if (aFlags & Ci.nsIWebProgressListener.STATE_START) {
+          let channel = aRequest.QueryInterface(Ci.nsIChannel);
+          this.maybeClearFlowReset(aWebProgress, aFlags, channel.URI.spec);
+        }
+      },
     };
-    listener.onLocationChange = listener.onLocationChange.bind(this);
+
     win.gBrowser.addProgressListener(listener);
   }
 
