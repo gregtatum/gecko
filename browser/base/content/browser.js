@@ -1572,6 +1572,17 @@ function _loadURI(browser, uri, params = {}) {
   // XXX(nika): Is `browser.isNavigating` necessary anymore?
   browser.isNavigating = true;
 
+  if (globalHistoryOptions?.triggeringSearchEngine) {
+    browser.setAttribute(
+      "triggeringSearchEngine",
+      globalHistoryOptions.triggeringSearchEngine
+    );
+    browser.setAttribute("triggeringSearchEngineURL", uri);
+  } else {
+    browser.removeAttribute("triggeringSearchEngine");
+    browser.removeAttribute("triggeringSearchEngineURL");
+  }
+
   if (globalHistoryOptions?.triggeringSponsoredURL) {
     browser.setAttribute(
       "triggeringSponsoredURL",
@@ -3349,6 +3360,8 @@ function BrowserPageInfo(
 
   documentURL = documentURL || window.gBrowser.selectedBrowser.currentURI.spec;
 
+  let isPrivate = PrivateBrowsingUtils.isWindowPrivate(window);
+
   // Check for windows matching the url
   for (let currentWindow of Services.wm.getEnumerator("Browser:page-info")) {
     if (currentWindow.closed) {
@@ -3356,7 +3369,8 @@ function BrowserPageInfo(
     }
     if (
       currentWindow.document.documentElement.getAttribute("relatedUrl") ==
-      documentURL
+        documentURL &&
+      PrivateBrowsingUtils.isWindowPrivate(currentWindow) == isPrivate
     ) {
       currentWindow.focus();
       currentWindow.resetPageInfo(args);
@@ -3365,10 +3379,16 @@ function BrowserPageInfo(
   }
 
   // We didn't find a matching window, so open a new one.
+  let options = "chrome,toolbar,dialog=no,resizable";
+
+  // Ensure the window groups correctly in the Windows taskbar
+  if (isPrivate) {
+    options += ",private";
+  }
   return openDialog(
     "chrome://browser/content/pageinfo/pageInfo.xhtml",
     "",
-    "chrome,toolbar,dialog=no,resizable",
+    options,
     args
   );
 }
@@ -4283,6 +4303,9 @@ const BrowserSearch = {
       triggeringPrincipal,
       csp,
       targetBrowser: tab?.linkedBrowser,
+      globalHistoryOptions: {
+        triggeringSearchEngine: engine.name,
+      },
     });
 
     return { engine, url: submission.uri };
