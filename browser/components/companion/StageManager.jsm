@@ -1915,6 +1915,20 @@ class WorkspaceHistory extends EventTarget {
     lazy.logConsole.debug(
       `Did not initially find InternalView with ID: ${newEntry.ID}.`
     );
+
+    return this.#findInternalViewToNavigateHelper(browser, newEntry);
+  }
+
+  /**
+   * Called by #findInternalViewToNavigate to see if there are existing
+   * InternalViews to overwrite for the newEntry. This should only be called
+   * by #findInternalViewToNavigate.
+   *
+   * @param {Browser} browser
+   * @param {nsISHEntry} newEntry
+   * @returns {FindInternalViewResult}
+   */
+  #findInternalViewToNavigateHelper(browser, newEntry) {
     // It's possible that a session restoration has resulted in a new
     // nsISHEntry being created with a new ID that doesn't match the one
     // we're looking for. Thankfully, SessionHistory keeps track of this,
@@ -1923,7 +1937,7 @@ class WorkspaceHistory extends EventTarget {
     let previousID = lazy.SessionHistory.getPreviousID(newEntry);
     if (previousID) {
       lazy.logConsole.debug(`Found previous SHEntry ID: ${previousID}`);
-      internalView = this.historyViews.get(previousID);
+      let internalView = this.historyViews.get(previousID);
       if (internalView) {
         lazy.logConsole.debug(`Found InternalView ${internalView.toString()}`);
         this.historyViews.delete(previousID);
@@ -1936,7 +1950,9 @@ class WorkspaceHistory extends EventTarget {
       lazy.logConsole.debug(
         `Found pending View ${this.#stageManager.pendingView.toString()}.`
       );
-      internalView = InternalView.viewMap.get(this.#stageManager.pendingView);
+      let internalView = InternalView.viewMap.get(
+        this.#stageManager.pendingView
+      );
       this.historyViews.delete(internalView.historyId);
       this.historyViews.set(newEntry.ID, internalView);
       let event = new CustomEvent("ClearPendingInternalView");
