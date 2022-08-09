@@ -9,6 +9,7 @@
 #include "mozilla/ErrorResult.h"
 #include "ErrorList.h"
 #include "nsClipboard.h"
+#include "nsCocoaFeatures.h"
 #include "nsCocoaUtils.h"
 #include "mozilla/MacStringHelpers.h"
 #include "mozilla/ScopeExit.h"
@@ -20,6 +21,22 @@ namespace mozilla::widget {
 auto TextRecognition::DoFindText(gfx::DataSourceSurface& aSurface,
                                  const nsTArray<nsCString>& aLanguages) -> RefPtr<NativePromise> {
   NS_OBJC_BEGIN_TRY_IGNORE_BLOCK
+  // Typically we would use the @available mechanism, but it was not working as expected
+  // when implementing this function.
+
+  // VNRecognizeTextRequestRevision1. Supports only English, and is available from
+  // macOS 10.15 and on.
+  NSUInteger revision = 1;
+  if (nsCocoaFeatures::OnBigSurOrLater()) {
+    // VNRecognizeTextRequestRevision2 supports English, Chinese, Portuguese, French,
+    // Italian, German and Spanish in the accurate recognition level.
+    printf("!!! nsCocoaFeatures::OnBigSurOrLater\n");
+    revision = 2;
+  } else {
+    printf("!!! before big sur\n");
+  }
+  printf("!!! revision %zu\n", revision);
+
   if (@available(macOS 10.15, *)) {
     printf("!!! TextRecognition::DoFindText\n");
     for (const auto& language : aLanguages) {
@@ -40,10 +57,21 @@ auto TextRecognition::DoFindText(gfx::DataSourceSurface& aSurface,
       [recognitionLanguages addObject:nsCocoaUtils::ToNSString(locale)];
     }
 
+    NSError* error = nil;
+    auto supportedLanguages = [VNRecognizeTextRequest
+        supportedRecognitionLanguagesForTextRecognitionLevel:VNRequestTextRecognitionLevelAccurate
+                                                    revision:revision
+                                                       error:&error];
+    if (supportedLanguages) {
+      for (id string in supportedLanguages) {
+        printf("!!! supported language: %s\n", [string UTF8String]);
+      }
+    }
+
     NS_DispatchBackgroundTask(
         NS_NewRunnableFunction(
             __func__,
-            [promise, imageRef, recognitionLanguages] {
+            [promise, imageRef, recognitionLanguages, revision] {
               auto unrefImage = MakeScopeExit([&] {
                 ::CGImageRelease(imageRef);
                 [recognitionLanguages release];
@@ -83,6 +111,7 @@ auto TextRecognition::DoFindText(gfx::DataSourceSurface& aSurface,
               textRecognitionRequest.recognitionLevel = VNRequestTextRecognitionLevelAccurate;
               textRecognitionRequest.recognitionLanguages = recognitionLanguages;
               textRecognitionRequest.usesLanguageCorrection = true;
+              textRecognitionRequest.revision = revision;
 
               // Send out the request. This blocks execution of this thread with an expensive
               // CPU call.
