@@ -32,7 +32,7 @@ add_task(async function test_basic_downloads() {
   await CompanionHelper.whenReady(async helper => {
     let browser = win.gBrowser.selectedBrowser;
     BrowserTestUtils.loadURI(browser, TEST_URL);
-    await BrowserTestUtils.browserLoaded(browser);
+    await BrowserTestUtils.browserLoaded(browser, false, TEST_URL);
 
     let publicDownloads = await Downloads.getList(Downloads.PUBLIC);
     let downloadFinishedPromise = new Promise(resolve => {
