@@ -731,15 +731,16 @@ class InternalView {
    *   The top-level DOM window this view is in.
    * @param {Browser | null} browser
    *   The browser element that holds this view or null if this is a view for a discarded entry.
-   * @param {nsISHEntry | object} historyEntry
-   *   The nsISHEntry for this view or the serialized version if this view is for a lazy or
-   *   dropped entry.
+   * @param {nsISHEntry | nsIURI | object} historyEntryOrURL
+   *   The nsISHEntry for this view, or if an object, the serialized version if this view is
+   *   for a lazy or dropped entry. If this is an nsIURI, then this is for a speculatively
+   *   created InternalView for which there is no nsISHEntry yet.
    * @param {Number} workspaceId
    *   ID representing the workspace this view belongs to. We ignore this argument
    *   if browser is not null because that allows us to fetch the userContextId from
    *   the browser'r tab.
    */
-  constructor(window, browser, historyEntry, workspaceId) {
+  constructor(window, browser, historyEntryOrURL, workspaceId) {
     this.#id = InternalView.nextInternalViewID++;
     this.#window = window;
     this.#workspaceId = browser
@@ -755,36 +756,54 @@ class InternalView {
 
     InternalView.viewMap.set(this.#view, this);
 
-    if (historyEntry instanceof Ci.nsISHEntry) {
+    if (historyEntryOrURL instanceof Ci.nsISHEntry) {
       lazy.logConsole.debug(
-        `Created InternalView ${this.#id} with SHEntry ID: ${historyEntry.ID}`
+        `Created InternalView ${this.#id} with SHEntry ID: ${
+          historyEntryOrURL.ID
+        }`
       );
 
-      this.update(browser, historyEntry);
+      this.update(browser, historyEntryOrURL);
+    } else if (historyEntryOrURL instanceof Ci.nsIURI) {
+      lazy.logConsole.debug(
+        `Creating InternalView speculatively for URI `,
+        historyEntryOrURL.spec
+      );
+      this.#setURL(historyEntryOrURL);
     } else {
       lazy.logConsole.debug(
         `Created InternalView ${this.#id} with ${
           browser ? "lazy" : "cached"
-        } SHEntry ID: ` + historyEntry.ID
+        } SHEntry ID: ` + historyEntryOrURL.ID
       );
       this.browserId = browser?.browserId;
       this.browserKey = browser?.permanentKey;
 
-      this.historyId = historyEntry.ID;
-      this.cachedEntry = historyEntry;
-
-      this.url = Services.io.newURI(historyEntry.url);
-      let originAttributes = lazy.E10SUtils.predictOriginAttributes({
-        window,
-        userContextId: workspaceId,
-      });
-      this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
-        this.url,
-        originAttributes
-      );
-      this.#title = historyEntry.title;
+      this.historyId = historyEntryOrURL.ID;
+      this.cachedEntry = historyEntryOrURL;
+      this.#setURL(Services.io.newURI(historyEntryOrURL.url));
+      this.#title = historyEntryOrURL.title;
       this.iconURL = browser?.mIconURL;
     }
+  }
+
+  /**
+   * Sets the URL for the InternalView, and then computes and sets the
+   * contentPrincipal for the InternalView based on that URL.
+   *
+   * @param {nsIURI} url
+   *   The URL to set for the InternalView.
+   */
+  #setURL(url) {
+    this.url = url;
+    let originAttributes = lazy.E10SUtils.predictOriginAttributes({
+      window: this.#window,
+      userContextId: this.#workspaceId,
+    });
+    this.#contentPrincipal = Services.scriptSecurityManager.createContentPrincipal(
+      this.url,
+      originAttributes
+    );
   }
 
   /**
