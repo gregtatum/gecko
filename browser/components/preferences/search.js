@@ -809,13 +809,13 @@ EngineView.prototype = {
     this._localShortcutL10nNames = new Map();
     return document.l10n
       .formatValues(
-        UrlbarUtils.LOCAL_SEARCH_MODES.map(mode => {
+        this.localSearchModes.map(mode => {
           let name = UrlbarUtils.getResultSourceName(mode.source);
           return { id: `urlbar-search-mode-${name}` };
         })
       )
       .then(names => {
-        for (let { source } of UrlbarUtils.LOCAL_SEARCH_MODES) {
+        for (let { source } of this.localSearchModes) {
           this._localShortcutL10nNames.set(source, names.shift());
         }
         // Invalidate the tree now that we have the names in case getCellText was
@@ -840,6 +840,20 @@ EngineView.prototype = {
 
   get selectedEngine() {
     return this._engineStore.engines[this.selectedIndex];
+  },
+
+  get localSearchModes() {
+    delete this.localSearchModes;
+    let searchModes = UrlbarUtils.LOCAL_SEARCH_MODES;
+    if (AppConstants.PINEBUILD) {
+      searchModes = UrlbarUtils.LOCAL_SEARCH_MODES.filter(
+        mode =>
+          mode.source !== UrlbarUtils.RESULT_SOURCE.BOOKMARKS &&
+          mode.source !== UrlbarUtils.RESULT_SOURCE.TABS
+      );
+    }
+    Object.defineProperty(this, "localSearchModes", { value: searchModes });
+    return this.localSearchModes;
   },
 
   // Helpers
@@ -894,7 +908,7 @@ EngineView.prototype = {
     if (index < engineCount) {
       return null;
     }
-    return UrlbarUtils.LOCAL_SEARCH_MODES[index - engineCount];
+    return this.localSearchModes[index - engineCount];
   },
 
   /**
@@ -914,11 +928,8 @@ EngineView.prototype = {
 
   // nsITreeView
   get rowCount() {
-    return (
-      this._engineStore.engines.length + UrlbarUtils.LOCAL_SEARCH_MODES.length
-    );
+    return this._engineStore.engines.length + this.localSearchModes.length;
   },
-
   getImageSrc(index, column) {
     if (column.id == "engineName") {
       let shortcut = this._getLocalShortcut(index);
