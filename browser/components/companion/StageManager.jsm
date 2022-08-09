@@ -1832,7 +1832,8 @@ class WorkspaceHistory extends EventTarget {
         detail: { internalView },
       });
       this.dispatchEvent(event);
-      this.#insertNewView(internalView, newEntry, browser);
+      this.#insertNewView(internalView, browser);
+      this.historyViews.set(newEntry.ID, internalView);
 
       lazy.SessionManager.register(this.#window, internalView.url).catch(
         lazy.logConsole.error
@@ -2006,19 +2007,17 @@ class WorkspaceHistory extends EventTarget {
    * Takes a newly constructed View and finds the most appropriate place
    * in the viewStack to insert it into.
    *
-   * Regarding the arguments, while it's true that both the newEntry and
-   * browser could be inferred by newInternalView, the caller of this function
-   * is known to already have those values available, and this saves us having
-   * to do another set of lookups.
+   * Regarding the browser argument, while it's true that the browser could be
+   * inferred by newInternalView, the caller of this function is known to
+   * already have those values available, and this saves us having to do
+   * another set of lookups.
    *
    * @param {InternalView} newInternalView
    *   The new View being added
-   * @param {nsISHEntry} newEntry
-   *   The nsISHEntry associated with the new View
    * @param {Browser} browser
    *   The browser associated with the View
    */
-  #insertNewView(newInternalView, newEntry, browser) {
+  #insertNewView(newInternalView, browser) {
     if (this.pinnedAppBrowsers.has(browser)) {
       let siblingViewIndex = -1;
       for (let i = 0; i < this.viewStack.length; ++i) {
@@ -2041,7 +2040,6 @@ class WorkspaceHistory extends EventTarget {
     } else {
       this.viewStack.push(newInternalView);
     }
-    this.historyViews.set(newEntry.ID, newInternalView);
   }
 
   /**
