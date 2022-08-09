@@ -55,12 +55,6 @@ export default class River extends MozLitElement {
 
   #onKeyUp(event) {
     if (
-      event.composedTarget == this.overflowButton &&
-      (event.keyCode == KeyEvent.DOM_VK_SPACE ||
-        event.keyCode == KeyEvent.DOM_VK_RETURN)
-    ) {
-      this.#openOverflowMenu();
-    } else if (
       event.composedTarget instanceof ViewGroupElement &&
       (event.keyCode == KeyEvent.DOM_VK_LEFT ||
         event.keyCode == KeyEvent.DOM_VK_RIGHT)
@@ -88,11 +82,14 @@ export default class River extends MozLitElement {
   }
 
   #openOverflowMenu(event) {
-    let e = new CustomEvent("UserAction:OpenOverflowPanel", {
-      bubbles: true,
-      composed: true,
-    });
-    this.dispatchEvent(e);
+    if (event.key == "Enter" || event.key == " " || event.type == "click") {
+      let e = new CustomEvent("UserAction:OpenOverflowPanel", {
+        bubbles: true,
+        composed: true,
+        detail: { view: this.activeView, triggerEvent: event },
+      });
+      this.dispatchEvent(e);
+    }
   }
 
   #onDragOver(event) {
@@ -150,6 +147,7 @@ export default class River extends MozLitElement {
         id="river-overflow-button"
         tabindex="0"
         @click=${this.#openOverflowMenu}
+        @keypress=${this.#openOverflowMenu}
         data-l10n-id="active-view-manager-overflow-button"
         data-l10n-args='{ "count": ${this.overflowedViews.length} }'
         ?hidden=${!this.overflowedViews.length}

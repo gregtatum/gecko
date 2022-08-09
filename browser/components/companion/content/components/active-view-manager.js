@@ -304,16 +304,16 @@ export default class ActiveViewManager extends window.MozHTMLElement {
    */
 
   #openOverflowPanel(event) {
+    let triggerEvent = event.detail.triggerEvent;
     let panel = this.#getOverflowPanel();
     let workspaceId = event.target.parentNode.parentNode.getAttribute(
       "workspace-id"
     );
     panel.setAttribute("workspace-id", workspaceId);
-    PanelMultiView.openPopup(
-      panel,
-      event.composedTarget,
-      "topleft bottomleft"
-    ).catch(Cu.reportError);
+    PanelMultiView.openPopup(panel, event.composedTarget, {
+      triggerEvent,
+      position: "topleft bottomleft",
+    }).catch(Cu.reportError);
   }
 
   #getOverflowPanel() {
