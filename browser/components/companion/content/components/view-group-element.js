@@ -270,7 +270,7 @@ export default class ViewGroupElement extends MozLitElement {
             shouldExposeParts ? "domain" : ""
           }>
             <div id="view-security-icon" class="${securityIconClass}"></div>
-            <div class="view-domain">${domain}</div>
+            <input class="view-domain" type="text" readonly value=${domain}></input>
           </div>
           <div class="view-history" part=${
             shouldExposeParts ? "history" : ""
@@ -283,6 +283,33 @@ export default class ViewGroupElement extends MozLitElement {
         ></button>
       </div>
     `;
+  }
+
+  updated() {
+    let domainTextNode = this.shadowRoot.querySelector(".view-domain");
+    let view = this.active ? this.activeView : this.lastView;
+    let baseDomain = "";
+    try {
+      baseDomain = Services.eTLD.getBaseDomain(view.url);
+    } catch (e) {}
+
+    let hostname = "";
+    try {
+      hostname = view.url.host;
+    } catch (e) {}
+
+    domainTextNode.selectionStart = hostname.indexOf(baseDomain);
+    domainTextNode.selectionEnd =
+      hostname.indexOf(baseDomain) + baseDomain.length;
+    let selectionController = window.docShell
+      .QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsISelectionDisplay)
+      .QueryInterface(Ci.nsISelectionController);
+    selectionController.scrollSelectionIntoView(
+      Ci.nsISelectionController.SELECTION_NORMAL,
+      Ci.nsISelectionController.SELECTION_FOCUS_REGION,
+      true
+    );
   }
 
   /**

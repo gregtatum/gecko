@@ -120,6 +120,12 @@
 
 .view-domain {
   font-size: 1rem;
+  background: none;
+  border: none;
+}
+
+.view-domain:focus-visible {
+  outline: none;
 }
 
 .view-title {
