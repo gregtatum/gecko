@@ -2751,6 +2751,8 @@ pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"c
   pref("fission.autostart", true, locked);
   pref("browser.aboutwelcome.enabled", false);
   pref("browser.pinebuild.targetTopLevelLinkClicksToBlank", true);
+  pref("browser.urlbar.suggest.quickactions", false);
+  pref("browser.urlbar.shortcuts.quickactions", false);
   #ifdef MOZILLA_OFFICIAL
     pref("browser.startup.launchOnOSLogin", true);
   #else
