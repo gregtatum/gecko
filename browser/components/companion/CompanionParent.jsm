@@ -963,7 +963,7 @@ class CompanionParent extends JSWindowActorParent {
     let tab = browser.getTabBrowser()?.getTabForBrowser(browser);
 
     this.sendAsyncMessage("Companion:ViewLocation", {
-      url: browser.documentURI.spec,
+      url: browser.documentURI?.spec,
       oauthFlowService: tab?.getAttribute("pinebuild-oauth-flow"),
     });
 

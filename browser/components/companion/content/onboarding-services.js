@@ -183,7 +183,7 @@ export class ServicesOnboarding extends MozLitElement {
     serviceType = this.normalizeServiceType(serviceType);
     let service = ServiceUtils.getServiceByType(serviceType);
     if (!service) {
-      Cu.reportError(new Error(`Can't find service "${serviceType}"`));
+      Cu.reportError(`Can't find service "${serviceType}"`);
       return "";
     }
     let { icon, name, services, type } = service;

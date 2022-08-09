@@ -2486,7 +2486,9 @@ class StageManager extends EventTarget {
             Ci.nsIWebProgressListener.STATE_STOP;
 
           if (stateFlags == targetState && request.originalURI.spec == url) {
-            newTab.linkedBrowser.removeProgressListener(listener);
+            if (newTab.linkedBrowser.webProgress) {
+              newTab.linkedBrowser.removeProgressListener(listener);
+            }
             resolve();
           }
         },
