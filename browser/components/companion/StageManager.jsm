@@ -72,6 +72,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
 
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
+  "SPECULATIVELY_CREATE_VIEWS",
+  "browser.pinebuild.speculatively-create-views",
+  false
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
   "MAX_RIVER_GROUPS",
   "browser.river.maxGroups",
   5
@@ -1391,6 +1398,13 @@ class WorkspaceHistory extends EventTarget {
    */
   pinnedAppBrowsers = new WeakSet();
 
+  /**
+   * A mapping of <browser> elements to speculatively created InternalViews
+   * for loads that have very recently been started in the <browser>.
+   * @type {WeakMap<Browser, InternalView>}
+   */
+  #speculativeInternalViews = new WeakMap();
+
   constructor(workspaceId, window) {
     super();
     if (!(Number.isInteger(workspaceId) && workspaceId >= 0)) {
@@ -1874,6 +1888,9 @@ class WorkspaceHistory extends EventTarget {
       if (internalView == currentInternalView) {
         lazy.logConsole.trace(`Updated InternalView is the current index.`);
         lazy.logConsole.groupEnd();
+        // We need to updateSessionStore so that the View selection is recorded
+        // if we happen to set aside the session before anything else occurs.
+        this.#stageManager.updateSessionStore();
         this.#stageManager.notifyEvent("ViewUpdated", internalView);
         return;
       }
@@ -1902,6 +1919,111 @@ class WorkspaceHistory extends EventTarget {
     });
 
     lazy.logConsole.groupEnd();
+  }
+
+  /**
+   * Attempts to create an InternalView for a URI that a network connection has
+   * just been opened for. The InternalView, if created, will get passed through
+   * ViewAdded and ViewChanged events that the AVM can use to render the View.
+   *
+   * The speculatively created InternalView may or may not end up actually
+   * getting used. This will be decided in #findInternalViewToNavigate after
+   * the nsISHEntry is created for the page load.
+   *
+   * @param {Browser} browser
+   *   The <browser> that has started the network connection.
+   * @param {nsIURI} uri
+   *   The URI being loaded.
+   * @returns {boolean}
+   *   True if an InternalView was speculatively created.
+   */
+  speculativelyCreateView(browser, uri) {
+    if (this.#window.gInitialPages.includes(uri.spec)) {
+      lazy.logConsole.debug(
+        "Not speculatively creating InternalView for an internal page belonging ",
+        "to gInitialPages:",
+        uri.spec
+      );
+      return false;
+    }
+
+    // If we're navigating to a pre-existing nsISHEntry for a <browser>, then
+    // by the time we get to the point of opening the network connection, the
+    // <browser> will already be pointed at the target URL. We don't want to
+    // speculatively create a new InternalView in that case, since we're navigating
+    // back to an existing one. We detect this case by comparing the <browser>'s
+    // current URI to the URI being loaded. This isn't perfect, as there are in
+    // theory cases where it'd be nice to speculatively create an InternalView
+    // for a *new* load on a <browser> that's already pointed at the URI, but
+    // this seems rare enough to be a worthwhile trade-off.
+    if (getCurrentEntry(browser)?.URI.equals(uri)) {
+      lazy.logConsole.debug(
+        "Not speculatively creating InternalView since the browser's URI already ",
+        "matches the one we're loading:",
+        uri.spec
+      );
+      return false;
+    }
+
+    let internalView = new InternalView(this.#window, browser, uri);
+    lazy.logConsole.debug(
+      "Saw a top-level network connection start for ",
+      uri.spec,
+      ". Queued a new InternalView with ID ",
+      internalView.id
+    );
+    this.#speculativeInternalViews.set(browser, internalView);
+
+    let event = new CustomEvent("SetCurrentInternalView", {
+      detail: { internalView },
+    });
+    this.dispatchEvent(event);
+
+    this.#insertNewView(internalView, browser);
+    lazy.SessionManager.register(this.#window, internalView.url).catch(
+      lazy.logConsole.error
+    );
+
+    // We don't wait to wait for the underlying <tab> to report that it's
+    // busy, since we know that the load has begun, so we pre-empt and
+    // set busy to true here to show the loading state in the AVM.
+    internalView.busy = true;
+
+    this.#stageManager.notifyEvent("ViewAdded", internalView);
+    this.#stageManager.notifyEvent("ViewChanged", internalView, {
+      navigating: true,
+      browser,
+    });
+
+    return true;
+  }
+
+  /**
+   * Removes a speculatively created InternalView from a Workspace, and
+   * fires an event to clear it from AVM. This should be used if it turns
+   * out that the speculatively created InternalView is not going to be
+   * needed.
+   *
+   * @param {Browser} browser
+   *   The <browser> that has started the network connection.
+   * @param {nsIURI} uri
+   *   The URI being loaded.
+   * @returns {boolean}
+   *   True if an InternalView was speculatively created.
+   */
+  clearSpeculativelyCreatedView(browser) {
+    let internalView = this.#speculativeInternalViews.get(browser);
+    if (!internalView) {
+      return;
+    }
+    this.#speculativeInternalViews.delete(browser);
+    lazy.logConsole.debug(
+      "Clearing speculatively created InternalView: ",
+      internalView.toString()
+    );
+    let index = this.viewStack.indexOf(internalView);
+    this.viewStack.splice(index, 1);
+    this.#stageManager.notifyEvent("ViewRemoved", internalView);
   }
 
   /**
@@ -1935,7 +2057,33 @@ class WorkspaceHistory extends EventTarget {
       `Did not initially find InternalView with ID: ${newEntry.ID}.`
     );
 
-    return this.#findInternalViewToNavigateHelper(browser, newEntry);
+    let result = this.#findInternalViewToNavigateHelper(browser, newEntry);
+    if (result.internalView) {
+      this.clearSpeculativelyCreatedView(browser);
+      return result;
+    }
+
+    // It's possible that there's a speculatively created InternalView that
+    // is mapped to this <browser> that we can use. We'll take the InternalView
+    // from the map and hold a reference to it, and only use it if it turns out
+    // there are no other InternalViews to overwrite for the new nsISHEntry
+    // instead.
+    let speculativeInternalView = this.#speculativeInternalViews.get(browser);
+    if (speculativeInternalView) {
+      this.#speculativeInternalViews.delete(browser);
+      lazy.logConsole.debug(
+        "Found speculative InternalView with ID ",
+        speculativeInternalView.id
+      );
+      // We're going to use the speculativeInternalView for the load, so we can
+      // go ahead and wire that up to the nsISHEntry and return it.
+      this.historyViews.set(newEntry.ID, speculativeInternalView);
+      return { internalView: speculativeInternalView, overwriting: true };
+    }
+
+    // Otherwise, we found no existing InternalViews to use, and the caller should
+    // create one on their own.
+    return { internalView: null, overwriting: false };
   }
 
   /**
@@ -2470,18 +2618,31 @@ class StageManager extends EventTarget {
   }
 
   onStateChange(browser, webProgress, request, stateFlags, status) {
+    if (!webProgress.isTopLevel) {
+      return;
+    }
+
     if (
       stateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW &&
       stateFlags & Ci.nsIWebProgressListener.STATE_STOP
     ) {
+      let tab = this.#window.gBrowser.getTabForBrowser(browser);
+      let workspaceId = tab.userContextId;
+      let workspace = this.#workspaces.get(workspaceId);
+
+      if (lazy.SPECULATIVELY_CREATE_VIEWS) {
+        // It's possible that we saw STATE_STOP before an nsISHEntry
+        // was created - for example, during redirects, or during HTTPS
+        // upgrades. In case we happen to still have a speculatively created
+        // InternalView around for this browser, we should clear it.
+        workspace.clearSpeculativelyCreatedView(browser);
+      }
+
       let entry = getCurrentEntry(browser);
       if (!entry) {
         return;
       }
 
-      let tab = this.#window.gBrowser.getTabForBrowser(browser);
-      let workspaceId = tab.userContextId;
-      let workspace = this.#workspaces.get(workspaceId);
       let internalView = workspace.historyViews.get(entry.ID);
       if (!internalView) {
         return;
@@ -2489,6 +2650,23 @@ class StageManager extends EventTarget {
 
       internalView.update(browser, entry);
       this.notifyEvent("ViewLoaded", internalView);
+    } else if (
+      stateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW &&
+      stateFlags & Ci.nsIWebProgressListener.STATE_START
+    ) {
+      let tab = this.#window.gBrowser.getTabForBrowser(browser);
+      let workspaceId = tab.userContextId;
+      let workspace = this.#workspaces.get(workspaceId);
+      let channel = request.QueryInterface(Ci.nsIChannel);
+
+      if (lazy.SPECULATIVELY_CREATE_VIEWS) {
+        if (!workspace.speculativelyCreateView(browser, channel.URI)) {
+          lazy.logConsole.debug(
+            "Could not speculatively create a View for ",
+            channel.URI.spec
+          );
+        }
+      }
     }
   }
 
