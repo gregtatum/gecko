@@ -18,6 +18,19 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.jsm",
 });
 
+XPCOMUtils.defineLazyGetter(lazy, "log", () => {
+  let { ConsoleAPI } = ChromeUtils.import("resource://gre/modules/Console.jsm");
+  return new ConsoleAPI({
+    prefix: "OAuth2.jsm",
+    maxLogLevel: Services.prefs.getBoolPref(
+      "browser.pinebuild.oauth2.log",
+      false
+    )
+      ? "debug"
+      : "error",
+  });
+});
+
 const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
   "TopLevelNavigationDelegate:IgnoreList";
 
@@ -307,18 +320,18 @@ class OAuth2 {
   getTokenPromise = null;
 
   async internalGetToken() {
+    // If we have a valid access token and it hasn't expired, return it.
     if (this.accessToken && this.tokenExpires > Date.now()) {
+      lazy.log.debug("Have accessToken and it's valid");
       return this.accessToken;
     }
 
+    // Our access token has expired, so we need to get a new one.
     if (this.refreshToken) {
-      this.accessToken = null;
-      this.tokenExpires = null;
-      try {
-        return await this.requestAccessToken();
-      } catch (e) {
-        console.error("Failed to refresh token");
-      }
+      lazy.log.debug("accessToken has expired, requesting a new one.");
+      // This could return null if we have an invalid_grant.
+      // Error should be handled by the caller.
+      return this.requestAccessToken();
     }
 
     return null;
@@ -411,7 +424,7 @@ class OAuth2 {
         "pinebuild.testing.OAuthErrorAccessToken",
         false
       );
-    if ("error" in result || shouldError) {
+    if ((result && "error" in result) || shouldError) {
       // RFC 6749 section 5.2. Error Response
 
       // Typically in production this would be {"error": "invalid_grant"}.
@@ -430,13 +443,16 @@ class OAuth2 {
       return null;
     }
 
+    lazy.log.debug("New accessToken received.");
+
     // RFC 6749 section 5.1. Successful Response
     this.accessToken = result.access_token;
     if ("refresh_token" in result) {
       this.refreshToken = result.refresh_token;
     }
+
     if ("expires_in" in result) {
-      this.tokenExpires = new Date().getTime() + result.expires_in * 1000;
+      this.tokenExpires = Date.now() + result.expires_in * 1000;
     } else {
       this.tokenExpires = Number.MAX_VALUE;
     }

@@ -93,7 +93,12 @@ class GoogleService {
   }
 
   async disconnect() {
-    let token = await this.getToken();
+    // For disconnect, we just want to grab the oAuth token directly.
+    // It doesn't make sense to try to reauthenticate.
+    let token = this.auth.accessToken;
+    if (!token) {
+      return;
+    }
 
     // Revoke access for the currently stored token.
     let apiTarget = new URL(
@@ -131,8 +136,17 @@ class GoogleService {
     }
   }
 
-  getToken() {
-    return this.auth.getToken();
+  async getToken() {
+    let token = await this.auth.getToken();
+    if (token) {
+      OnlineServices.persist();
+    } else if (!this.auth.refreshToken) {
+      // If the refreshToken has been cleared, oAuth failed.
+      // Delete the service.
+      lazy.log.error("Google OAuth token invalid. Deleting service.");
+      OnlineServices.deleteService(this);
+    }
+    return token;
   }
 
   getAccountAddress() {
@@ -141,6 +155,9 @@ class GoogleService {
 
   async getNextMeetings() {
     let token = await this.getToken();
+    if (!token) {
+      return [];
+    }
 
     let apiTarget = new URL(
       "https://www.googleapis.com/calendar/v3/users/me/calendarList"
@@ -170,25 +187,25 @@ class GoogleService {
       return null;
     }
 
-    let calendarList = [];
+    let results = await response.json();
 
     if (!response.ok) {
-      calendarList.push({
-        id: "primary",
-      });
-    } else {
-      let results = await response.json();
-      lazy.log.debug(JSON.stringify(results));
-      for (let result of results.items) {
-        if (result.hidden || !result.selected) {
-          continue;
-        }
-        let calendar = {};
-        calendar.id = result.primary ? "primary" : result.id;
-        calendar.backgroundColor = result.backgroundColor;
-        calendar.foregroundColor = result.foregroundColor;
-        calendarList.push(calendar);
+      lazy.log.error("Invalid calendar list response", JSON.stringify(results));
+      return [];
+    }
+
+    lazy.log.debug(JSON.stringify(results));
+
+    let calendarList = [];
+    for (let result of results.items) {
+      if (result.hidden || !result.selected) {
+        continue;
       }
+      let calendar = {};
+      calendar.id = result.primary ? "primary" : result.id;
+      calendar.backgroundColor = result.backgroundColor;
+      calendar.foregroundColor = result.foregroundColor;
+      calendarList.push(calendar);
     }
 
     let allEvents = new Map();
@@ -219,12 +236,12 @@ class GoogleService {
           headers,
         });
 
+        results = await response.json();
+
         if (!response.ok) {
-          lazy.log.debug(response.statusText);
+          lazy.log.error("Invalid calendar response", JSON.stringify(results));
           return;
         }
-
-        let results = await response.json();
 
         lazy.log.debug(JSON.stringify(results));
 
@@ -272,6 +289,9 @@ class GoogleService {
 
   async getEmailInfo() {
     let token = await this.getToken();
+    if (!token) {
+      return;
+    }
 
     let apiTarget = new URL("https://www.googleapis.com/oauth2/v3/userinfo");
 
@@ -327,6 +347,9 @@ class GoogleService {
       `https://www.googleapis.com/drive/v2/files/${id}?fields=title`
     );
     let token = await this.getToken();
+    if (!token) {
+      return null;
+    }
     let headers = {
       Authorization: `Bearer ${token}`,
     };
@@ -434,7 +457,16 @@ class MicrosoftService {
   }
 
   async getToken() {
-    return this.auth.getToken();
+    let token = await this.auth.getToken();
+    if (token) {
+      OnlineServices.persist();
+    } else if (!this.auth.refreshToken) {
+      // If refreshToken has been cleared, we have no grant.
+      // Delete the service.
+      lazy.log.error("Microsoft OAuth token invalid. Deleting service.");
+      OnlineServices.deleteService(this);
+    }
+    return token;
   }
 
   // For Microsoft, we don't have an email address
@@ -444,6 +476,9 @@ class MicrosoftService {
 
   async getNextMeetings() {
     let token = await this.getToken();
+    if (!token) {
+      return [];
+    }
 
     let apiTarget = new URL("https://graph.microsoft.com/v1.0/me/calendars");
 
@@ -540,6 +575,9 @@ class MicrosoftService {
 
   async getEmailInfo() {
     let token = await this.getToken();
+    if (!token) {
+      return;
+    }
 
     let apiTarget = new URL("https://graph.microsoft.com/v1.0/me");
 
@@ -573,8 +611,6 @@ class MicrosoftService {
   async getUnreadCount() {
     let token = await this.getToken();
     if (!token) {
-      // This might get called before we have a token.
-      // Just bail, we'll get called again.
       return;
     }
     // By just selecting the ID, we're getting as little data as we need.
