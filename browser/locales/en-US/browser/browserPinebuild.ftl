@@ -104,6 +104,24 @@ onboarding-flow-data-prefs-label-better-browsing = Make recommendations better
 onboarding-flow-data-prefs-label-better-browsing-detail = Sends websites you visit anonymously to { -vendor-short-name } to improve snapshot suggestions and other features
 onboarding-flow-data-prefs-label-usage-statistics = Send usage data and telemetry
 onboarding-flow-data-prefs-label-usage-statistics-detail = { -brand-short-name } sends technical and interaction data to { -vendor-short-name }.
+onboarding-flow-privacy-policy-header = About { -brand-short-name }
+onboarding-flow-privacy-policy-connected-header = { -brand-short-name } is a connected service
+onboarding-flow-privacy-policy-placeholder =
+  Lorem ipsum dolor sit amet. Sed ac accumsan sapien, vitae accumsan neque. Aliquam a tempus orci. Sed at nulla gravida, fringilla turpis eu, mattis elit. Vivamus at turpis condimentum, euismod ipsum vel, maximus nisl. Sed sapien dui, dapibus porttitor placerat sed.
+
+  Nullam mollis sit amet tellus a viverra. Nunc fermentum, eros et dapibus rutrum, diam mauris auctor quam.
+
+  Nullam ac magna id elit imperdiet suscipit. Aliquam convallis leo at tempor faucibus.
+
+  Etiam aliquam, dui vitae facilisis eleifend, dolor neque ultrices lorem, non interdum metus nunc a nisi. Vivamus accumsan neque id turpis vestibulum sollicitudin. Proin tincidunt erat ligula, sit amet faucibus dolor accumsan lacinia. Phasellus molestie mollis arcu non cursus.
+onboarding-flow-privacy-policy-placeholder-2 =
+  Lorem ipsum dolor sit amet. Sed ac accumsan sapien, vitae accumsan neque. Aliquam a tempus orci. Sed at nulla gravida, fringilla turpis eu, mattis elit. Vivamus at turpis condimentum, euismod ipsum vel, maximus nisl. Sed sapien dui, dapibus porttitor placerat sed.
+
+  Nullam mollis sit amet tellus a viverra. Nunc fermentum, eros et dapibus rutrum, diam mauris auctor quam.
+
+  Nullam ac magna id elit imperdiet suscipit. Aliquam convallis leo at tempor faucibus.
+
+  Etiam aliquam, dui vitae facilisis eleifend, dolor neque ultrices lorem, non interdum metus nunc a nisi. Vivamus accumsan neque id turpis vestibulum sollicitudin. Proin tincidunt erat ligula, sit amet faucibus dolor accumsan lacinia. Phasellus molestie mollis arcu non cursus.
 
 onboarding-flow-complete-title = You’re ready to go!
 

@@ -3487,6 +3487,7 @@ pinebuild.onboarding:
       "welcome",
       "connect_fxa",
       "fxa_connected",
+      "privacy", 
       "data_prefs",
       "congrats",
     ]
@@ -3513,6 +3514,7 @@ pinebuild.onboarding:
       "welcome",
       "connect_fxa",
       "fxa_connected",
+      "privacy", 
       "data_prefs",
       "congrats",
     ]

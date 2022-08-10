@@ -9,6 +9,7 @@ const ONBOARDING_CARDS = [
   "Welcome",
   "Connect Account",
   "Account Connected",
+  "Privacy Policy",
   "Data Preferences",
   "Ready to Go",
 ];
@@ -119,6 +120,13 @@ add_task(async function test_onboarding_fxa_to_complete() {
     Services.prefs.getIntPref(ONBOARDING_PROGRESS_PREF),
     currentPage,
     "Reached page 5 of onboarding"
+  );
+  await checkForNextButton("navigate-forward");
+  await navigateToNextPage("navigate-forward");
+  is(
+    Services.prefs.getIntPref(ONBOARDING_PROGRESS_PREF),
+    currentPage,
+    "Reached page 6 of onboarding"
   );
   await checkForNextButton("complete-onboarding");
   await navigateToNextPage("complete-onboarding");

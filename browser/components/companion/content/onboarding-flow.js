@@ -28,7 +28,14 @@ class OnboardingFlowElement extends HTMLElement {
   // Sequence of steps in the onboarding flow, with names shortened to fit
   // the byte length limits of Glean events. If this sequence is changed, the
   // corresponding metrics events and tests should also be updated. MR2-2885
-  STEPS = ["welcome", "connect_fxa", "fxa_connected", "data_prefs", "congrats"];
+  STEPS = [
+    "welcome",
+    "connect_fxa",
+    "fxa_connected",
+    "privacy",
+    "data_prefs",
+    "congrats",
+  ];
 
   constructor() {
     super();

@@ -180,6 +180,21 @@ pinebuild:
       - jhirsch@mozilla.com
     expires: never
     telemetry_mirror: PinebuildOnboarding_Shown_DataPrefs
+  onboarding_shown_privacy:
+    type: event
+    description: >
+      Recorded when the "privacy policy" onboarding card is shown to the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Shown_Privacy
   onboarding_shown_congrats:
     type: event
     description: >
@@ -241,6 +256,21 @@ pinebuild:
       - jhirsch@mozilla.com
     expires: never
     telemetry_mirror: PinebuildOnboarding_Done_FxaConnected
+  onboarding_done_privacy:
+    type: event
+    description: >
+      Recorded when the "privacy policy" card is completed by the user.
+    extra_keys: *onboarding_extra
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_reviews:
+      - https://mozilla-hub.atlassian.net/browse/MR2-2885
+    data_sensitivity:
+      - interaction
+    notification_emails:
+      - jhirsch@mozilla.com
+    expires: never
+    telemetry_mirror: PinebuildOnboarding_Done_Privacy
   onboarding_done_data_prefs:
     type: event
     description: >

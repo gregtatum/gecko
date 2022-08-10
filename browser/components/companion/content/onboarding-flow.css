@@ -96,13 +96,13 @@ body {
   width: 360px;
 }
 
-  .onboarding-card-text-container > p {
-    flex: content;
-  }
+.onboarding-card-text-container > p {
+  flex: content;
+}
 
-  .onboarding-card-text-container img {
-    margin: 1em auto;
-  }
+.onboarding-card-text-container img {
+  margin: 1em auto;
+}
 
 @media not (prefers-contrast) {
   .onboarding-card-text-container {
@@ -124,7 +124,6 @@ body {
   margin-left: 50%;
   padding: 1em 3em 1em 5em;
 }
-
 
 /* Onboarding: welcome card */
 .onboarding-welcome-card p {
@@ -152,13 +151,40 @@ body {
   top: 35%;
 }
 
-  .onboarding-ready-card h2 {
-    margin-inline: 0;
-  }
+.onboarding-ready-card h2 {
+  margin-inline: 0;
+}
+
+/* onboarding: privacy policy card */
+.onboarding-privacy-policy-card {
+  text-align: start;
+}
+
+.onboarding-privacy-policy-card .onboarding-card-text-halvsies {
+  padding-inline-end: 0.5em;
+}
+
+.onboarding-privacy-policy-card .onboarding-card-text-scroll {
+  margin-block-end: 1em;
+  padding-block-start: 129px;
+  padding-inline-end: 3em;
+}
+
+.onboarding-privacy-policy-card .onboarding-buttons-row {
+  margin-inline-end: 3em;
+}
+
+.onboarding-card-text-scroll {
+  overflow-y: scroll;
+}
+
+.onboarding-card-text-scroll h2 {
+  margin-inline: 0;
+}
 
 /* onboarding: data prefs card */
 .onboarding-data-prefs-card {
-  text-align: left;
+  text-align: start;
 }
 
 .onboarding-data-prefs-label-heading,
@@ -166,13 +192,13 @@ body {
   display: block;
 }
 
-  .onboarding-data-prefs-label-heading {
-    font-weight: 700;
-  }
+.onboarding-data-prefs-label-heading {
+  font-weight: 700;
+}
 
-  .onboarding-data-prefs-label-detail {
-    font-size: 12px;
-  }
+.onboarding-data-prefs-label-detail {
+  font-size: 12px;
+}
 
 .onboarding-data-prefs-card p {
   margin-inline-end: 5em;
@@ -191,7 +217,7 @@ body {
   border: none;
   flex: content;
   padding: 0;
-  text-align: left;
+  text-align: start;
 }
 
 .onboarding-flow-card fieldset label {
@@ -230,6 +256,11 @@ body {
 .onboarding-buttons-row {
   display: flex;
   gap: 1em;
+  justify-items: flex-end;
+}
+
+.onboarding-buttons-row > * {
+  width: 100%;
 }
 
 @media not (prefers-contrast) {
@@ -260,13 +291,13 @@ body {
   height: 40px;
 }
 
-  .onboarding-forward-nav {
-    background: center center no-repeat url("chrome://global/skin/icons/arrow-right.svg");
-  }
+.onboarding-forward-nav {
+  background: center center no-repeat url("chrome://global/skin/icons/arrow-right.svg");
+}
 
-  .onboarding-backward-nav {
-    background: center center no-repeat url("chrome://global/skin/icons/arrow-left.svg");
-  }
+.onboarding-backward-nav {
+  background: center center no-repeat url("chrome://global/skin/icons/arrow-left.svg");
+}
 
 @media not (prefers-contrast) {
   .onboarding-forward-nav {
@@ -292,22 +323,22 @@ body {
   top: 1em;
 }
 
-  .onboarding-flow-breadcrumbs span {
-    background-color: ButtonFace;
-    border: 1px solid ButtonShadow;
-    border-radius: 50%;
-    display: inline-block;
-    height: 7px;
-    margin-inline: 6px;
-    width: 7px;
-  }
+.onboarding-flow-breadcrumbs span {
+  background-color: ButtonFace;
+  border: 1px solid ButtonShadow;
+  border-radius: 50%;
+  display: inline-block;
+  height: 7px;
+  margin-inline: 6px;
+  width: 7px;
+}
 
-    .onboarding-flow-breadcrumbs span[data-active="true"] {
-      background-color: ButtonText;
-      border-radius: 10px;
-      opacity: unset;
-      width: 26px;
-    }
+.onboarding-flow-breadcrumbs span[data-active="true"] {
+  background-color: ButtonText;
+  border-radius: 10px;
+  opacity: unset;
+  width: 26px;
+}
 
 @media not (prefers-contrast) {
   .onboarding-flow-breadcrumbs span {
@@ -319,5 +350,4 @@ body {
   .onboarding-flow-breadcrumbs span[data-active="true"] {
     background-color: var(--pine-onboarding-breadcrumb-active-color);
   }
-
 }

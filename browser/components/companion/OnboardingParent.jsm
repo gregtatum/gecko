@@ -191,6 +191,10 @@ class OnboardingParent extends JSWindowActorParent {
             shown: Glean.pinebuild.onboardingShownFxaConnected,
             done: Glean.pinebuild.onboardingDoneFxaConnected,
           },
+          privacy: {
+            shown: Glean.pinebuild.onboardingShownPrivacy,
+            done: Glean.pinebuild.onboardingDonePrivacy,
+          },
           data_prefs: {
             shown: Glean.pinebuild.onboardingShownDataPrefs,
             done: Glean.pinebuild.onboardingDoneDataPrefs,
