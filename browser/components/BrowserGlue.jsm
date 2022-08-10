@@ -3074,6 +3074,12 @@ BrowserGlue.prototype = {
 
       {
         task: () => {
+          lazy.UrlbarQuickSuggest.init();
+        },
+      },
+
+      {
+        task: () => {
           // Use idleDispatch a second time to run this after the per-window
           // idle tasks.
           ChromeUtils.idleDispatch(() => {
