@@ -7471,6 +7471,36 @@ migration:
 
 
 pinebuild:
+  calendar_service_connected:
+    bug_numbers:
+      - -1
+    description: >
+      The count of successfully connected calendar services. Label is the type
+      of service, expected to be "google" or "microsoft".
+    expires: never
+    kind: uint
+    keyed: true
+    notification_emails:
+      - mstriemer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
+  calendar_service_disconnected:
+    bug_numbers:
+      - -1
+    description: >
+      The count of successfully disconnected calendar services. Label is the
+      type of service, expected to be "google" or "microsoft".
+    expires: never
+    kind: uint
+    keyed: true
+    notification_emails:
+      - mstriemer@mozilla.com
+    products:
+      - 'firefox'
+    record_in_processes:
+      - main
   suggested_snapshots_painted:
     bug_numbers:
       - -1

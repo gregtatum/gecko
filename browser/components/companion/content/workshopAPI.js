@@ -157,6 +157,7 @@ if (workshopEnabled) {
         this.companionActor.sendAsyncMessage("Companion:AccountCreated", {
           type,
         });
+        Glean.pinebuild.calendarServiceConnected[type].add(1);
       }
 
       return account;
@@ -168,6 +169,7 @@ if (workshopEnabled) {
       this.companionActor.sendAsyncMessage("Companion:AccountDeleted", {
         type,
       });
+      Glean.pinebuild.calendarServiceDisconnected[type].add(1);
     },
 
     get companionActor() {
