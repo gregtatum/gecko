@@ -492,7 +492,7 @@ html|button[type="submit"]:enabled:hover:active,
 html|button.primary:enabled:hover:active,
 xul|button[default]:not([disabled="true"]):hover:active,
 xul|button.primary:not([disabled="true"]):hover:active,
-a.button-link.primary:active {
+a.button-link.primary:hover:active {
   background-color: var(--in-content-primary-button-background-active);
 }
 

@@ -34,6 +34,13 @@
   --pine-font-weight-bold: 700;
 }
 
+@media (prefers-contrast) {
+  :root {
+    --pine-text-color-secondary: ButtonText;
+    --pine-text-color-disabled: ButtonText;
+  }
+}
+
 /* Heading */
 
 .text-heading-l-semibold {
@@ -110,8 +117,12 @@
 }
 
 .text-body-xs {
-  color: var(--pine-text-color-primary);
+  color: var(--pine-text-color-secondary);
   font-size: var(--pine-text-size-xxxs);
   font-weight: var(--pine-font-weight-base);
   line-height: 1.6; /* 16px */
+}
+
+.text-color-disabled {
+  color: var(--pine-text-color-disabled);
 }

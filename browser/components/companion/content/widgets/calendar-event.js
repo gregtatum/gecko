@@ -239,6 +239,25 @@ export class CalendarEvent extends MozLitElement {
         border-color: var(--action-button-border-color-hover);
       }
 
+      @media (prefers-contrast) {
+        .event .event-button-secondary:active,
+        .event .event-button-secondary {
+          border: 0.5px solid var(--in-content-button-border-color);
+          color: var(--in-content-button-text-color);
+          fill: currentColor;
+        }
+
+        .event .event-button-secondary:hover {
+          background-color: var(--in-content-button-background-hover);
+          color: var(--in-content-button-text-color-hover);
+        }
+
+        .event .event-button-secondary:hover:active {
+          background-color: SelectedItem;
+          color: SelectedItemText;
+        }
+      }
+
       .event-quick-actions {
         display: flex;
         justify-content: space-between;

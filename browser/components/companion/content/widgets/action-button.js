@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "../widget-utils.js";
-import { css, html } from "../lit.all.js";
+import { classMap, css, html } from "../lit.all.js";
 
 export class ActionButton extends MozLitElement {
   static get properties() {
@@ -55,12 +55,11 @@ export class ActionButton extends MozLitElement {
         width: 15px;
         height: auto;
         -moz-context-properties: fill;
-        fill: var(--icon-color-default);
+        fill: var(--action-button-icon-fill);
       }
 
       .action-button-label {
         margin-block-start: 6px;
-        color: var(--pine-text-color-secondary);
       }
 
       .action-button:not([disabled]):hover > .action-button-icon-container {
@@ -68,16 +67,20 @@ export class ActionButton extends MozLitElement {
         border-color: var(--action-button-border-color-hover);
       }
 
+      .action-button:not([disabled]):hover .action-button-icon {
+        fill: var(--action-button-icon-fill-hover);
+      }
+
+      .action-button:not([disabled]):active .action-button-icon {
+        fill: var(--action-button-icon-fill-active);
+      }
+
       .action-button:not([disabled]):active > .action-button-icon-container {
         background-color: var(--action-button-background-active);
       }
 
-      .action-button:disabled .action-button-icon {
-        fill: var(--icon-color-disabled);
-      }
-
-      .action-button:disabled .action-button-label {
-        color: var(--pine-text-color-disabled);
+      .action-button:disabled .action-button-icon-container {
+        opacity: 0.5;
       }
     `;
   }
@@ -104,7 +107,11 @@ export class ActionButton extends MozLitElement {
           />
         </div>
         <span
-          class="action-button-label text-body-xs"
+          class=${classMap({
+            "action-button-label": true,
+            "text-body-xs": true,
+            "text-color-disabled": this.disabled,
+          })}
           data-l10n-id=${this.label}
         ></span>
       </button>

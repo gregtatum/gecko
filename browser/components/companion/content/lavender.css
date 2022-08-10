@@ -130,6 +130,9 @@
     --icon-color-default: var(--colors-darkgrey-30);
     --icon-color-success: #50a369;
     --icon-color-disabled: var(--colors-lightgrey-80);
+    --action-button-icon-fill: var(--icon-color-default);
+    --action-button-icon-fill-hover: var(--icon-color-default);
+    --action-button-icon-fill-active: var(--icon-color-default);
 
     --colors-primarygrey: #4e4a55;
     --colors-secondarygrey: #5f5b66;
@@ -289,13 +292,27 @@
     --notification-card-border-color: WindowText;
 
     /* Icon Colors */
+    --icon-color-default: ButtonText;
     --icon-color-success: WindowText;
+    --action-button-icon-fill: ButtonText;
+    --action-button-icon-fill-hover: ButtonFace;
+    --action-button-icon-fill-active: SelectedItemText;
 
     --flowreset-button-border-color: transparent;
     --flowreset-button-boxshadow-color: transparent;
     --flowreset-button-background-color: ButtonFace;
     --flowreset-button-text-color: ButtonText;
     --flowreset-textshadow-color: unset;
+
+    --colors-border-focus: SelectedItem;
+    --focus-outline-color: SelectedItem;
+
+    --action-button-background: ButtonFace;
+    --action-button-background-hover: ButtonText;
+    --action-button-background-active: SelectedItem;
+    --action-button-background-disabled: transparent;
+    --action-button-border-color: ButtonText;
+    --action-button-border-color-hover: ButtonFace;
 
     --button-background-secondary: ButtonFace;
     --button-background-secondary-hover: ButtonFace;
