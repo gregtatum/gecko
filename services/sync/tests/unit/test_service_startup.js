@@ -34,9 +34,9 @@ add_task(async function run_test() {
 
   _("Engines are registered.");
   let engines = Service.engineManager.getAll();
-  let engineList = ["bookmarks", "forms", "history"];
+  let engineList = ["forms", "history"];
   if (!AppConstants.PINEBUILD) {
-    engineList.unshift("tabs");
+    engineList.unshift("tabs", "bookmarks");
   }
   Assert.ok(
     Utils.deepEquals(

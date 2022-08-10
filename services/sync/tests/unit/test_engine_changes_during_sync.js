@@ -360,6 +360,11 @@ add_task(async function test_forms_change_during_sync() {
 });
 
 add_task(async function test_bookmark_change_during_sync() {
+  if (AppConstants.PINEBUILD) {
+    // No bookmarks sync engine for PINEBUILD
+    ok(true, "Bookmarks sync is disabled for pinebuild");
+    return;
+  }
   _("Ensure that we track bookmark changes made during a sync.");
 
   enableValidationPrefs();
