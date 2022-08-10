@@ -392,16 +392,20 @@ export class CalendarEventList extends MozLitElement {
 
     let [firstEvent, ...otherEvents] = events;
     let eventsAndBreaks = [firstEvent];
+    let latestEndDate = new Date(firstEvent.endDate);
     for (let event of otherEvents) {
-      let lastEvent = eventsAndBreaks.at(-1);
       let timeBetween = Math.round(
-        (new Date(event.startDate) - new Date(lastEvent.endDate)) / 60 / 1000
+        (new Date(event.startDate) - latestEndDate) / 60 / 1000
       );
       if (minBreakTime <= timeBetween && timeBetween <= maxBreakTime) {
         eventsAndBreaks.push({
           isBreakTime: true,
           length: timeBetween,
         });
+      }
+      let endDate = new Date(event.endDate);
+      if (endDate > latestEndDate) {
+        latestEndDate = endDate;
       }
       eventsAndBreaks.push(event);
     }
