@@ -828,7 +828,6 @@ const OnlineServices = {
       lazy.log.error(`Unable to get email info for ${type}`);
     }
     this.persist();
-    Glean.pinebuild.calendarServiceConnected[type].add(1);
     // grab events for this service and put them in the cache
     let meetingResults = await service.getNextMeetings();
     this.data = this.data.concat(meetingResults);
@@ -860,7 +859,6 @@ const OnlineServices = {
     this.persist();
     Services.obs.notifyObservers(this.data, "companion-services-refresh");
     Services.obs.notifyObservers(null, "companion-signout", service.app);
-    Glean.pinebuild.calendarServiceDisconnected[service.app].add(1);
   },
 
   getServices(type) {

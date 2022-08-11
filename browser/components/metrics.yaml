@@ -11,36 +11,6 @@ $tags:
   - 'Firefox :: General'
 
 pinebuild:
-  calendar_service_connected:
-    type: labeled_counter
-    bugs:
-      - https://mozilla-hub.atlassian.net/browse/MR2-2901
-    data_reviews:
-      - https://mozilla-hub.atlassian.net/browse/MR2-2901
-    description: >
-      The count of successfully connected calendar services. Label is the type
-      of service, expected to be "google" or "microsoft".
-    data_sensitivity:
-      - interaction
-    notification_emails:
-      - mstriemer@mozilla.com
-    expires: never
-    telemetry_mirror: PINEBUILD_CALENDAR_SERVICE_CONNECTED
-  calendar_service_disconnected:
-    type: labeled_counter
-    bugs:
-      - https://mozilla-hub.atlassian.net/browse/MR2-2901
-    data_reviews:
-      - https://mozilla-hub.atlassian.net/browse/MR2-2901
-    description: >
-      The count of successfully disconnected calendar services. Label is the
-      type of service, expected to be "google" or "microsoft".
-    data_sensitivity:
-      - interaction
-    notification_emails:
-      - mstriemer@mozilla.com
-    expires: never
-    telemetry_mirror: PINEBUILD_CALENDAR_SERVICE_DISCONNECTED
   suggested_snapshots_painted:
     type: timespan
     time_unit: millisecond
