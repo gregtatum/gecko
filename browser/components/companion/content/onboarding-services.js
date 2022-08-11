@@ -97,13 +97,15 @@ export class ServicesOnboarding extends MozLitElement {
       );
     } else {
       this.currentlyAuthenticatingTabService = null;
-      let currentDomain = new URL(e.detail.url).host;
-      this.currentService = ServiceUtils.getServiceForDomain(currentDomain);
-      this.dispatchOnUpdateComplete(
-        new CustomEvent("service-onboarding-url-handled", {
-          detail: { domain: currentDomain },
-        })
-      );
+      if (e.detail.url) {
+        let currentDomain = new URL(e.detail.url).host;
+        this.currentService = ServiceUtils.getServiceForDomain(currentDomain);
+        this.dispatchOnUpdateComplete(
+          new CustomEvent("service-onboarding-url-handled", {
+            detail: { domain: currentDomain },
+          })
+        );
+      }
     }
   }
 
