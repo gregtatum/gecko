@@ -185,7 +185,7 @@ preferences-services-devices-label =
         [one] You have { $deviceCount } device connected
        *[other] You have { $deviceCount } devices connected
     }
-preferences-mozproducts-header = More from { -vendor-brand-name }
+preferences-mozproducts-header = More from { -vendor-short-name }
 preferences-mozproduct-vpn-name = { -mozilla-vpn-brand-name }
 preferences-mozproduct-vpn-description = Security, reliability and speed — on every device. anywhere you go.
 preferences-mozproduct-rally-name = { -rally-brand-name }
