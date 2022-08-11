@@ -201,17 +201,31 @@ body:not([browser-ready]) .browserStack > browser {
 
 /* Oddly, despite the browser transitioning opacity above, the browser's
    border immediately pops in. These two blocks fix that. */
-.browserStack > browser {
+body[flow-reset] .browserStack > browser {
   border-color: transparent;
+}
+
+.browserStack > browser {
+  border-color: var(--chrome-content-separator-color);
   transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
 }
 
+:root[pinebuild] {
+  --chrome-content-separator-color: var(--colors-cafe-40);
+}
+
+@media (prefers-contrast) {
+  :root[pinebuild] {
+    --chrome-content-separator-color: ButtonText;
+  }
+}
+
 :root body:not([flow-reset],[onboarding="no-browsing"]) .browserStack > browser {
-  border-top: 1px solid var(--colors-cafe-40);
+  border-top: 1px solid var(--chrome-content-separator-color);
 }
 
 :root[companion] body:not([flow-reset],[onboarding="no-browsing"]) .browserStack > browser {
-  border-inline-start: 1px solid var(--colors-cafe-40);
+  border-inline-start: 1px solid var(--chrome-content-separator-color);
   border-start-start-radius: 8px;
 }
 
