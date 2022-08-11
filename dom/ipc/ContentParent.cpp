@@ -2685,9 +2685,7 @@ bool ContentParent::LaunchSubprocessResolve(bool aIsSync,
     sCreatedFirstContentProcess = true;
   }
 
-  base::ProcessId procId =
-      base::GetProcId(mSubprocess->GetChildProcessHandle());
-  Open(mSubprocess->TakeInitialPort(), procId);
+  mSubprocess->TakeInitialEndpoint().Bind(this);
 
   ContentProcessManager* cpm = ContentProcessManager::GetSingleton();
   if (!cpm) {
@@ -5195,11 +5193,6 @@ bool ContentParent::DeallocPWebrtcGlobalParent(PWebrtcGlobalParent* aActor) {
 }
 #endif
 
-mozilla::ipc::IPCResult ContentParent::RecvSetOfflinePermission(
-    nsIPrincipal* aPrincipal) {
-  return IPC_OK();
-}
-
 void ContentParent::MaybeInvokeDragSession(BrowserParent* aParent) {
   // dnd uses IPCBlob to transfer data to the content process and the IPC
   // message is sent as normal priority. When sending input events with input
@@ -5934,7 +5927,6 @@ void ContentParent::BroadcastBlobURLRegistration(
       BlobURLProtocolHandler::IsBlobURLBroadcastPrincipal(aPrincipal);
 
   nsCString uri(aURI);
-  IPC::Principal principal(aPrincipal);
 
   for (auto* cp : AllProcesses(eLive)) {
     if (cp != aIgnoreThisCP) {
@@ -5942,7 +5934,7 @@ void ContentParent::BroadcastBlobURLRegistration(
         continue;
       }
 
-      nsresult rv = cp->TransmitPermissionsForPrincipal(principal);
+      nsresult rv = cp->TransmitPermissionsForPrincipal(aPrincipal);
       if (NS_WARN_IF(NS_FAILED(rv))) {
         break;
       }
@@ -5953,7 +5945,7 @@ void ContentParent::BroadcastBlobURLRegistration(
         break;
       }
 
-      Unused << cp->SendBlobURLRegistration(uri, ipcBlob, principal,
+      Unused << cp->SendBlobURLRegistration(uri, ipcBlob, aPrincipal,
                                             aAgentClusterId);
     }
   }
