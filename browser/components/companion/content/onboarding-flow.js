@@ -206,7 +206,7 @@ class OnboardingFlowElement extends HTMLElement {
         );
         break;
       case "navigate-forward":
-        const DATA_PREFS_PAGE_ID = 3;
+        const DATA_PREFS_PAGE_ID = this.STEPS.indexOf("data_prefs");
         if (this._currentIndex === DATA_PREFS_PAGE_ID) {
           this.saveDataPrefs();
         }
