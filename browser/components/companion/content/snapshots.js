@@ -18,29 +18,6 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 const MAX_SNAPSHOTS = 5;
 const DEFAULT_FAVICON = "chrome://global/skin/icons/defaultFavicon.svg";
 
-function pickColorFromImage(icon) {
-  let canvas = document.createElement("canvas");
-  let ctx = canvas.getContext("2d");
-
-  // Make small canvas so enough to spread some colours but will not take
-  // too long to process.
-  let width = 24;
-  let height = 24;
-  canvas.width = width;
-  canvas.height = height;
-  ctx.drawImage(icon, 0, 0, width, height, 0, 0, width, height);
-
-  let colors = {};
-  let data = ctx.getImageData(0, 0, width, height).data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    let key = `${data[i]},${data[i + 1]},${data[i + 2]}`;
-    colors[key] = key in colors ? colors[key] + 1 : 1;
-  }
-  canvas.remove();
-  return Object.entries(colors).sort((a, b) => b[1] - a[1])[0];
-}
-
 class HidableElement extends HTMLElement {
   get hidden() {
     return this.hasAttribute("hidden");
@@ -98,13 +75,6 @@ export class Snapshot extends HTMLElement {
     this.appendChild(fragment);
     this.addEventListener("click", this);
     this.addEventListener("contextmenu", this);
-
-    if (!data.image && this.data.faviconImage) {
-      let primaryIconColor = pickColorFromImage(iconEl);
-      if (primaryIconColor) {
-        previewEl.style.backgroundColor = `rgb(${primaryIconColor})`;
-      }
-    }
   }
 
   handleEvent(event) {
@@ -253,8 +223,15 @@ export class SuggestedSnapshotList extends SnapshotList {
 
   updateRecommendations(recommendations) {
     let nodes = [];
-    for (let { source, score, snapshot, preview } of recommendations) {
+    for (let {
+      faviconSelector,
+      source,
+      score,
+      snapshot,
+      preview,
+    } of recommendations) {
       snapshot.image = preview;
+      snapshot.faviconSelector = faviconSelector;
       nodes.push(new Recommendation(snapshot, source, score));
     }
 

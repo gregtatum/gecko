@@ -1086,12 +1086,18 @@ class CompanionParent extends JSWindowActorParent {
           recommendations.map(s => s.snapshot.url)
         );
         let recommendationList = await Promise.all(
-          recommendations.map(async r => ({
-            source: r.source,
-            score: r.score,
-            snapshot: r.snapshot,
-            preview: await lazy.Snapshots.getSnapshotImageURL(r.snapshot),
-          }))
+          recommendations.map(async r => {
+            const preview = await lazy.Snapshots.getSnapshotImageURL(
+              r.snapshot
+            );
+            return {
+              source: r.source,
+              score: r.score,
+              snapshot: r.snapshot,
+              preview,
+              faviconSelector: preview ? "img.inline-favicon" : "img.favicon",
+            };
+          })
         );
 
         if (!this._destroyed) {

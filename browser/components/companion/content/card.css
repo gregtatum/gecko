@@ -13,12 +13,8 @@
   cursor: pointer;
 }
 
-/* We need a wrapper div to do position: relative on to get a stacking context
- * for the position: absolute options-button. However, we need the options
- * panel to live outside that or else its absolute positioning logic gets
- * confused. */
 .card-content-wrapper {
-  position: relative;
+  display: flex;
 }
 
 .card.popupshowing,
@@ -29,7 +25,8 @@
 
 .contents {
   display: flex;
-  position: relative;
+  flex-grow: 1;
+  overflow: hidden;
 }
 
 .contents, .contents:visited, .contents:hover {
@@ -38,17 +35,14 @@
 }
 
 .info {
-  padding: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 12px;
   flex: 1;
-  white-space: nowrap;
+  overflow: hidden;
 }
 
 .subtitle {
   display: flex;
   gap: 5px;
-  max-width: 85%;
 }
 
 .snapshot-sitetitle {
@@ -63,13 +57,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  margin-block-end: .5em;
-  max-width: 85%;
+  margin-bottom: 4px;
 }
 
 .sub {
   color: #5B5B66;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .info-divider::after {
@@ -83,21 +77,21 @@
 .card-image {
   background: var(--light-bg-color);
   border-radius: 8px 0 0 8px;
-  flex-basis: 25%;
+  min-width: 70px;
   background-size: cover;
   background-position: center;
+}
+
+.card:not(.nopreview) .card-image img.favicon {
+  display: none;
+}
+
+.nopreview .card-image {
   display: flex;
 }
 
-.card-image img.favicon {
-  width: 16px;
-  height: 16px;
-  margin-inline-start: 8px;
-  margin-block-end: 8px;
-  align-self: end;
-}
-
 .nopreview img.favicon {
+  display: block;
   width: 24px;
   height: 24px;
   align-self: center;
@@ -106,33 +100,14 @@
   fill: #CFCFD8;
 }
 
-.snapshot .contents::before {
-  content: " ";
-  background: linear-gradient(269.67deg, var(--light-bg-color) 26.15%, rgba(240, 240, 244, 0) 72.84%);
-  height: 100%;
-  width: 50%;
-  border-radius: 0 8px 8px 0;
-  position: absolute;
-  right: 0;
-  display: none;
-}
-
 .options-button {
-  position: absolute;
-  right: 8px;
-  top: calc(50% - 12px);
   padding: 0;
-  margin: 0;
-  min-width: unset;
+  margin-block: auto;
+  margin-inline: .5em 8px;
+  min-width: 24px;
   min-height: unset;
-  width: 24px;
   height: 24px;
   background: var(--light-bg-color) no-repeat center url("chrome://global/skin/icons/more.svg");
-}
-
-.snapshot.card:is(:hover, :focus-within):not(.prevent-hover-panel) .contents::before,
-.popupshowing .contents::before {
-  display: block;
 }
 
 @media (prefers-contrast) {
