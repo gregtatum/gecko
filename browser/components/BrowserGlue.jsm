@@ -1229,6 +1229,7 @@ BrowserGlue.prototype = {
         child: {
           moduleURI: "resource:///actors/OnboardingChild.jsm",
           events: {
+            LaunchLearnMore: { wantUntrusted: true },
             OnboardingCompleted: { wantUntrusted: true },
             OpenFxa: { wantUntrusted: true },
             RecordEvent: { wantUntrusted: true },

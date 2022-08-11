@@ -97,7 +97,8 @@ onboarding-flow-connected-title = { -fxaccount-brand-name(capitalization: "sente
 onboarding-flow-connected-text = Your account has been verified. Just one more step and you’ll be on your way.
 
 onboarding-flow-data-prefs-title = Choose what data to share with { -brand-short-name }
-onboarding-flow-data-prefs-text = { -brand-short-name }’s data protection policy puts your privacy first. We will never collect data without your permission. <a data-l10n-name="link-learn-more">Learn more</a>
+onboarding-flow-data-prefs-text = { -brand-short-name }’s data protection policy puts your privacy first. We will never collect data without your permission.
+onboarding-learn-more-link = Learn More
 onboarding-flow-data-prefs-label-firefox-suggest = Improved { -firefox-suggest-brand-name }
 onboarding-flow-data-prefs-label-firefox-suggest-detail = A richer search experience by allowing { -vendor-short-name } to process your search queries.
 onboarding-flow-data-prefs-label-better-browsing = Make recommendations better

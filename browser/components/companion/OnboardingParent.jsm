@@ -40,6 +40,27 @@ class OnboardingParent extends JSWindowActorParent {
     let fxaListener;
 
     switch (message.name) {
+      case "LaunchLearnMore":
+        doc.body.setAttribute("onboarding", "with-browsing");
+        const learnMoreListener = {
+          QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener"]),
+
+          onLocationChange(aWebProgress, aRequest, aLocationURI, aFlags) {
+            if (
+              aWebProgress.isTopLevel &&
+              aLocationURI.spec == ONBOARDING_URL
+            ) {
+              doc.body.setAttribute("onboarding", "no-browsing");
+              window.gBrowser.removeProgressListener(learnMoreListener);
+            }
+          },
+        };
+
+        learnMoreListener.onLocationChange = learnMoreListener.onLocationChange.bind(
+          this
+        );
+        window.gBrowser.addProgressListener(learnMoreListener);
+        break;
       case "OnboardingCompleted":
         Services.prefs.setBoolPref(
           "browser.pinebuild.onboarding.complete",

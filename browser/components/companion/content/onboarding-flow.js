@@ -22,6 +22,7 @@ class OnboardingFlowElement extends HTMLElement {
     "navigate-forward",
     "navigate-backward",
     "initiate-fxa-flow",
+    "launch-learn-more",
     "complete-onboarding",
   ];
 
@@ -66,12 +67,10 @@ class OnboardingFlowElement extends HTMLElement {
         backwardNav: section.dataset.backwardNav,
       };
 
-      const buttons = section.getElementsByTagName("button");
+      const actionableElements = section.querySelectorAll("[data-action]");
 
-      if (buttons.length) {
-        for (let button of buttons) {
-          button.addEventListener("click", this);
-        }
+      for (let actionableElement of actionableElements) {
+        actionableElement.addEventListener("click", this);
       }
 
       let thisBreadcrumb = document.createElement("span");
@@ -196,6 +195,13 @@ class OnboardingFlowElement extends HTMLElement {
           new CustomEvent("OpenFxa", {
             bubbles: true,
             detail: { email },
+          })
+        );
+        break;
+      case "launch-learn-more":
+        document.dispatchEvent(
+          new CustomEvent("LaunchLearnMore", {
+            bubbles: true,
           })
         );
         break;

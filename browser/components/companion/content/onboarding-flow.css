@@ -5,6 +5,7 @@
 @media not (prefers-contrast) {
   :root {
     --in-content-link-color: var(--colors-lavender-90);
+    --in-content-link-color-visited: var(--colors-lavender-100);
     --in-content-link-color-hover: var(--colors-lavender-120);
   }
 }
@@ -211,6 +212,14 @@ body {
 
 .onboarding-data-prefs-card img {
   margin-top: 129px;
+}
+
+.onboarding-data-prefs-card .onboarding-privacy-learn-more {
+  margin-inline-start: 4px;
+}
+
+.onboarding-data-prefs-card .onboarding-privacy-learn-more:visited:hover {
+  color: var(--in-content-link-color-hover);
 }
 
 .onboarding-data-prefs-card fieldset {
