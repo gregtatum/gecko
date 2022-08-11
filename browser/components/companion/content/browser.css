@@ -114,6 +114,10 @@ body {
   transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
 }
 
+body[onboarding="with-browsing"] #nav-bar river-el::part(page-action-button) {
+  display: none;
+}
+
 body[browser-ready]:not([flow-reset],[onboarding="no-browsing"]) {
   /* This is just our normal solid color background */
   background-color: var(--pinebuild-global-background);

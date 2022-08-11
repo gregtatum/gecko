@@ -276,7 +276,8 @@ export default class ViewGroupElement extends MozLitElement {
             shouldExposeParts ? "history" : ""
           }>${history}</div>
         </div>
-        <button class="page-action-button" ?hidden=${!this.active}
+        <button class="page-action-button" part="page-action-button" ?hidden=${!this
+          .active}
                 @click="${this.#pageActionButtonClicked}"
                 @keypress="${this.#pageActionButtonKeypressed}"
                 data-l10n-id="page-action-menu-button"

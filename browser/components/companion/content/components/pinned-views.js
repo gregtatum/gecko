@@ -111,7 +111,7 @@ class PinnedViews extends MozLitElement {
           return html`
             <view-group
               tabindex="0"
-              exportparts="domain, history"
+              exportparts="domain, history, page-action-button"
               role="tab"
               ?active=${isActive}
               aria-label=${isActive

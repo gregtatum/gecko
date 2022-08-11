@@ -175,7 +175,7 @@ export default class River extends MozLitElement {
               return html`
                 <view-group
                   ?top=${viewGroup === topViewGroup}
-                  exportparts="domain, history"
+                  exportparts="domain, history, page-action-button"
                   tabindex="0"
                   role="tab"
                   aria-expanded=${ifDefined(isExpandedWithHistory)}
