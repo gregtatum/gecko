@@ -263,7 +263,17 @@ function getConferenceInfo(result, links) {
         locationURL = new URL(result.location.displayName);
       } else {
         // Google
-        locationURL = new URL(result.location);
+        // Location can be multiple entries, split by a comma.
+        // Look for a URL
+        let locations = result.location.split(",");
+        for (let location of locations) {
+          try {
+            locationURL = new URL(location);
+            break;
+          } catch (e) {
+            // Move on to the next one if it fails.
+          }
+        }
       }
       return getConferencingDetails(locationURL);
     } catch (e) {

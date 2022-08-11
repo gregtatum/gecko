@@ -38,6 +38,7 @@ const GOOGLE_TEST = [
         },
       ],
       htmlLink,
+      location: "https://example.zoom.us/12345678,Not part of URL",
     },
     test_result: {
       attendees: [
@@ -58,6 +59,7 @@ const GOOGLE_TEST = [
         },
       ],
       url: `${htmlLink}?authuser=${encodeURIComponent(creatorEmail)}`,
+      conference: "https://example.zoom.us/12345678",
     },
   },
 ];
@@ -68,5 +70,6 @@ add_task(async function test_parseGoogleCalendarResult() {
     deepEqual(event.attendees, test.test_result.attendees);
     equal(event.creator.isSelf, true);
     equal(event.url, test.test_result.url);
+    equal(event.conference.url, test.test_result.conference);
   }
 });
