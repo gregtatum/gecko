@@ -2821,7 +2821,7 @@ pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"c
   pref("browser.pinebuild.megaback.click-count-threshold", 5);
   pref("browser.pinebuild.snapshots.relevancy.enabled", true);
   pref("browser.pinebuild.login-view-overwriting.enabled", true);
-  pref("browser.pinebuild.speculatively-create-views", true);
+  pref("browser.pinebuild.speculatively-create-views", false);
   pref("browser.companion.snapshot-groups.enabled", false);
   pref("identity.fxaccounts.commands.enabled", false);
   pref("extensions.pocket.enabled", false);
