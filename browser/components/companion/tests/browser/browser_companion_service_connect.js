@@ -3,6 +3,10 @@
 
 "use strict";
 
+const { TelemetryTestUtils } = ChromeUtils.import(
+  "resource://testing-common/TelemetryTestUtils.jsm"
+);
+
 registerCleanupFunction(async () => {
   // No matter what happens, blow away window history after this file runs
   // to avoid leaking state between tests.
@@ -148,6 +152,9 @@ add_task(async function testConnectOptionNotShown() {
 });
 
 add_task(async function testConnectOptionShown() {
+  Services.fog.testResetFOG();
+  Services.telemetry.clearScalars();
+
   await PinebuildTestUtils.withNewBrowserWindow(async win => {
     const { gBrowser } = win;
 
@@ -182,9 +189,33 @@ add_task(async function testConnectOptionShown() {
         connected: false,
         authenticating: true,
       });
-      await clickLoginLink(gBrowser.selectedBrowser);
 
+      TelemetryTestUtils.assertScalarUnset(
+        TelemetryTestUtils.getProcessScalars("parent", true),
+        "pinebuild.calendar_service_connected"
+      );
+      is(
+        Glean.pinebuild.calendarServiceConnected.testservice.testGetValue(),
+        undefined,
+        "Glean is initially undefined"
+      );
+
+      await clickLoginLink(gBrowser.selectedBrowser);
       await connected;
+
+      TelemetryTestUtils.assertKeyedScalar(
+        TelemetryTestUtils.getProcessScalars("parent", true),
+        "pinebuild.calendar_service_connected",
+        "testservice",
+        1
+      );
+      await Services.fog.testFlushAllChildren();
+      is(
+        Glean.pinebuild.calendarServiceConnected.testservice.testGetValue(),
+        1,
+        "Glean updated to 1"
+      );
+
       await assertConnectCard(helper, {
         service: "testservice",
         length: 1,
