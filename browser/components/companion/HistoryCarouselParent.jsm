@@ -178,12 +178,18 @@ class HistoryCarousel {
    *
    * @param {Boolean} shouldShow
    *   True if the carousel should be shown.
+   * @param {Boolean} [skipSelection=false]
+   *   True if the HistoryCarousel shouldn't try to stage the View that was
+   *   last centered in the carousel when exiting. This is useful if the
+   *   HistoryCarousel is being exited because a new <browser> got staged
+   *   by some kind of navigation (for example, clicking on a link in an
+   *   external application). This argument is ignored if shouldShow is true.
    * @returns {Promise}
    * @resolves {undefined}
    *   Resolves once the state has been entered (or if we're already in the
    *   selected state).
    */
-  async showHistoryCarousel(shouldShow) {
+  async showHistoryCarousel(shouldShow, skipSelection = false) {
     if (this.#enabled == shouldShow) {
       return;
     }
@@ -262,7 +268,7 @@ class HistoryCarousel {
       let finalIndex = await actor.sendQuery("Exit");
       lazy.logConsole.debug("Got back final index: ", finalIndex);
 
-      this.#notify("HistoryCarousel:Exit", { finalIndex });
+      this.#notify("HistoryCarousel:Exit", { finalIndex, skipSelection });
       this.#enabled = shouldShow;
 
       for (let browser of gBrowser.browsers) {

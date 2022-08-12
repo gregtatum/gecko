@@ -1472,7 +1472,14 @@ class WorkspaceHistory extends EventTarget {
         }
 
         if (this.#window.gHistoryCarousel.enabled) {
-          this.#window.gHistoryCarousel.showHistoryCarousel(false);
+          // We set skipSelection to true here so that the HistoryCarousel doesn't
+          // attempt to stage the most recently selected View in the carousel,
+          // which could end up overriding the tab switch that caused this exit
+          // to occur.
+          this.#window.gHistoryCarousel.showHistoryCarousel(
+            false,
+            true /* skipSelection */
+          );
         }
 
         lazy.logConsole.debug(
@@ -3739,16 +3746,23 @@ class StageManager extends EventTarget {
     this.#currentHistoryCarouselInternalView = this.#currentInternalView;
   }
 
-  async #historyCarouselExit({ finalIndex }) {
-    lazy.logConsole.debug(
-      "Exiting history carousel mode, selecting index ",
-      finalIndex
-    );
+  async #historyCarouselExit({ finalIndex, skipSelection }) {
     this.#historyCarouselMode = false;
     this.#currentHistoryCarouselInternalView = null;
-    let internalView = this.currentWorkspace.viewStack[finalIndex];
-    lazy.logConsole.debug(`Selecting view: ${internalView.toString()}`);
-    this.setView(internalView.view);
+
+    if (skipSelection) {
+      lazy.logConsole.debug(
+        "Exiting history carousel mode, skipping selection."
+      );
+    } else {
+      lazy.logConsole.debug(
+        "Exiting history carousel mode, selected index ",
+        finalIndex
+      );
+      let internalView = this.currentWorkspace.viewStack[finalIndex];
+      lazy.logConsole.debug(`Selecting view: ${internalView.toString()}`);
+      this.setView(internalView.view);
+    }
 
     let flushed = this.#window.promiseDocumentFlushed(() => {});
     // Finally, we'll wait until we've completed the next paint and composite
