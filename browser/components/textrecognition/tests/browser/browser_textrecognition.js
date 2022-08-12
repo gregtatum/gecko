@@ -10,9 +10,19 @@ add_task(async function() {
     set: [["dom.text-recognition.enabled", true]],
   });
 
+  clearTelemetry();
+
   await BrowserTestUtils.withNewTab(URL_IMG, async function(browser) {
     setClipboardText("");
     is(getTextFromClipboard(), "", "The copied text is empty.");
+    is(getTelemetryEvents().length, 0, "No telemetry has been recorded yet.");
+    is(
+      Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_API_PERFORMANCE")
+        .snapshot().sum,
+      0,
+      "No histogram timing was recorded."
+    );
 
     info("Right click image to show context menu.");
     let popupShownPromise = BrowserTestUtils.waitForEvent(
@@ -43,6 +53,26 @@ add_task(async function() {
       document.querySelector(".textRecognitionDialogFrame")
     );
 
+    {
+      info("Check the event telemetry.");
+      const events = await BrowserTestUtils.waitForCondition(() =>
+        getTelemetryEvents()
+      );
+
+      is(events.length, 1, "Telemetry has been recorded");
+      const [event] = events;
+      is(
+        event.category,
+        "textrecognition",
+        "Event category had the expected value."
+      );
+      is(event.method, "context_menu", "Event method had the expected value.");
+      is(event.object, "open", "Event object had the expected value.");
+
+      is(event.stringValue, undefined, "Event stringValue was undefined.");
+      is(event.extraValues, undefined, "Event extraValues was undefined.");
+    }
+
     info("Waiting for text results.");
     const resultsHeader = contentDocument.querySelector(
       "#text-recognition-header-results"
@@ -51,14 +81,23 @@ add_task(async function() {
       return resultsHeader.style.display !== "none";
     });
 
-    info("Checking the text results.");
-    const text = contentDocument.querySelector(".textRecognitionText");
-    is(text.children.length, 2, "Two piece of text were found");
-    const [p1, p2] = text.children;
-    is(p1.tagName, "P", "The children are paragraph tags.");
-    is(p2.tagName, "P", "The children are paragraph tags.");
-    is(p1.innerText, "Mozilla\n", "The first piece of text matches.");
-    is(p2.innerText, "Firefox\n", "The second piece of text matches.");
+    {
+      info("Check the text results.");
+      const text = contentDocument.querySelector(".textRecognitionText");
+      is(text.children.length, 2, "Two piece of text were found");
+      const [p1, p2] = text.children;
+      is(p1.tagName, "P", "The children are paragraph tags.");
+      is(p2.tagName, "P", "The children are paragraph tags.");
+      is(p1.innerText, "Mozilla\n", "The first piece of text matches.");
+      is(p2.innerText, "Firefox\n", "The second piece of text matches.");
+    }
+
+    ok(
+      Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_API_PERFORMANCE")
+        .snapshot().sum > 0,
+      "Text recognition API performance was recorded."
+    );
 
     info("Close the dialog box.");
     const close = contentDocument.querySelector("#text-recognition-close");
@@ -74,6 +113,20 @@ add_task(async function() {
     await BrowserTestUtils.waitForCondition(
       () => !document.querySelector(".textRecognitionDialogFrame")
     );
+
+    info("Check for interaction telemetry.");
+    const timing = await BrowserTestUtils.waitForCondition(() => {
+      const { sum } = Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_INTERACTION_TIMING")
+        .snapshot();
+      if (sum > 0) {
+        return sum;
+      }
+      return false;
+    });
+    ok(timing > 0, "Interaction timing was measured.");
+
     setClipboardText("");
+    clearTelemetry();
   });
 });

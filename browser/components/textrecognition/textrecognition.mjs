@@ -21,8 +21,11 @@ class TextRecognitionModal {
    * @param {Promise<TextRecognitionResult[]>} resultsPromise
    * @param {() => {}} resizeVertically
    * @param {(url: string, where: string, params: Object) => {}} openLinkIn
+   * @param {number} startTime
    */
   constructor(resultsPromise, resizeVertically, openLinkIn) {
+    Services.telemetry.setEventRecordingEnabled("textrecognition", true);
+
     /** @type {HTMLElement} */
     this.textEl = document.querySelector(".textRecognitionText");
 
@@ -41,11 +44,18 @@ class TextRecognitionModal {
 
     this.showHeaderByID("text-recognition-header-loading");
 
+    TextRecognitionModal.recordTelemetryEvent("open");
+
     resultsPromise.then(
       ({ results, direction }) => {
         if (results.length === 0) {
           // Update the UI to indicate that there were no results.
           this.showHeaderByID("text-recognition-header-no-results");
+          // It's still worth recording telemetry times, as the API was still invoked.
+          TelemetryStopwatch.finish(
+            "TEXT_RECOGNITION_API_PERFORMANCE",
+            resultsPromise
+          );
           return;
         }
 
@@ -53,14 +63,59 @@ class TextRecognitionModal {
         // the results to the UI.
         this.runClusteringAndUpdateUI(results, direction);
         this.showHeaderByID("text-recognition-header-results");
+        TelemetryStopwatch.finish(
+          "TEXT_RECOGNITION_API_PERFORMANCE",
+          resultsPromise
+        );
+
+        TextRecognitionModal.recordInteractionTime();
       },
       error => {
         // There was an error in the text recognition call. Treat this as the same
-        // as if there were no results, but report the error to the console.
-        console.error(error);
+        // as if there were no results, but report the error to the console and telemetry.
         this.showHeaderByID("text-recognition-header-no-results");
+
+        console.error(error);
+        TextRecognitionModal.recordTelemetryEvent("failure");
+        TelemetryStopwatch.cancel(
+          "TEXT_RECOGNITION_API_PERFORMANCE",
+          resultsPromise
+        );
       }
     );
+  }
+
+  /**
+   * After the results are shown, measure how long a user interacts with the modal.
+   */
+  static recordInteractionTime() {
+    TelemetryStopwatch.start(
+      "TEXT_RECOGNITION_INTERACTION_TIMING",
+      // Pass the instance of the window in case multiple tabs are doing text recognition
+      // and there is a race condition.
+      window
+    );
+    window.addEventListener("unload", () => {
+      TelemetryStopwatch.finish("TEXT_RECOGNITION_INTERACTION_TIMING", window);
+    });
+  }
+
+  /**
+   * @param {string} object
+   */
+  static recordTelemetryEvent(object) {
+    Services.telemetry.recordEvent("textrecognition", "context_menu", object);
+  }
+
+  /**
+   * After the results are shown, measure how long a user interacts with the modal.
+   * @param {number} length
+   */
+  static recordTextLengthTelemetry(length) {
+    const histogram = Services.telemetry.getHistogramById(
+      "TEXT_RECOGNITION_TEXT_LENGTH"
+    );
+    histogram.add(length);
   }
 
   setupCloseHandler() {
@@ -166,6 +221,7 @@ class TextRecognitionModal {
     this.textEl.style.display = "block";
 
     TextRecognitionModal.copy(text);
+    TextRecognitionModal.recordTextLengthTelemetry(text.length);
   }
 }
 

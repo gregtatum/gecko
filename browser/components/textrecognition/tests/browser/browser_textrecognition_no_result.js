@@ -10,6 +10,8 @@ add_task(async function() {
     set: [["dom.text-recognition.enabled", true]],
   });
 
+  clearTelemetry();
+
   await BrowserTestUtils.withNewTab(url, async function(browser) {
     setClipboardText("");
     is(getTextFromClipboard(), "", "The copied text is empty.");
@@ -54,6 +56,21 @@ add_task(async function() {
     const text = contentDocument.querySelector(".textRecognitionText");
     is(text.children.length, 0, "No results are listed.");
 
+    ok(
+      Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_API_PERFORMANCE")
+        .snapshot().sum > 0,
+      "Histogram timing was recorded even though there were no results."
+    );
+
+    is(
+      Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_INTERACTION_TIMING")
+        .snapshot().sum,
+      0,
+      "No interaction timing has been measured yet."
+    );
+
     info("Close the dialog box.");
     const close = contentDocument.querySelector("#text-recognition-close");
     close.click();
@@ -65,4 +82,6 @@ add_task(async function() {
 
     is(getTextFromClipboard(), "", "The copied text is still empty.");
   });
+
+  clearTelemetry();
 });

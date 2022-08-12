@@ -3335,6 +3335,17 @@ synced_tabs:
       tab_pos: position of the tab clicked
       filter: was there a filter enabled
 
+textrecognition:
+  context_menu:
+    objects: ["open", "failure"]
+    description: >
+      Recorded when a user uses the context menu to extract text from an image.
+    notification_emails: ["gtatum@mozilla.com"]
+    products: ["firefox"]
+    record_in_processes: [main]
+    bug_numbers: [1783261]
+    expiry_version: "never"
+
 colorways:
   try_colorways:
     objects: ["firefoxview"]
@@ -3487,4 +3498,3 @@ firefoxview:
       - 1779642
     expiry_version: "never"
     release_channel_collection: opt-out
-
