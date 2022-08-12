@@ -74,33 +74,57 @@ function maybeInitializeUI() {
   window.addEventListener("Companion:BrowsePanel", goBack);
 
   companionDeck.addEventListener("view-changed", e => {
-    // Clumsily wait for the iframes in the passwords and downloads
-    // browse submenu items to load, before focusing their back
-    // buttons. We would eventually like to do this in a cleaner, more
-    // reliable way (MR2-2770).
-    setTimeout(() => {
-      let currentView = document.querySelector(
-        `[name=${companionDeck.selectedViewName}][slot=selected]`
-      );
-      if (!currentView) {
+    // This function's job is to find the section-panel back button for the selected
+    // named-deck view, and focus it. Since some named-deck views tuck their section-panels
+    // within nested browsers that might still be in the midst of loading, we try to detect
+    // any <browser> elements within the selected panel and only proceed once that <browser>
+    // has finished loading.
+    let viewName = companionDeck.selectedViewName;
+    let currentView = document.querySelector(
+      `[name=${viewName}][slot=selected]`
+    );
+
+    let browser = currentView.querySelector("browser");
+
+    // This helper function will do the work of finding the section-panel in the
+    // view, waiting for the section-panel to finish any pending LitElement updates,
+    // and then focus the back button. This function might be called synchronously
+    // if there's no loading <browser> to wait for.
+    let focusBackButton = async () => {
+      let sectionPanel = null;
+      // The view itself might be a section-panel...
+      if (currentView.tagName == "section-panel") {
+        sectionPanel = currentView;
+      } else if (browser) {
+        // Or the section-panel might be within a <browser>...
+        sectionPanel = browser.contentDocument.querySelector("section-panel");
+      } else {
+        // Or it might be a child of the current view's shadowRoot, or a direct
+        // descendant.
+        sectionPanel = currentView.shadowRoot
+          ? currentView.shadowRoot.querySelector("section-panel")
+          : currentView.querySelector("section-panel");
+      }
+
+      if (!sectionPanel) {
+        // We tried our best to find a section-panel, and now we're giving up.
         return;
       }
-      let backBtn;
-      if (currentView.attributes.name.value == "passwords") {
-        const passwordsFrame = document.getElementById(
-          "companion-login-browser"
-        );
-        const sectionPanel = passwordsFrame.contentDocument.querySelector(
-          "section-panel"
-        );
-        backBtn = sectionPanel.shadowRoot.querySelector("button.back-button");
-      } else {
-        backBtn = currentView.shadowRoot
-          ? currentView.shadowRoot.querySelector("button.back-button")
-          : currentView.querySelector("button.back-button");
-      }
+
+      // We have to wait for Lit to resolve this Promise to ensure that the
+      // back button has finished being inserted into the DOM.
+      await sectionPanel.updateComplete;
+      let backBtn = sectionPanel.shadowRoot.querySelector("button.back-button");
       backBtn?.focus({ focusVisible: e.detail.isKeyboardSource });
-    }, 100);
+    };
+
+    if (!browser || browser.contentDocument.readyState == "complete") {
+      // Since there's no <browser>, or the <browser> has finished loading, we can
+      // go ahead and search for the back button.
+      focusBackButton();
+    } else {
+      browser.addEventListener("load", focusBackButton, { once: true });
+    }
   });
 
   // When "browser.startup.launchOnOSLogin" is true, pinebuildBackground() will
