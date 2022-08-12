@@ -55,6 +55,8 @@ var PineBuildUIUtils = {
       let item = document.getElementById("sync-setup");
       item.setAttribute("disabled", true);
     }
+
+    gPermissionPanel.setAnchor(gActiveViewManager, "after_end");
   },
 
   onLoad() {
