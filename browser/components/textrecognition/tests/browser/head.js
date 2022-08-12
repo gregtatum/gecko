@@ -58,4 +58,7 @@ function getTelemetryEvents() {
 
 function clearTelemetry() {
   Services.telemetry.clearEvents();
+  Services.telemetry
+    .getHistogramById("TEXT_RECOGNITION_API_PERFORMANCE")
+    .clear();
 }

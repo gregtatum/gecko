@@ -50,6 +50,11 @@ class TextRecognitionModal {
         if (results.length === 0) {
           // Update the UI to indicate that there were no results.
           this.showHeaderByID("text-recognition-header-no-results");
+          // It's still worth recording telemetry times, as the API was still invoked.
+          TelemetryStopwatch.finish(
+            "TEXT_RECOGNITION_API_PERFORMANCE",
+            resultsPromise
+          );
           return;
         }
 
@@ -57,6 +62,10 @@ class TextRecognitionModal {
         // the results to the UI.
         this.runClusteringAndUpdateUI(results, direction);
         this.showHeaderByID("text-recognition-header-results");
+        TelemetryStopwatch.finish(
+          "TEXT_RECOGNITION_API_PERFORMANCE",
+          resultsPromise
+        );
       },
       error => {
         // There was an error in the text recognition call. Treat this as the same
@@ -65,6 +74,10 @@ class TextRecognitionModal {
 
         console.error(error);
         TextRecognitionModal.recordTelemetryEvent("failure");
+        TelemetryStopwatch.cancel(
+          "TEXT_RECOGNITION_API_PERFORMANCE",
+          resultsPromise
+        );
       }
     );
   }

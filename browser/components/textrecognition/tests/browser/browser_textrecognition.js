@@ -16,6 +16,13 @@ add_task(async function() {
     setClipboardText("");
     is(getTextFromClipboard(), "", "The copied text is empty.");
     is(getTelemetryEvents().length, 0, "No telemetry has been recorded yet.");
+    is(
+      Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_API_PERFORMANCE")
+        .snapshot().sum,
+      0,
+      "No histogram timing was recorded."
+    );
 
     info("Right click image to show context menu.");
     let popupShownPromise = BrowserTestUtils.waitForEvent(
@@ -84,6 +91,13 @@ add_task(async function() {
       is(p1.innerText, "Mozilla\n", "The first piece of text matches.");
       is(p2.innerText, "Firefox\n", "The second piece of text matches.");
     }
+
+    ok(
+      Services.telemetry
+        .getHistogramById("TEXT_RECOGNITION_API_PERFORMANCE")
+        .snapshot().sum > 0,
+      "Text recognition API performance was recorded."
+    );
 
     info("Close the dialog box.");
     const close = contentDocument.querySelector("#text-recognition-close");
