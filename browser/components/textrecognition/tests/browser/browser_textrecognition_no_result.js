@@ -10,6 +10,8 @@ add_task(async function() {
     set: [["dom.text-recognition.enabled", true]],
   });
 
+  clearTelemetry();
+
   await BrowserTestUtils.withNewTab(url, async function(browser) {
     setClipboardText("");
     is(getTextFromClipboard(), "", "The copied text is empty.");
@@ -51,6 +53,20 @@ add_task(async function() {
       return noResultsHeader.style.display !== "none";
     });
 
+    {
+      info("Check the event telemetry.");
+      const events = await BrowserTestUtils.waitForCondition(() =>
+        getTelemetryEvents()
+      );
+
+      is(events.length, 1, "Event telemetry has been recorded");
+      is(
+        events[0].object,
+        "open",
+        "An open event was measured even if no results were found."
+      );
+    }
+
     const text = contentDocument.querySelector(".textRecognitionText");
     is(text.children.length, 0, "No results are listed.");
 
@@ -65,4 +81,6 @@ add_task(async function() {
 
     is(getTextFromClipboard(), "", "The copied text is still empty.");
   });
+
+  clearTelemetry();
 });

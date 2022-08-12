@@ -26,3 +26,36 @@ function getTextFromClipboard() {
   transferable.getTransferData("text/unicode", results);
   return results.value.QueryInterface(Ci.nsISupportsString)?.data ?? "";
 }
+
+/**
+ * Returns events specifically for text recognition.
+ */
+function getTelemetryEvents() {
+  const events = Services.telemetry.snapshotEvents(
+    Ci.nsITelemetry.DATASET_PRERELEASE_CHANNELS,
+    true /* clear events */
+  );
+
+  if (!events.parent) {
+    return [];
+  }
+
+  return (
+    events.parent
+      .map(
+        ([timestamp, category, method, object, stringValue, extraValues]) => ({
+          timestamp,
+          category,
+          method,
+          object,
+          stringValue,
+          extraValues,
+        })
+      )
+      .filter(event => event.category === "textrecognition") ?? []
+  );
+}
+
+function clearTelemetry() {
+  Services.telemetry.clearEvents();
+}

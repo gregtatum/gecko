@@ -23,6 +23,8 @@ class TextRecognitionModal {
    * @param {(url: string, where: string, params: Object) => {}} openLinkIn
    */
   constructor(resultsPromise, resizeVertically, openLinkIn) {
+    Services.telemetry.setEventRecordingEnabled("textrecognition", true);
+
     /** @type {HTMLElement} */
     this.textEl = document.querySelector(".textRecognitionText");
 
@@ -41,6 +43,8 @@ class TextRecognitionModal {
 
     this.showHeaderByID("text-recognition-header-loading");
 
+    TextRecognitionModal.recordTelemetryEvent("open");
+
     resultsPromise.then(
       ({ results, direction }) => {
         if (results.length === 0) {
@@ -56,11 +60,20 @@ class TextRecognitionModal {
       },
       error => {
         // There was an error in the text recognition call. Treat this as the same
-        // as if there were no results, but report the error to the console.
-        console.error(error);
+        // as if there were no results, but report the error to the console and telemetry.
         this.showHeaderByID("text-recognition-header-no-results");
+
+        console.error(error);
+        TextRecognitionModal.recordTelemetryEvent("failure");
       }
     );
+  }
+
+  /**
+   * @param {string} object
+   */
+  static recordTelemetryEvent(object) {
+    Services.telemetry.recordEvent("textrecognition", "context_menu", object);
   }
 
   setupCloseHandler() {
