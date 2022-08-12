@@ -2778,6 +2778,7 @@ pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"c
   pref("browser.pinebuild.enabled", true, locked);
   pref("browser.pinebuild.onboarding.complete", true);
   pref("browser.pinebuild.onboarding.progress", 0);
+  pref("browser.pinebuild.webUsage.enabled", true);
   pref("browser.companion.stagemanagerdebugging", false);
   pref("browser.companion.stagemanagerdebugging.logLevel", "Warn");
   pref("browser.river.activationTimeout", 30000);

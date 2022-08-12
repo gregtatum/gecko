@@ -130,13 +130,20 @@ class OnboardingFlowElement extends HTMLElement {
     let suggestPrefChecked = document.querySelector(
       "input[name='firefox-suggest']"
     ).checked;
+    let betterBrowsingPrefChecked = document.querySelector(
+      "input[name='better-browsing']"
+    ).checked;
     let usageStatsPrefChecked = document.querySelector(
       "input[name='usage-statistics']"
     ).checked;
     document.dispatchEvent(
       new CustomEvent("SaveDataPrefs", {
         bubbles: true,
-        detail: { suggestPrefChecked, usageStatsPrefChecked },
+        detail: {
+          suggestPrefChecked,
+          betterBrowsingPrefChecked,
+          usageStatsPrefChecked,
+        },
       })
     );
   }

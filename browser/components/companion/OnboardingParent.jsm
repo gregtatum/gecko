@@ -183,6 +183,10 @@ class OnboardingParent extends JSWindowActorParent {
           message.data.suggestPrefChecked
         );
         Services.prefs.setBoolPref(
+          "browser.pinebuild.webUsage.enabled",
+          message.data.betterBrowsingPrefChecked
+        );
+        Services.prefs.setBoolPref(
           "datareporting.healthreport.uploadEnabled",
           message.data.usageStatsPrefChecked
         );
