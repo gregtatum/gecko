@@ -97,18 +97,18 @@ add_task(async function test_open_overflow_view_menu() {
     "The river overflow menu button should be focused after closing the overflow panel"
   );
 
-  let oldFocusedElement = document.activeElement;
-
   panelShown = BrowserTestUtils.waitForEvent(window, "popupshown");
   // Click the overflow views button and
   // ensure the first view in the list is focused
   await EventUtils.synthesizeMouseAtCenter(riverOverflow, {}, window);
   await panelShown;
 
+  // The first item in the panel should be focused
+  overflowList = overflowPanel.querySelectorAll("toolbarbutton");
   Assert.equal(
-    oldFocusedElement,
     document.activeElement,
-    "Should not have moved focus after clicking"
+    overflowList[0],
+    "The first item in the overflow panel should be focused"
   );
 
   popupHidden = BrowserTestUtils.waitForEvent(overflowPanel, "popuphidden");
