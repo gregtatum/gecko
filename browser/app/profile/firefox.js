@@ -2829,5 +2829,6 @@ pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"c
   pref("browser.urlbar.opencompanionsearch.enabled", true);
   pref("browser.pinebuild.pinning-apps.enabled", false);
   pref("browser.pinebuild.sounds", true);
+  pref("browser.pinebuild.privacyPolicyURL", "https://www.mozilla.org/en-US/privacy/firefox/");
   pref("browser.shell.checkDefaultBrowser", false);
 #endif

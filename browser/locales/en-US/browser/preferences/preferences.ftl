@@ -1405,6 +1405,10 @@ addon-recommendations =
     .label = Allow { -brand-short-name } to make personalized extension recommendations
 addon-recommendations-link = Learn more
 
+better-recommendations =
+  .label = Send websites you visit anonymously to { -vendor-short-name } to improve snapshot suggestions and other features
+better-recommendations-link = Learn more
+
 # This message is displayed above disabled data sharing options in developer builds
 # or builds with no Telemetry support available.
 collection-health-report-disabled = Data reporting is disabled for this build configuration

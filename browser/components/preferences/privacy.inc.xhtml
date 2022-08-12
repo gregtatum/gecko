@@ -1024,6 +1024,19 @@
       </label>
     </hbox>
 #endif
+
+#ifdef PINEBUILD
+     <hbox align="center">
+      <checkbox id="betterBrowsingEnabledBox"
+                class="tail-with-learn-more"
+                preference="browser.pinebuild.webUsage.enabled"
+                data-l10n-id="better-recommendations"/>
+      <label id="betterBrowsingEnabledLabel"
+              class="learnMore" is="text-link"
+              data-l10n-id="better-recommendations-link"/>
+    </hbox>
+#endif
+
   </vbox>
 #endif
   <vbox id="privacySegmentationSection" data-subcategory="privacy-segmentation" hidden="true">
