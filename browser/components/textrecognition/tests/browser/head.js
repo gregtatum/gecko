@@ -64,4 +64,5 @@ function clearTelemetry() {
   Services.telemetry
     .getHistogramById("TEXT_RECOGNITION_INTERACTION_TIMING")
     .clear();
+  Services.telemetry.getHistogramById("TEXT_RECOGNITION_TEXT_LENGTH").clear();
 }
