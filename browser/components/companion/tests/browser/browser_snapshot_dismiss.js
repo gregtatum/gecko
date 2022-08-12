@@ -71,8 +71,6 @@ add_setup(async function() {
   registerCleanupFunction(async () => {
     idleService.disabled = false;
     await BrowserTestUtils.closeWindow(win);
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
   });
 });
 

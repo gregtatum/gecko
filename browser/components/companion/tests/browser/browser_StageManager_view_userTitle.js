@@ -12,11 +12,6 @@
  * with that user title.
  */
 add_task(async function test_user_title_snapshot() {
-  registerCleanupFunction(async () => {
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
-  });
-
   const URL = "https://example.com/";
   const CUSTOM_USER_TITLE = "This is my custom user title! Woohoo!";
   let [view1] = await PinebuildTestUtils.loadViews(["https://example.com/"]);

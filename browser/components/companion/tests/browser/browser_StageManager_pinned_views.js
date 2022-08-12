@@ -12,11 +12,6 @@
  * for it.
  */
 add_task(async function test_pinned_view() {
-  registerCleanupFunction(async () => {
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
-  });
-
   const URL = "https://example.com/";
   // First, delete any Snapshots for example.com that might already exist,
   // since other tests might have left one around.

@@ -31,11 +31,7 @@ add_task(async function preview_construction() {
   // match TEST_USER_TITLE.
   const TEST_USER_TITLE = "This is a user-provided title";
   gStageManager.setUserTitle(views[1], TEST_USER_TITLE);
-  registerCleanupFunction(async () => {
-    // Setting a title adds a Snapshot, so let's be sure to clean up.
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
-  });
+
   Assert.equal(
     views[1].title,
     TEST_USER_TITLE,

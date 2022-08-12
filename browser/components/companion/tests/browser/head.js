@@ -83,6 +83,11 @@ registerCleanupFunction(async () => {
 
   // Remove any logins that may have been added
   LoginTestUtils.clearData();
+
+  // Blow away any Snapshots and/or History that the tests might have
+  // accumulated.
+  await Snapshots.reset();
+  await PlacesUtils.history.clear();
 });
 
 const redirectHosts = [

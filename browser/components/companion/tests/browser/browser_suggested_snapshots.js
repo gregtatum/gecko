@@ -140,8 +140,6 @@ add_setup(async function() {
     idleService.disabled = false;
     tmpFile.remove(false);
     await BrowserTestUtils.closeWindow(win);
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
   });
 });
 

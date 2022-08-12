@@ -378,11 +378,6 @@ add_task(async function testSessionRestoreLazyNoExtraBrowsers() {
  * Apps.
  */
 add_task(async function testSessionRestorePinnedViewsAndApps() {
-  registerCleanupFunction(async () => {
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
-  });
-
   let win = await BrowserTestUtils.openNewBrowserWindow();
   let { gStageManager } = win;
 

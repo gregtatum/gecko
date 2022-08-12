@@ -12,11 +12,6 @@ add_setup(async () => {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.pagethumbnails.capturing_disabled", false]],
   });
-
-  registerCleanupFunction(async () => {
-    await Snapshots.reset();
-    await PlacesUtils.history.clear();
-  });
 });
 
 /**
