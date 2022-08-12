@@ -83,16 +83,10 @@ export default class River extends MozLitElement {
 
   #openOverflowMenu(event) {
     if (event.key == "Enter" || event.key == " " || event.type == "click") {
-      // PanelMultiView.jsm expects a keypress event in order to focus
-      // the first item in a opened panel.
-      // Without this, VoiceOver users will have no notification that
-      // the Recent Views menu has been opened when using
-      // the VoiceOver modifier key + Space.
-      let clonedEvent = new KeyboardEvent("keypress", event);
       let e = new CustomEvent("UserAction:OpenOverflowPanel", {
         bubbles: true,
         composed: true,
-        detail: { view: this.activeView, triggerEvent: clonedEvent },
+        detail: { view: this.activeView, triggerEvent: event },
       });
       this.dispatchEvent(e);
     }
