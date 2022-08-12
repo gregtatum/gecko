@@ -114,7 +114,8 @@ body {
   transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
 }
 
-body[onboarding="with-browsing"] #nav-bar river-el::part(page-action-button) {
+body[onboarding="with-browsing"] #nav-bar river-el::part(page-action-button),
+body[onboarding="with-browsing"] #nav-bar pinned-views::part(page-action-button) {
   display: none;
 }
 
