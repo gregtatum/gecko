@@ -146,7 +146,7 @@ body[flow-reset] #tabbrowser-tabpanels[session-change="2"] {
   padding-inline: var(--tab-shadow-max-size);
 }
 
-@supports -moz-bool-pref("layout.css.emulate-moz-box-with-flex") {
+@media (-moz-box-flexbox-emulation) {
   .tab-stack {
     /* Needed to allow tabs to shrink to be skinnier than their page-title: */
     min-width: 0;

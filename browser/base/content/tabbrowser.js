@@ -7351,7 +7351,7 @@ var TabContextMenu = {
       closeTabsToTheEndItem.disabled &&
       closeOtherTabsItem.disabled;
 
-    // Hide "Bookmark Tab" for multiselection.
+    // Hide "Bookmark Tab…" for multiselection.
     // Update its state if visible.
     let bookmarkTab = document.getElementById("context_bookmarkTab");
     bookmarkTab.hidden = multiselectionContext;

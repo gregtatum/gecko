@@ -6613,10 +6613,6 @@ mozilla::ipc::IPCResult ContentParent::RecvCompleteAllowAccessFor(
     return IPC_OK();
   }
 
-  if (!aTrackingPrincipal) {
-    return IPC_FAIL(this, "No principal");
-  }
-
   StorageAccessAPIHelper::CompleteAllowAccessFor(
       aParentContext.get_canonical(), aTopLevelWindowId, aTrackingPrincipal,
       aTrackingOrigin, aCookieBehavior, aReason, nullptr)

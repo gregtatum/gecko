@@ -43,7 +43,7 @@
 #ifndef PINEBUILD
         <menuitem id="context-bookmarkpage"
                   class="menuitem-iconic"
-                  data-l10n-id="main-context-menu-bookmark-add"
+                  data-l10n-id="main-context-menu-bookmark-page"
                   oncommand="gContextMenu.bookmarkThisPage();"/>
 #endif
       </menugroup>
@@ -101,7 +101,7 @@
       <menuseparator id="context-sep-open"/>
 #ifndef PINEBUILD
       <menuitem id="context-bookmarklink"
-                data-l10n-id="main-context-menu-bookmark-link"
+                data-l10n-id="main-context-menu-bookmark-link-2"
                 oncommand="gContextMenu.bookmarkLink();"/>
 #endif
       <menuitem id="context-savelink"
@@ -264,7 +264,7 @@
       <menuseparator id="context-sep-ctp"/>
 #if defined(XP_MACOSX) && !defined(PINEBUILD)
       <menuitem id="context-bookmarkpage"
-                data-l10n-id="main-context-menu-bookmark-add-mac"
+                data-l10n-id="main-context-menu-bookmark-page-mac"
                 oncommand="gContextMenu.bookmarkThisPage();"/>
 #endif
       <menuitem id="context-savepage"
@@ -322,7 +322,7 @@
                 data-l10n-id="main-context-menu-reveal-password"
                 oncommand="gContextMenu.toggleRevealPassword();"/>
       <menuitem id="context-print-selection"
-                data-l10n-id="main-context-menu-print-selection"
+                data-l10n-id="main-context-menu-print-selection-2"
                 oncommand="gContextMenu.printSelection();"/>
       <menuseparator id="context-sep-selectall"/>
 
@@ -383,7 +383,7 @@
           <menuseparator/>
 #ifndef PINEBUILD
           <menuitem id="context-bookmarkframe"
-                    data-l10n-id="main-context-menu-frame-bookmark"
+                    data-l10n-id="main-context-menu-frame-add-bookmark"
                     oncommand="gContextMenu.addBookmarkForFrame();"/>
 #endif
           <menuitem id="context-saveframe"
