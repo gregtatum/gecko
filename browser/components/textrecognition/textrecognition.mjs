@@ -66,6 +66,8 @@ class TextRecognitionModal {
           "TEXT_RECOGNITION_API_PERFORMANCE",
           resultsPromise
         );
+
+        TextRecognitionModal.recordInteractionTime();
       },
       error => {
         // There was an error in the text recognition call. Treat this as the same
@@ -80,6 +82,21 @@ class TextRecognitionModal {
         );
       }
     );
+  }
+
+  /**
+   * After the results are shown, measure how long a user interacts with the modal.
+   */
+  static recordInteractionTime() {
+    TelemetryStopwatch.start(
+      "TEXT_RECOGNITION_INTERACTION_TIMING",
+      // Pass the instance of the window in case multiple tabs are doing text recognition
+      // and there is a race condition.
+      window
+    );
+    window.addEventListener("unload", () => {
+      TelemetryStopwatch.finish("TEXT_RECOGNITION_INTERACTION_TIMING", window);
+    });
   }
 
   /**
