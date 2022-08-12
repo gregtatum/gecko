@@ -884,6 +884,13 @@ class InternalView {
    *   The browser element that holds this view.
    * @param {nsISHEntry | object} historyEntry
    *   The nsISHEntry for this view.
+   * @param {Object} options
+   *   Additional options for the update. Those options are:
+   *
+   *   overwriting (boolean):
+   *     True if this InternalView is being completely recycled, meaning
+   *     that the creation time and other such internal state should be
+   *     overwritten.
    */
   update(browser, historyEntry, options = {}) {
     this.browserId = browser.browserId;
@@ -911,8 +918,10 @@ class InternalView {
       this.aboutPageType = this.#getAboutPageType(docURI);
     }
 
-    if (options.resetCreationTime) {
+    if (options.overwriting) {
+      lazy.logConsole.debug("Overwriting InternalView");
       this.#creationTime = Cu.now();
+      this.#submittedPassword = false;
     }
 
     lazy.logConsole.debug(`Updated InternalView ${this.toString()}`);
@@ -972,8 +981,8 @@ class InternalView {
 
   /**
    * Set to true if a password submission form has been submitted via
-   * this View. This is a one-way setting - it's not possible to set this
-   * back to false after it has been set to true.
+   * this View. The only way this can be reset to false is to call
+   * update with the `overwriting` option.
    *
    * @param {boolean} val
    *   True if the user submitted a password form from this view.
@@ -1878,9 +1887,7 @@ class WorkspaceHistory extends EventTarget {
         `Updating InternalView ${internalView.toString()}.`
       );
       // This is a navigation to an existing view.
-      internalView.update(browser, newEntry, {
-        resetCreationTime: overwriting,
-      });
+      internalView.update(browser, newEntry, { overwriting });
 
       let currentInternalView = InternalView.viewMap.get(
         this.#stageManager.currentView

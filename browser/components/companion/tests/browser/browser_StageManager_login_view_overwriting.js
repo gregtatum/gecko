@@ -7,6 +7,7 @@ const BUILDER_URL = "https://example.com/document-builder.sjs?html=";
 const PAGE_2_MARKUP = `
 <html>
   <h1>This is page 2</h1>
+  <a id="go-home" href="https://example.com">Go home</a>
 </html>
 `;
 const PAGE_2_URL = BUILDER_URL + encodeURI(PAGE_2_MARKUP);
@@ -57,4 +58,17 @@ add_task(async function test_view_overwriting() {
   await viewUpdated;
 
   PinebuildTestUtils.assertViewsAre([view]);
+
+  // Subsequent navigations within this View should now result in new
+  // Views being created.
+  let newViewCreated = PinebuildTestUtils.waitForNewView(
+    browser,
+    "https://example.com/"
+  );
+  await SpecialPowers.spawn(browser, [], async () => {
+    let link = content.document.getElementById("go-home");
+    link.click();
+  });
+  let view2 = await newViewCreated;
+  PinebuildTestUtils.assertViewsAre([view, view2]);
 });
