@@ -295,7 +295,23 @@ add_task(async function testOauthFlow() {
         authenticating: true,
         hideService: true,
       });
-      gBrowser.removeTab(gBrowser.selectedTab);
+
+      let authenticated = TestUtils.topicObserved(
+        "companion-signin",
+        (_, data) => data == "testservice"
+      );
+
+      let tabClosed = BrowserTestUtils.waitForTabClosing(gBrowser.selectedTab);
+      await clickLoginLink(gBrowser.selectedBrowser);
+      await tabClosed;
+      await authenticated;
+
+      Assert.equal(
+        win.gStageManager.views.length,
+        1,
+        "Should have cleared all OAuth Views."
+      );
+      await helper.logoutFromTestService("testservice");
     }, win);
   });
 });
@@ -382,6 +398,11 @@ add_task(async function testMultipleOauthFlow() {
       await authenticated;
 
       is(gBrowser.tabs.length, initialTabCount, "OAuth tabs have been removed");
+      Assert.equal(
+        win.gStageManager.views.length,
+        1,
+        "Should have cleared all OAuth Views."
+      );
 
       await helper.logoutFromTestService("testservice");
     }, win);
