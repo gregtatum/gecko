@@ -71,7 +71,7 @@ class OnboardingParent extends JSWindowActorParent {
         window.gBrowser.removeProgressListener(fxaListener);
 
         doc.body.setAttribute("flow-reset", true);
-        window.gStageManager.reset({
+        await window.gStageManager.reset({
           url: "about:flow-reset",
         });
         let companion = doc.getElementById("companion-box");
@@ -124,9 +124,9 @@ class OnboardingParent extends JSWindowActorParent {
         let email = message.data;
         doc.body.setAttribute("onboarding", "with-browsing");
 
-        function concludeFxaFlow(obj) {
+        async function concludeFxaFlow(obj) {
           doc.body.setAttribute("onboarding", "no-browsing");
-          window.gStageManager.reset({ url: ONBOARDING_URL });
+
           Services.prefs.setIntPref(
             "browser.pinebuild.onboarding.progress",
             ONBOARDING_SCREEN_AFTER_FXA
@@ -136,6 +136,8 @@ class OnboardingParent extends JSWindowActorParent {
           obj.sendAsyncMessage("OnboardingProgressPrefValueUpdated", {
             prefValue: ONBOARDING_SCREEN_AFTER_FXA,
           });
+
+          await window.gStageManager.reset({ url: ONBOARDING_URL });
         }
 
         // This progress listener listens to location changes to help get users who are deviating
@@ -160,6 +162,8 @@ class OnboardingParent extends JSWindowActorParent {
                   lazy.ROOT_URL + CONNECT_ANOTHER_DEVICE_PATH
                 )
               ) {
+                // concludeFxaFlow is an async function that returns a Promise, but
+                // we cannot await a Promise inside of onLocationChange.
                 concludeFxaFlow(this);
               }
             }
@@ -170,7 +174,7 @@ class OnboardingParent extends JSWindowActorParent {
         window.gBrowser.addProgressListener(fxaListener);
 
         await window.gSync.openFxAEmailFirstPage("pinebuild-onboarding", email);
-        concludeFxaFlow(this);
+        await concludeFxaFlow(this);
         break;
       case "GetOnboardingProgressPrefValue":
         return Services.prefs.getIntPref(
