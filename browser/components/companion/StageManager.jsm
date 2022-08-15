@@ -1499,12 +1499,7 @@ class WorkspaceHistory extends EventTarget {
         // If we're closing the special OAuth tab, blow away any Views
         // associated with it.
         if (tab.getAttribute("pinebuild-oauth-flow")) {
-          let viewsToRemove = this.viewStack.filter(
-            view => view.browserId == browser.browserId
-          );
-          for (let internalView of viewsToRemove) {
-            this.#stageManager.closeView(internalView.view);
-          }
+          this.#stageManager.closeOAuthViews(browser);
         }
         break;
       case "TabAttrModified":
@@ -3611,6 +3606,42 @@ class StageManager extends EventTarget {
     }
 
     this.#closeInternalView(internalView);
+  }
+
+  /**
+   * Closes all InternalViews associated with an OAuth2.jsm <browser>.
+   * This should only be called by the TabClose event handler for the
+   * OAuth2 <browser> tab.
+   *
+   * @param {Browser} browser
+   *   The OAuth2 tab <browser>.
+   */
+  closeOAuthViews(browser) {
+    let userContextId =
+      parseInt(browser.getAttribute("usercontextid"), 10) || 0;
+    let workspace = this.#workspaces.get(userContextId);
+
+    let viewsToRemove = workspace.viewStack.filter(
+      view => view.browserId == browser.browserId
+    );
+
+    // We only want to do the InternalView switching logic for the first
+    // InternalView in the series, so let's hold a reference to it, and
+    // keep it in the InternalView stack while filtering all of the other
+    // associated InternalViews out.
+    let firstView = viewsToRemove.shift();
+    workspace.viewStack = workspace.viewStack.filter(
+      view => view.browserId != browser.browserId || view == firstView
+    );
+
+    for (let internalView of viewsToRemove) {
+      workspace.historyViews.delete(internalView.historyId);
+      this.notifyEvent("ViewRemoved", internalView);
+    }
+
+    // Now run the close routine on the firstView so that we switch to
+    // the most appropriate InternalView once it goes away.
+    this.#closeInternalView(firstView);
   }
 
   /**
