@@ -780,7 +780,11 @@ export class CalendarEvent extends MozLitElement {
       let startTime = new Date(Date.parse(startDate));
       fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
     }
-    this.dateCreator.TEST_timeWarp({ fakeNow });
+    if (this.dateCreator.TEST_timeWarp) {
+      this.dateCreator.TEST_timeWarp({ fakeNow });
+    } else {
+      this.dateCreator.now = () => new Date(fakeNow);
+    }
   }
 
   get isBrowse() {

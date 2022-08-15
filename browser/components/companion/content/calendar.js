@@ -673,16 +673,5 @@ class CalendarEventWrapper extends CalendarEvent {
       catch: errorCallback => errorCallback(),
     };
   }
-
-  setTimeWarp(fakeNow) {
-    if (!fakeNow) {
-      const tenMinutes = 10 * 60 * 1000;
-      const tenSeconds = 10 * 1000;
-      let { startDate } = this.event;
-      let startTime = new Date(Date.parse(startDate));
-      fakeNow = startTime.valueOf() - (tenMinutes + tenSeconds);
-    }
-    this.dateCreator.TEST_timeWarp({ fakeNow });
-  }
 }
 customElements.define("calendar-event", CalendarEventWrapper);
