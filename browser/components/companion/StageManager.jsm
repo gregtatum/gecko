@@ -777,6 +777,9 @@ class InternalView {
         historyEntryOrURL.spec
       );
       this.#setURL(historyEntryOrURL);
+      this.browserId = browser?.browserId;
+      this.browserKey = browser?.permanentKey;
+      this.iconURL = browser?.mIconURL;
     } else {
       lazy.logConsole.debug(
         `Created InternalView ${this.#id} with ${
