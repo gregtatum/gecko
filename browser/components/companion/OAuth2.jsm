@@ -31,9 +31,6 @@ XPCOMUtils.defineLazyGetter(lazy, "log", () => {
   });
 });
 
-const TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY =
-  "TopLevelNavigationDelegate:IgnoreList";
-
 // This is used for Microsoft OAuth integration. Microsoft requires the Origin
 // header to be correct, or to be missing. There's no way to disable the Origin
 // header using `fetch()` (at best it can be empty, which doesn't work), so we
@@ -106,34 +103,6 @@ const OAuthConnect = {
       // here.
       tab.linkedBrowser.browsingContext.targetTopLevelLinkClicksToBlank = false;
 
-      // If the TopLevelNavigationDelegateChild is being used, we need it
-      // to never convert a top-level navigation into a new tab. We do this
-      // with sharedData instead of sending a message to the
-      // TopLevelNavigationDelegateChild directly, because we need that
-      // configuration to survive potential cross-domain process flips.
-      let browserId = tab.linkedBrowser.browsingContext.browserId;
-
-      let { sharedData } = Services.ppmm;
-      if (!sharedData.has(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY)) {
-        sharedData.set(
-          TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY,
-          new Set([browserId])
-        );
-      } else {
-        // In order for SharedData to detect the change and propagate it, we
-        // have to write a new reference value to the
-        // TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY key by creating a new Set.
-        let originalSet = sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY);
-        let newSet = new Set(originalSet).add(browserId);
-        sharedData.set(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY, newSet);
-      }
-
-      // SharedData is, by default, lazy, and will only flush the changes
-      // on idle. We don't want to run the risk of racing with that message,
-      // so we flush manually here to ensure that the sharedData shows up
-      // in the content process for this tab before it loads anything.
-      sharedData.flush();
-
       win.focus();
 
       tab.linkedBrowser.loadURI(url.toString(), {
@@ -195,9 +164,7 @@ const OAuthConnect = {
     let serviceConnections = [...this.connections.entries()].filter(
       ([, connection]) => connection.oauth.serviceType == oauth.serviceType
     );
-    const browserIds = serviceConnections.map(
-      ([, connection]) => connection.tab.linkedBrowser.browsingContext.browserId
-    );
+
     let tabsPerWindow = new Map();
     for (let [, connection] of serviceConnections) {
       if (!tabsPerWindow.has(connection.tab.ownerGlobal)) {
@@ -211,10 +178,6 @@ const OAuthConnect = {
     }
     for (let [window, _tabs] of tabsPerWindow.entries()) {
       window.gBrowser.removeTabs(_tabs, { animate: false });
-    }
-    for (let browserId of browserIds) {
-      const { sharedData } = Services.ppmm;
-      sharedData.get(TOPLEVEL_NAVIGATION_DELEGATE_DATA_KEY).delete(browserId);
     }
 
     if (oauth.serviceType == "fxa") {
