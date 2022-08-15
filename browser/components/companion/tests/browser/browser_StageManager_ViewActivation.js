@@ -167,7 +167,7 @@ add_task(async function test_activate_activated_View() {
     "River should have the same updateComplete Promise."
   );
 
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 /**
@@ -217,5 +217,5 @@ add_task(async function test_activate_oop_iframe() {
     );
   });
 
-  gStageManager.reset();
+  await gStageManager.reset();
 });

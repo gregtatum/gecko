@@ -16,7 +16,7 @@ const TEST_URL3 = "https://example.com/browser/browser/";
  * River so that no "top" View is displayed.
  */
 add_task(async function test_no_top_view() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   let [, , view3] = await PinebuildTestUtils.loadViews([
     TEST_URL1,
@@ -34,7 +34,7 @@ add_task(async function test_no_top_view() {
     !viewGroups[0].hasAttribute("top"),
     "Should not have the 'top' attribute."
   );
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 /**

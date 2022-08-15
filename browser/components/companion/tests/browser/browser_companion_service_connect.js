@@ -10,7 +10,7 @@ const { TelemetryTestUtils } = ChromeUtils.import(
 registerCleanupFunction(async () => {
   // No matter what happens, blow away window history after this file runs
   // to avoid leaking state between tests.
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 add_setup(async function setup() {

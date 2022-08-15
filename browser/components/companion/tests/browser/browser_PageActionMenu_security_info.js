@@ -4,9 +4,9 @@
 "use strict";
 
 add_task(async function test_secure_website_info() {
-  gStageManager.reset();
+  await gStageManager.reset();
   registerCleanupFunction(async () => {
-    gStageManager.reset();
+    await gStageManager.reset();
   });
   let [view1, view2] = await PinebuildTestUtils.loadViews([
     "https://example.com/",

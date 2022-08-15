@@ -73,9 +73,9 @@ add_task(async function test_back_forward() {
  */
 add_task(async function test_view_history_keyboard_navigation() {
   // Reset the stage manager for a clean slate
-  gStageManager.reset();
+  await gStageManager.reset();
   registerCleanupFunction(async () => {
-    gStageManager.reset();
+    await gStageManager.reset();
   });
 
   /**

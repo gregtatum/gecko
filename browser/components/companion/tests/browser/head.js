@@ -70,7 +70,7 @@ registerCleanupFunction(async () => {
 
   // No matter what happens, blow away window history after tests run
   // in this directory to avoid leaking state between tests.
-  gStageManager.reset();
+  await gStageManager.reset();
 
   // Cleanup the Workshop object used in the tests.
   sharedWorkshopAPI?.willDie();

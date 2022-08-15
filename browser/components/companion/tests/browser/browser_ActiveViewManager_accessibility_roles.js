@@ -37,7 +37,7 @@ add_task(async function test_tablist_tab_roles() {
     );
   }
 
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 /**
@@ -132,7 +132,7 @@ add_task(async function test_viewgroupelement_aria_states() {
     "The second ViewGroupElement should have aria-selected set to false " +
       "on it when inactive."
   );
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 /**
@@ -212,5 +212,5 @@ add_task(async function test_pinned_viewgroupelement_aria_states() {
     "The second ViewGroupElement should have aria-selected set to false " +
       "on it when inactive."
   );
-  gStageManager.reset();
+  await gStageManager.reset();
 });

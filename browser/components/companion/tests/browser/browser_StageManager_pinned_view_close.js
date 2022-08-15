@@ -31,7 +31,7 @@ add_task(async function test_pinned_view_close_single() {
  * in the River.
  */
 add_task(async function test_pinned_view_close_only_multiple_pinned() {
-  gStageManager.reset();
+  await gStageManager.reset();
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",
     "https://example.com/browser/browser",
@@ -108,7 +108,7 @@ add_task(async function test_pinned_view_close_only_multiple_pinned() {
  * also in the River.
  */
 add_task(async function test_pinned_view_close_river_and_multiple_pinned() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   let [view1, view2, view3, view4] = await PinebuildTestUtils.loadViews([
     "https://example.com/",

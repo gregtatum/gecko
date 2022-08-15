@@ -55,7 +55,7 @@ add_task(async function test_remove_browser_on_last_view() {
   );
   Assert.ok(!originalBrowser.isConnected, "Original browser was removed");
 
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 /**

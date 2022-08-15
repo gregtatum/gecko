@@ -11,12 +11,6 @@ const PAGE_1 = "https://example.com/";
 const PAGE_2 = "https://example.org/";
 const PAGE_3 = "http://mochi.test:8888/";
 
-registerCleanupFunction(() => {
-  // No matter what happens, blow away window history after this file runs
-  // to avoid leaking state between tests.
-  gStageManager.reset();
-});
-
 /**
  * These tests ensure that navigating to a View mapping to a destroyed SHEntry
  * works properly and doesn't corrupt the stack of Views.
@@ -30,7 +24,7 @@ registerCleanupFunction(() => {
  * This tests a destroyed SHEntry for a normal page load.
  */
 add_task(async function test_destroyed_shentry() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 
@@ -73,7 +67,7 @@ add_task(async function test_destroyed_shentry() {
  * This tests a destroyed SHEntry for a History.pushState load.
  */
 add_task(async function test_destroyed_shentry() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   let browser = gBrowser.selectedBrowser;
 

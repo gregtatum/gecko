@@ -8,7 +8,7 @@
  */
 
 add_task(async function test_add_view_navigation() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   let viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 0, "There should be no ViewGroups.");

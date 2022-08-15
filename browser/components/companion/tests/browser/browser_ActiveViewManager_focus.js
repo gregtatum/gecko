@@ -49,7 +49,7 @@ add_task(async function test_ViewGroupElement_reorder_focus() {
     viewGroupEls[1].containingShadowRoot.activeElement,
     viewGroupEls[1]
   );
-  gStageManager.reset();
+  await gStageManager.reset();
 });
 
 /**

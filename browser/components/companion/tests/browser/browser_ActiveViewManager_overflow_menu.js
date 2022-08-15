@@ -11,7 +11,7 @@
  */
 
 add_task(async function test_open_overflow_view_menu() {
-  gStageManager.reset();
+  await gStageManager.reset();
   // Change the max view groups to one so that we can
   // get the overflow menu to appear with a minimum amount of views
   await SpecialPowers.pushPrefEnv({

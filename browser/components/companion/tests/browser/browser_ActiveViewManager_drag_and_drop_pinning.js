@@ -86,7 +86,7 @@ async function simulateViewGroupDragAndEnd(viewGroup, destination) {
  * into the dragging state.
  */
 add_task(async function test_pinned_views_dragging_state() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   await PinebuildTestUtils.loadViews([TEST_URL1]);
 
@@ -144,7 +144,7 @@ add_task(async function test_pinned_views_dragging_state() {
  * Test that ViewGroups can be dragged to pin and unpin.
  */
 add_task(async function test_drag_and_drop_pin_unpin() {
-  gStageManager.reset();
+  await gStageManager.reset();
 
   let [view1, view2, view3, view4, view5] = await PinebuildTestUtils.loadViews([
     TEST_URL1,
