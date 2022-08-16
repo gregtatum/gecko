@@ -140,7 +140,7 @@ class GoogleService {
     let token = await this.auth.getToken();
     if (token) {
       OnlineServices.persist();
-    } else if (!this.auth.refreshToken) {
+    } else if (this.auth.tokenError) {
       // If the refreshToken has been cleared, oAuth failed.
       // Delete the service.
       lazy.log.error("Google OAuth token invalid. Deleting service.");
@@ -460,7 +460,7 @@ class MicrosoftService {
     let token = await this.auth.getToken();
     if (token) {
       OnlineServices.persist();
-    } else if (!this.auth.refreshToken) {
+    } else if (this.auth.tokenError) {
       // If refreshToken has been cleared, we have no grant.
       // Delete the service.
       lazy.log.error("Microsoft OAuth token invalid. Deleting service.");

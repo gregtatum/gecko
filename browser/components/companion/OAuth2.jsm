@@ -279,6 +279,7 @@ class OAuth2 {
   accessToken = null;
   refreshToken = null;
   tokenExpires = null;
+  tokenError = false;
 
   getTokenPromise = null;
 
@@ -396,6 +397,7 @@ class OAuth2 {
       // will be re-triggered.
       this.accessToken = null;
       this.refreshToken = null;
+      this.tokenError = true;
 
       let resultStr = JSON.stringify(result, null, 2);
       console.error(
@@ -407,6 +409,8 @@ class OAuth2 {
     }
 
     lazy.log.debug("New accessToken received.");
+
+    this.tokenError = false;
 
     // RFC 6749 section 5.1. Successful Response
     this.accessToken = result.access_token;
