@@ -46,4 +46,50 @@ add_task(async function test_failed_http_downgrade() {
     "Should still be a total of 2 ViewGroup elements."
   );
   Assert.ok(viewGroupEls[1].active, "Second ViewGroup should still be active.");
+  await gStageManager.reset();
+});
+
+/**
+ * Tests that if a content process doesn't respond soon enough with the nsISHEntry
+ * for a navigation that we have a speculative InternalView created for it and
+ * rendered in the AVM.
+ */
+add_task(async function test_speculative_internalview() {
+  await PinebuildTestUtils.loadViews(["https://example.org/"]);
+
+  // We're going to simulate a slow network load by starting a navigation
+  // and then hanging the content process main thread. This should make it
+  // so that the parent process sees the network activity begin, but the
+  // nsISHistory mechanism won't have had any time to create an nsISHEntry
+  // for the navigation.
+  let hangFinished = false;
+  let hangPromise = SpecialPowers.spawn(
+    gBrowser.selectedBrowser,
+    [],
+    async () => {
+      content.location = "https://example.org/browser";
+      let then = Date.now();
+      while (Date.now() - then < 500) {
+        // Let's burn some CPU time!
+      }
+    }
+  ).then(() => {
+    hangFinished = true;
+  });
+
+  await BrowserTestUtils.waitForEvent(gStageManager, "ViewAdded");
+  Assert.ok(!hangFinished, "Hang should still be underway.");
+
+  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  Assert.equal(
+    viewGroupEls.length,
+    1,
+    "Should only have a single ViewGroup element"
+  );
+  let viewGroup = viewGroupEls[0].viewGroup;
+
+  Assert.equal(viewGroup.length, 2);
+  Assert.equal(viewGroup.at(1).url.spec, "https://example.org/browser");
+  await hangPromise;
+  await gStageManager.reset();
 });
