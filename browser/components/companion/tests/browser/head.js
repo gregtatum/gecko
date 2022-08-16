@@ -712,23 +712,29 @@ class CompanionHelper {
 
           // TODO: We should remove this once workshop is enabled.
           let isAllDay = isAllDayEvent(startDate, endDate);
+          let id = new Date(); // guarantee a unique id for this event
 
           return {
-            id: new Date(), // guarantee a unique id for this event
+            id,
+            originalId: id,
             startDate,
             endDate,
             links: [],
-            conference: {},
+            conference: {
+              url: event.location || "",
+            },
             calendar: { id: "primary" },
             attendees: [],
             organizer: { email: "organizer@example.com", isSelf: false },
             creator: { email: "creator@example.com", isSelf: false },
             serviceId: 0,
+            serviceType: "testservice",
             isAllDay,
             ...event,
           };
         })
         .sort((a, b) => a.startDate - b.startDate);
+
       await this.runCompanionTask(
         async (events, options) => {
           content.document.dispatchEvent(

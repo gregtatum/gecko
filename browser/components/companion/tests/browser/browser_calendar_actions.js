@@ -218,7 +218,7 @@ add_task(async function testHideEvent() {
     set: [["browser.pinebuild.calendar.browseEnabled", true]],
   });
 
-  async function createTestEvents(helper, expectedEventCount) {
+  async function createTestEvents(helper, expectedEventCount, listType) {
     let now = new Date(DEFAULT_FAKE_NOW_TS);
     let eventTime = PinebuildTestUtils.generateEventTimes(0, 30, now);
     let nextStart = new Date(eventTime.end);
@@ -229,17 +229,19 @@ add_task(async function testHideEvent() {
         {
           id: "test-hide-event-1",
           summary: "Test Event",
-          start: eventTime.start,
-          end: eventTime.end,
+          startDate: eventTime.start,
+          endDate: eventTime.end,
+          originalId: 1,
         },
         {
           id: "test-hide-event-2",
           summary: "Next Event",
-          start: nextEventTime.start,
-          end: nextEventTime.end,
+          startDate: nextEventTime.start,
+          endDate: nextEventTime.end,
+          originalId: 2,
         },
       ],
-      { expectedEventCount }
+      { expectedEventCount, listType }
     );
   }
 
@@ -300,7 +302,6 @@ add_task(async function testHideEvent() {
 
   async function openBrowse(helper) {
     await helper.selectCompanionTab("browse");
-
     await helper.runCompanionTask(async () => {
       let calendarButton = content.document.querySelector(".calendar");
       let calendarShown = ContentTaskUtils.waitForEvent(
@@ -356,7 +357,7 @@ add_task(async function testHideEvent() {
     info("Check event and break time are still visible in browse");
     await helper.reload();
     await openBrowse(helper);
-
+    await createTestEvents(helper, 2, "browse");
     await assertVisibleEvents({ helper, section: "browse" });
 
     info("Cleanup");
@@ -372,6 +373,7 @@ add_task(async function testHideEvent() {
       await assertVisibleEvents({ helper, section: "now", hasHidden: true });
       info("open browse");
       await openBrowse(helper);
+      await createTestEvents(helper, 1, "browse");
       info("assert visible");
       await assertVisibleEvents({ helper, section: "browse" });
 

@@ -493,15 +493,18 @@ add_task(async function testHostDetailsWeirdNonSecondaryGCalOrganizerData() {
 
 add_task(async function testSharedCalendarEventsDeDuplicated() {
   await CompanionHelper.whenReady(async helper => {
+    const ID = "123Id";
     const ORIGINAL_ID = "123OriginalId";
     let events = [
       {
         summary: "Shared Calendar Event",
-        id: ORIGINAL_ID,
+        id: ID,
+        originalId: ORIGINAL_ID,
       },
       {
         summary: "Shared Calendar Event",
-        id: ORIGINAL_ID,
+        id: ID,
+        originalId: ORIGINAL_ID,
       },
     ];
 
