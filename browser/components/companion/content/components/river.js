@@ -147,17 +147,18 @@ export default class River extends MozLitElement {
         href="chrome://browser/content/companion/components/river.css"
       />
 
-      <toolbarbutton
+      <button
         part="overflow"
         class="subviewbutton"
         id="river-overflow-button"
+        aria-haspopup="menu"
         tabindex="0"
         @click=${this.#openOverflowMenu}
         @keypress=${this.#openOverflowMenu}
         data-l10n-id="active-view-manager-overflow-button"
         data-l10n-args='{ "count": ${this.overflowedViews.length} }'
         ?hidden=${!this.overflowedViews.length}
-      ></toolbarbutton>
+      ></button>
       <div id="river" ?containsActive=${containsActive} role="tablist">
         <div
           class="view-groups-wrapper"

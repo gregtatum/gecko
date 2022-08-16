@@ -4,6 +4,50 @@
 "use strict";
 
 /**
+ * Tests that the overflow view menu has the correct accessibility attributes.
+ */
+
+add_setup(async function() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.river.maxGroups", 1]],
+  });
+});
+
+add_task(async function test_overflow_view_menu_button_semantics() {
+  await gStageManager.reset();
+  // Change the max view groups to one so that we can
+  // get the overflow menu to appear with a minimum amount of views
+
+  await PinebuildTestUtils.loadViews([
+    "https://example.com/",
+    "https://example.com/browser/browser",
+    "https://example.org/",
+  ]);
+
+  // Assert that the overflow button has the correct aria attributes
+  let riverEl = document.querySelector("river-el");
+  await riverEl.updateComplete;
+  let riverOverflow = riverEl.shadowRoot.getElementById(
+    "river-overflow-button"
+  );
+
+  Assert.equal(
+    riverOverflow.tagName,
+    "button",
+    `The overflow button should be a button`
+  );
+  Assert.equal(
+    riverOverflow.getAttribute("aria-haspopup"),
+    "menu",
+    `The overflow button should have aria-haspopup="menu"`
+  );
+  Assert.equal(
+    riverOverflow.getAttribute("data-l10n-id"),
+    "active-view-manager-overflow-button"
+  );
+});
+
+/**
  * Tests that the overflow menu can be activated via keyboard and that
  * the first item in the menu is focused when the overflow menu is opened.
  * Tests that the overflow menu can be opened via mouse and that
@@ -14,9 +58,6 @@ add_task(async function test_open_overflow_view_menu() {
   await gStageManager.reset();
   // Change the max view groups to one so that we can
   // get the overflow menu to appear with a minimum amount of views
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.river.maxGroups", 1]],
-  });
 
   await PinebuildTestUtils.loadViews([
     "https://example.com/",
@@ -42,9 +83,11 @@ add_task(async function test_open_overflow_view_menu() {
   );
 
   // Navigate to the overflow menu button
-  let riverOverflow = document
-    .querySelector("river-el")
-    .shadowRoot.getElementById("river-overflow-button");
+  let riverEl = document.querySelector("river-el");
+  await riverEl.updateComplete;
+  let riverOverflow = riverEl.shadowRoot.getElementById(
+    "river-overflow-button"
+  );
   EventUtils.synthesizeKey("VK_TAB");
 
   Assert.equal(
