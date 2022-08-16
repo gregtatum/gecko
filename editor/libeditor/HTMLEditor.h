@@ -886,20 +886,19 @@ class HTMLEditor final : public EditorBase,
 
   /**
    * SplitAncestorStyledInlineElementsAtRangeEdges() splits all ancestor inline
-   * elements in the block at both aStartPoint and aEndPoint if given style
-   * matches with some of them.
+   * elements in the block at aRange if given style matches with some of them.
    *
-   * @param aStartPoint Start of range to split ancestor inline elements.
-   * @param aEndPoint   End of range to split ancestor inline elements.
+   * @param aRange      Ancestor inline elements of the start and end boundaries
+   *                    will be split.
    * @param aProperty   The style tag name which you want to split.  Set
    *                    nullptr if you want to split any styled elements.
    * @param aAttribute  Attribute name if aProperty has some styles like
    *                    nsGkAtoms::font.
    */
   [[nodiscard]] MOZ_CAN_RUN_SCRIPT SplitRangeOffResult
-  SplitAncestorStyledInlineElementsAtRangeEdges(
-      const EditorDOMPoint& aStartPoint, const EditorDOMPoint& aEndPoint,
-      nsAtom* aProperty, nsAtom* aAttribute);
+  SplitAncestorStyledInlineElementsAtRangeEdges(const EditorDOMRange& aRange,
+                                                nsAtom* aProperty,
+                                                nsAtom* aAttribute);
 
   /**
    * SplitAncestorStyledInlineElementsAt() splits ancestor inline elements at
@@ -936,9 +935,12 @@ class HTMLEditor final : public EditorBase,
    * @param aAttribute  Attribute name if aProperty has some styles like
    *                    nsGkAtoms::font.
    * @param aSpecifiedStyle  Whether the class and style attributes should
-   *                         be preserved or discareded.
+   *                         be preserved or discarded.
+   * @return            A candidate position to put caret.  If there is
+   *                    AutoTransactionsConserveSelection instances, this stops
+   *                    suggesting caret point only in some cases.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT EditResult
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT Result<EditorDOMPoint, nsresult>
   ClearStyleAt(const EditorDOMPoint& aPoint, nsAtom* aProperty,
                nsAtom* aAttribute, SpecifiedStyle aSpecifiedStyle);
 
@@ -3296,38 +3298,39 @@ class HTMLEditor final : public EditorBase,
       Document& aDocument, const nsACString& aCharacterSet);
 
   /**
-   * SetInlinePropertyInternal() stores new style with `mTypeInState` if
+   * SetInlinePropertyAsSubAction() stores new style with `mTypeInState` if
    * `Selection` is collapsed.  Otherwise, applying the style at all selection
    * ranges.
    *
-   * @param aProperty           One of the presentation tag names which we
+   * @param aHTMLProperty       One of the presentation tag names which we
    *                            support in style editor.
    * @param aAttribute          For some aProperty values, needs to be set to
    *                            its attribute name.  Otherwise, nullptr.
    * @param aAttributeValue     The value of aAttribute.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult SetInlinePropertyInternal(
-      nsAtom& aProperty, nsAtom* aAttribute, const nsAString& aValue);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult
+  SetInlinePropertyAsSubAction(nsAtom& aHTMLProperty, nsAtom* aAttribute,
+                               const nsAString& aAttributeValue);
 
   /**
-   * RemoveInlinePropertyInternal() removes specified style from `mTypeInState`
-   * if `Selection` is collapsed.  Otherwise, removing the style.
+   * RemoveInlinePropertiesAsSubAction() removes specified styles from
+   * mTypeInState if `Selection` is collapsed.  Otherwise, removing the style.
    *
-   * @param aHTMLProperty       nullptr if you want to remove all inline styles.
-   *                            Otherwise, one of the presentation tag names
-   *                            which we support in style editor.
-   * @param aAttribute          For some aHTMLProperty values, need to be set to
-   *                            its attribute name.  Otherwise, nullptr.
-   * @param aRemoveRelatedElements      If Yes, this method removes different
-   *                                    name's elements in the block if
-   *                                    necessary.  For example, if
-   *                                    aHTMLProperty is nsGkAtoms::b,
-   *                                    `<strong>` elements are also removed.
+   * @param aStylesToRemove     Styles to remove from the selected contents.
    */
-  enum class RemoveRelatedElements { Yes, No };
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult RemoveInlinePropertyInternal(
-      nsStaticAtom* aHTMLProperty, nsStaticAtom* aAttribute,
-      RemoveRelatedElements aRemoveRelatedElements);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult RemoveInlinePropertiesAsSubAction(
+      const nsTArray<EditorInlineStyle>& aStylesToRemove);
+
+  /**
+   * Helper method to call RemoveInlinePropertiesAsSubAction().  If you want to
+   * remove other elements to remove the style completely, this will append
+   * related elements of aStyleToRemove and aStyleToRemove itself to the array.
+   * E.g., nsGkAtoms::strong and nsGkAtoms::b will be appended if aStyleToRemove
+   * is nsGkAtoms::b.
+   */
+  void AppendInlineStyleAndRelatedStyle(
+      const EditorInlineStyle& aStyleToRemove,
+      nsTArray<EditorInlineStyle>& aStylesToRemove) const;
 
   /**
    * ReplaceHeadContentsWithSourceWithTransaction() replaces all children of
@@ -3888,11 +3891,18 @@ class HTMLEditor final : public EditorBase,
                                                        nsINode* aNode);
 
   /**
-   * Helper routines for inline style.
+   * SetInlinePropertyOnTextNode() splits aData if aStartOffset and/or
+   * aEndOffset are not start/end of aData.  Then, the text node which was
+   * contained in the range is wrapped into an element which applies the style.
+   *
+   * @return            The result of splitting aData.  Note that middle text
+   *                    node may be moved in an element, so left/middle/right
+   *                    nodes may not be siblings.
    */
-  [[nodiscard]] MOZ_CAN_RUN_SCRIPT nsresult SetInlinePropertyOnTextNode(
-      Text& aData, uint32_t aStartOffset, uint32_t aEndOffset,
-      nsAtom& aProperty, nsAtom* aAttribute, const nsAString& aValue);
+  [[nodiscard]] MOZ_CAN_RUN_SCRIPT SplitRangeOffFromNodeResult
+  SetInlinePropertyOnTextNode(Text& aData, uint32_t aStartOffset,
+                              uint32_t aEndOffset, nsAtom& aProperty,
+                              nsAtom* aAttribute, const nsAString& aValue);
 
   nsresult PromoteInlineRange(nsRange& aRange);
   nsresult PromoteRangeIfStartsOrEndsInNamedAnchor(nsRange& aRange);

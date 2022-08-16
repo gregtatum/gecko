@@ -2714,7 +2714,7 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
 
 // If the user has seen the Firefox View feature tour this value reflects the tour
 // message id, the id of the last screen they saw, and whether they completed the tour
-pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"complete\":true}");
+pref("browser.firefox-view.feature-tour", "{\"message\":\"FIREFOX_VIEW_FEATURE_TOUR\",\"screen\":\"\",\"complete\":true}");
 
 #ifdef PINEBUILD
   pref("browser.contentblocking.category", "strict");
@@ -2832,3 +2832,4 @@ pref("browser.firefox-view.feature-tour", "{\"message\":\"\",\"screen\":\"\",\"c
   pref("browser.pinebuild.privacyPolicyURL", "https://www.mozilla.org/en-US/privacy/firefox/");
   pref("browser.shell.checkDefaultBrowser", false);
 #endif
+
