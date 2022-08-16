@@ -2028,11 +2028,25 @@ class WorkspaceHistory extends EventTarget {
     if (!internalView) {
       return;
     }
+
+    // We set the current InternalView on the workspace first since
+    // it's the ViewRemoved event that's going to cause the AVM to
+    // update itself.
+    let entry = getCurrentEntry(this.#window.gBrowser.selectedBrowser);
+    let stagedInternalView = this.historyViews.get(entry.ID);
+    if (stagedInternalView) {
+      let event = new CustomEvent("SetCurrentInternalView", {
+        detail: { internalView: stagedInternalView },
+      });
+      this.dispatchEvent(event);
+    }
+
     this.#speculativeInternalViews.delete(browser);
     lazy.logConsole.debug(
       "Clearing speculatively created InternalView: ",
       internalView.toString()
     );
+
     let index = this.viewStack.indexOf(internalView);
     this.viewStack.splice(index, 1);
     this.#stageManager.notifyEvent("ViewRemoved", internalView);
