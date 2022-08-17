@@ -1200,7 +1200,7 @@ void nsWindow::HideWaylandPopupWindow(bool aTemporaryHide,
   if (mPopupClosed) {
     LOG("  Clearing mMoveToRectPopupSize\n");
     mMoveToRectPopupSize = {};
-
+#ifdef MOZ_WAYLAND
     if (moz_container_wayland_is_waiting_to_show(mContainer)) {
       // We need to clear rendering queue, see Bug 1782948.
       LOG("  popup failed to show by Wayland compositor, clear rendering "
@@ -1208,6 +1208,7 @@ void nsWindow::HideWaylandPopupWindow(bool aTemporaryHide,
       moz_container_wayland_clear_waiting_to_show_flag(mContainer);
       ClearRenderingQueue();
     }
+#endif
   }
 }
 
@@ -1261,6 +1262,7 @@ void nsWindow::WaylandPopupHideTooltips() {
 }
 
 void nsWindow::WaylandPopupCloseOrphanedPopups() {
+#ifdef MOZ_WAYLAND
   LOG("nsWindow::WaylandPopupCloseOrphanedPopups");
   MOZ_ASSERT(mWaylandToplevel == nullptr, "Should be called on toplevel only!");
 
@@ -1276,6 +1278,7 @@ void nsWindow::WaylandPopupCloseOrphanedPopups() {
     }
     popup = popup->mWaylandPopupNext;
   }
+#endif
 }
 
 // We can't show popups with remote content or overflow popups
@@ -5452,7 +5455,7 @@ void nsWindow::ConfigureCompositor() {
 
   LOG("nsWindow::ConfigureCompositor()");
   auto startCompositing = [self = RefPtr{this}, this]() -> void {
-    LOG("  moz_container_wayland_add_initial_draw_callback "
+    LOG("  moz_container_wayland_add_or_fire_initial_draw_callback "
         "ConfigureCompositor");
 
     // too late
@@ -5460,9 +5463,14 @@ void nsWindow::ConfigureCompositor() {
       LOG("  quit, mIsDestroyed = %d mIsMapped = %d", mIsDestroyed, mIsMapped);
       return;
     }
-
     // Compositor will be resumed later by ResumeCompositorFlickering().
     if (mCompositorState == COMPOSITOR_PAUSED_FLICKERING) {
+      LOG("  quit, will be resumed by ResumeCompositorFlickering.");
+      return;
+    }
+    // Compositor will be resumed at nsWindow::SetCompositorWidgetDelegate().
+    if (!mCompositorWidgetDelegate) {
+      LOG("  quit, missing mCompositorWidgetDelegate");
       return;
     }
 
@@ -5471,8 +5479,8 @@ void nsWindow::ConfigureCompositor() {
 
   if (GdkIsWaylandDisplay()) {
 #ifdef MOZ_WAYLAND
-    moz_container_wayland_add_initial_draw_callback(mContainer,
-                                                    startCompositing);
+    moz_container_wayland_add_or_fire_initial_draw_callback(mContainer,
+                                                            startCompositing);
 #endif
   } else {
     startCompositing();
