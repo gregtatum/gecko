@@ -792,6 +792,7 @@ search-bar-shown =
 
 search-engine-default-header = Default Search Engine
 search-engine-default-desc-2 = This is your default search engine in the address bar and search bar. You can switch it at any time.
+search-engine-default-desc-pine = This is your default search engine in the address bar. You can switch it at any time.
 search-engine-default-private-desc-2 = Choose a different default search engine for Private Windows only
 search-separate-default-engine =
     .label = Use this search engine in Private Windows
@@ -826,6 +827,7 @@ search-suggestions-cant-show = Search suggestions will not be shown in location 
 search-one-click-header2 = Search Shortcuts
 
 search-one-click-desc = Choose the alternative search engines that appear below the address bar and search bar when you start to enter a keyword.
+search-one-click-desc-pine = Choose the alternative search engines that appear below the address bar when you start to enter a keyword.
 
 search-choose-engine-column =
     .label = Search Engine

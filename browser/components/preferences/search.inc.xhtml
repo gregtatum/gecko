@@ -24,7 +24,7 @@
     <!-- Default Search Engine -->
     <groupbox id="defaultEngineGroup" data-category="paneSearch" hidden="true">
       <label><html:h2 data-l10n-id="search-engine-default-header" /></label>
-      <description data-l10n-id="search-engine-default-desc-2" />
+      <description id="search-description" data-l10n-id="search-engine-default-desc-2" />
 
       <hbox>
         <!-- Please don't remove the wrapping hbox/vbox/box for these elements. It's used to properly compute the search tooltip position. -->
@@ -77,7 +77,7 @@
 
     <groupbox id="oneClickSearchProvidersGroup" data-category="paneSearch" hidden="true">
       <label><html:h2 data-l10n-id="search-one-click-header2" /></label>
-      <description data-l10n-id="search-one-click-desc" />
+      <description id="search-one-click" data-l10n-id="search-one-click-desc" />
 
       <tree id="engineList" flex="1" rows="11" hidecolumnpicker="true" editable="true"
             seltype="single" allowunderflowscroll="true">

@@ -409,12 +409,22 @@ async function gotoPref(
     return;
   }
 
-  // Hide settings that are incompatible with pinebuild
   if (AppConstants.PINEBUILD) {
+    // Hide settings that are incompatible with pinebuild
     let hiddenSettings = document.querySelectorAll("[pine-supported='false']");
     for (let element of hiddenSettings) {
       element.setAttribute("data-hidden-from-search", "true");
     }
+
+    // Update any l10n attributes that are different for pinebuild
+    const IdToL10nAttributeForPine = {
+      "search-description": "search-engine-default-desc-pine",
+      "search-one-click": "search-one-click-desc-pine",
+    };
+    Object.entries(IdToL10nAttributeForPine).forEach(([id, l10nId]) => {
+      const element = document.getElementById(id);
+      element?.setAttribute("data-l10n-id", l10nId);
+    });
   }
 
   search(category, "data-category");
