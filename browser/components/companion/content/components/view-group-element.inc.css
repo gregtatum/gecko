@@ -119,7 +119,8 @@
 }
 
 .view-domain {
-  font-size: 1rem;
+  color: var(--avm-view-group-domain-text-color);
+  font-size: 11px;
   background: none;
   border: none;
 }
@@ -129,7 +130,16 @@
 }
 
 .view-title {
-  font-size: 1.20rem;
+  color: var(--avm-view-group-title-text-color);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (prefers-contrast) {
+  .view-title,
+  .view-domain {
+    color: inherit;
+  }
 }
 
 .view-domain-container {
