@@ -41,6 +41,10 @@ const { XPCOMUtils } = ChromeUtils.import(
   "resource://gre/modules/XPCOMUtils.jsm"
 );
 
+const { DismissedEventStore } = ChromeUtils.import(
+  "resource:///modules/OnlineServicesHelper.jsm"
+);
+
 const workshopEnabled = Services.prefs.getBoolPref(
   "browser.pinebuild.workshop.enabled"
 );
@@ -57,11 +61,21 @@ XPCOMUtils.defineLazyGetter(globalThis, "logConsole", function() {
   });
 });
 
+const lazy = {};
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "hideDismissedEventNotifications",
+  "browser.pinebuild.companion.notifications.hideDismissed",
+  false
+);
+
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
 
-let notificationTimers = new Set();
+let notificationTimers = new Map();
+let dismissedEventStore = new DismissedEventStore();
 
 async function isActiveWindow() {
   let result;
@@ -136,14 +150,18 @@ function processEvents(events, now) {
   if (!events || !events.length) {
     return;
   }
-  // MR2-2720 - sometimes we receive null events from the backend
-  let filteredEvents = events.filter(event => event);
+
+  let filteredEvents = events.filter(
+    event =>
+      event &&
+      !dismissedEventStore.isDismissed(event.serviceType, event.originalId)
+  );
   logConsole.debug("processEvents, now:", now);
   logConsole.debug("processEvents removing timers:", notificationTimers.size);
-  for (let timer of notificationTimers) {
+  for (let timer of notificationTimers.values()) {
     clearTimeout(timer);
   }
-  notificationTimers = new Set();
+  notificationTimers.clear();
   let notificationTimeout = Services.prefs.getIntPref(
     "browser.pinebuild.companion.notifications.minutesBeforeEvent"
   );
@@ -152,11 +170,19 @@ function processEvents(events, now) {
       new Date(event.startDate) - 60 * notificationTimeout * 1000;
     if (notificationTime > now) {
       logConsole.debug("Adding timer for", event.summary);
-      notificationTimers.add(
+      notificationTimers.set(
+        event.originalId,
         setTimeout(showNotification, notificationTime - now, event)
       );
     }
   }
+}
+
+function clearEventNotification({ eventId, serviceType } = {}) {
+  let eventTimer = notificationTimers.get(eventId);
+  clearTimeout(eventTimer);
+  notificationTimers.delete(eventId);
+  dismissedEventStore.dismissEvent(serviceType, eventId);
 }
 
 let observer = {
@@ -288,6 +314,25 @@ export function initNotifications(wAPI) {
     document.addEventListener("refresh-events", function(e) {
       processEvents(e.detail.events, Date.now());
     });
+    if (lazy.hideDismissedEventNotifications) {
+      window.addEventListener("Companion:DismissedEvent", function(e) {
+        clearEventNotification(e.detail);
+      });
+      window.addEventListener("Companion:SignOut", function(e) {
+        dismissedEventStore.clearService(e.detail.service);
+      });
+      if (window.CompanionUtils.dismissedEvents) {
+        dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
+      } else {
+        window.addEventListener(
+          "Companion:Setup",
+          function() {
+            dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
+          },
+          { once: true }
+        );
+      }
+    }
   } else {
     Services.obs.addObserver(observer, "companion-services-refresh", true);
   }

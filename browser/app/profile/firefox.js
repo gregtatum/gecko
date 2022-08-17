@@ -2802,6 +2802,7 @@ pref("browser.firefox-view.feature-tour", "{\"message\":\"FIREFOX_VIEW_FEATURE_T
   // 0 = Never, 1 = Always, 2 = If no browser window is active
   pref("browser.pinebuild.companion.notifications.level", 2);
   pref("browser.pinebuild.companion.notifications.minutesBeforeEvent", 10);
+  pref("browser.pinebuild.companion.notifications.hideDismissed", false);
   // Preferences below here were at one point off by default and now have
   // been enabled (and should likely be removed eventually).
   pref("browser.pinebuild.animateViewTransitions", true);
