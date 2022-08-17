@@ -79,9 +79,9 @@ set_config(
 # ==============================================================
 
 
-@depends("--enable-backgroundtasks", build_project)
-def update_agent_default(backgroundtasks, build_project):
-    return bool(backgroundtasks) and build_project == "browser"
+@depends("--enable-backgroundtasks", build_project, pinebuild)
+def update_agent_default(backgroundtasks, build_project, pinebuild):
+    return bool(backgroundtasks) and build_project == "browser" and not pinebuild
 
 
 option(
