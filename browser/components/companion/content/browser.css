@@ -1067,8 +1067,10 @@ body[flow-reset] companion-manager {
     opacity: 1;
   }
 
-  [flow-reset] .titlebar-button {
-    stroke: white;
+  @media not (prefers-contrast) {
+    [flow-reset] .titlebar-button {
+      stroke: var(--colors-white);
+    }
   }
 
   .titlebar-buttonbox-container {
