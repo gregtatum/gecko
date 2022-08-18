@@ -203,6 +203,10 @@ Preferences.addAll([
 
   // Windows SSO
   { id: "network.http.windows-sso.enabled", type: "bool" },
+
+  // Quick Actions
+  { id: "browser.urlbar.quickactions.showPrefs", type: "bool" },
+  { id: "browser.urlbar.suggest.quickactions", type: "bool" },
 ]);
 
 // Study opt out
@@ -478,6 +482,19 @@ var gPrivacyPane = {
         Services.prefs.removeObserver(pref, trackingProtectionObserver);
       }
     });
+  },
+
+  _initQuickActionsSection() {
+    let showPref = Preferences.get("browser.urlbar.quickactions.showPrefs");
+    let showQuickActionsGroup = () => {
+      document.getElementById("quickActionsBox").hidden = !showPref.value;
+    };
+    showPref.on("change", showQuickActionsGroup);
+    showQuickActionsGroup();
+
+    document
+      .getElementById("quickActionsLink")
+      .setAttribute("href", UrlbarProviderQuickActions.helpUrl);
   },
 
   syncFromHttpsOnlyPref() {
@@ -2086,6 +2103,7 @@ var gPrivacyPane = {
     }
 
     this._updateFirefoxSuggestSection(true);
+    this._initQuickActionsSection();
   },
 
   /**

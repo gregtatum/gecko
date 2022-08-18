@@ -237,6 +237,9 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // Whether results will include QuickActions.
   ["suggest.quickactions", false],
 
+  // Whether we show the Actions section in about:preferences.
+  ["quickactions.showPrefs", false],
+
   // Whether we will match QuickActions within a phrase and not only a prefix.
   ["quickactions.matchInPhrase", true],
 
