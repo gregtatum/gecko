@@ -1066,6 +1066,12 @@ body[flow-reset] companion-manager {
     margin: 4px !important;
     opacity: 1;
   }
+  @media (prefers-contrast) {
+    .titlebar-button {
+      border: var(--pinebuild-toolbarbutton-border);
+      stroke: ButtonText;
+    }
+  }
 
   @media not (prefers-contrast) {
     [flow-reset] .titlebar-button {
