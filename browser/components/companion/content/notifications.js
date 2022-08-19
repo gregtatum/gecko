@@ -61,15 +61,6 @@ XPCOMUtils.defineLazyGetter(globalThis, "logConsole", function() {
   });
 });
 
-const lazy = {};
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "hideDismissedEventNotifications",
-  "browser.pinebuild.companion.notifications.hideDismissed",
-  false
-);
-
 export const timeFormat = new Intl.DateTimeFormat([], {
   timeStyle: "short",
 });
@@ -150,11 +141,14 @@ function processEvents(events, now) {
   if (!events || !events.length) {
     return;
   }
-
-  let filteredEvents = events.filter(
-    event =>
-      event &&
-      !dismissedEventStore.isDismissed(event.serviceType, event.originalId)
+  let hideDismissed = Services.prefs.getBoolPref(
+    "browser.pinebuild.companion.notifications.hideDismissed",
+    false
+  );
+  let filteredEvents = events.filter(event =>
+    event && hideDismissed
+      ? !dismissedEventStore.isDismissed(event.serviceType, event.originalId)
+      : true
   );
   logConsole.debug("processEvents, now:", now);
   logConsole.debug("processEvents removing timers:", notificationTimers.size);
@@ -179,10 +173,17 @@ function processEvents(events, now) {
 }
 
 function clearEventNotification({ eventId, serviceType } = {}) {
-  let eventTimer = notificationTimers.get(eventId);
-  clearTimeout(eventTimer);
-  notificationTimers.delete(eventId);
   dismissedEventStore.dismissEvent(serviceType, eventId);
+  if (
+    Services.prefs.getBoolPref(
+      "browser.pinebuild.companion.notifications.hideDismissed",
+      false
+    )
+  ) {
+    let eventTimer = notificationTimers.get(eventId);
+    clearTimeout(eventTimer);
+    notificationTimers.delete(eventId);
+  }
 }
 
 let observer = {
@@ -314,24 +315,22 @@ export function initNotifications(wAPI) {
     document.addEventListener("refresh-events", function(e) {
       processEvents(e.detail.events, Date.now());
     });
-    if (lazy.hideDismissedEventNotifications) {
-      window.addEventListener("Companion:DismissedEvent", function(e) {
-        clearEventNotification(e.detail);
-      });
-      window.addEventListener("Companion:SignOut", function(e) {
-        dismissedEventStore.clearService(e.detail.service);
-      });
-      if (window.CompanionUtils.dismissedEvents) {
-        dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
-      } else {
-        window.addEventListener(
-          "Companion:Setup",
-          function() {
-            dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
-          },
-          { once: true }
-        );
-      }
+    window.addEventListener("Companion:DismissedEvent", function(e) {
+      clearEventNotification(e.detail);
+    });
+    window.addEventListener("Companion:SignOut", function(e) {
+      dismissedEventStore.clearService(e.detail.service);
+    });
+    if (window.CompanionUtils.dismissedEvents) {
+      dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
+    } else {
+      window.addEventListener(
+        "Companion:Setup",
+        function() {
+          dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
+        },
+        { once: true }
+      );
     }
   } else {
     Services.obs.addObserver(observer, "companion-services-refresh", true);
