@@ -203,8 +203,13 @@ const HistoryCarousel = {
   maxIndex: -1,
 
   /**
+   * A MediaQueryList used to monitor changes to the prefers-reduced-motion
+   * media query value.
+   */
+  mediaQuery: null,
+
+  /**
    * True if the browser has been configured to use fewer motions / animations.
-   * This is only calculated once during setup().
    */
   prefersReducedMotion: false,
 
@@ -350,6 +355,10 @@ const HistoryCarousel = {
         this.onInput(event);
         break;
       }
+      case "change": {
+        this.onChange(event);
+        break;
+      }
       case "click": {
         this.onClick(event);
         break;
@@ -382,9 +391,9 @@ const HistoryCarousel = {
     let currentIndex = CarouselUtils.getCurrentIndex();
 
     this.originalIndex = currentIndex;
-    this.prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion)"
-    ).matches;
+    this.mediaQuery = window.matchMedia("(prefers-reduced-motion)");
+    this.mediaQuery.addEventListener("change", this);
+    this.mediaQueryUpdate();
 
     this.totalPreviews = previews.length;
     let root = document.documentElement;
@@ -734,6 +743,14 @@ const HistoryCarousel = {
     }
   },
 
+  /**
+   * Caches the prefers-reduced-motion media query value for the
+   * window in this.prefersReducedMotion.
+   */
+  mediaQueryUpdate() {
+    this.prefersReducedMotion = this.mediaQuery.matches;
+  },
+
   // DOM event handlers
 
   /**
@@ -746,6 +763,19 @@ const HistoryCarousel = {
     if (event.target == this.scrubber) {
       let index = Math.round(this.scrubber.value);
       this.selectIndex(index, false /* instant */);
+    }
+  },
+
+  /**
+   * Handles change events on the MediaQueryList generated in
+   * setup().
+   *
+   * @param {Event} event
+   *   The change event to handle.
+   */
+  onChange(event) {
+    if (event.target == this.mediaQuery) {
+      this.mediaQueryUpdate();
     }
   },
 
