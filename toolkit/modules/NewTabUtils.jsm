@@ -104,7 +104,7 @@ const ACTIVITY_STREAM_DEFAULT_RECENT = 5 * 24 * 60 * 60;
 // The fallback value for the width of smallFavicon in pixels.
 // This value will be multiplied by the current window's devicePixelRatio.
 // If devicePixelRatio cannot be found, it will be multiplied by 2.
-const DEFAULT_SMALL_FAVICON_WIDTH = 16;
+const DEFAULT_SMALL_FAVICON_WIDTH = AppConstants.PINEBUILD ? 28 : 16;
 
 const POCKET_UPDATE_TIME = 24 * 60 * 60 * 1000; // 1 day
 const POCKET_INACTIVE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week

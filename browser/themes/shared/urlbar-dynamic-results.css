@@ -263,17 +263,6 @@
   margin-inline-start: 12px;
 }
 
-.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
-  width: 32px;
-  height: 32px;
-  padding: 8px;
-  background: var(--arrowpanel-background);
-  margin-inline-end: 0;
-  border-radius: 50%;
-  border: .5px solid transparent;
-  margin-block-end: 5px;
-}
-
 .urlbarView-row:not([dynamicType=topSitesButtons]):not([dynamicType=pinebuildquickactions]) {
   margin-inline: calc(5px + var(--urlbar-container-padding));
 }
@@ -314,11 +303,11 @@
 }
 
 .urlbarView-row[dynamicType=pinebuildquickactions] .urlbarView-quickaction-row:hover,
-.urlbarView-row[dynamicType=topSitesButtons] [role="button"]:hover .urlbarView-favicon {
+.urlbarView-row[dynamicType=topSitesButtons] [role="button"]:hover .urlbarView-favicon-circle {
   border: .5px solid #CFCFD8;
 }
 
-.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected] .urlbarView-favicon,
+.urlbarView-row[dynamicType=topSitesButtons] .urlbarView-topsitesbutton-row[selected] .urlbarView-favicon-circle,
 .urlbarView-row[dynamicType=pinebuildquickactions] .urlbarView-quickaction-row[selected] {
   background-color: var(--autocomplete-popup-highlight-background);
 }
@@ -358,19 +347,26 @@
   margin-block-start: calc(-1 * var(--urlbar-view-padding-block));
 }
 
+.urlbarView-row[dynamicType="topSitesButtons"] .urlbarView-favicon-circle {
+  align-self: center;
+  margin-block-end: 5px;
+  border: 1px solid transparent;
+  padding: 9px;
+}
+
 #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=pinebuildquickactions] .urlbarView-quickaction-row,
-#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
+#urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon-circle {
   box-shadow: var(--quickactions-topsites-outset-shadow);
 }
 
 @media (prefers-contrast) {
   #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=pinebuildquickactions] .urlbarView-quickaction-row,
-  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon {
+  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon-circle {
     border: 1px solid var(--page-action-menu-button-border-color);
   }
 
   #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=pinebuildquickactions] .urlbarView-quickaction-row:hover,
-  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon:hover {
+  #urlbar[breakout][breakout-extend] .urlbarView-row[dynamicType=topSitesButtons] .urlbarView-favicon-circle:hover {
     background-color: var(--button-hover-bgcolor);
     color: var(--page-action-menu-button-hover-fill);
   }

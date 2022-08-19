@@ -51,8 +51,8 @@ class ProviderTopSitesButtons extends UrlbarProvider {
         children: [
           {
             name: `icon-${i}`,
-            tag: "img",
-            attributes: { class: "urlbarView-favicon" },
+            tag: "favicon-circle",
+            attributes: { class: "urlbarView-favicon-circle", size: "large" },
           },
           {
             name: `label-${i}`,
