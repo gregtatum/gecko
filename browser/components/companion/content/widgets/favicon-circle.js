@@ -9,6 +9,7 @@ export class FaviconCircle extends MozLitElement {
   static get properties() {
     return {
       src: { type: String },
+      size: { type: String },
     };
   }
 
@@ -23,9 +24,21 @@ export class FaviconCircle extends MozLitElement {
         box-sizing: border-box;
       }
 
-      img {
+      img[size=""],
+      img[size="medium"] {
         height: 16px;
         width: 16px;
+        border-radius: 2px;
+      }
+
+      img[size="large"] {
+        height: 28px;
+        width: 28px;
+        border-radius: 4px;
+      }
+
+      img[src=""] {
+        visibility: hidden;
       }
     `;
   }
@@ -33,11 +46,12 @@ export class FaviconCircle extends MozLitElement {
   constructor() {
     super();
     this.src = "";
+    this.size = "medium";
   }
 
   render() {
     return html`
-      <img src="${this.src}" role="presentation" />
+      <img src="${this.src}" role="presentation" alt="" size=${this.size} />
     `;
   }
 }
