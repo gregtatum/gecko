@@ -323,12 +323,12 @@ a {
 }
 
 .media .prev {
-  background-image: url("next.svg");
+  background-image: url("chrome://browser/content/companion/next.svg");
   transform: scaleX(-1);
 }
 
 .media .next {
-  background-image: url("next.svg");
+  background-image: url("chrome://browser/content/companion/next.svg");
 }
 
 .media .pip {
@@ -470,7 +470,7 @@ e-global-nav-debugging h2 {
 }
 
 #companion-deck-button-browse img {
-  background: center center no-repeat url(chrome://browser/skin/reader-mode.svg);
+  background-image: url("chrome://browser/content/companion/browse.svg");
 }
 
 #companion-deck-button-now img {
@@ -494,6 +494,14 @@ e-global-nav-debugging h2 {
   background: center left 8px / 16px no-repeat url("chrome://global/skin/icons/defaultFavicon.svg");
   margin-inline: 0;
   font-weight: normal;
+  -moz-context-properties: fill;
+}
+
+@media not (prefers-contrast) {
+  .browse button {
+    fill: var(--colors-darkgrey-30);
+    color: var(--colors-darkgrey-30);
+  }
 }
 
 .browse button::after {
@@ -528,11 +536,11 @@ e-global-nav-debugging h2 {
 }
 
 .browse button.snapshot-groups {
-  background-image: url("snapshot-groups.svg");
+  background-image: url("chrome://browser/content/companion/snapshot-groups.svg");
 }
 
 .browse button.sessions {
-  background-image: url("sessions.svg");
+  background-image: url("chrome://browser/content/companion/sessions.svg");
 }
 
 .browse button.downloads {
@@ -544,7 +552,7 @@ e-global-nav-debugging h2 {
 }
 
 .browse button.calendar {
-  background-image: url("calendar.svg");
+  background-image: url("chrome://browser/content/companion/calendar.svg");
 }
 
 .history-panel-content {

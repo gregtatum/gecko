@@ -636,7 +636,7 @@ export class CalendarEvent extends MozLitElement {
         class: "event-item-copy-invite-action",
       },
       message: {
-        icon: "chrome://browser/skin/mail.svg",
+        icon: "chrome://browser/content/companion/running-late.svg",
         label: this._getEmailLabel(),
         disabled:
           (this.isBrowse && this.event.isAllDay) ||

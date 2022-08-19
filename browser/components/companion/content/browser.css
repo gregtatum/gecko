@@ -612,7 +612,7 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
 }
 
 #site-security-icon.readerMode {
-  background-image: url("chrome://browser/skin/reader-mode.svg");
+  background-image: url("chrome://browser/content/companion/reader-mode.svg");
 }
 
 #site-security-icon.localResource {
@@ -700,7 +700,7 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
 
 #page-action-pin-view > .toolbarbutton-icon,
 #page-action-pin-app > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/pin-12.svg");
+  background-image: url("chrome://browser/content/companion/pin.svg");
 }
 
 #page-action-copy-url > .toolbarbutton-icon {
@@ -720,7 +720,7 @@ body:not([flow-reset]) #companion-sidebar-button[checked] {
 }
 
 #page-action-reader-mode > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/reader-mode.svg");
+  background-image: url("chrome://browser/content/companion/reader-mode.svg");
 }
 
 #page-action-more > .toolbarbutton-icon {
@@ -981,7 +981,7 @@ body[flow-reset] #urlbar[open] #urlbar-background {
 }
 
 #session-setaside-button > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/session-setaside.svg");
+  background-image: url("chrome://browser/content/companion/session-setaside.svg");
 }
 
 .confirmation {

@@ -217,7 +217,6 @@
   skin/classic/browser/zoom-out.svg                   (../shared/icons/zoom-out.svg)
   skin/classic/browser/ion.svg                        (../shared/icons/ion.svg)
 #ifdef PINEBUILD
-  skin/classic/browser/session-setaside.svg           (../shared/icons/session-setaside.svg)
   skin/classic/browser/session-confirm-checkmark.svg  (../shared/icons/session-confirm-checkmark.svg)
   skin/classic/browser/companion.svg                  (../shared/icons/companion.svg)
   skin/classic/browser/companion-selected.svg         (../shared/icons/companion-selected.svg)
