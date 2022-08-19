@@ -62,10 +62,10 @@ export class SessionCard extends HTMLElement {
 
     let pages = data.pages.slice(0, MAX_ICONS);
     let icons = pages.map(page => {
-      let img = document.createElement("img");
-      img.className = "icon";
-      img.src = pageToDataURI(page);
-      return img;
+      let icon = document.createElement("favicon-circle");
+      icon.className = "icon";
+      icon.src = pageToDataURI(page);
+      return icon;
     });
 
     if (data.pages.length > MAX_ICONS) {
