@@ -87,16 +87,13 @@
   box-sizing: border-box;
   background-color: var(--avm-view-group-element-icon-bgcolor);
   overflow: hidden;
+  align-items: center;
+  justify-content: center;
 }
 
 .view-icon-overlay,
-.view-icon-container,
-.view-icon {
+.view-icon-container {
   border-radius: 100px;
-}
-
-.view-icon:not([src]) {
-  visibility: hidden;
 }
 
 :host(:not([active])) .view-label-container {
