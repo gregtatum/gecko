@@ -1217,26 +1217,28 @@ customElements.define(
       );
       this.appendChild(template.content.cloneNode(true));
 
+      this._actionButton = this.querySelector(
+        ".unified-extensions-item-action"
+      );
       this._openMenuButton = this.querySelector(
         ".unified-extensions-item-open-menu"
       );
-      this._openMenuButton.addEventListener("mouseover", () => {
-        this.classList.add("no-hover");
-      });
-      this._openMenuButton.addEventListener("mouseout", () => {
-        this.classList.remove("no-hover");
-      });
+
+      this._openMenuButton.addEventListener("blur", this);
+      this._openMenuButton.addEventListener("focus", this);
 
       this.addEventListener("click", this);
+      this.addEventListener("mouseout", this);
+      this.addEventListener("mouseover", this);
 
       this.render();
     }
 
     handleEvent(event) {
+      const { target } = event;
+
       switch (event.type) {
         case "click":
-          const { target } = event;
-
           if (event.button !== 0) {
             return;
           }
@@ -1254,9 +1256,7 @@ customElements.define(
               false /* attributesOverride */,
               event
             );
-          } else {
-            gUnifiedExtensions.togglePanel();
-
+          } else if (target === this._actionButton) {
             const extension = WebExtensionPolicy.getByID(this.addon.id)
               ?.extension;
             if (!extension) {
@@ -1270,6 +1270,22 @@ customElements.define(
             extension.tabManager.activateScripts(tab);
           }
           break;
+
+        case "blur":
+        case "mouseout":
+          if (target !== this._openMenuButton) {
+            return;
+          }
+          this.removeAttribute("secondary-button-hovered");
+          break;
+
+        case "focus":
+        case "mouseover":
+          if (target !== this._openMenuButton) {
+            return;
+          }
+          this.setAttribute("secondary-button-hovered", true);
+          break;
       }
     }
 
@@ -1281,7 +1297,6 @@ customElements.define(
       }
 
       this.setAttribute("extension-id", this.addon.id);
-      this.classList.add("subviewbutton", "complex-subviewbutton");
 
       this.querySelector(
         ".unified-extensions-item-name"
