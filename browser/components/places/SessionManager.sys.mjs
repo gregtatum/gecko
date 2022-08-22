@@ -286,6 +286,8 @@ export const SessionManager = new (class SessionManager extends EventEmitter {
       return;
     }
 
+    this.emit("session-change-prepare", window);
+
     // Kick off loading the new session data so that it is hopefully
     // ready as soon as we need it.
     let loadDataPromise;

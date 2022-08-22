@@ -12,6 +12,10 @@ const { XPCOMUtils } = ChromeUtils.import(
 
 const lazy = {};
 
+XPCOMUtils.defineLazyModuleGetters(lazy, {
+  SessionManager: "resource:///modules/SessionManager.jsm",
+});
+
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "CLICK_COUNT_TIMEOUT_MS",
@@ -95,6 +99,18 @@ class HistoryCarousel {
       this.#openedByLongPress = true;
       this.showHistoryCarousel(true);
     });
+
+    this._onSessionChangePrepare = this._onSessionChangePrepare.bind(this);
+    lazy.SessionManager.on(
+      "session-change-prepare",
+      this._onSessionChangePrepare
+    );
+    this.#window.addEventListener("unload", () => {
+      lazy.SessionManager.off(
+        "session-change-prepare",
+        this._onSessionChangePrepare
+      );
+    });
   }
 
   handleEvent(event) {
@@ -140,6 +156,12 @@ class HistoryCarousel {
 
   get enabled() {
     return this.#enabled;
+  }
+
+  _onSessionChangePrepare(event, window) {
+    if (window == this.#window && this.enabled) {
+      this.showHistoryCarousel(false);
+    }
   }
 
   get #container() {

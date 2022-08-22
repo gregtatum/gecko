@@ -3807,9 +3807,18 @@ class StageManager extends EventTarget {
         "Exiting history carousel mode, selected index ",
         finalIndex
       );
+
       let internalView = this.currentWorkspace.viewStack[finalIndex];
-      lazy.logConsole.debug(`Selecting view: ${internalView.toString()}`);
-      this.setView(internalView.view);
+
+      // If we're exiting the history carousel due to session history being
+      // set aside, it's possible that the View associated with the final
+      // index is gone. In that case, don't bother trying to switch to it.
+      if (internalView) {
+        lazy.logConsole.debug(`Selecting view: ${internalView.toString()}`);
+        this.setView(internalView.view);
+      } else {
+        lazy.logConsole.debug(`No view at index: `, finalIndex);
+      }
     }
 
     let flushed = this.#window.promiseDocumentFlushed(() => {});
