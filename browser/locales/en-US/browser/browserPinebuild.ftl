@@ -94,7 +94,7 @@ onboarding-flow-connect-title = Connect your { -fxaccount-brand-name(capitalizat
 onboarding-flow-connect-text = A new way to internet is just ahead. Log in or create an account to unlock { -brand-short-name }.
 
 onboarding-flow-connected-title = { -fxaccount-brand-name(capitalization: "sentence") } connected
-onboarding-flow-connected-text = Your account has been verified. Just one more step and you’ll be on your way.
+onboarding-flow-connected-text = Your account has been verified. Just two more steps and you’ll be on your way.
 
 onboarding-flow-data-prefs-title = Choose what data to share with { -brand-short-name }
 onboarding-flow-data-prefs-text = { -brand-short-name }’s data protection policy puts your privacy first. We will never collect data without your permission.

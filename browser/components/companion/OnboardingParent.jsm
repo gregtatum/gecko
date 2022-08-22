@@ -132,10 +132,14 @@ class OnboardingParent extends JSWindowActorParent {
             ONBOARDING_SCREEN_AFTER_FXA
           );
 
-          // Message child with updated pref value to pass on to component
-          obj.sendAsyncMessage("OnboardingProgressPrefValueUpdated", {
-            prefValue: ONBOARDING_SCREEN_AFTER_FXA,
-          });
+          // Message child with updated pref value to pass on to component.
+          // Ignore errors from cases where the child has been unloaded before
+          // the message has been sent.
+          try {
+            obj.sendAsyncMessage("OnboardingProgressPrefValueUpdated", {
+              prefValue: ONBOARDING_SCREEN_AFTER_FXA,
+            });
+          } catch (ex) {}
 
           await window.gStageManager.reset({ url: ONBOARDING_URL });
         }
@@ -153,10 +157,28 @@ class OnboardingParent extends JSWindowActorParent {
                   lazy.ROOT_URL + RESET_PASSWORD_VERIFIED_PATH
                 )
               ) {
-                window.gSync.openFxAEmailFirstPage(
-                  "pinebuild-onboarding",
-                  email
-                );
+                // Clear out any possible email inbox pages opened inline
+                // during the password reset flow, as well as the final
+                // RESET_PASSWORD_VERIFIED FxA page.
+                //
+                // NOTE: Sometimes yahoo mail shows a beforeunload alert when
+                // closing its tab, but suppressing this by passing the
+                // `skipPermitUnload: true` argument to gStageManager.reset
+                // causes the window to close due to an uncaught error.
+                // Filed MR2-3251 to investigate.
+                window.gStageManager
+                  .reset({
+                    url: ONBOARDING_URL,
+                  })
+                  .then(() => {
+                    window.gSync
+                      .openFxAEmailFirstPage("pinebuild-onboarding", email)
+                      .then(() => {
+                        // concludeFxaFlow is an async function that returns a Promise, but
+                        // we cannot await a Promise inside of onLocationChange.
+                        concludeFxaFlow(this);
+                      });
+                  });
               } else if (
                 aLocationURI.spec.startsWith(
                   lazy.ROOT_URL + CONNECT_ANOTHER_DEVICE_PATH

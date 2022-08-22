@@ -47,6 +47,7 @@ class OnboardingFlowElement extends HTMLElement {
 
   connectedCallback() {
     window.addEventListener("OnboardingProgressPrefValue", this);
+    window.addEventListener("visibilitychange", this);
     this.requestProgressPref();
 
     this._backwardNavButton = document.querySelector(
@@ -185,6 +186,17 @@ class OnboardingFlowElement extends HTMLElement {
     if (event.type === "OnboardingProgressPrefValue") {
       let newPage = event.detail.prefValue;
       this.changePage(newPage);
+      return;
+    }
+
+    // The FxA flow sometimes exits before the updated progress pref is sent
+    // down to this page, causing the wrong screen to be shown. Guard against
+    // this edge case by requesting a progress pref update whenever this page
+    // is foregrounded.
+    if (event.type === "visibilitychange") {
+      if (document.visibilityState === "visible") {
+        this.requestProgressPref();
+      }
       return;
     }
 
