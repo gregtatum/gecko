@@ -640,12 +640,12 @@ export default class ActiveViewManager extends window.MozHTMLElement {
   }
 
   #getEventViewGroup(event) {
-    let node = event.composedTarget;
-    let host = node.getRootNode().host;
-    if (host.localName == "view-group") {
-      return host;
+    let path = event.composedPath();
+    for (let node of path) {
+      if (node.tagName == "view-group") {
+        return node;
+      }
     }
-
     return null;
   }
 

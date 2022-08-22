@@ -9,24 +9,25 @@
  */
 
 /**
- * Opens the ViewGroup context menu for the passed group.
+ * Opens the ViewGroup context menu for the passed element.
  *
- * @param {ViewGroup} group
- *   The ViewGroup to open the context menu on.
+ * @param {Element} element
+ *   The ViewGroupElement, or child of a ViewGroupElement, to open the
+ *   context menu on.
  * @return Promise
  * @resolves {Element}
  *   Resolves with the menu DOM element once the popupshown event
  *   has fired.
  */
-async function openContextMenu(group) {
+async function openContextMenu(element) {
   info("Opening context menu on a ViewGroup");
 
-  let menu = group.ownerDocument.getElementById(
+  let menu = element.ownerDocument.getElementById(
     "active-view-manager-context-menu"
   );
 
   let shown = BrowserTestUtils.waitForPopupEvent(menu, "shown");
-  EventUtils.synthesizeMouseAtCenter(group, {
+  EventUtils.synthesizeMouseAtCenter(element, {
     type: "contextmenu",
   });
   await shown;
@@ -88,5 +89,38 @@ add_task(async function test_context_menu_close_group() {
   );
   menu.activateItem(closeGroupMenuItem);
   await viewGroupClosed;
+  await contextMenuClosed;
+  await gStageManager.reset();
+});
+
+/**
+ * Tests that the favicon-circle for a non-staged ViewGroupElement can be
+ * used as the contextmenu target.
+ */
+add_task(async function test_favicon_circle_context_menu_target() {
+  let [view1, view2] = await PinebuildTestUtils.loadViews([
+    "https://example.com/",
+    "https://example.org/",
+  ]);
+  Assert.equal(
+    gStageManager.currentView,
+    view2,
+    "The second View should be staged."
+  );
+
+  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroupElements.");
+  Assert.ok(
+    !viewGroupEls[0].active,
+    "The first ViewGroupElement should not be active."
+  );
+  Assert.equal(viewGroupEls[0].viewGroup.length, 1);
+  Assert.equal(viewGroupEls[0].viewGroup.at(0), view1);
+
+  let viewIcon = viewGroupEls[0].shadowRoot.querySelector(".view-icon");
+  let img = viewIcon.shadowRoot.querySelector("img");
+  let menu = await openContextMenu(img);
+  let contextMenuClosed = BrowserTestUtils.waitForPopupEvent(menu, "hidden");
+  menu.hidePopup();
   await contextMenuClosed;
 });
