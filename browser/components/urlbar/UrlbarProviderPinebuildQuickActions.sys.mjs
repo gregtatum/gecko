@@ -428,6 +428,10 @@ class ProviderQuickActionsBase extends UrlbarProvider {
         }
       }
     }
+    let clearServiceData = (subject, topic, data) => {
+      this._serviceData[data] = {};
+    };
+    Services.obs.addObserver(clearServiceData, "companion-signout");
   }
 
   /**
