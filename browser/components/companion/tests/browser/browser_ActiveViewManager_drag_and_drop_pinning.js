@@ -24,14 +24,14 @@ const TEST_URL5 = "https://example.org/browser/browser/";
  * View, then this will also wait until the dragged View is staged,
  * since that's what happens when clicking on a ViewGroup.
  *
- * @param {ViewGroup} viewGroup
- *   The ViewGroup to drag.
+ * @param {ViewGroupElement} viewGroupEl
+ *   The ViewGroupElement to drag.
  * @param {Element} destination
  *   The Element to drop the ViewGroup on.
  * @returns {Promise}
  * @resolves Once the drop operation has completed.
  */
-async function simulateViewGroupDragAndEnd(viewGroup, destination) {
+async function simulateViewGroupDragAndEnd(viewGroupEl, destination) {
   // The VIEWGROUP_DROP_TYPE is a static member of the ActiveViewManager
   // customElement class, which happens to be exposed as a JS Module.
   // Unfortunately, it doesn't seem that I can import that JS Module
@@ -39,29 +39,13 @@ async function simulateViewGroupDragAndEnd(viewGroup, destination) {
   // way to access the static member for now in this test.
   let avm = document.querySelector("active-view-manager");
   const VIEWGROUP_DROP_TYPE = avm.constructor.VIEWGROUP_DROP_TYPE;
-  let icon = viewGroup.shadowRoot.querySelector(".view-icon");
-  if (!viewGroup.active && avm.isRiverView(viewGroup.lastView)) {
-    info("Hovering River ViewGroup to ensure it's visible");
-    let iconContainer = viewGroup.shadowRoot.querySelector(
-      ".view-icon-container"
-    );
-    let transitionEnd = BrowserTestUtils.waitForEvent(
-      iconContainer,
-      "transitionend"
-    );
-    EventUtils.synthesizeMouse(icon, 1, 1, { type: "mouseover" });
-    EventUtils.synthesizeMouse(icon, 2, 2, { type: "mousemove" });
-    EventUtils.synthesizeMouse(icon, 3, 3, { type: "mousemove" });
-    EventUtils.synthesizeMouse(icon, 4, 4, { type: "mousemove" });
-    await transitionEnd;
-    info("River ViewGroup is now visible");
-  }
+  let icon = viewGroupEl.shadowRoot.querySelector(".view-icon");
 
   let drop = () => {
     EventUtils.synthesizeDrop(
       icon,
       destination,
-      [[{ type: VIEWGROUP_DROP_TYPE, data: viewGroup }]],
+      [[{ type: VIEWGROUP_DROP_TYPE, data: viewGroupEl }]],
       null,
       window,
       window,
@@ -69,7 +53,7 @@ async function simulateViewGroupDragAndEnd(viewGroup, destination) {
     );
   };
 
-  if (gStageManager.currentView != viewGroup.lastView) {
+  if (gStageManager.currentView != viewGroupEl.viewGroup.lastView) {
     let viewChanged = BrowserTestUtils.waitForEvent(
       gStageManager,
       "ViewChanged"
@@ -86,19 +70,10 @@ async function simulateViewGroupDragAndEnd(viewGroup, destination) {
  * into the dragging state.
  */
 add_task(async function test_pinned_views_dragging_state() {
-  await gStageManager.reset();
-
   await PinebuildTestUtils.loadViews([TEST_URL1]);
 
   let river = document.querySelector("river-el");
   let pinnedViews = document.querySelector("pinned-views");
-
-  // No matter what, make sure we exit the dragging state at the
-  // end of this test.
-  registerCleanupFunction(async () => {
-    pinnedViews.dragging = false;
-    await pinnedViews.updateComplete;
-  });
 
   let viewGroups = await PinebuildTestUtils.getViewGroups();
   Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
@@ -118,8 +93,9 @@ add_task(async function test_pinned_views_dragging_state() {
   );
 
   try {
+    let icon = viewGroup.shadowRoot.querySelector(".view-icon");
     let [, dataTransfer] = EventUtils.synthesizeDragOver(
-      viewGroup,
+      icon,
       river,
       [[{ type: VIEWGROUP_DROP_TYPE, data: viewGroup }]],
       null,
@@ -138,14 +114,17 @@ add_task(async function test_pinned_views_dragging_state() {
   } finally {
     ds.endDragSession(true);
   }
+
+  await gStageManager.reset();
+  pinnedViews.dragging = false;
+  await pinnedViews.updateComplete;
+  await river.updateComplete;
 });
 
 /**
  * Test that ViewGroups can be dragged to pin and unpin.
  */
 add_task(async function test_drag_and_drop_pin_unpin() {
-  await gStageManager.reset();
-
   let [view1, view2, view3, view4, view5] = await PinebuildTestUtils.loadViews([
     TEST_URL1,
     TEST_URL2,
@@ -166,10 +145,6 @@ add_task(async function test_drag_and_drop_pin_unpin() {
   // simulate dragging and dropping to it.
   pinnedViews.dragging = true;
   await pinnedViews.updateComplete;
-  registerCleanupFunction(async () => {
-    pinnedViews.dragging = false;
-    await pinnedViews.updateComplete;
-  });
 
   Assert.equal(gStageManager.currentView, view5, "view5 is on the stage.");
   Assert.ok(!view5.pinned, "view5 is not pinned.");
@@ -200,7 +175,6 @@ add_task(async function test_drag_and_drop_pin_unpin() {
   let pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
 
   Assert.ok(view3.pinned, "view3 is pinned.");
-  //await new Promise(resolve => setTimeout(resolve, 15000));
   // Since we dropped View 3 onto the pinned Views dropTarget, that
   // should have put it at the front of the pinned Views list.
   Assert.equal(
@@ -245,20 +219,14 @@ add_task(async function test_drag_and_drop_pin_unpin() {
     3,
     "There should only be 3 pinned ViewGroups now."
   );
-  //await new Promise(resolve => setTimeout(resolve, 1000));
 
   // Okay, now let's drag some pinned Views back to the River. We'll
   // start by dragging the first pinned ViewGroup, which should be
-  // view3. We'll make sure that view3 is staged and loaded to get
-  // ahead of any extra River regrouping which might result from the
-  // load occurring.
-  await PinebuildTestUtils.setCurrentView(view3);
+  // view3.
 
   // We have to wait for the River to regroup before we can trust
   // the ViewGroup count.
-  let riverRegrouped = BrowserTestUtils.waitForEvent(river, "RiverRegrouped");
   await simulateViewGroupDragAndEnd(pinnedViewGroups[0], river);
-  await riverRegrouped;
 
   viewGroups = await PinebuildTestUtils.getViewGroups();
   pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
@@ -295,9 +263,7 @@ add_task(async function test_drag_and_drop_pin_unpin() {
 
   // Let's drag view4 back to the River now.
   await PinebuildTestUtils.setCurrentView(view4);
-  riverRegrouped = BrowserTestUtils.waitForEvent(river, "RiverRegrouped");
   await simulateViewGroupDragAndEnd(pinnedViewGroups[1], river);
-  await riverRegrouped;
 
   viewGroups = await PinebuildTestUtils.getViewGroups();
   pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
@@ -311,9 +277,9 @@ add_task(async function test_drag_and_drop_pin_unpin() {
     2,
     "There should be 2 ViewGroups in the River."
   );
-  Assert.equal(viewGroups[1].views.length, 1);
+  Assert.equal(viewGroups[1].viewGroup.length, 1);
   Assert.equal(
-    viewGroups[1].lastView,
+    viewGroups[1].activeView,
     view4,
     "view4 should be the Active View."
   );
@@ -326,9 +292,7 @@ add_task(async function test_drag_and_drop_pin_unpin() {
 
   // Finally, let's drag view5 back to the River.
   await PinebuildTestUtils.setCurrentView(view5);
-  riverRegrouped = BrowserTestUtils.waitForEvent(river, "RiverRegrouped");
   await simulateViewGroupDragAndEnd(pinnedViewGroups[0], river);
-  await riverRegrouped;
 
   viewGroups = await PinebuildTestUtils.getViewGroups();
   pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
@@ -342,9 +306,9 @@ add_task(async function test_drag_and_drop_pin_unpin() {
     2,
     "There should be 2 ViewGroups in the River."
   );
-  Assert.equal(viewGroups[1].views.length, 2);
+  Assert.equal(viewGroups[1].viewGroup.length, 2);
   Assert.equal(
-    viewGroups[1].lastView,
+    viewGroups[1].activeView,
     view5,
     "view5 should be the Active View."
   );
@@ -357,4 +321,7 @@ add_task(async function test_drag_and_drop_pin_unpin() {
 
   // Now let's check the final order of the Views.
   PinebuildTestUtils.assertViewsAre([view1, view2, view3, view4, view5]);
+  pinnedViews.dragging = false;
+  await pinnedViews.updateComplete;
+  gStageManager.reset();
 });
