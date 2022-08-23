@@ -32,9 +32,6 @@ const ENABLED_PREF = "opencompanionsearch.enabled";
 const DYNAMIC_RESULT_TYPE = "companionSearchLink";
 
 const VIEW_TEMPLATE = {
-  attributes: {
-    selectable: true,
-  },
   children: [
     {
       name: "icon",

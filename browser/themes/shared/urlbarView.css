@@ -239,7 +239,8 @@
 }
 
 .urlbarView-row:not([type=tip], [type=dynamic])[selected] > .urlbarView-row-inner,
-.urlbarView-row-inner[selected] {
+.urlbarView-row-inner[selected],
+.urlbarView-pinebuild .urlbarView-row[selected] > .urlbarView-row-inner {
   background-color: var(--autocomplete-popup-highlight-background);
   color: var(--autocomplete-popup-highlight-color);
 }
