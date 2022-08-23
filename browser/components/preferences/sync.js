@@ -629,6 +629,9 @@ var gSyncPane = {
       document.querySelector(
         "[engine_preference='services.sync.engine.tabs']"
       ).hidden = true;
+      document.querySelector(
+        "[engine_preference='services.sync.engine.bookmarks']"
+      ).hidden = true;
     }
   },
 };

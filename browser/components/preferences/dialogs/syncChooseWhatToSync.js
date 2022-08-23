@@ -65,6 +65,7 @@ let gSyncChooseWhatToSync = {
       document.querySelector(".sync-engine-addons").hidden = true;
       document.querySelector(".sync-engine-prefs").hidden = true;
       document.querySelector(".sync-engine-tabs").hidden = true;
+      document.querySelector(".sync-engine-bookmarks").hidden = true;
     }
   },
 };
