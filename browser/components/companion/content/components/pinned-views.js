@@ -49,24 +49,31 @@ class PinnedViews extends MozLitElement {
     event.preventDefault();
 
     let dt = event.dataTransfer;
-    let droppedViewGroup = dt.mozGetDataAt(
+    let droppedViewGroupEl = dt.mozGetDataAt(
       ActiveViewManager.VIEWGROUP_DROP_TYPE,
       0
     );
 
     // It's possible to drag a ViewGroup that is not active, so in that
     // case, we'll just assume we're dragging the last View in the group.
-    let view = droppedViewGroup.active
-      ? droppedViewGroup.activeView
-      : droppedViewGroup.lastView;
+    let view = droppedViewGroupEl.active
+      ? droppedViewGroupEl.activeView
+      : droppedViewGroupEl.viewGroup.lastView;
     let dragOverElement = this.#dragOverElement;
 
     this.#cancelDragActive();
 
     let index = 0;
     if (dragOverElement.tagName == "view-group") {
-      let dragOverView = dragOverElement.lastView;
-      let dragIndex = this._views.indexOf(dragOverView);
+      // Since the dragging attribute is applied in an rAF, it's technically
+      // possible for the user to drop the ViewGroupElement onto itself. In that
+      // case, we just return since there's nothing to do.
+      if (dragOverElement == droppedViewGroupEl) {
+        return;
+      }
+
+      let dragOverViewGroupEl = dragOverElement;
+      let dragIndex = this.viewGroups.indexOf(dragOverViewGroupEl.viewGroup);
 
       if (dragIndex != -1) {
         index = dragIndex + 1;

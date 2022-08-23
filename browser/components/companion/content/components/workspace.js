@@ -133,7 +133,14 @@ export default class Workspace extends window.MozHTMLElement {
       ActiveViewManager.VIEWGROUP_DROP_TYPE,
       0
     );
-    draggedViewGroup.removeAttribute("dragging");
+
+    // #onDragStart will set this attribute in an rAF, so in the event that
+    // this event fires before it's had a chance to fire, we also put the
+    // removal in an rAF so that it's guaranteed to be removed after being
+    // added.
+    window.requestAnimationFrame(() => {
+      draggedViewGroup.removeAttribute("dragging");
+    });
 
     this.dragging = false;
   }
