@@ -12,12 +12,12 @@ add_task(async function test_secure_website_info() {
     "https://example.com/",
     "http://mochi.test:8888/",
   ]);
-  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(window);
 
   // Open up page action menu on insecure page and ensure the correct
   // security icon and text are showing
   let pageActionMenu = await PinebuildTestUtils.openPageActionMenu(
-    viewGroups[1]
+    viewGroupEls[1]
   );
   Assert.equal(
     pageActionMenu.querySelector("#site-security-icon").className,
@@ -36,7 +36,7 @@ add_task(async function test_secure_website_info() {
   // Navigate to secure page and check the correct
   // security icon and text are showing.
   await PinebuildTestUtils.setCurrentView(view1);
-  pageActionMenu = await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);
+  pageActionMenu = await PinebuildTestUtils.openPageActionMenu(viewGroupEls[0]);
   Assert.equal(
     pageActionMenu.querySelector("#site-security-icon").className,
     "verifiedDomain",
@@ -58,7 +58,7 @@ add_task(async function test_secure_website_info() {
   // when the website is not secure due to an exception
   // that was thrown when constructing the security info. (MR2-2722)
   await PinebuildTestUtils.setCurrentView(view2);
-  pageActionMenu = await PinebuildTestUtils.openPageActionMenu(viewGroups[1]);
+  pageActionMenu = await PinebuildTestUtils.openPageActionMenu(viewGroupEls[1]);
   Assert.equal(
     pageActionMenu.querySelector("#site-security-icon").className,
     "notSecure",

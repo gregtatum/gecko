@@ -40,11 +40,11 @@ async function openContextMenu(element) {
  */
 add_task(async function test_context_menu_close_group() {
   let [view1] = await PinebuildTestUtils.loadViews(["https://example.com/"]);
-  let [group] = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(group.viewGroup.length, 1);
-  Assert.equal(group.viewGroup.at(0), view1);
+  let [viewGroupEl] = await PinebuildTestUtils.getViewGroupEls();
+  Assert.equal(viewGroupEl.viewGroup.length, 1);
+  Assert.equal(viewGroupEl.viewGroup.at(0), view1);
 
-  let menu = await openContextMenu(group);
+  let menu = await openContextMenu(viewGroupEl);
   let closeGroupMenuItem = menu.querySelector(
     "#active-view-manager-context-menu-close-view-group"
   );
@@ -66,11 +66,11 @@ add_task(async function test_context_menu_close_group() {
     "https://example.com/browser/browser",
     "https://example.com/browser/browser/components",
   ]);
-  [group] = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(group.viewGroup.length, 3);
-  Assert.deepEqual([...group.viewGroup], [view2, view3, view4]);
+  [viewGroupEl] = await PinebuildTestUtils.getViewGroupEls();
+  Assert.equal(viewGroupEl.viewGroup.length, 3);
+  Assert.deepEqual([...viewGroupEl.viewGroup], [view2, view3, view4]);
 
-  menu = await openContextMenu(group);
+  menu = await openContextMenu(viewGroupEl);
   Assert.equal(
     document.l10n.getAttributes(closeGroupMenuItem).args.viewCount,
     3,
@@ -108,7 +108,7 @@ add_task(async function test_favicon_circle_context_menu_target() {
     "The second View should be staged."
   );
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroupElements.");
   Assert.ok(
     !viewGroupEls[0].active,

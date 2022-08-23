@@ -18,7 +18,7 @@ add_task(async function test_tablist_tab_roles() {
     "https://example.org/",
   ]);
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroupElements.");
 
   let river = document
@@ -61,7 +61,7 @@ add_task(async function test_viewgroupelement_aria_states() {
     "https://example.org/",
   ]);
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroupElements.");
   Assert.equal(viewGroupEls[0].viewGroup.length, 4);
   for (let view of [view1, view2, view3, view4]) {
@@ -152,7 +152,7 @@ add_task(async function test_pinned_viewgroupelement_aria_states() {
 
   Assert.equal(gStageManager.currentView, view2);
 
-  let viewGroupEls = await PinebuildTestUtils.getPinnedViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls();
   Assert.equal(
     viewGroupEls.length,
     2,

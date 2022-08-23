@@ -80,7 +80,7 @@ async function waitForViewIconURL(view, iconURL) {
  * @resolves undefined
  */
 async function assertAVMBusyState(view, isBusy) {
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 1, "Should only be 1 ViewGroup");
   Assert.equal(
     viewGroupEls[0].viewGroup.length,
@@ -109,7 +109,7 @@ async function assertAVMBusyState(view, isBusy) {
  * @resolves undefined
  */
 async function assertAVMIconURL(view, iconURL) {
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 1, "Should only be 1 ViewGroup");
   Assert.equal(
     viewGroupEls[0].viewGroup.length,

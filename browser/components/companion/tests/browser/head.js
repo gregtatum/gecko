@@ -1400,16 +1400,17 @@ var PinebuildTestUtils = {
   },
 
   /**
-   * Returns the ViewGroup DOM elements in the ActiveViewManager
+   * Returns the ViewGroupElement DOM elements in the ActiveViewManager
    * in a window. This does not include pinned ViewGroups.
    *
    * @param {Window?} win
-   *   The window to get the ViewGroups for. The current window is used by
-   *   default
+   *   The window to get the ViewGroupElements for. The current window is used
+   *   by default
    * @return {Promise}
-   * @resolves {ViewGroup[]} The ViewGroup DOM nodes for the current window.
+   * @resolves {ViewGroupElement[]} The ViewGroupElement DOM nodes for the
+   *   current window.
    */
-  async getViewGroups(win = window) {
+  async getViewGroupEls(win = window) {
     let river = win.document.querySelector("river-el");
     // Make sure LitElement has finished any in-flight DOM update jobs.
     await river.updateComplete;
@@ -1428,7 +1429,7 @@ var PinebuildTestUtils = {
    * @resolves {View} The active View.
    */
   async getActiveView(win = window) {
-    let viewGroups = await this.getViewGroups(win);
+    let viewGroups = await this.getViewGroupEls(win);
     let topGroup = viewGroups.at(-1);
     Assert.ok(topGroup, "Found a top-most ViewGroupElement.");
     Assert.ok(topGroup.lastView, "Top-most ViewGroupElement contains a View.");
@@ -1436,17 +1437,18 @@ var PinebuildTestUtils = {
   },
 
   /**
-   * Returns the pinned ViewGroups in the ActiveViewManager in a window.
-   * This also ensures that there's only 1 View per pinned ViewGroup.
+   * Returns the pinned ViewGroupElements in the ActiveViewManager in a
+   * window. This also ensures that there's only 1 View per pinned
+   * ViewGroupElement.
    *
    * @param {Window?} win
-   *   The window to get the ViewGroups for. The current window is used by
-   *   default
+   *   The window to get the ViewGroupElements for. The current window is used
+   *   by default
    * @return {Promise}
-   * @resolves {ViewGroup[]} The pinned ViewGroup DOM nodes for the current
-   *   window.
+   * @resolves {ViewGroupElement[]} The pinned ViewGroupElement DOM nodes for the
+   *   current window.
    */
-  async getPinnedViewGroups(win = window) {
+  async getPinnedViewGroupEls(win = window) {
     let pinnedViews = win.document.querySelector("pinned-views");
     // Make sure LitElement has finished any in-flight DOM update jobs.
     await pinnedViews.updateComplete;

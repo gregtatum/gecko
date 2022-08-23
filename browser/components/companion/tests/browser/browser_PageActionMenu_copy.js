@@ -9,9 +9,9 @@ const TEST_URL1 = "https://example.com/";
  */
 add_task(async function test_PageActionMenu_copy() {
   await PinebuildTestUtils.loadViews([TEST_URL1]);
-  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
-  Assert.equal(viewGroups.length, 1, "There should be one total ViewGroups");
-  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(window);
+  Assert.equal(viewGroupEls.length, 1, "There should be one total ViewGroups");
+  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroupEls[0]);
   let copyButton = pam.querySelector("#page-action-copy-url");
 
   let pamClosed = BrowserTestUtils.waitForEvent(pam, "popuphidden");

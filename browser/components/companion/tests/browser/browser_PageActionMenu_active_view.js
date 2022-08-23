@@ -23,15 +23,15 @@ add_task(async function test_PageActionMenu_active_view() {
     TEST_URL5,
   ]);
 
-  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(window);
 
-  Assert.equal(viewGroups.length, 2, "There should be two total ViewGroups");
+  Assert.equal(viewGroupEls.length, 2, "There should be two total ViewGroups");
   Assert.ok(
-    viewGroups[1].hasAttribute("top"),
+    viewGroupEls[1].hasAttribute("top"),
     "The second ViewGroup should be the Active ViewGroup"
   );
   Assert.deepEqual(
-    viewGroups[1].views,
+    viewGroupEls[1].viewGroup,
     [view4, view5],
     "View 4 and View 5should be in the Active ViewGroup"
   );
@@ -42,14 +42,14 @@ add_task(async function test_PageActionMenu_active_view() {
   // the one that is considered the "Active View". MR2-1040 will hopefully
   // clean this up.
   Assert.equal(
-    viewGroups[1].activeView,
+    viewGroupEls[1].activeView,
     view5,
     "The last View in the ViewGroup should be current."
   );
 
-  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroups[1]);
+  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroupEls[1]);
   Assert.deepEqual(
-    viewGroups[1].views,
+    viewGroupEls[1].viewGroup,
     [view4, view5],
     "The Active ViewGroup order does not change when opening the Page " +
       "Action Menu for the last View in the Active ViewGroup."
@@ -61,9 +61,9 @@ add_task(async function test_PageActionMenu_active_view() {
   // and make sure that opening its Page Action Menu doesn't cause
   // the order to change.
   await PinebuildTestUtils.setCurrentView(view4);
-  await PinebuildTestUtils.openPageActionMenu(viewGroups[1]);
+  await PinebuildTestUtils.openPageActionMenu(viewGroupEls[1]);
   Assert.deepEqual(
-    viewGroups[1].views,
+    viewGroupEls[1].viewGroup,
     [view4, view5],
     "The Active ViewGroup order does not change when opening the Page " +
       "Action Menu for the second-last View in the Active ViewGroup."
@@ -76,15 +76,15 @@ add_task(async function test_PageActionMenu_active_view() {
   await PinebuildTestUtils.closePageActionMenu(pam);
 
   Assert.deepEqual(
-    viewGroups[0].views,
+    viewGroupEls[0].viewGroup,
     [view1, view2, view3],
     "The non-Active ViewGroup has the right order."
   );
 
   await PinebuildTestUtils.setCurrentView(view1);
-  await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);
+  await PinebuildTestUtils.openPageActionMenu(viewGroupEls[0]);
   Assert.deepEqual(
-    viewGroups[0].views,
+    viewGroupEls[0].viewGroup,
     [view1, view2, view3],
     "The non-Active ViewGroup order does not change when opening the Page " +
       "Action Menu for the second-last View in the Active ViewGroup."

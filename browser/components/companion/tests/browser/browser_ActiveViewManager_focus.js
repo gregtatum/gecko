@@ -13,7 +13,7 @@ add_task(async function test_ViewGroupElement_reorder_focus() {
     "https://example.org/",
   ]);
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroupElements.");
   Assert.equal(viewGroupEls[0].viewGroup.lastView, view1);
   Assert.equal(viewGroupEls[1].viewGroup.lastView, view2);
@@ -32,7 +32,7 @@ add_task(async function test_ViewGroupElement_reorder_focus() {
   gStageManager.activateCurrentView();
   await viewMoved;
 
-  viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(
     viewGroupEls.length,
     2,
@@ -68,7 +68,7 @@ add_task(async function test_ViewGroupElement_maintain_focus() {
 
   let [view1, view2] = gStageManager.views;
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroupElements.");
   Assert.equal(viewGroupEls[0].viewGroup.lastView, view1);
   Assert.equal(viewGroupEls[1].viewGroup.lastView, view2);

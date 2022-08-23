@@ -20,7 +20,7 @@ add_task(async function test_failed_http_downgrade() {
 
   await PinebuildTestUtils.loadViews(["https://example.org/"]);
   await BrowserTestUtils.openNewForegroundTab(gBrowser, SECURE_PAGE);
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroup elements");
   Assert.ok(viewGroupEls[1].active, "The second ViewGroup should be active.");
 
@@ -39,7 +39,7 @@ add_task(async function test_failed_http_downgrade() {
     "HTTP downgrade should have failed."
   );
 
-  viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(
     viewGroupEls.length,
     2,
@@ -80,7 +80,7 @@ add_task(async function test_speculative_internalview() {
   await BrowserTestUtils.waitForEvent(gStageManager, "ViewAdded");
   Assert.ok(!hangFinished, "Hang should still be underway.");
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(
     viewGroupEls.length,
     1,

@@ -75,9 +75,9 @@ add_task(async function test_pinned_views_dragging_state() {
   let river = document.querySelector("river-el");
   let pinnedViews = document.querySelector("pinned-views");
 
-  let viewGroups = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
-  let viewGroup = viewGroups[0];
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  Assert.equal(viewGroupEls.length, 1, "There should be 1 ViewGroup.");
+  let viewGroupEl = viewGroupEls[0];
 
   let avm = document.querySelector("active-view-manager");
   const VIEWGROUP_DROP_TYPE = avm.constructor.VIEWGROUP_DROP_TYPE;
@@ -93,11 +93,11 @@ add_task(async function test_pinned_views_dragging_state() {
   );
 
   try {
-    let icon = viewGroup.shadowRoot.querySelector(".view-icon");
+    let icon = viewGroupEl.shadowRoot.querySelector(".view-icon");
     let [, dataTransfer] = EventUtils.synthesizeDragOver(
       icon,
       river,
-      [[{ type: VIEWGROUP_DROP_TYPE, data: viewGroup }]],
+      [[{ type: VIEWGROUP_DROP_TYPE, data: viewGroupEl }]],
       null,
       window,
       window,
@@ -107,7 +107,7 @@ add_task(async function test_pinned_views_dragging_state() {
 
     EventUtils.sendDragEvent(
       { type: "dragend", dataTransfer, _domDispatchOnly: true },
-      viewGroup
+      viewGroupEl
     );
 
     Assert.ok(!pinnedViews.dragging, "Pinned Views exited the dragging state.");
@@ -136,8 +136,8 @@ add_task(async function test_drag_and_drop_pin_unpin() {
   let river = document.querySelector("river-el");
   let pinnedViews = document.querySelector("pinned-views");
 
-  let viewGroups = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(viewGroups.length, 2, "There should be 2 ViewGroups.");
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroups.");
 
   let dropTarget = pinnedViews.shadowRoot.querySelector("#pinned-views");
 
@@ -151,46 +151,46 @@ add_task(async function test_drag_and_drop_pin_unpin() {
 
   // Drag the active ViewGroup, which should pin the last View (view5)
   // since that's what's current.
-  await simulateViewGroupDragAndEnd(viewGroups[1], dropTarget);
+  await simulateViewGroupDragAndEnd(viewGroupEls[1], dropTarget);
 
   Assert.ok(view5.pinned, "view5 is pinned.");
 
   // Refresh our collection of unpinned Views now that we've changed
   // things, and drag one of the first non-Active Views over. This should
   // pin the last View in that ViewGroup, which is view3.
-  viewGroups = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(viewGroups.length, 2, "There should still be 2 ViewGroups.");
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  Assert.equal(viewGroupEls.length, 2, "There should still be 2 ViewGroups.");
   Assert.ok(!view3.pinned, "view3 is not pinned.");
   Assert.equal(
-    viewGroups[0].lastView,
+    viewGroupEls[0].lastView,
     view3,
     "view3 should be the last view in the first ViewGroup"
   );
-  Assert.equal(viewGroups[0].lastView.url.spec, TEST_URL3);
+  Assert.equal(viewGroupEls[0].lastView.url.spec, TEST_URL3);
 
-  await simulateViewGroupDragAndEnd(viewGroups[0], dropTarget);
+  await simulateViewGroupDragAndEnd(viewGroupEls[0], dropTarget);
   // Refresh our collection of unpinned and pinned Views now that we've
   // changed things again
-  viewGroups = await PinebuildTestUtils.getViewGroups();
-  let pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  let pinnedViewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls();
 
   Assert.ok(view3.pinned, "view3 is pinned.");
   // Since we dropped View 3 onto the pinned Views dropTarget, that
   // should have put it at the front of the pinned Views list.
   Assert.equal(
-    pinnedViewGroups.length,
+    pinnedViewGroupEls.length,
     2,
     "There should be 2 pinned ViewGroups."
   );
 
   Assert.equal(
     view3,
-    pinnedViewGroups[0].lastView,
+    pinnedViewGroupEls[0].lastView,
     "view3 should be the first pinned View."
   );
   Assert.equal(
     view5,
-    pinnedViewGroups[1].lastView,
+    pinnedViewGroupEls[1].lastView,
     "view5 should be the second pinned View."
   );
 
@@ -198,24 +198,24 @@ add_task(async function test_drag_and_drop_pin_unpin() {
   // which contains view5. This should put view4 _after_ view5 in the
   // pinned View list, and also reduce the number of ViewGroups in the River
   // to 1.
-  Assert.equal(viewGroups.length, 2, "There should still be 2 ViewGroups.");
+  Assert.equal(viewGroupEls.length, 2, "There should still be 2 ViewGroups.");
   Assert.ok(!view4.pinned, "View 4 is not pinned.");
 
-  await simulateViewGroupDragAndEnd(viewGroups[1], pinnedViewGroups[1]);
+  await simulateViewGroupDragAndEnd(viewGroupEls[1], pinnedViewGroupEls[1]);
   Assert.ok(view4.pinned, "view4 is pinned.");
 
   // Refresh our collection of unpinned and pinned Views now that we've
   // changed things again
-  viewGroups = await PinebuildTestUtils.getViewGroups();
-  pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  pinnedViewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls();
 
   Assert.equal(
-    viewGroups.length,
+    viewGroupEls.length,
     1,
     "There should only be 1 River ViewGroup now."
   );
   Assert.equal(
-    pinnedViewGroups.length,
+    pinnedViewGroupEls.length,
     3,
     "There should only be 3 pinned ViewGroups now."
   );
@@ -226,95 +226,95 @@ add_task(async function test_drag_and_drop_pin_unpin() {
 
   // We have to wait for the River to regroup before we can trust
   // the ViewGroup count.
-  await simulateViewGroupDragAndEnd(pinnedViewGroups[0], river);
+  await simulateViewGroupDragAndEnd(pinnedViewGroupEls[0], river);
 
-  viewGroups = await PinebuildTestUtils.getViewGroups();
-  pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  pinnedViewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls();
   Assert.ok(!view3.pinned, "view3 is no longer pinned.");
 
   // Since view3 is same-domain as view1 and view2, it should have joined
   // the same ViewGroup, so there should only be 1 ViewGroup in the River.
   Assert.equal(
-    viewGroups.length,
+    viewGroupEls.length,
     1,
     "There should only be 1 ViewGroup in the River."
   );
   Assert.equal(
-    viewGroups[0].lastView,
+    viewGroupEls[0].lastView,
     view3,
     "view3 should be the active View"
   );
 
   Assert.equal(
-    pinnedViewGroups.length,
+    pinnedViewGroupEls.length,
     2,
     "There should only be 2 pinned ViewGroups now."
   );
   Assert.equal(
     view5,
-    pinnedViewGroups[0].lastView,
+    pinnedViewGroupEls[0].lastView,
     "view5 should be the first pinned View."
   );
   Assert.equal(
     view4,
-    pinnedViewGroups[1].lastView,
+    pinnedViewGroupEls[1].lastView,
     "view4 should be the second pinned View."
   );
 
   // Let's drag view4 back to the River now.
   await PinebuildTestUtils.setCurrentView(view4);
-  await simulateViewGroupDragAndEnd(pinnedViewGroups[1], river);
+  await simulateViewGroupDragAndEnd(pinnedViewGroupEls[1], river);
 
-  viewGroups = await PinebuildTestUtils.getViewGroups();
-  pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  pinnedViewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls();
   Assert.ok(!view4.pinned, "view4 is no longer pinned.");
 
   // view4 is not same-origin as the other Views in the River, so
   // it'll get put into its own ViewGroup, meaning there should be
   // 2 ViewGroups in the River now.
   Assert.equal(
-    viewGroups.length,
+    viewGroupEls.length,
     2,
     "There should be 2 ViewGroups in the River."
   );
-  Assert.equal(viewGroups[1].viewGroup.length, 1);
+  Assert.equal(viewGroupEls[1].viewGroup.length, 1);
   Assert.equal(
-    viewGroups[1].activeView,
+    viewGroupEls[1].activeView,
     view4,
     "view4 should be the Active View."
   );
 
   Assert.equal(
-    pinnedViewGroups.length,
+    pinnedViewGroupEls.length,
     1,
     "There should only be 1 pinned ViewGroup now."
   );
 
   // Finally, let's drag view5 back to the River.
   await PinebuildTestUtils.setCurrentView(view5);
-  await simulateViewGroupDragAndEnd(pinnedViewGroups[0], river);
+  await simulateViewGroupDragAndEnd(pinnedViewGroupEls[0], river);
 
-  viewGroups = await PinebuildTestUtils.getViewGroups();
-  pinnedViewGroups = await PinebuildTestUtils.getPinnedViewGroups();
+  viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  pinnedViewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls();
   Assert.ok(!view5.pinned, "view5 is no longer pinned.");
 
   // view5 is same origin as view4, so it should have been grouped
   // together with it, and there should still be only 2 ViewGroups
   // in the River.
   Assert.equal(
-    viewGroups.length,
+    viewGroupEls.length,
     2,
     "There should be 2 ViewGroups in the River."
   );
-  Assert.equal(viewGroups[1].viewGroup.length, 2);
+  Assert.equal(viewGroupEls[1].viewGroup.length, 2);
   Assert.equal(
-    viewGroups[1].activeView,
+    viewGroupEls[1].activeView,
     view5,
     "view5 should be the Active View."
   );
 
   Assert.equal(
-    pinnedViewGroups.length,
+    pinnedViewGroupEls.length,
     0,
     "There should be no pinned ViewGroups now."
   );

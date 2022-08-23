@@ -28,10 +28,10 @@ add_task(async function test_no_top_view() {
 
   // Despite there being two items still in the River, there
   // should be no "top" ViewGroup.
-  let viewGroups = await PinebuildTestUtils.getViewGroups();
-  Assert.equal(viewGroups.length, 1, "There should be 1 ViewGroup.");
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
+  Assert.equal(viewGroupEls.length, 1, "There should be 1 ViewGroup.");
   Assert.ok(
-    !viewGroups[0].hasAttribute("top"),
+    !viewGroupEls[0].hasAttribute("top"),
     "Should not have the 'top' attribute."
   );
   await gStageManager.reset();
@@ -55,7 +55,7 @@ add_task(async function test_never_group_pinned_views() {
   Assert.ok(view1.pinned, "View 1 should now be pinned.");
   Assert.ok(view2.pinned, "View 2 should now be pinned.");
 
-  let viewGroupsEls = await PinebuildTestUtils.getPinnedViewGroups();
+  let viewGroupsEls = await PinebuildTestUtils.getPinnedViewGroupEls();
   Assert.equal(viewGroupsEls.length, 2, "There should be 2 ViewGroups");
   Assert.equal(
     viewGroupsEls[0].viewGroup.length,

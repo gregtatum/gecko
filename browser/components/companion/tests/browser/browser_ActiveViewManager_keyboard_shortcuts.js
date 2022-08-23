@@ -148,7 +148,7 @@ add_task(async function test_view_history_keyboard_navigation() {
     let [view1, view2, view3, view4] = views;
     // Focus the active view group for easier task setup
 
-    let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+    let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
     Assert.equal(viewGroupEls.length, 1, "Should only be a single ViewGroup");
 
     let viewGroupEl = viewGroupEls[0];

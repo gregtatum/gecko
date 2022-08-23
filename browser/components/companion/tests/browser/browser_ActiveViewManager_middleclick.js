@@ -42,15 +42,15 @@ add_task(async function test_middleclick() {
     "https://example.org/browser",
     "https://example.org/browser/browser/components",
   ]);
-  let [, viewGroup2] = await PinebuildTestUtils.getViewGroups(window);
-  Assert.ok(viewGroup2, "Found the example.org ViewGroup");
+  let [, viewGroupEl2] = await PinebuildTestUtils.getViewGroupEls(window);
+  Assert.ok(viewGroupEl2, "Found the example.org ViewGroup");
 
   // Let's make sure that a right mousebutton auxclick doesn't cause the
   // ViewGroup to close.
   let sawViewClosedEvent = false;
   let controller = new AbortController();
   BrowserTestUtils.waitForEvent(
-    viewGroup2,
+    viewGroupEl2,
     "UserAction:ViewClosed",
     false,
     () => {
@@ -59,7 +59,7 @@ add_task(async function test_middleclick() {
     false,
     controller.signal
   );
-  EventUtils.synthesizeMouseAtCenter(viewGroup2, { button: 2 }, window);
+  EventUtils.synthesizeMouseAtCenter(viewGroupEl2, { button: 2 }, window);
   Assert.ok(
     !sawViewClosedEvent,
     "Should not have seen UserAction:ViewClosed event"
@@ -67,10 +67,10 @@ add_task(async function test_middleclick() {
   // Now tear down our event listener.
   controller.abort();
 
-  await assertMiddleClickClosesAndSwitchesTo(viewGroup2, view3);
-  await assertMiddleClickClosesAndSwitchesTo(viewGroup2, view2);
+  await assertMiddleClickClosesAndSwitchesTo(viewGroupEl2, view3);
+  await assertMiddleClickClosesAndSwitchesTo(viewGroupEl2, view2);
 
-  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
-  Assert.equal(viewGroups.length, 1, "Only 1 ViewGroup left");
-  await assertMiddleClickClosesAndSwitchesTo(viewGroups[0], view1);
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(window);
+  Assert.equal(viewGroupEls.length, 1, "Only 1 ViewGroup left");
+  await assertMiddleClickClosesAndSwitchesTo(viewGroupEls[0], view1);
 });

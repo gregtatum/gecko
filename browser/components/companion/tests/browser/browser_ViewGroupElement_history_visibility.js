@@ -14,7 +14,7 @@ add_task(async function test_ViewGroupElement_visibility() {
     "https://example.com/browser/components",
   ]);
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(viewGroupEls.length, 1, "Expected a single ViewGroupElement.");
   let viewGroupEl = viewGroupEls[0];
 

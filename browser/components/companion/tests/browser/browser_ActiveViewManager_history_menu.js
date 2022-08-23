@@ -16,7 +16,7 @@ add_task(async function test_history_menu() {
     "https://example.com/browser/browser/components",
   ]);
 
-  let viewGroupEls = await PinebuildTestUtils.getViewGroups();
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls();
   Assert.equal(
     viewGroupEls.length,
     1,

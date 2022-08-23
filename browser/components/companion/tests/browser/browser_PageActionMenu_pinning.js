@@ -11,10 +11,10 @@ const TEST_URL1 = "https://example.com/";
 
 add_task(async function test_PageActionMenu_active_view() {
   let [view1] = await PinebuildTestUtils.loadViews([TEST_URL1]);
-  let viewGroups = await PinebuildTestUtils.getViewGroups(window);
-  Assert.equal(viewGroups.length, 1, "There should be only 1 ViewGroup.");
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(window);
+  Assert.equal(viewGroupEls.length, 1, "There should be only 1 ViewGroup.");
   Assert.ok(
-    viewGroups[0].hasAttribute("top"),
+    viewGroupEls[0].hasAttribute("top"),
     "The ViewGroup should be the Active ViewGroup"
   );
 
@@ -24,13 +24,13 @@ add_task(async function test_PageActionMenu_active_view() {
   // the one that is considered the "Active View". MR2-1040 will hopefully
   // clean this up.
   Assert.equal(
-    viewGroups[0].activeView,
+    viewGroupEls[0].activeView,
     view1,
     "The last View in the ViewGroup should be current."
   );
   Assert.ok(!view1.pinned, "View should not started pinned.");
 
-  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);
+  let pam = await PinebuildTestUtils.openPageActionMenu(viewGroupEls[0]);
   let pinningToggle = pam.querySelector("#page-action-pin-view");
 
   Assert.equal(
@@ -45,10 +45,10 @@ add_task(async function test_PageActionMenu_active_view() {
 
   Assert.ok(view1.pinned, "View should now be pinned.");
 
-  viewGroups = await PinebuildTestUtils.getPinnedViewGroups(window);
-  Assert.equal(viewGroups.length, 1, "Should be 1 pinned ViewGroup.");
+  viewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls(window);
+  Assert.equal(viewGroupEls.length, 1, "Should be 1 pinned ViewGroup.");
 
-  pam = await PinebuildTestUtils.openPageActionMenu(viewGroups[0]);
+  pam = await PinebuildTestUtils.openPageActionMenu(viewGroupEls[0]);
 
   Assert.equal(
     pinningToggle.dataset.l10nId,

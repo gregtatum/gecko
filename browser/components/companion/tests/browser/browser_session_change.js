@@ -43,10 +43,10 @@ add_task(async function test_session_change() {
 
     // This should result in 2 ViewGroups being created - 1 for the
     // example.com Views, and 1 for example.org Views.
-    let groups = await PinebuildTestUtils.getViewGroups(win);
-    Assert.equal(groups.length, 2, "There should be 2 ViewGroups.");
-    Assert.deepEqual([...groups[0].viewGroup], [view1, view2]);
-    Assert.deepEqual([...groups[1].viewGroup], [view3, view4]);
+    let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(win);
+    Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroups.");
+    Assert.deepEqual([...viewGroupEls[0].viewGroup], [view1, view2]);
+    Assert.deepEqual([...viewGroupEls[1].viewGroup], [view3, view4]);
 
     let sessionReplaced = SessionManager.once("session-replaced");
     let sessionSetAside = SessionManager.once("session-set-aside");
@@ -119,10 +119,10 @@ add_task(async function test_session_change() {
     [view1, view2, view3, view4] = views;
 
     // We should get back the same number of ViewGroups as before.
-    groups = await PinebuildTestUtils.getViewGroups(win);
-    Assert.equal(groups.length, 2, "There should be 2 ViewGroups.");
-    Assert.deepEqual([...groups[0].viewGroup], [view1, view2]);
-    Assert.deepEqual([...groups[1].viewGroup], [view3, view4]);
+    viewGroupEls = await PinebuildTestUtils.getViewGroupEls(win);
+    Assert.equal(viewGroupEls.length, 2, "There should be 2 ViewGroups.");
+    Assert.deepEqual([...viewGroupEls[0].viewGroup], [view1, view2]);
+    Assert.deepEqual([...viewGroupEls[1].viewGroup], [view3, view4]);
 
     // setTimeout is to allow the failing condition to complete, it
     // will not cause intermittent failures.

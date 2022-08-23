@@ -300,15 +300,15 @@ add_task(async function testSessionSetAsideNoFlowReset() {
   console.log(gStageManager.views);
   Assert.equal(gStageManager.currentView, view2, "Should be looking at View 2");
 
-  let viewGroups = await PinebuildTestUtils.getViewGroups(win);
-  Assert.equal(viewGroups.length, 1, "Should only be 1 ViewGroup");
+  let viewGroupEls = await PinebuildTestUtils.getViewGroupEls(win);
+  Assert.equal(viewGroupEls.length, 1, "Should only be 1 ViewGroup");
   Assert.equal(
-    viewGroups[0].viewGroup.length,
+    viewGroupEls[0].viewGroup.length,
     1,
     "Should only be 1 View in the ViewGroup"
   );
   Assert.equal(
-    viewGroups[0].lastView,
+    viewGroupEls[0].lastView,
     view2,
     "The view in the ViewGroup should be view2"
   );
@@ -402,7 +402,7 @@ add_task(async function testSessionRestorePinnedViewsAndApps() {
   gStageManager.setViewPinnedState(view1, true, true /* appMode */);
   gStageManager.setViewPinnedState(view3, true, false /* appMode */);
 
-  let viewGroupEls = await PinebuildTestUtils.getPinnedViewGroups(win);
+  let viewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls(win);
   Assert.equal(viewGroupEls.length, 2, "There should be two pinned ViewGroups");
   Assert.ok(!viewGroupEls[0].viewGroup.isApp, "Pinned View should be first.");
   Assert.equal(
@@ -427,7 +427,7 @@ add_task(async function testSessionRestorePinnedViewsAndApps() {
   // Setting aside and restoring the views has made our original view
   // variables obsolete, so we get at the restored Views now.
   let views = gStageManager.views;
-  viewGroupEls = await PinebuildTestUtils.getPinnedViewGroups(win);
+  viewGroupEls = await PinebuildTestUtils.getPinnedViewGroupEls(win);
   Assert.equal(
     viewGroupEls.length,
     2,
