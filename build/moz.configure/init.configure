@@ -958,6 +958,24 @@ set_define("MOZILLA_OFFICIAL", mozilla_official)
 add_old_configure_assignment("MOZILLA_OFFICIAL", mozilla_official)
 
 
+# Pinebuild
+# ==============================================================================
+option("--enable-pinebuild", help="Enable pinebuild customizations")
+
+
+@depends(build_project, when="--enable-pinebuild")
+def pinebuild(build_project):
+    return build_project == "browser"
+
+
+set_config("PINEBUILD", pinebuild)
+set_define("PINEBUILD", pinebuild)
+add_old_configure_assignment("PINEBUILD", pinebuild)
+
+
+imply_option("--enable-pinebuild", True)
+
+
 # Allow specifying custom paths to the version files used by the milestone() function below.
 option(
     "--with-version-file-path",
