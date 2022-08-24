@@ -201,11 +201,21 @@ function clearEventNotification({ eventId, serviceType } = {}) {
 let observer = {
   observe(subject, topic, data) {
     switch (topic) {
-      case "companion-services-refresh":
+      case "companion-services-refresh": {
         let events = subject.wrappedJSObject;
         logConsole.debug("processing events via observer:", events.length);
         processEvents(events, Date.now());
         break;
+      }
+      case "companion-dismiss-event": {
+        let event = subject.wrappedJSObject;
+        clearEventNotification(event);
+        break;
+      }
+      case "companion-signout": {
+        dismissedEventStore.clearService(data);
+        break;
+      }
     }
   },
   QueryInterface: ChromeUtils.generateQI([
@@ -351,5 +361,7 @@ export function initNotifications(wAPI) {
     }
   } else {
     Services.obs.addObserver(observer, "companion-services-refresh", true);
+    Services.obs.addObserver(observer, "companion-dismiss-event", true);
+    Services.obs.addObserver(observer, "companion-signout", true);
   }
 }
