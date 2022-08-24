@@ -189,8 +189,7 @@ module.exports = {
         // These are more complicated bugs which may require some in-depth
         // investigation or different solutions. They are also likely to be
         // a reasonable size.
-        "dom/**",
-        "netwerk/**",
+        "dom/indexedDB/**",
       ],
       rules: {
         // No declaring variables that are never used
