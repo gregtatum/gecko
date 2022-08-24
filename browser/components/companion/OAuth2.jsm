@@ -68,6 +68,12 @@ const OAuthConnect = {
         throw new Error("No current browser window");
       }
 
+      Services.obs.notifyObservers(
+        null,
+        "oauth-connect-started",
+        oauth.serviceType
+      );
+
       // This will be passed in the state parameter to identify this request
       // when the user returns from the OAuth flow.
       let id = Services.uuid.generateUUID().toString();

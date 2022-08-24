@@ -5,31 +5,43 @@
 import "companion/widgets/connect-service.js";
 import { html } from "lit";
 
-export default {
-  title: "Specifics/Companion/Connect Service",
+const STATUS_TYPES = {
+  disconnected: "disconnected",
+  connected: "connected",
+  error: "error",
+  authenticating: "authenticating",
 };
 
-const Template = ({ authenticating, connected, icon, name, services }) =>
+export default {
+  title: "Specifics/Companion/Connect Service",
+  argTypes: {
+    status: {
+      options: Object.keys(STATUS_TYPES),
+      mapping: STATUS_TYPES,
+      control: { type: "select" },
+    },
+  },
+};
+
+const Template = ({ icon, name, description, status }) =>
   html`
     <link
       rel="stylesheet"
       href="chrome://browser/content/companion/fonts.css"
     />
     <connect-service-notification
-      .authenticating=${authenticating}
-      .connected=${connected}
+      .status=${status}
       .icon=${icon}
       .name=${name}
-      .services=${services}
+      .description=${description}
       .connectServiceCallback=${() => alert("Open connect page")}
     ></connect-service-notification>
   `;
 
 export const Default = Template.bind({});
 Default.args = {
-  authenticating: false,
-  connected: false,
+  status: "disconnected",
   icon: "chrome://browser/content/companion/googleAccount.png",
   name: "Google Services",
-  services: "Gmail, Calendar, Meet",
+  description: "Gmail, Calendar, Meet",
 };

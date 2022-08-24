@@ -15,6 +15,7 @@ export class ServicesOnboarding extends MozLitElement {
       currentlyAuthenticatingTabService: { type: String },
       currentlyAuthorizingServices: { type: Set },
       recentlyAuthedServices: { type: Set },
+      accountProblems: { type: Map },
     };
   }
 
@@ -30,6 +31,7 @@ export class ServicesOnboarding extends MozLitElement {
     this.currentlyAuthorizingServices = new Set();
     this.hideTimeouts = new Map();
     this.connectedServices = new Set();
+    this.accountProblems = new Map();
     this.showConnectedMs = 10 * 1000;
   }
 
@@ -38,8 +40,10 @@ export class ServicesOnboarding extends MozLitElement {
     window.addEventListener("Companion:ViewLocation", this);
     window.addEventListener("Companion:SignIn", this);
     window.addEventListener("Companion:SignOut", this);
+    window.addEventListener("Companion:OAuthConnectStarted", this);
     window.addEventListener("Companion:OAuthRefreshTokenReceived", this);
     window.addEventListener("Companion:OAuthAccessTokenError", this);
+    window.addEventListener("Companion:OAuthAccessGrantError", this);
     if (workshopEnabled) {
       Workshop.getConnectedAccounts().then(accounts =>
         this.setConnectedServices(accounts)
@@ -62,8 +66,10 @@ export class ServicesOnboarding extends MozLitElement {
     window.removeEventListener("Companion:ViewLocation", this);
     window.removeEventListener("Companion:SignIn", this);
     window.removeEventListener("Companion:SignOut", this);
+    window.removeEventListener("Companion:OAuthConnectStarted", this);
     window.removeEventListener("Companion:OAuthRefreshTokenReceived", this);
     window.removeEventListener("Companion:OAuthAccessTokenError", this);
+    window.removeEventListener("Companion:OAuthAccessGrantError", this);
     this.setConnectedServices([]);
   }
 
@@ -74,6 +80,9 @@ export class ServicesOnboarding extends MozLitElement {
       this.onSignIn(e);
     } else if (e.type == "Companion:SignOut") {
       this.onSignOut(e);
+    } else if (e.type == "Companion:OAuthConnectStarted") {
+      this.accountProblems.delete(e.detail.service);
+      this.requestUpdate();
     } else if (e.type == "Companion:OAuthRefreshTokenReceived") {
       // This service is waiting to get its access token, keep it in the
       // "connecting" state for now.
@@ -82,6 +91,8 @@ export class ServicesOnboarding extends MozLitElement {
     } else if (e.type == "Companion:OAuthAccessTokenError") {
       this.currentlyAuthorizingServices.delete(e.detail.service);
       this.requestUpdate();
+    } else if (e.type == "Companion:OAuthAccessGrantError") {
+      this.accountProblem(e.detail.service);
     }
   }
 
@@ -129,6 +140,12 @@ export class ServicesOnboarding extends MozLitElement {
       this.setConnectedServices(connectedServices);
     }
     this.hideService(service);
+  }
+
+  accountProblem(service, account) {
+    let serviceType = this.normalizeServiceType(service);
+    this.accountProblems.set(serviceType, {});
+    this.requestUpdate();
   }
 
   showService(serviceType) {
@@ -181,7 +198,7 @@ export class ServicesOnboarding extends MozLitElement {
     }
   }
 
-  connectTemplate(serviceType) {
+  connectTemplate(serviceType, error) {
     serviceType = this.normalizeServiceType(serviceType);
     let service = ServiceUtils.getServiceByType(serviceType);
     if (!service) {
@@ -189,17 +206,34 @@ export class ServicesOnboarding extends MozLitElement {
       return "";
     }
     let { icon, name, services, type } = service;
-    let connected =
-      this.connectedServices.has(type) || this.recentlyAuthedServices.has(type);
+    let description = services;
+    let status;
+    if (
+      this.connectedServices.has(type) ||
+      this.recentlyAuthedServices.has(type)
+    ) {
+      status = "connected";
+    } else if (
+      serviceType == this.currentlyAuthenticatingTabService ||
+      this.currentlyAuthorizingServices.has(serviceType)
+    ) {
+      status = "authenticating";
+    } else if (error) {
+      status = "error";
+      let l10n = new Localization(["browser/companion.ftl"]);
+      description = l10n.formatValue(
+        "companion-onboarding-service-reconnect-description"
+      );
+    } else {
+      status = "disconnected";
+    }
+
     return html`
       <connect-service-notification
-        .authenticating=${serviceType ==
-          this.currentlyAuthenticatingTabService ||
-          this.currentlyAuthorizingServices.has(serviceType)}
-        .connected=${connected}
+        .status=${status}
         .icon=${icon}
         .name=${name}
-        .services=${services}
+        .description=${description}
         .type=${type}
         .connectServiceCallback=${() => this.connectService(service)}
       ></connect-service-notification>
@@ -214,10 +248,13 @@ export class ServicesOnboarding extends MozLitElement {
     ) {
       showServices.add(this.currentService);
     }
-    let content = [...showServices].map(s => this.connectTemplate(s));
+    let errorServices = [...this.accountProblems.keys()].map(s =>
+      this.connectTemplate(s, true)
+    );
+    let connectServices = [...showServices].map(s => this.connectTemplate(s));
     return html`
       <div class="services-onboarding">
-        ${content}
+        ${errorServices} ${connectServices}
       </div>
     `;
   }

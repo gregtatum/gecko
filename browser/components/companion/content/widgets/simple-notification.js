@@ -3,9 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { MozLitElement } from "../widget-utils.js";
-import { css, html } from "../lit.all.js";
+import { css, html, until } from "../lit.all.js";
 
 class SimpleNotification extends MozLitElement {
+  static get properties() {
+    return {
+      icon: { type: String },
+      name: { type: String },
+      description: { type: String },
+    };
+  }
+
   static get styles() {
     return css`
       .card {
@@ -78,7 +86,7 @@ class SimpleNotification extends MozLitElement {
         <div class="notification-content">
           <h2 class="notification-heading text-body-l-med">${this.heading}</h2>
           <p class="notification-description text-body-s">
-            ${this.description}
+            ${until(this.description)}
           </p>
         </div>
         <slot name="primary-action"></slot>

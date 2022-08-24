@@ -339,8 +339,13 @@ function oauthObserver(subject, topic, data) {
   }
   if (topic == "oauth-refresh-token-received") {
     serviceRow.setAttribute("status", "connecting");
-  } else if (topic == "oauth-access-token-error") {
+  } else if (
+    topic == "oauth-access-token-error" ||
+    topic == "oauth-access-grant-error"
+  ) {
     serviceRow.setAttribute("status", "disconnected");
+  } else if (topic == "companion-signin") {
+    serviceRow.setAttribute("status", "connected");
   }
 }
 
@@ -378,11 +383,15 @@ function buildExtraServiceRows() {
 
   Services.obs.addObserver(oauthObserver, "oauth-refresh-token-received");
   Services.obs.addObserver(oauthObserver, "oauth-access-token-error");
+  Services.obs.addObserver(oauthObserver, "oauth-access-grant-error");
+  Services.obs.addObserver(oauthObserver, "companion-signin");
   Services.obs.addObserver(fxaStatusObserver, TOPIC_SYNC_STATE_CHANGED);
 
   window.addEventListener("unload", () => {
     Services.obs.removeObserver(oauthObserver, "oauth-refresh-token-received");
     Services.obs.removeObserver(oauthObserver, "oauth-access-token-error");
+    Services.obs.removeObserver(oauthObserver, "oauth-access-grant-error");
+    Services.obs.removeObserver(oauthObserver, "companion-signin");
     Services.obs.removeObserver(fxaStatusObserver, TOPIC_SYNC_STATE_CHANGED);
   });
 }

@@ -127,6 +127,12 @@ companion-onboarding-service-connected = Connected
 # Shown on the companion onboarding card when a user has started to connect to a
 # service and they are currently logging in.
 companion-onboarding-service-connecting = Connecting…
+# Shown on the companion onboarding card button when we've encountered an error
+# with a service and the user needs to reconnect.
+companion-onboarding-service-reconnect = Reconnect
+# Shown on the companion onboarding card description when we've encountered
+# an error with a service and the user needs to reconnect.
+companion-onboarding-service-reconnect-description = This account encountered an error. Please reauthenticate.
 
 # This string is used in the page action menu to indicate the
 # security status of a view.

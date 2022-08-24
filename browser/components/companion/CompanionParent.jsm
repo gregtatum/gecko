@@ -122,9 +122,11 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.addObserver(this._observer, "companion-signout");
     Services.obs.addObserver(this._observer, "companion-services-refresh");
     Services.obs.addObserver(this._observer, "companion-submenu-change");
+    Services.obs.addObserver(this._observer, "oauth-connect-started");
     Services.obs.addObserver(this._observer, "oauth-refresh-token-received");
     Services.obs.addObserver(this._observer, "oauth-access-token-received");
     Services.obs.addObserver(this._observer, "oauth-access-token-error");
+    Services.obs.addObserver(this._observer, "oauth-access-grant-error");
     Services.obs.addObserver(this._observer, "places-snapshot-group-added");
     Services.obs.addObserver(this._observer, "places-snapshot-group-updated");
     Services.obs.addObserver(this._observer, "places-snapshot-group-deleted");
@@ -219,9 +221,11 @@ class CompanionParent extends JSWindowActorParent {
     Services.obs.removeObserver(this._observer, "companion-signout");
     Services.obs.removeObserver(this._observer, "companion-services-refresh");
     Services.obs.removeObserver(this._observer, "companion-submenu-change");
+    Services.obs.removeObserver(this._observer, "oauth-connect-started");
     Services.obs.removeObserver(this._observer, "oauth-refresh-token-received");
     Services.obs.removeObserver(this._observer, "oauth-access-token-received");
     Services.obs.removeObserver(this._observer, "oauth-access-token-error");
+    Services.obs.removeObserver(this._observer, "oauth-access-grant-error");
     Services.obs.removeObserver(this._observer, "places-snapshot-group-added");
     Services.obs.removeObserver(
       this._observer,
@@ -642,6 +646,11 @@ class CompanionParent extends JSWindowActorParent {
         this.sendAsyncMessage("Companion:BrowsePanel");
         break;
       }
+      case "oauth-connect-started":
+        this.sendAsyncMessage("Companion:OAuthConnectStarted", {
+          service: data,
+        });
+        break;
       case "oauth-refresh-token-received":
         this.sendAsyncMessage("Companion:OAuthRefreshTokenReceived", {
           service: data,
@@ -649,6 +658,11 @@ class CompanionParent extends JSWindowActorParent {
         break;
       case "oauth-access-token-error":
         this.sendAsyncMessage("Companion:OAuthAccessTokenError", {
+          service: data,
+        });
+        break;
+      case "oauth-access-grant-error":
+        this.sendAsyncMessage("Companion:OAuthAccessGrantError", {
           service: data,
         });
         break;

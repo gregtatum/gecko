@@ -9,11 +9,10 @@ import { css, html, styleMap } from "../lit.all.js";
 class ConnectServiceNotification extends MozLitElement {
   static get properties() {
     return {
-      authenticating: { type: Boolean },
-      connected: { type: Boolean },
       icon: { type: String },
       name: { type: String },
-      services: { type: String },
+      description: { type: String },
+      status: { type: String },
     };
   }
 
@@ -53,20 +52,24 @@ class ConnectServiceNotification extends MozLitElement {
   }
 
   connectService() {
-    if (!this.connected) {
+    if (this.status !== "connected") {
       this.connectServiceCallback();
     }
   }
 
   get connectButtonLabelId() {
-    if (this.authenticating) {
-      return "companion-onboarding-service-connecting";
+    switch (this.status) {
+      case "error":
+        return "companion-onboarding-service-reconnect";
+      case "authenticating":
+        return "companion-onboarding-service-connecting";
+      default:
+        return "companion-onboarding-service-connect";
     }
-    return "companion-onboarding-service-connect";
   }
 
   connectStatusTemplate() {
-    if (this.connected) {
+    if (this.status == "connected") {
       return html`
         <div class="connected" slot="primary-action">
           <span
@@ -87,7 +90,7 @@ class ConnectServiceNotification extends MozLitElement {
       <button
         slot="primary-action"
         class="primary"
-        ?disabled=${this.authenticating}
+        ?disabled=${this.status == "authenticating"}
         @click=${this.connectService}
         data-l10n-id=${this.connectButtonLabelId}
       ></button>
@@ -108,7 +111,7 @@ class ConnectServiceNotification extends MozLitElement {
       <simple-notification
         .heading=${this.name}
         .icon=${this.icon}
-        .description=${this.services}
+        .description=${this.description}
       >
         ${this.connectStatusTemplate()}
       </simple-notification>

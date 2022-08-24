@@ -114,7 +114,10 @@ class GoogleService {
     });
 
     if (!response.ok) {
-      throw new Error(response.statusText);
+      let results = await response.json();
+      if (results?.error != "invalid_token") {
+        lazy.log.error("Disconnect error:", JSON.stringify(results));
+      }
     }
   }
 
@@ -141,12 +144,16 @@ class GoogleService {
     if (token) {
       OnlineServices.persist();
     } else if (this.auth.tokenError) {
-      // If the refreshToken has been cleared, oAuth failed.
-      // Delete the service.
-      lazy.log.error("Google OAuth token invalid. Deleting service.");
-      OnlineServices.deleteService(this);
+      // A token error means we've lost access.
+      this.authError(`${this.name} OAuth token invalid.`);
     }
     return token;
+  }
+
+  authError(error) {
+    lazy.log.error(error, `Deleting ${this.name} service.`);
+    OnlineServices.deleteService(this);
+    Services.obs.notifyObservers(null, "oauth-access-grant-error", this.app);
   }
 
   getAccountAddress() {
@@ -190,7 +197,14 @@ class GoogleService {
     let results = await response.json();
 
     if (!response.ok) {
-      lazy.log.error("Invalid calendar list response", JSON.stringify(results));
+      if (results?.error?.code == 401) {
+        this.authError(results.error.message);
+      } else {
+        lazy.log.error(
+          "Invalid calendar list response",
+          JSON.stringify(results)
+        );
+      }
       return [];
     }
 
@@ -239,7 +253,14 @@ class GoogleService {
         results = await response.json();
 
         if (!response.ok) {
-          lazy.log.error("Invalid calendar response", JSON.stringify(results));
+          if (results?.error?.code == 401) {
+            this.authError(results.error.message);
+          } else {
+            lazy.log.error(
+              "Invalid calendar response",
+              JSON.stringify(results)
+            );
+          }
           return;
         }
 
@@ -363,7 +384,7 @@ class GoogleService {
     if (results.error) {
       // 404 just means the user doesn't have access,
       // so don't clutter up the console.
-      if (results.error.code != 404) {
+      if (results?.error?.code != 404) {
         lazy.log.error(JSON.stringify(results));
       }
       return null;
@@ -461,12 +482,16 @@ class MicrosoftService {
     if (token) {
       OnlineServices.persist();
     } else if (this.auth.tokenError) {
-      // If refreshToken has been cleared, we have no grant.
-      // Delete the service.
-      lazy.log.error("Microsoft OAuth token invalid. Deleting service.");
-      OnlineServices.deleteService(this);
+      // A token error means we've lost access.
+      this.authError(`${this.name} OAuth token invalid.`);
     }
     return token;
+  }
+
+  authError(error) {
+    lazy.log.error(error, `Deleting ${this.name} service.`);
+    OnlineServices.deleteService(this);
+    Services.obs.notifyObservers(null, "oauth-access-grant-error", this.app);
   }
 
   // For Microsoft, we don't have an email address
