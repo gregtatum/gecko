@@ -1691,6 +1691,25 @@ def extensions_webidl_enabled(value):
 
 set_config("MOZ_WEBEXT_WEBIDL_ENABLED", extensions_webidl_enabled)
 
+# Pinebuild
+# ==============================================================================
+
+
+option("--enable-pinebuild", help="Enable pinebuild customizations")
+
+
+@depends(build_project, when="--enable-pinebuild")
+def pinebuild(build_project):
+    return build_project == "browser"
+
+
+set_config("PINEBUILD", pinebuild)
+set_define("PINEBUILD", pinebuild)
+add_old_configure_assignment("PINEBUILD", pinebuild)
+
+
+imply_option("--enable-pinebuild", True)
+
 # Launcher process (Windows only)
 # ==============================================================
 
