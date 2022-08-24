@@ -64,6 +64,37 @@ const GOOGLE_TEST = [
   },
 ];
 
+const GOOGLE_CONFERENCE_TEST = {
+  result: {
+    organizer: {
+      email: "organizer@example.com",
+    },
+    htmlLink,
+    conferenceData: {
+      entryPoints: [
+        {
+          entryPointType: "phone",
+          uri: "tel:+1.512.555.1212",
+        },
+        {
+          entryPointType: "more",
+          uri: "https://meet.jit.si/static/dialInInfo.html?room=RoomName",
+        },
+        {
+          entryPointType: "video",
+          uri: "https://meet.jit.si/RoomName",
+        },
+      ],
+      conferenceSolution: {
+        name: "Conference Info",
+      },
+    },
+  },
+  test_result: {
+    conference: "https://meet.jit.si/RoomName",
+  },
+};
+
 add_task(async function test_parseGoogleCalendarResult() {
   for (let test of GOOGLE_TEST) {
     let event = parseGoogleCalendarResult(test.result, creatorEmail);
@@ -72,4 +103,12 @@ add_task(async function test_parseGoogleCalendarResult() {
     equal(event.url, test.test_result.url);
     equal(event.conference.url, test.test_result.conference);
   }
+});
+
+add_task(async function test_parseGoogleCalendarConferenceResult() {
+  let event = parseGoogleCalendarResult(
+    GOOGLE_CONFERENCE_TEST.result,
+    creatorEmail
+  );
+  equal(event.conference.url, GOOGLE_CONFERENCE_TEST.test_result.conference);
 });

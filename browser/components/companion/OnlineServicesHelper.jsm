@@ -234,7 +234,7 @@ function getConferenceInfo(result, links) {
     let locationURL;
 
     for (let entry of result.conferenceData.entryPoints) {
-      if (entry.uri.startsWith("https:")) {
+      if (entry.entryPointType == "video") {
         locationURL = new URL(entry.uri);
         break;
       }
