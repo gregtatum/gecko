@@ -145,17 +145,24 @@ function processEvents(events, now) {
     "browser.pinebuild.companion.notifications.hideDismissed",
     false
   );
+  logConsole.debug("hideDismissed:", hideDismissed);
+  logConsole.debug(
+    "dismissed store during processing:",
+    dismissedEventStore.store
+  );
+  logConsole.debug("how many events:", events.length);
   let filteredEvents = events.filter(event =>
     event && hideDismissed
       ? !dismissedEventStore.isDismissed(event.serviceType, event.originalId)
       : true
   );
+  logConsole.debug("how many filtered events:", filteredEvents.length);
   logConsole.debug("processEvents, now:", now);
   logConsole.debug("processEvents removing timers:", notificationTimers.size);
   for (let timer of notificationTimers.values()) {
     clearTimeout(timer);
   }
-  notificationTimers.clear();
+  notificationTimers = new Map();
   let notificationTimeout = Services.prefs.getIntPref(
     "browser.pinebuild.companion.notifications.minutesBeforeEvent"
   );
@@ -163,7 +170,7 @@ function processEvents(events, now) {
     let notificationTime =
       new Date(event.startDate) - 60 * notificationTimeout * 1000;
     if (notificationTime > now) {
-      logConsole.debug("Adding timer for", event.summary);
+      logConsole.debug("Adding timer for:", event.originalId, event.summary);
       notificationTimers.set(
         event.originalId,
         setTimeout(showNotification, notificationTime - now, event)
@@ -173,7 +180,9 @@ function processEvents(events, now) {
 }
 
 function clearEventNotification({ eventId, serviceType } = {}) {
+  logConsole.debug("clearing notification for:", eventId);
   dismissedEventStore.dismissEvent(serviceType, eventId);
+  logConsole.debug("dismissed events after clear:", dismissedEventStore.store);
   if (
     Services.prefs.getBoolPref(
       "browser.pinebuild.companion.notifications.hideDismissed",
@@ -181,8 +190,11 @@ function clearEventNotification({ eventId, serviceType } = {}) {
     )
   ) {
     let eventTimer = notificationTimers.get(eventId);
+    logConsole.debug("dismissing timer:", eventTimer);
     clearTimeout(eventTimer);
+    logConsole.debug("notification timers before:", notificationTimers.size);
     notificationTimers.delete(eventId);
+    logConsole.debug("notification timers after:", notificationTimers.size);
   }
 }
 
@@ -191,6 +203,7 @@ let observer = {
     switch (topic) {
       case "companion-services-refresh":
         let events = subject.wrappedJSObject;
+        logConsole.debug("processing events via observer:", events.length);
         processEvents(events, Date.now());
         break;
     }
@@ -313,6 +326,10 @@ export function initNotifications(wAPI) {
     Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT
   ) {
     document.addEventListener("refresh-events", function(e) {
+      logConsole.debug(
+        "processing events from refresh:",
+        e.detail.events.length
+      );
       processEvents(e.detail.events, Date.now());
     });
     window.addEventListener("Companion:DismissedEvent", function(e) {
