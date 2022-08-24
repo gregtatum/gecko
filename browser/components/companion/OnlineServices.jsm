@@ -601,11 +601,13 @@ class MicrosoftService {
 
     // Consumer accounts are a hexadecimal number;
     // Office365 accounts are a UUID.
+    let accountType;
     if (`0x${results.id}` == parseInt(results.id, 16)) {
-      this.inboxURL = "https://outlook.live.com/mail/";
+      accountType = "live";
     } else {
-      this.inboxURL = `https://outlook.office.com/owa/${this.emailAddress}`;
+      accountType = "office";
     }
+    this.inboxURL = `https://outlook.${accountType}.com/mail/?login_hint=${this.emailAddress}`;
   }
 
   async getUnreadCount() {
