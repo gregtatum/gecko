@@ -183,7 +183,7 @@ class SnapshotList extends HidableElement {
 }
 
 export class SuggestedSnapshotList extends SnapshotList {
-  constructor(snapshotTitle = "Suggested") {
+  constructor(snapshotTitle = "Inspired by recent activity") {
     super(snapshotTitle);
     this.recommendations = window.CompanionUtils.initialRecommendationData();
   }
