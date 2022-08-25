@@ -346,6 +346,7 @@ function oauthObserver(subject, topic, data) {
     serviceRow.setAttribute("status", "disconnected");
   } else if (topic == "companion-signin") {
     serviceRow.setAttribute("status", "connected");
+    serviceRow.service = OnlineServices.getServices(data)[0];
   }
 }
 
