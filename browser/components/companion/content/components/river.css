@@ -139,14 +139,6 @@ view-group[active]:not(:last-of-type) {
   }
 }
 
-view-group[keying]:focus-within::part(history) {
-  display: flex;
-}
-
-view-group[keying]:focus-within::part(domain) {
-  display: none;
-}
-
 #river:not([hidden]) + view-group[top] {
   padding-inline-start: 12px;
   margin-inline-start: 0;
