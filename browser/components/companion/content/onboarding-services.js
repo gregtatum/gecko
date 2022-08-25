@@ -118,6 +118,8 @@ export class ServicesOnboarding extends MozLitElement {
         );
       }
     }
+    // Clear account problems so reconnect goes away.
+    this.accountProblems.clear();
   }
 
   onSignIn(e) {
