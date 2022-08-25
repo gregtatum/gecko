@@ -120,6 +120,7 @@
   font-size: 11px;
   background: none;
   border: none;
+  padding: 0;
 }
 
 .view-domain:focus-visible {
