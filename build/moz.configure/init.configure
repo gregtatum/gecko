@@ -1044,7 +1044,9 @@ def milestone(build_env, build_project, version_path, pinebuild, _):
 
     is_nightly = is_release_or_beta = is_early_beta_or_earlier = None
 
-    if "a1" in milestone:
+    if pinebuild:
+        is_release_or_beta = True
+    elif "a1" in milestone:
         is_nightly = True
     elif "a" not in milestone:
         is_release_or_beta = True

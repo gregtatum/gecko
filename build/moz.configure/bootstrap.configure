@@ -18,12 +18,12 @@ def moz_fetches_dir(value):
         return value[0]
 
 
-@depends(vcs_checkout_type, milestone.is_nightly, "MOZ_AUTOMATION")
-def bootstrap_default(vcs_checkout_type, is_nightly, automation):
+@depends(vcs_checkout_type, milestone.is_nightly, pinebuild, "MOZ_AUTOMATION")
+def bootstrap_default(vcs_checkout_type, is_nightly, pinebuild, automation):
     if automation:
         return False
     # We only enable if building off a VCS checkout of central.
-    if is_nightly and vcs_checkout_type:
+    if (pinebuild or is_nightly) and vcs_checkout_type:
         return True
 
 
