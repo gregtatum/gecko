@@ -8,6 +8,10 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -175,22 +179,26 @@ var gBuiltInInputs = {
         key: "search-scrollview",
         type: kInputTypes.SCROLLVIEW,
         children: {
-          Bookmarks: {
-            title: "search-bookmarks",
-            type: kInputTypes.BUTTON,
-            callback: () =>
-              lazy.touchBarHelper.insertRestrictionInUrlbar(
-                lazy.UrlbarTokenizer.RESTRICT.BOOKMARK
-              ),
-          },
-          OpenTabs: {
-            title: "search-opentabs",
-            type: kInputTypes.BUTTON,
-            callback: () =>
-              lazy.touchBarHelper.insertRestrictionInUrlbar(
-                lazy.UrlbarTokenizer.RESTRICT.OPENPAGE
-              ),
-          },
+          ...(!AppConstants.PINEBUILD
+            ? {
+                Bookmarks: {
+                  title: "search-bookmarks",
+                  type: kInputTypes.BUTTON,
+                  callback: () =>
+                    lazy.touchBarHelper.insertRestrictionInUrlbar(
+                      lazy.UrlbarTokenizer.RESTRICT.BOOKMARK
+                    ),
+                },
+                OpenTabs: {
+                  title: "search-opentabs",
+                  type: kInputTypes.BUTTON,
+                  callback: () =>
+                    lazy.touchBarHelper.insertRestrictionInUrlbar(
+                      lazy.UrlbarTokenizer.RESTRICT.OPENPAGE
+                    ),
+                },
+              }
+            : {}),
           History: {
             title: "search-history",
             type: kInputTypes.BUTTON,

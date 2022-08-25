@@ -32,6 +32,10 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.jsm",
 });
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 export var UrlbarUtils = {
   // Extensions are allowed to add suggestions if they have registered a keyword
   // with the omnibox API. This is the maximum number of suggestions an extension
@@ -209,7 +213,8 @@ export var UrlbarUtils = {
   // Search mode objects corresponding to the local shortcuts in the view, in
   // order they appear.  Pref names are relative to the `browser.urlbar` branch.
   get LOCAL_SEARCH_MODES() {
-    return [
+    delete this.LOCAL_SEARCH_MODES;
+    let buildRestrictedModes = [
       {
         source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
         restrict: lazy.UrlbarTokenizer.RESTRICT.BOOKMARK,
@@ -222,6 +227,9 @@ export var UrlbarUtils = {
         icon: "chrome://browser/skin/tab.svg",
         pref: "shortcuts.tabs",
       },
+    ];
+    return (this.LOCAL_SEARCH_MODES = [
+      ...(!AppConstants.PINEBUILD ? buildRestrictedModes : []),
       {
         source: UrlbarUtils.RESULT_SOURCE.HISTORY,
         restrict: lazy.UrlbarTokenizer.RESTRICT.HISTORY,
@@ -234,7 +242,7 @@ export var UrlbarUtils = {
         icon: "chrome://browser/skin/quickactions.svg",
         pref: "shortcuts.quickactions",
       },
-    ];
+    ]);
   },
 
   /**

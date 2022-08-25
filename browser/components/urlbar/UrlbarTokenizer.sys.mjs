@@ -17,6 +17,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarUtils: "resource:///modules/UrlbarUtils.sys.mjs",
 });
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 XPCOMUtils.defineLazyGetter(lazy, "logger", () =>
   lazy.UrlbarUtils.getLogger({ prefix: "Tokenizer" })
 );
@@ -67,23 +71,26 @@ export var UrlbarTokenizer = {
   // These restriction characters can be typed alone, or at word boundaries,
   // provided their meaning cannot be confused, for example # could be present
   // in a valid url, and thus it should not be interpreted as a restriction.
-  RESTRICT: {
-    HISTORY: "^",
-    BOOKMARK: "*",
-    TAG: "+",
-    OPENPAGE: "%",
-    SEARCH: "?",
-    TITLE: "#",
-    URL: "$",
-    ACTION: ">",
+  get RESTRICT() {
+    delete this.RESTRICT;
+    return (this.RESTRICT = {
+      ...(!AppConstants.PINEBUILD ? { BOOKMARK: "*", OPENPAGE: "%" } : {}),
+      HISTORY: "^",
+      TAG: "+",
+      SEARCH: "?",
+      TITLE: "#",
+      URL: "$",
+      ACTION: ">",
+    });
   },
 
   // The keys of characters in RESTRICT that will enter search mode.
   get SEARCH_MODE_RESTRICT() {
     return new Set([
+      ...(!AppConstants.PINEBUILD
+        ? [this.RESTRICT.BOOKMARK, this.RESTRICT.OPENPAGE]
+        : []),
       this.RESTRICT.HISTORY,
-      this.RESTRICT.BOOKMARK,
-      this.RESTRICT.OPENPAGE,
       this.RESTRICT.SEARCH,
       this.RESTRICT.ACTION,
     ]);
