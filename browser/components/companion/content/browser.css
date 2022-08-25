@@ -332,8 +332,6 @@ body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container
 #nav-bar:hover river-el::part(history),
 #nav-bar:hover pinned-views::part(history) {
   display: flex;
-  position: initial;
-  opacity: 1;
 }
 
 #nav-bar:hover river-el::part(domain),

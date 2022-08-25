@@ -198,26 +198,24 @@ export default class ViewGroupElement extends MozLitElement {
     let history = [];
     let viewGroupHistory = this.computeHistoryVisualization(view);
 
-    if (viewGroupHistory.length > 1) {
-      for (let { view: historyView, size } of viewGroupHistory) {
-        let classes = {
-          history: true,
-          active: this.active && historyView == this.activeView,
-        };
+    for (let { view: historyView, size } of viewGroupHistory) {
+      let classes = {
+        history: true,
+        active: this.active && historyView == this.activeView,
+      };
 
-        history.push(
-          html`
-            <button
-              class=${classMap(classes)}
-              .view=${historyView}
-              @click=${this.#onHistoryItemSelected}
-              @keyup=${this.#onViewHistoryNavigation}
-              title=${historyView.title}
-              size=${size}
-            ></button>
-          `
-        );
-      }
+      history.push(
+        html`
+          <button
+            class=${classMap(classes)}
+            .view=${historyView}
+            @click=${this.#onHistoryItemSelected}
+            @keyup=${this.#onViewHistoryNavigation}
+            title=${historyView.title}
+            size=${size}
+          ></button>
+        `
+      );
     }
 
     // If we're not active, then we want the entire ViewGroup to show
@@ -268,15 +266,15 @@ export default class ViewGroupElement extends MozLitElement {
           <div class="view-title"
                part="title"
                title=${view.title}>${view.title}</div>
-          <div class="view-history" part=${
-            shouldExposeParts ? "history" : ""
-          }>${history}</div>
           <div class="view-domain-container" part=${
             shouldExposeParts ? "domain" : ""
           }>
             <div id="view-security-icon" class="${securityIconClass}"></div>
-            <input class="view-domain" type="text" readonly value=${domain} tabindex="-1"></input>
+            <input class="view-domain" type="text" readonly value=${domain}></input>
           </div>
+          <div class="view-history" part=${
+            shouldExposeParts ? "history" : ""
+          }>${history}</div>
         </div>
         <button class="page-action-button" part="page-action-button" ?hidden=${!this
           .active}

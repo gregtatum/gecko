@@ -197,26 +197,7 @@
   display: flex;
 }
 
-/**
- * We want the history items to still be keyboard focusable even when
- * when they're not displayed. Hidden things aren't supposed to be
- * focusable, so we work around this by making them mostly transparent
- * and out-of-line with the rest of the layout. When they are keyboard
- * focused, we then snap them to full opacity and put them back into
- * the layout.
- */
 .view-history {
-  position: absolute;
-  opacity: 0.0001;
-}
-
-.view-history:focus-within {
-  display: flex;
-  position: initial;
-  opacity: 1;
-}
-
-.view-history:focus-within + .view-domain-container {
   display: none;
 }
 
