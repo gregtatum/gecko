@@ -705,6 +705,11 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
         ]:
             return False
 
+        # Disable linux opt builds until bug 1787118 is resolved.
+        build_type = task.attributes.get("build_type", "")
+        if platform == "linux64-pinebuild" and build_type == "opt":
+            return False
+
         if task.attributes.get("kind") not in [
             "test",
             "source-test",
@@ -971,7 +976,7 @@ def target_tasks_nightly_pinebuild(full_task_graph, parameters, graph_config):
         {
             "macosx64-pinebuild",
             "win64-pinebuild",
-            "linux64-pinebuild",
+            # "linux64-pinebuild",
             "win64-aarch64-pinebuild",
         }
     )
