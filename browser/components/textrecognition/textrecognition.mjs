@@ -5,6 +5,34 @@
 window.docShell.chromeEventHandler.classList.add("textRecognitionDialogFrame");
 
 window.addEventListener("DOMContentLoaded", () => {
+  window.addEventListener("contextmenu", event => {
+    let popup = document.getElementById("contentAreaContextMenu");
+
+    if (!popup) {
+      console.log(`!!! Creating content`);
+      // document.documentElement.appendChild(
+      //   window.MozXULElement.parseXULToFragment(`
+      //     <menupopup id="contentAreaContextMenu">
+      //       <menuitem id="context-copy"
+      //                 data-l10n-id="common-dialog-copy-cmd"
+      //                 disabled="true"/>
+      //       <menuitem id="context-selectall"
+      //                 data-l10n-id="common-dialog-select-all-cmd"
+      //                 />
+      //     </menupopup>
+      //   `)
+      // );
+      popup = document.documentElement.lastElementChild;
+      console.log(`!!! No popup`);
+    }
+
+    popup.openPopupAtScreen(event.screenX, event.screenY, true, event);
+
+    // Don't show any other context menu at the same time. There can be a
+    // context menu from an ancestor too but we only want to show this one.
+    event.preventDefault();
+  });
+
   // The arguments are passed in as the final parameters to TabDialogBox.prototype.open.
   new TextRecognitionModal(...window.arguments);
 });

@@ -3,6 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 browser.jar:
-    content/browser/textrecognition/textrecognition.html
+    content/browser/textrecognition/textrecognition.xhtml
     content/browser/textrecognition/textrecognition.mjs
     content/browser/textrecognition/textrecognition.css

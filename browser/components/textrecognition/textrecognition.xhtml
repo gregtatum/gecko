@@ -1,25 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- This Source Code Form is subject to the terms of the Mozilla Public
    - License, v. 2.0. If a copy of the MPL was not distributed with this
    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
 
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 <head>
-  <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src chrome:; object-src 'none';">
+        content="default-src chrome:; object-src 'none';"/>
   <link rel="stylesheet" type="text/css"
-        href="chrome://global/skin/in-content/common.css">
+        href="chrome://global/skin/in-content/common.css"/>
   <link rel="stylesheet" type="text/css"
-        href="chrome://browser/content/textrecognition/textrecognition.css">
+        href="chrome://browser/content/textrecognition/textrecognition.css"/>
+  <link rel="localization" href="toolkit/global/commonDialog.ftl"/>
   <link rel="localization" href="browser/textRecognition.ftl"/>
   <script type="module" src="chrome://browser/content/textrecognition/textrecognition.mjs"></script>
   <!-- The title is available to screen readers only -->
   <title data-l10n-id="text-recognition-modal-accessible-modal-title"></title>
 </head>
 <body>
+  <commandset id="selectEditMenuItems">
+    <command id="cmd_copy" oncommand="goDoCommand('cmd_copy')" disabled="true"/>
+    <command id="cmd_selectAll" oncommand="goDoCommand('cmd_selectAll')"/>
+  </commandset>
+
   <div class="textRecognition">
-    <div class="textRecognitionHeader" id="text-recognition-header-loading"">
+    <div class="textRecognitionHeader" id="text-recognition-header-loading">
       <span class="textRecognitionThrobber"></span>
       <span data-l10n-id="text-recognition-modal-searching-title"></span>
     </div>
@@ -33,7 +40,7 @@
         <a data-l10n-name="error-link" href="https://support.mozilla.org/%LOCALE%/kb/placeholder5"></a>
       </span>
     </div>
-    <div class="textRecognitionText" role="document"></div>
+    <div class="textRecognitionText" role="document" context="contentAreaContextMenu"></div>
     <div class="textRecognitionFooter">
       <button data-l10n-id="text-recognition-modal-close-button" type="button" id="text-recognition-close" class="primary"></button>
     </div>
