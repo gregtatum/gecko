@@ -1,0 +1,59 @@
+# -*- Mode: python; indent-tabs-mode: nil; tab-width: 40 -*-
+# vim: set filetype=python:
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+Program("firefox")
+
+DIST_SUBDIR = ""
+
+# Don't use STL wrappers here (i.e. wrapped <new>); they require mozalloc
+DisableStlWrapping()
+
+if CONFIG["OS_ARCH"] == "WINNT":
+    SOURCES += [
+        "stub-win.cpp",
+    ]
+
+    # For nsNativeAppSupportWin.h icon definitions
+    LOCAL_INCLUDES += ["/toolkit/xre"]
+
+    if CONFIG["CC_TYPE"] in ("gcc", "clang"):
+        # This allows us to use wmain as the entry point on mingw
+        LDFLAGS += [
+            "-municode",
+        ]
+
+    RCINCLUDE = "stub-win.rc"
+    DEFINES["UNICODE"] = 1
+    DEFINES["TARGET_BINARY"] = 'L"{}{}"'.format(
+        CONFIG["MOZ_APP_NAME"], CONFIG["BIN_SUFFIX"]
+    )
+
+    OS_LIBS += ["shlwapi"]
+
+    DEFINES["APP_ICO"] = '"%s/%s/%s.ico"' % (
+        TOPSRCDIR,
+        CONFIG["MOZ_BRANDING_DIRECTORY"],
+        CONFIG["MOZ_APP_NAME"],
+    )
+
+    FINAL_TARGET_FILES += ["firefox.exe.manifest"]
+else:
+    LOCAL_INCLUDES += [
+        "/xpcom/build",
+    ]
+
+    SOURCES += [
+        "stub.cpp",
+    ]
+
+    if CONFIG["OS_ARCH"] == "Darwin":
+        OS_LIBS += ["-framework CoreFoundation"]
+
+    DEFINES["TARGET_BINARY"] = '"{}{}"'.format(
+        CONFIG["MOZ_APP_NAME"], CONFIG["BIN_SUFFIX"]
+    )
+
+    DEFINES["MOZ_NO_MOZALLOC"] = True

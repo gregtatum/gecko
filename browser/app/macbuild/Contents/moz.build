@@ -16,6 +16,9 @@ for s in (
     if CONFIG[s]:
         defs.append("-D%s=%s" % (s, "1" if CONFIG[s] is True else CONFIG[s]))
 
+if CONFIG["PINEBUILD"] and CONFIG["MOZ_APP_NAME"] != "firefox":
+    defs.append("-DAPP_STUB=firefox")
+
 GeneratedFile(
     "MacOS-files.txt",
     script="/python/mozbuild/mozbuild/action/preprocessor.py",

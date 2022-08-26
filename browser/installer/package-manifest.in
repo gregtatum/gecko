@@ -130,6 +130,10 @@
 @BINPATH@/@MOZ_APP_NAME@.VisualElementsManifest.xml
 @BINPATH@/browser/VisualElements/VisualElements_150.png
 @BINPATH@/browser/VisualElements/VisualElements_70.png
+#ifdef APP_STUB
+@BINPATH@/@APP_STUB@.exe
+@BINPATH@/@APP_STUB@.exe.manifest
+#endif
 #ifndef PINEBUILD
 @BINPATH@/private_browsing.exe
 @BINPATH@/private_browsing.VisualElementsManifest.xml
@@ -139,6 +143,9 @@
 #else
 @BINPATH@/@MOZ_APP_NAME@-bin
 @BINPATH@/@MOZ_APP_NAME@
+#ifdef APP_STUB
+@BINPATH@/@APP_STUB@
+#endif
 #endif
 @RESPATH@/application.ini
 #ifdef MOZ_UPDATER
