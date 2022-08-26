@@ -578,13 +578,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
   true
 );
 
-XPCOMUtils.defineLazyPreferenceGetter(
-  this,
-  "gPrivateBrowsingNewIndicatorEnabled",
-  "browser.privatebrowsing.enable-new-indicator",
-  false
-);
-
 customElements.setElementCreationCallback("translation-notification", () => {
   Services.scriptloader.loadSubScript(
     "chrome://browser/content/translation-notification.js",
@@ -8629,7 +8622,7 @@ var gPrivateBrowsingUI = {
     // This will hide the old indicator.
     docElement.toggleAttribute(
       "privatebrowsingnewindicator",
-      gPrivateBrowsingNewIndicatorEnabled
+      NimbusFeatures.majorRelease2022.getVariable("feltPrivacyPBMNewIndicator")
     );
 
     gBrowser.updateTitlebar();
