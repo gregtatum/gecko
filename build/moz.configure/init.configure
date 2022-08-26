@@ -1208,12 +1208,14 @@ option(
 )
 
 
-@depends("--with-app-basename", target_is_android)
-def moz_app_basename(value, target_is_android):
+@depends("--with-app-basename", target_is_android, pinebuild)
+def moz_app_basename(value, target_is_android, pinebuild):
     if value:
         return value[0]
     if target_is_android:
         return "Fennec"
+    if pinebuild:
+        return "Flowstate"
     return "Firefox"
 
 

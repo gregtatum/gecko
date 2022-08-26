@@ -202,7 +202,7 @@ if (AppConstants.platform == "android") {
 }
 
 if (
-  AppConstants.MOZ_APP_NAME != "firefox" ||
+  !["firefox", "flowstate"].includes(AppConstants.MOZ_APP_NAME) ||
   AppConstants.platform == "android"
 ) {
   for (const perm of PRIVILEGED_PERMS_DESKTOP_ONLY) {

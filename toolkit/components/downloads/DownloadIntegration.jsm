@@ -190,8 +190,10 @@ var DownloadIntegration = {
    * @return boolean True if data should be kept.
    */
   shouldKeepBlockedData() {
-    const FIREFOX_ID = "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}";
-    return Services.appinfo.ID == FIREFOX_ID;
+    return [
+      "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}",
+      "{27dca482-e0b1-440c-8490-086552ef58a7}",
+    ].includes(Services.appinfo.ID);
   },
 
   /**
