@@ -261,9 +261,10 @@ function init_all() {
 
   gotoPref().then(() => {
     let helpButton = document.getElementById("helpButton");
-    let helpUrl =
-      Services.urlFormatter.formatURLPref("app.support.baseURL") +
-      "preferences";
+    let helpUrl = AppConstants.PINEBUILD
+      ? "https://support.mozilla.org/products/flowstate"
+      : Services.urlFormatter.formatURLPref("app.support.baseURL") +
+        "preferences";
     helpButton.setAttribute("href", helpUrl);
 
     if (Services.prefs.getBoolPref("xpinstall.enabled", true)) {

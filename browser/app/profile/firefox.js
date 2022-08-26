@@ -1215,7 +1215,7 @@ pref("toolkit.crashreporter.infoURL",
      "https://www.mozilla.org/legal/privacy/firefox.html#crash-reporter");
 
 // base URL for web-based support pages
-pref("app.support.baseURL", "https://support.mozilla.org/products/flowstate/%VERSION%/%OS%/%LOCALE%/");
+pref("app.support.baseURL", "https://support.mozilla.org/1/firefox/%VERSION%/%OS%/%LOCALE%/");
 
 // base url for web-based feedback pages
 pref("app.feedback.baseURL", "https://ideas.mozilla.org/");
