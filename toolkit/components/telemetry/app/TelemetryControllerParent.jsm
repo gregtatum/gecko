@@ -356,8 +356,7 @@ var Impl = {
     return {
       architecture: arch,
       buildId: Services.appinfo.appBuildID,
-      // Temporarily overridden to obscure the product name before release.
-      name: "Firefox", // Services.appinfo.name,
+      name: Services.appinfo.name,
       version: Services.appinfo.version,
       displayVersion: AppConstants.MOZ_APP_VERSION_DISPLAY,
       vendor: Services.appinfo.vendor,

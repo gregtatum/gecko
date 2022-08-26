@@ -8,7 +8,7 @@ import platform
 
 # OS Specifics
 ABS_WORK_DIR = os.path.join(os.getcwd(), "build")
-BINARY_PATH = os.path.join(ABS_WORK_DIR, "application", "flowstate", "flowstate")
+BINARY_PATH = os.path.join(ABS_WORK_DIR, "application", "firefox", "firefox-bin")
 INSTALLER_PATH = os.path.join(ABS_WORK_DIR, "installer.tar.bz2")
 XPCSHELL_NAME = "xpcshell"
 HTTP3SERVER_NAME = "http3server"
@@ -36,7 +36,6 @@ config = {
     ###
     "virtualenv_modules": ["six==1.13.0", "vcversioner==2.16.0.0"],
     "installer_path": INSTALLER_PATH,
-    "application": "flowstate",
     "binary_path": BINARY_PATH,
     "xpcshell_name": XPCSHELL_NAME,
     "http3server_name": HTTP3SERVER_NAME,

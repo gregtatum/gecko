@@ -261,7 +261,7 @@ VIAddVersionKey "OriginalFilename" "setup-stub.exe"
 
 Name "$BrandFullName"
 OutFile "setup-stub.exe"
-Icon "${MOZ_APP_NAME}64.ico"
+Icon "firefox64.ico"
 XPStyle on
 BrandingText " "
 ChangeUI IDD_INST "nsisui.exe"

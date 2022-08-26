@@ -217,9 +217,7 @@ var loader = new DevToolsLoader({
    * loader instance.
    * @see devtools/client/framework/browser-toolbox/Launcher.jsm
    */
-  invisibleToDebugger: !["Firefox", "Flowstate"].includes(
-    Services.appinfo.name
-  ),
+  invisibleToDebugger: Services.appinfo.name !== "Firefox",
 });
 
 var require = loader.require;

@@ -97,12 +97,7 @@ StartupRecorder.prototype = {
   observe(subject, topic, data) {
     if (topic == "app-startup" || topic == "content-process-ready-for-script") {
       // Don't do anything in xpcshell.
-      if (
-        ![
-          "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}",
-          "{27dca482-e0b1-440c-8490-086552ef58a7}",
-        ].includes(Services.appinfo.ID)
-      ) {
+      if (Services.appinfo.ID != "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}") {
         return;
       }
 

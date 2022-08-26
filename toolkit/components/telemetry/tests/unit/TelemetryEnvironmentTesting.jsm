@@ -34,7 +34,7 @@ const MILLISECONDS_PER_DAY = 24 * MILLISECONDS_PER_HOUR;
 const PLATFORM_VERSION = "1.9.2";
 const APP_VERSION = "1";
 const APP_ID = "xpcshell@tests.mozilla.org";
-const APP_NAME = "Firefox";
+const APP_NAME = "XPCShell";
 
 const DISTRIBUTION_ID = "distributor-id";
 const DISTRIBUTION_VERSION = "4.5.6b";

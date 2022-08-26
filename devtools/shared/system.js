@@ -36,7 +36,6 @@ loader.lazyGetter(this, "endianness", () => {
 
 const APP_MAP = {
   "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}": "firefox",
-  "{27dca482-e0b1-440c-8490-086552ef58a7}": "flowstate",
   "{3550f703-e582-4d05-9a08-453d09bdfdc6}": "thunderbird",
   "{92650c4d-4b8e-4d2a-b7eb-24ecf4f6b63a}": "seamonkey",
   "{718e30fb-e89b-41dd-9da7-e25a45638b28}": "sunbird",

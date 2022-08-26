@@ -9,7 +9,7 @@ import sys
 
 # OS Specifics
 ABS_WORK_DIR = os.path.join(os.getcwd(), "build")
-BINARY_PATH = os.path.join(ABS_WORK_DIR, "flowstate", "flowstate.exe")
+BINARY_PATH = os.path.join(ABS_WORK_DIR, "firefox", "firefox.exe")
 INSTALLER_PATH = os.path.join(ABS_WORK_DIR, "installer.zip")
 NODEJS_PATH = None
 if "MOZ_FETCHES_DIR" in os.environ:
@@ -45,7 +45,6 @@ config = {
     },
     ###
     "installer_path": INSTALLER_PATH,
-    "application": "flowstate",
     "binary_path": BINARY_PATH,
     "xpcshell_name": XPCSHELL_NAME,
     "virtualenv_modules": [PYWIN32, "six==1.13.0", "vcversioner==2.16.0.0"],

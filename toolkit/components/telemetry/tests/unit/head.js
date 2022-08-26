@@ -210,7 +210,7 @@ function decodeRequestPayload(request) {
 
 function checkPingFormat(aPing, aType, aHasClientId, aHasEnvironment) {
   const APP_VERSION = "1";
-  const APP_NAME = "Firefox";
+  const APP_NAME = "XPCShell";
   const PING_FORMAT_VERSION = 4;
   const PLATFORM_VERSION = "1.9.2";
   const MANDATORY_PING_FIELDS = [
@@ -562,7 +562,7 @@ fakeUninstallPingPath();
 const PLATFORM_VERSION = "1.9.2";
 const APP_VERSION = "1";
 const APP_ID = "xpcshell@tests.mozilla.org";
-const APP_NAME = "Firefox";
+const APP_NAME = "XPCShell";
 
 const DISTRIBUTION_CUSTOMIZATION_COMPLETE_TOPIC =
   "distribution-customization-complete";

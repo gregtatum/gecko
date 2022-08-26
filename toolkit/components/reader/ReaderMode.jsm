@@ -53,10 +53,8 @@ ChromeUtils.defineModuleGetter(
   "resource://gre/modules/Readerable.jsm"
 );
 
-const gIsFirefoxDesktop = [
-  "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}",
-  "{27dca482-e0b1-440c-8490-086552ef58a7}",
-].includes(Services.appinfo.ID);
+const gIsFirefoxDesktop =
+  Services.appinfo.ID == "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}";
 
 Services.telemetry.setEventRecordingEnabled("readermode", true);
 
