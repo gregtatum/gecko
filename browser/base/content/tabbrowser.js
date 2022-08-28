@@ -38,6 +38,16 @@
           "nsIMacSharingService",
         ],
       });
+      XPCOMUtils.defineLazyModuleGetters(this, {
+        E10SUtils: "resource://gre/modules/E10SUtils.jsm",
+        PictureInPicture: "resource://gre/modules/PictureInPicture.jsm",
+      });
+      XPCOMUtils.defineLazyServiceGetters(this, {
+        MacSharingService: [
+          "@mozilla.org/widget/macsharingservice;1",
+          "nsIMacSharingService",
+        ],
+      });
 
       if (AppConstants.MOZ_CRASHREPORTER) {
         ChromeUtils.defineModuleGetter(
@@ -47,6 +57,12 @@
         );
       }
 
+      if (AppConstants.PINEBUILD) {
+        XPCOMUtils.defineLazyModuleGetters(this, {
+          Sounds: "resource:///modules/Sounds.jsm",
+        });
+      }
+
       Services.obs.addObserver(this, "contextual-identity-updated");
 
       Services.els.addSystemEventListener(document, "keydown", this, false);
@@ -54,10 +70,24 @@
       document.addEventListener("visibilitychange", this);
       window.addEventListener("framefocusrequested", this);
 
+      if (
+        Services.prefs.getBoolPref(
+          "browser.pinebuild.animateViewTransitions",
+          false
+        )
+      ) {
+        this.tabpanels.setAttribute("multideck", "true");
+      }
+
       this.tabContainer.init();
       this._setupInitialBrowserAndTab();
 
+      // In PINEBUILD we use one global background which can show through some
+      // content. We want to be controlling the background color of the
+      // tabbrowser at that level and not here, but presently we do not support
+      // theming or non-default colors for PINEBUILD.
       if (
+        !AppConstants.PINEBUILD &&
         Services.prefs.getIntPref("browser.display.document_color_use") == 2
       ) {
         this.tabpanels.style.backgroundColor = Services.prefs.getBoolPref(
@@ -1130,13 +1160,14 @@
       );
 
       let securityUI = newBrowser.securityUI;
+      let callTabsListener = AppConstants.PINEBUILD;
       if (securityUI) {
         this._callProgressListeners(
           null,
           "onSecurityChange",
           [webProgress, null, securityUI.state],
           true,
-          false
+          callTabsListener
         );
         // Include the true final argument to indicate that this event is
         // simulated (instead of being observed by the webProgressListener).
@@ -1333,7 +1364,6 @@
           !findBar.hidden &&
           findBar._findField.getAttribute("focused") == "true";
       }
-
       let activeEl = document.activeElement;
       // If focus is on the old tab, move it to the new tab.
       if (activeEl == oldTab) {
@@ -1341,7 +1371,9 @@
       } else if (
         gMultiProcessBrowser &&
         activeEl != newBrowser &&
-        activeEl != newTab
+        activeEl != newTab &&
+        // eslint-disable-next-line prettier/prettier
+        (AppConstants.PINEBUILD && activeEl != document.getElementById("pinebuild-back-button"))
       ) {
         // In e10s, if focus isn't already in the tabstrip or on the new browser,
         // and the new browser's previous focus wasn't in the url bar but focus is
@@ -1390,6 +1422,17 @@
         // selected which could cause them to overwrite what they've
         // already typed in.
         if (gURLBar.focused && newBrowser.userTypedValue) {
+          return;
+        }
+
+        // If the pinebuild Back button is focused,
+        // even if the URL was previously focused,
+        // we do not want to pull focus to the URL bar.
+        if (
+          AppConstants.PINEBUILD &&
+          document.activeElement ==
+            document.getElementById("pinebuild-back-button")
+        ) {
           return;
         }
 
@@ -1995,12 +2038,13 @@
       let state = securityUI
         ? securityUI.state
         : Ci.nsIWebProgressListener.STATE_IS_INSECURE;
+      let callTabsListener = AppConstants.PINEBUILD;
       this._callProgressListeners(
         aBrowser,
         "onSecurityChange",
         [aBrowser.webProgress, null, state],
         true,
-        false
+        callTabsListener
       );
       let event = aBrowser.getContentBlockingEvents();
       // Include the true final argument to indicate that this event is
@@ -2451,6 +2495,9 @@
         return false;
       }
 
+      let evt = new CustomEvent("TabBrowserDiscarding", { bubbles: true });
+      aTab.dispatchEvent(evt);
+
       // Reset sharing state.
       if (aTab._sharingState) {
         this.resetBrowserSharing(browser);
@@ -2510,7 +2557,7 @@
 
       this._createLazyBrowser(aTab);
 
-      let evt = new CustomEvent("TabBrowserDiscarded", { bubbles: true });
+      evt = new CustomEvent("TabBrowserDiscarded", { bubbles: true });
       aTab.dispatchEvent(evt);
       return true;
     },
@@ -6314,6 +6361,143 @@
           this.setSuccessor(predecessor, aOtherTab);
         }
       }
+    },
+
+    /**
+     * @typedef {object} HideAnimationReturnType
+     * @property {Promise} animationCompletePromise
+     *   A promise that is resolved when the animation part has completed. When
+     *   this is resolved, the session has been hidden from the main view and
+     *   work to load a new session into the UI can start.
+     * @property {Promise} timerCompletePromise
+     *   A promise this is resolved when the timer has completed. The show
+     *   animation should only be started once this promise has been resolved.
+     */
+
+    /**
+     * Runs the first part of an animation which shrinks the current view and
+     * slide it to the left. doPinebuildSessionShowAnimation must be called
+     * after this. See also the notes on `HideAnimationReturnType`.
+     *
+     * @returns {HideAnimationReturnType}
+     */
+    doPinebuildSessionHideAnimation(newSession) {
+      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+        return {
+          animationCompletePromise: Promise.resolve(),
+          timerCompletePromise: Promise.resolve(),
+        };
+      }
+      // These times reflect the animation time plus a little longer per UX
+      // requirements.
+      const sessionChangePreSwipeTime = document.body.hasAttribute("flow-reset")
+        ? 0
+        : 750;
+      const sessionChangeSwipeAnimationTime = 400;
+
+      let tabpanels = this.tabpanels;
+      tabpanels.setAttribute("session-change", "1");
+
+      let resolveAnimation = PromiseUtils.defer();
+      let resolveTimer = PromiseUtils.defer();
+
+      this._delayDOMChange(() => {
+        // This tracks when the animation is complete, and allows the caller
+        // to start work before the full required animation time is up.
+        let self = this;
+        function transitionRun() {
+          tabpanels.removeEventListener("transitionrun", transitionRun);
+          self.Sounds.play(self.Sounds.SET_ASIDE);
+        }
+        function transitionEnd() {
+          tabpanels.removeEventListener("transitionend", transitionEnd);
+          tabpanels.removeEventListener("transitioncancel", transitionEnd);
+
+          resolveAnimation.resolve();
+        }
+        // As soon as the animation is complete, allow this function to return
+        // and the caller to continue. However, we still want to ensure the
+        // show animation does not happen until after `sessionChangeSwipeAnimationTime`,
+        // so save that in a promise for the show animation function to await
+        // upon.
+        if (newSession) {
+          tabpanels.addEventListener("transitionrun", transitionRun);
+        }
+        tabpanels.addEventListener("transitionend", transitionEnd);
+        tabpanels.addEventListener("transitioncancel", transitionEnd);
+
+        tabpanels.setAttribute("session-change", "2");
+        this._slideOutWaitPromise = this._delayDOMChange(
+          resolveTimer.resolve,
+          sessionChangeSwipeAnimationTime
+        );
+      }, sessionChangePreSwipeTime);
+
+      return {
+        animationCompletePromise: resolveAnimation.promise,
+        timerCompletePromise: resolveTimer.promise,
+      };
+    },
+
+    /**
+     * Runs the second part of an animation which slides in the current view
+     * from the left, and expands it to fill the whole viewport.
+     *
+     * @returns {Promise}
+     */
+    async doPinebuildSessionShowAnimation() {
+      let tabpanels = this.tabpanels;
+
+      if (window.matchMedia("(prefers-reduced-motion)").matches) {
+        tabpanels.removeAttribute("session-change");
+        return;
+      }
+
+      const sessionChangePostSwipeTime = document.body.hasAttribute(
+        "flow-reset"
+      )
+        ? 0
+        : 750;
+
+      await new Promise(resolve => {
+        tabpanels.setAttribute("session-change", "3");
+        this._delayDOMChange(() => {
+          tabpanels.removeAttribute("session-change");
+          resolve();
+        }, sessionChangePostSwipeTime);
+      });
+    },
+
+    /**
+     * Shows a confirmation message for a short period before fading out.
+     *
+     * @param {string} templateId
+     *   The id of the template element that will be cloned and displayed.
+     */
+    showConfirmation(templateId) {
+      let template = document.getElementById(templateId);
+      let fragment = template.content.cloneNode(true);
+      let elem = fragment.firstElementChild;
+      document.body.appendChild(fragment);
+      this._delayDOMChange(() => {
+        elem.addEventListener("transitionend", () => elem.remove());
+        elem.classList.add("fadeout");
+      }, 3000);
+      // This removes flickering while l10n inserts text.
+      this._delayDOMChange(() => elem.removeAttribute("hidden"), 100);
+    },
+
+    /**
+     * Delays a change for the specified timeout, and waits for an animation
+     * frame.
+     *
+     * @param {function} cb
+     *   Called when the delay is complete and an animation frame obtained.
+     * @param {number} timeout
+     *   The number of milliseconds to delay the change for.
+     */
+    _delayDOMChange(cb, timeout) {
+      return setTimeout(() => requestAnimationFrame(cb), timeout);
     },
   };
 

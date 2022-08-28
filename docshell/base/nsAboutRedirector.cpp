@@ -71,8 +71,10 @@ class CrashChannel final : public nsBaseChannel {
  */
 static const RedirEntry kRedirMap[] = {
     {"about", "chrome://global/content/aboutAbout.html", 0},
+#ifndef PINEBUILD
     {"addons", "chrome://mozapps/content/extensions/aboutaddons.html",
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::IS_SECURE_CHROME_UI},
+#endif
     {"buildconfig", "chrome://global/content/buildconfig.html",
      nsIAboutModule::URI_SAFE_FOR_UNTRUSTED_CONTENT |
          nsIAboutModule::IS_SECURE_CHROME_UI},

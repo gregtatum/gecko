@@ -21,13 +21,15 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 });
 
 // Constants
-const TAB_EVENTS = ["TabBrowserInserted", "TabSelect"];
+const TAB_EVENTS = ["TabBrowserInserted", "TabSelect", "TabClose"];
 const WINDOW_EVENTS = ["activate", "unload"];
 const DEBUG = false;
 
 // Variables
 var _lastTopBrowsingContextID = 0;
 var _trackedWindows = [];
+var _lastBrowserWindowId = 0;
+var _browserWindowIds = new WeakMap();
 
 // Global methods
 function debug(s) {
@@ -72,9 +74,19 @@ function _handleEvent(event) {
       ) {
         _updateCurrentBrowsingContextID(event.target.linkedBrowser);
       }
+      Services.obs.notifyObservers(
+        event.target,
+        "browser-window-tracker-tab-added"
+      );
       break;
     case "TabSelect":
       _updateCurrentBrowsingContextID(event.target.linkedBrowser);
+      break;
+    case "TabClose":
+      Services.obs.notifyObservers(
+        event.target,
+        "browser-window-tracker-tab-removed"
+      );
       break;
     case "activate":
       WindowHelper.onActivate(event.target);
@@ -109,6 +121,7 @@ function _untrackWindowOrder(window) {
 // Methods that impact a window. Put into single object for organization.
 var WindowHelper = {
   addWindow(window) {
+    _browserWindowIds.set(window, ++_lastBrowserWindowId);
     // Add event listeners
     TAB_EVENTS.forEach(function(event) {
       window.gBrowser.tabContainer.addEventListener(event, _handleEvent);
@@ -121,6 +134,7 @@ var WindowHelper = {
 
     // Update the selected tab's content outer window ID.
     _updateCurrentBrowsingContextID(window.gBrowser.selectedBrowser);
+    Services.obs.notifyObservers(window, "browser-window-tracker-add-window");
   },
 
   removeWindow(window) {
@@ -133,6 +147,11 @@ var WindowHelper = {
     WINDOW_EVENTS.forEach(function(event) {
       window.removeEventListener(event, _handleEvent);
     });
+    Services.obs.notifyObservers(
+      window,
+      "browser-window-tracker-remove-window"
+    );
+    _browserWindowIds.delete(window);
   },
 
   onActivate(window) {
@@ -223,6 +242,10 @@ const BrowserWindowTracker = {
       }
     }
     return null;
+  },
+
+  getBrowserWindowId(window) {
+    return _browserWindowIds.get(window);
   },
 
   // For tests only, this function will remove this window from the list of

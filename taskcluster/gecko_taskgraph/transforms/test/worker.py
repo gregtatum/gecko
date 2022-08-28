@@ -138,6 +138,10 @@ WINDOWS_WORKER_TYPES = {
         "virtual": "win10-64-2004",
         "virtual-with-gpu": "win10-64-2004-gpu",
     },
+    "windows10-64-2004-pinebuild-qr": {
+        "virtual": "win10-64-2004",
+        "virtual-with-gpu": "win10-64-2004-gpu",
+    },
     "windows10-64-2004-asan-qr": {
         "virtual": "win10-64-2004",
         "virtual-with-gpu": "win10-64-2004-gpu",

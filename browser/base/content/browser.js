@@ -17,9 +17,12 @@ ChromeUtils.defineESModuleGetters(this, {
   BrowserSearchTelemetry: "resource:///modules/BrowserSearchTelemetry.sys.mjs",
   FirefoxViewNotificationManager:
     "resource:///modules/firefox-view-notification-manager.sys.mjs",
+  InteractionsBlocklist: "resource:///modules/InteractionsBlocklist.sys.mjs",
   PlacesTransactions: "resource://gre/modules/PlacesTransactions.sys.mjs",
   PlacesUIUtils: "resource:///modules/PlacesUIUtils.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
+  Snapshots: "resource:///modules/Snapshots.sys.mjs",
   UrlbarInput: "resource:///modules/UrlbarInput.sys.mjs",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.sys.mjs",
   UrlbarProviderSearchTips:
@@ -85,6 +88,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
   SiteDataManager: "resource:///modules/SiteDataManager.jsm",
   SitePermissions: "resource:///modules/SitePermissions.jsm",
+  StageManager: "resource:///modules/StageManager.jsm",
   SubDialog: "resource://gre/modules/SubDialog.jsm",
   SubDialogManager: "resource://gre/modules/SubDialog.jsm",
   TabModalPrompt: "chrome://global/content/tabprompts.jsm",
@@ -351,6 +355,14 @@ XPCOMUtils.defineLazyGetter(this, "gNavToolbox", () => {
   return document.getElementById("navigator-toolbox");
 });
 
+XPCOMUtils.defineLazyGetter(this, "gStageManager", () => {
+  return new StageManager(window);
+});
+
+XPCOMUtils.defineLazyGetter(this, "gActiveViewManager", () => {
+  return document.querySelector("active-view-manager");
+});
+
 XPCOMUtils.defineLazyGetter(this, "gURLBar", () => {
   let urlbar = new UrlbarInput({
     textbox: document.getElementById("urlbar"),
@@ -407,16 +419,27 @@ XPCOMUtils.defineLazyGetter(this, "gNotificationBox", () => {
   return new MozElements.NotificationBox(element => {
     element.classList.add("global-notificationbox");
     element.setAttribute("notificationside", "top");
-    element.setAttribute("prepend-notifications", true);
-    // Notification messages use the CSS box model. When using
-    // negative margins on those notification messages to animate them in or out,
-    // if the ancestry of that node is all using the XUL box model, strange glitches
-    // arise. We sidestep this by containing the global notification box within a
-    // <div> that has CSS block layout.
-    let outer = document.createElement("div");
-    outer.appendChild(element);
-    let tabNotifications = document.getElementById("tab-notification-deck");
-    gNavToolbox.insertBefore(outer, tabNotifications);
+    element.toggleAttribute("prepend-notifications", true);
+    // With Proton enabled all notification boxes are at the top, built into the browser chrome.
+    if (!AppConstants.PINEBUILD) {
+      let tabNotifications = document.getElementById("tab-notification-deck");
+      // Notification messages use the CSS box model. When using
+      // negative margins on those notification messages to animate them in or out,
+      // if the ancestry of that node is all using the XUL box model, strange glitches
+      // arise. We sidestep this by containing the global notification box within a
+      // <div> that has CSS block layout.
+      let outer = document.createElement("div");
+      outer.appendChild(element);
+      gNavToolbox.insertBefore(outer, tabNotifications);
+    } else {
+      // Don't allow notifications to be drawn above the pinebuild's persistent sidebar.
+      // Instead, draw them above the web content only. (See MR2-184.)
+      // The simplest way to accomplish this is to insert before the browser element.
+      let browser = document.getElementById("browser");
+      let outer = document.createElement("div");
+      outer.appendChild(element);
+      browser.parentNode.insertBefore(outer, browser);
+    }
   });
 });
 
@@ -511,6 +534,16 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "gBookmarksToolbarVisibility",
   "browser.toolbars.bookmarks.visibility",
   "newtab"
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "gPerWindowSessionsEnabled",
+  "browser.places.perwindowsessions.enabled",
+  false,
+  (aPref, aOldVal, aNewVal) => {
+    document.getElementById("session-setaside-button").hidden = !aNewVal;
+  }
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -642,6 +675,8 @@ var gPageIcons = {
 
 var gInitialPages = [
   "about:blank",
+  "about:flow-reset",
+  "about:historycarousel",
   "about:home",
   "about:firefoxview",
   "about:newtab",
@@ -732,7 +767,10 @@ function UpdateBackForwardCommands(aWebNavigation) {
 
   var backDisabled = backCommand.hasAttribute("disabled");
   var forwardDisabled = forwardCommand.hasAttribute("disabled");
-  if (backDisabled == aWebNavigation.canGoBack) {
+  let canGoBack = AppConstants.PINEBUILD
+    ? gStageManager.canGoBack
+    : aWebNavigation.canGoBack;
+  if (backDisabled == canGoBack) {
     if (backDisabled) {
       backCommand.removeAttribute("disabled");
     } else {
@@ -740,13 +778,26 @@ function UpdateBackForwardCommands(aWebNavigation) {
     }
   }
 
-  if (forwardDisabled == aWebNavigation.canGoForward) {
+  let canGoForward = AppConstants.PINEBUILD
+    ? gStageManager.canGoForward
+    : aWebNavigation.canGoForward;
+  if (forwardDisabled == canGoForward) {
     if (forwardDisabled) {
       forwardCommand.removeAttribute("disabled");
     } else {
       forwardCommand.setAttribute("disabled", true);
     }
   }
+
+  if (AppConstants.PINEBUILD) {
+    let hasViews = !!gStageManager.views.length;
+    UpdateSetAsideButton(hasViews);
+  }
+}
+
+function UpdateSetAsideButton(hasViews) {
+  let setAsideButton = document.getElementById("session-setaside-button");
+  setAsideButton.disabled = !hasViews;
 }
 
 /**
@@ -772,8 +823,9 @@ function SetClickAndHoldHandlers() {
   gClickAndHoldListenersOnElement.add(forwardButton);
 }
 
-const gClickAndHoldListenersOnElement = {
+var gClickAndHoldListenersOnElement = {
   _timers: new Map(),
+  _callbacks: new WeakMap(),
 
   _mousedownHandler(aEvent) {
     if (
@@ -784,8 +836,10 @@ const gClickAndHoldListenersOnElement = {
       return;
     }
 
-    // Prevent the menupopup from opening immediately
-    aEvent.currentTarget.menupopup.hidden = true;
+    if (aEvent.currentTarget.hasAttribute("context")) {
+      // Prevent the menupopup from opening immediately
+      aEvent.currentTarget.menupopup.hidden = true;
+    }
 
     aEvent.currentTarget.addEventListener("mouseout", this);
     aEvent.currentTarget.addEventListener("mouseup", this);
@@ -828,8 +882,13 @@ const gClickAndHoldListenersOnElement = {
 
   _openMenu(aButton) {
     this._cancelHold(aButton);
-    aButton.firstElementChild.hidden = false;
-    aButton.open = true;
+    let callback = this._callbacks.get(aButton);
+    if (callback) {
+      callback();
+    } else {
+      aButton.firstElementChild.hidden = false;
+      aButton.open = true;
+    }
   },
 
   _mouseoutHandler(aEvent) {
@@ -885,13 +944,15 @@ const gClickAndHoldListenersOnElement = {
   },
 
   remove(aButton) {
+    this._callbacks.delete(aButton);
     aButton.removeEventListener("mousedown", this, true);
     aButton.removeEventListener("click", this, true);
     aButton.removeEventListener("keypress", this, true);
   },
 
-  add(aElm) {
+  add(aElm, aCallback) {
     this._timers.delete(aElm);
+    this._callbacks.set(aElm, aCallback);
 
     aElm.addEventListener("mousedown", this, true);
     aElm.addEventListener("click", this, true);
@@ -1587,12 +1648,11 @@ var gBrowserInit = {
 
   onBeforeInitialXULLayout() {
     BookmarkingUI.updateEmptyToolbarMessage();
-    setToolbarVisibility(
-      BookmarkingUI.toolbar,
-      gBookmarksToolbarVisibility,
-      false,
-      false
-    );
+
+    let toolbar = BookmarkingUI.toolbar;
+    if (toolbar) {
+      setToolbarVisibility(toolbar, gBookmarksToolbarVisibility, false, false);
+    }
 
     // Set a sane starting width/height for all resolutions on new profiles.
     if (Services.prefs.getBoolPref("privacy.resistFingerprinting")) {
@@ -1689,6 +1749,17 @@ var gBrowserInit = {
     delete window._gBrowser;
     gBrowser.init();
 
+    if (AppConstants.PINEBUILD) {
+      gStageManager.init();
+      gStageManager.addEventListener("ViewChanged", UpdateBackForwardCommands);
+      gStageManager.addEventListener("ViewAdded", UpdateBackForwardCommands);
+      gStageManager.addEventListener("ViewRemoved", UpdateBackForwardCommands);
+      gStageManager.addEventListener("ViewMoved", UpdateBackForwardCommands);
+      document.getElementById(
+        "session-setaside-button"
+      ).hidden = !gPerWindowSessionsEnabled;
+    }
+
     BrowserWindowTracker.track(window);
 
     FirefoxViewHandler.init();
@@ -1725,9 +1796,19 @@ var gBrowserInit = {
     this._setInitialFocus();
 
     this.domContentLoaded = true;
+
+    if (AppConstants.PINEBUILD) {
+      this.firstContentWindowPaintPromise.then(() =>
+        document.body.setAttribute("browser-ready", "true")
+      );
+    }
   },
 
   onLoad() {
+    if (AppConstants.PINEBUILD) {
+      window.PineBuildUIUtils.onLoad();
+    }
+
     gBrowser.addEventListener("DOMUpdateBlockedPopups", gPopupBlockerObserver);
 
     window.addEventListener("AppCommand", HandleAppCommandEvent, true);
@@ -1753,7 +1834,9 @@ var gBrowserInit = {
     gBrowser.addProgressListener(window.XULBrowserWindow);
     gBrowser.addTabsProgressListener(window.TabsProgressListener);
 
-    SidebarUI.init();
+    if (!AppConstants.PINEBUILD) {
+      SidebarUI.init();
+    }
 
     // We do this in onload because we want to ensure the button's state
     // doesn't flicker as the window is being shown.
@@ -2027,7 +2110,9 @@ var gBrowserInit = {
       // Enable the Restore Last Session command if needed
       RestoreLastSessionObserver.init();
 
-      SidebarUI.startDelayedLoad();
+      if (!AppConstants.PINEBUILD) {
+        SidebarUI.startDelayedLoad();
+      }
 
       PanicButtonNotifier.init();
     });
@@ -2123,6 +2208,10 @@ var gBrowserInit = {
       this._schedulePerWindowIdleTasks();
       document.documentElement.setAttribute("sessionrestored", "true");
     });
+
+    if (AppConstants.PINEBUILD) {
+      window.PineBuildUIUtils.delayedStartup();
+    }
 
     this.delayedStartupFinished = true;
     _resolveDelayedStartup();
@@ -2539,7 +2628,9 @@ var gBrowserInit = {
 
     CaptivePortalWatcher.uninit();
 
-    SidebarUI.uninit();
+    if (!AppConstants.PINEBUILD) {
+      SidebarUI.uninit();
+    }
 
     DownloadsButton.uninit();
 
@@ -2655,6 +2746,7 @@ function HandleAppCommandEvent(evt) {
       BrowserSearch.webSearch();
       break;
     case "Bookmarks":
+      // TODO: ensure we don't get this
       SidebarUI.toggle("viewBookmarksSidebar");
       break;
     case "Home":
@@ -2719,6 +2811,11 @@ function gotoHistoryIndex(aEvent) {
 }
 
 function BrowserForward(aEvent) {
+  // goForward returns true if it handled the request.
+  // otherwise, let the current code do its thing.
+  if (AppConstants.PINEBUILD && gStageManager.goForward()) {
+    return;
+  }
   let where = whereToOpenLink(aEvent, false, true);
 
   if (where == "current") {
@@ -2731,6 +2828,11 @@ function BrowserForward(aEvent) {
 }
 
 function BrowserBack(aEvent) {
+  // goBack returns true if it handled the request.
+  // otherwise, let the current code do its thing.
+  if (AppConstants.PINEBUILD && gStageManager.goBack()) {
+    return;
+  }
   let where = whereToOpenLink(aEvent, false, true);
 
   if (where == "current") {
@@ -4565,6 +4667,15 @@ function FillHistoryMenu(aParent) {
 }
 
 function BrowserDownloadsUI() {
+  if (AppConstants.PINEBUILD) {
+    let actor = document
+      .getElementById("companion-browser")
+      .browsingContext.currentWindowGlobal.getActor("Companion");
+    if (actor) {
+      actor.viewTab("downloads");
+    }
+    return;
+  }
   if (PrivateBrowsingUtils.isWindowPrivate(window)) {
     openTrustedLinkIn("about:downloads", "tab");
   } else {
@@ -5318,6 +5429,10 @@ var XULBrowserWindow = {
           browser.documentContentType &&
           BrowserUtils.mimeTypeIsTextBased(browser.documentContentType);
         for (let element of this._elementsForViewSource) {
+          // Some of these elements can not exist (in, say, the pinebuild window)
+          if (!element) {
+            continue;
+          }
           if (canViewSource && isText) {
             element.removeAttribute("disabled");
           } else {
@@ -5389,6 +5504,15 @@ var XULBrowserWindow = {
       return;
     }
 
+    if (AppConstants.PINEBUILD) {
+      let saveSnapshot = document.getElementById("Browser:SaveSnapshot");
+      if (!InteractionsBlocklist.canRecordUrl(aLocationURI)) {
+        saveSnapshot.setAttribute("disabled", "true");
+      } else {
+        saveSnapshot.removeAttribute("disabled");
+      }
+    }
+
     this.hideOverLinkImmediately = true;
     this.setOverLink("");
     this.hideOverLinkImmediately = false;
@@ -5415,18 +5539,24 @@ var XULBrowserWindow = {
     // via simulated locationchange events such as switching between tabs, however
     // if this is a document navigation then PopupNotifications will be updated
     // via TabsProgressListener.onLocationChange and we do not want it called twice
-    gURLBar.setURI(aLocationURI, aIsSimulated, isSessionRestore);
+    //
+    // For PINEBUILD, we only want to show URLs in the URLBar when new popups appear. MR2-2404
+    if (AppConstants.PINEBUILD && !gBrowser.ownerGlobal.toolbar.visible) {
+      gURLBar.setURI(aLocationURI, aIsSimulated, isSessionRestore);
+    }
 
     BookmarkingUI.onLocationChange();
     // If we've actually changed document, update the toolbar visibility.
     if (!isSameDocument) {
       let bookmarksToolbar = gNavToolbox.querySelector("#PersonalToolbar");
-      setToolbarVisibility(
-        bookmarksToolbar,
-        gBookmarksToolbarVisibility,
-        false,
-        false
-      );
+      if (bookmarksToolbar) {
+        setToolbarVisibility(
+          bookmarksToolbar,
+          gBookmarksToolbarVisibility,
+          false,
+          false
+        );
+      }
     }
 
     let closeOpenPanels = selector => {
@@ -5553,6 +5683,10 @@ var XULBrowserWindow = {
       browser.documentContentType &&
       BrowserUtils.mimeTypeIsTextBased(browser.documentContentType);
     for (let element of this._elementsForTextBasedTypes) {
+      // Some of these elements can not exist (in, say, the pinebuild window)
+      if (!element) {
+        continue;
+      }
       if (isText) {
         element.removeAttribute("disabled");
       } else {
@@ -5829,6 +5963,12 @@ var CombinedStopReload = {
 
     let reload = document.getElementById("reload-button");
     let stop = document.getElementById("stop-button");
+
+    if (AppConstants.PINEBUILD) {
+      reload = document.getElementById("pinebuild-reload-button");
+      stop = document.getElementById("pinebuild-stop-button");
+    }
+
     // It's possible the stop/reload buttons have been moved to the palette.
     // They may be reinserted later, so we will retry initialization if/when
     // we get notified of document loads.
@@ -6537,8 +6677,10 @@ function onViewToolbarsPopupShowing(aEvent, aInsertPoint) {
     }
 
     if (toolbar.id == "PersonalToolbar") {
-      let menu = BookmarkingUI.buildBookmarksToolbarSubmenu(toolbar);
-      popup.insertBefore(menu, firstMenuItem);
+      if (!AppConstants.PINEBUILD) {
+        let menu = BookmarkingUI.buildBookmarksToolbarSubmenu(toolbar);
+        popup.insertBefore(menu, firstMenuItem);
+      }
     } else {
       let menuItem = document.createXULElement("menuitem");
       menuItem.setAttribute("id", "toggle_" + toolbar.id);
@@ -6633,6 +6775,13 @@ function onViewToolbarsPopupShowing(aEvent, aInsertPoint) {
     moveToPanel.hidden = true;
     removeFromToolbar.hidden = true;
     menuSeparator.hidden = !showTabStripItems;
+  }
+
+  if (AppConstants.platform == "win" && AppConstants.PINEBUILD) {
+    let viewToolbarsSeparator = document.getElementById(
+      "viewToolbarsMenuSeparator"
+    );
+    viewToolbarsSeparator.hidden = true;
   }
 
   if (showTabStripItems) {
@@ -6755,6 +6904,16 @@ function setToolbarVisibility(
           !!currentURI && BookmarkingUI.isOnNewTabPage({ currentURI });
         break;
     }
+  }
+
+  // Normally, the titlebar is always visible since tabs are rendered
+  // in the titlebar. With pinebuild, TabsToolbar is hidden and as such
+  // we only want to show the titlebar if the menubar is visible.
+  if (AppConstants.PINEBUILD && toolbar.id == "toolbar-menubar") {
+    let titlebar = document.getElementById("titlebar");
+    titlebar.hidden =
+      !isVisible &&
+      !Services.prefs.getBoolPref("browser.companion.tabdebugging", false);
   }
 
   if (toolbar.getAttribute(hidingAttribute) == (!isVisible).toString()) {
@@ -6910,7 +7069,8 @@ var gUIDensity = {
     }
 
     let docs = [document.documentElement];
-    let shouldUpdateSidebar = SidebarUI.initialized && SidebarUI.isOpen;
+    let shouldUpdateSidebar =
+      !AppConstants.PINEBUILD && SidebarUI.initialized && SidebarUI.isOpen;
     if (shouldUpdateSidebar) {
       docs.push(SidebarUI.browser.contentDocument.documentElement);
     }
@@ -6963,6 +7123,12 @@ const nodeToTooltipMap = {
   "reader-mode-button": "reader-mode-button.tooltip",
   "reader-mode-button-icon": "reader-mode-button.tooltip",
 };
+
+if (AppConstants.PINEBUILD) {
+  nodeToTooltipMap["pinebuild-reload-button"] = "reloadButton.tooltip";
+  nodeToTooltipMap["pinebuild-stop-button"] = "stopButton.tooltip";
+}
+
 const nodeToShortcutMap = {
   "bookmarks-menu-button": "manBookmarkKb",
   "context-reload": "key_reload",
@@ -6982,6 +7148,11 @@ const nodeToShortcutMap = {
   "reader-mode-button": "key_toggleReaderMode",
   "reader-mode-button-icon": "key_toggleReaderMode",
 };
+
+if (AppConstants.PINEBUILD) {
+  nodeToShortcutMap["pinebuild-reload-button"] = "key_reload";
+  nodeToShortcutMap["pinebuild-stop-button"] = "key_stop";
+}
 
 const gDynamicTooltipCache = new Map();
 function GetDynamicShortcutTooltipText(nodeId) {
@@ -8183,6 +8354,9 @@ var MailIntegration = {
 
 function BrowserOpenAddonsMgr(aView) {
   return new Promise(resolve => {
+    if (!Services.prefs.getBoolPref("xpinstall.enabled", true)) {
+      return;
+    }
     let emWindow;
     let browserWindow;
 
@@ -8439,6 +8613,55 @@ var gPrivateBrowsingUI = {
     }
   },
 };
+
+async function openPinebuildCompanionLink(aURI) {
+  // If the current window's selected <browser> already matches the URI,
+  // there's nothing to do here. Note that we use equalsExceptRef because
+  // the desired behaviour is to match even if the fragment (everything
+  // following #) is different.
+  if (gBrowser.selectedBrowser.currentURI.equalsExceptRef(aURI)) {
+    return;
+  }
+
+  let tabbox = gBrowser.tabbox;
+  tabbox.setAttribute("disable-history-animations", "true");
+  tabbox.setAttribute("companion-link-open", "1");
+  let switched = false;
+  try {
+    switched = switchToTabHavingURI(aURI.spec, true, {
+      ignoreFragment: true,
+      excludeOtherWindows: true,
+    });
+  } finally {
+    async function animateContentIn() {
+      await window.promiseDocumentFlushed(() => {});
+      tabbox.setAttribute("companion-link-open", "2");
+      function transitionEnd() {
+        tabbox.removeAttribute("companion-link-open");
+        tabbox.removeAttribute("disable-history-animations");
+        tabbox.removeEventListener("transitionend", transitionEnd);
+        tabbox.removeEventListener("transitioncancel", transitionEnd);
+      }
+      tabbox.addEventListener("transitionend", transitionEnd);
+      tabbox.addEventListener("transitioncancel", transitionEnd);
+    }
+    let viewSwitchEvent = switched
+      ? "TabSwitchDone"
+      : "TabFirstContentfulPaint";
+    // Just in case we never get a contentful paint, add a backup. How long
+    // should this be? *shrug*
+    const contentfulPaintWaitTimeout = 8000;
+    await Promise.race([
+      new Promise(resolve => {
+        gBrowser.addEventListener(viewSwitchEvent, resolve, {
+          once: true,
+        });
+      }),
+      new Promise(resolve => setTimeout(resolve, contentfulPaintWaitTimeout)),
+    ]);
+    animateContentIn();
+  }
+}
 
 /**
  * Switch to a tab that has a given URI, and focuses its browser window.
@@ -9757,16 +9980,18 @@ var ConfirmationHint = {
   _timerID: null,
 
   /**
-   * Shows a transient, non-interactive confirmation hint anchored to an
-   * element, usually used in response to a user action to reaffirm that it was
-   * successful and potentially provide extra context. Examples for such hints:
+   * Shows a transient, non-interactive confirmation hint. Can be anchored to an
+   * element, or positioned with coordinates provided in options. Usually used in
+   * response to a user action to reaffirm that it was successful and potentially
+   * provide extra context. Examples for such hints:
    * - "Saved to bookmarks" after bookmarking a page
    * - "Sent!" after sending a tab to another device
    * - "Queued (offline)" when attempting to send a tab to another device
    *   while offline
    *
-   * @param  anchor (DOM node, required)
-   *         The anchor for the panel.
+   * @param  anchor (DOM node, optional)
+   *         The anchor for the panel. If not provided, a DOMRect for anchoring
+   *         will be expected in the options object.
    * @param  messageId (string, required)
    *         For getting the message string from browser.properties:
    *         confirmationHint.<messageId>.label
@@ -9774,7 +9999,9 @@ var ConfirmationHint = {
    *         An object with the following optional properties:
    *         - event (DOM event): The event that triggered the feedback.
    *         - showDescription (boolean): show description text (confirmationHint.<messageId>.description)
-   *
+   *         - position (string): Optional position string for the hint. Defaults to "bottomcenter topleft".
+   *         - rect (DOMRect): Rectangle for an out-of-process element to anchor on. This is only used if the
+   *                           anchor is null.
    */
   show(anchor, messageId, options = {}) {
     this._reset();
@@ -9814,16 +10041,31 @@ var ConfirmationHint = {
     this._panel.addEventListener(
       "popuphidden",
       () => {
-        // reset the timerId in case our timeout wasn't the cause of the popup being hidden
+        // Reset the timerId, in case our timeout wasn't the cause of the popup being hidden.
         this._reset();
       },
       { once: true }
     );
 
-    this._panel.openPopup(anchor, {
-      position: "bottomcenter topleft",
+    const panelOptions = {
+      position: options.position || "bottomcenter topleft",
       triggerEvent: options.event,
-    });
+    };
+
+    if (anchor === null && options.rect) {
+      this._panel.openPopupAtScreenRect(
+        panelOptions.position,
+        options.rect.left,
+        options.rect.top,
+        options.rect.width,
+        options.rect.height,
+        false,
+        false,
+        options.triggerEvent
+      );
+    } else {
+      this._panel.openPopup(anchor, panelOptions);
+    }
   },
 
   _reset() {

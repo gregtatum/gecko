@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+	<title>Atom</title>
+	<subtitle>A subtitle</subtitle>
+	<link href="http://allizom.org/feed/" rel="self" />
+	<link href="http://allizom.org/" />
+	<id>urn:uuid:1225c696-cfb8-4ebb-aaaa-80da344efa6b</id>
+	<updated>2021-11-03T10:30:02Z</updated>
+  <author>
+		<name>Foo Bar</name>
+  </author>
+
+	<entry>
+		<title>A title for an entry</title>
+		<link href="http://allizom.org/2021/11/03/314" />
+		<link rel="alternate" type="text/html" href="http://allizom.org/2021/11/03/314.html"/>
+		<link rel="edit" href="http://allizom.org/2021/11/03/314/edit"/>
+		<id>urn:uuid:1225c696-cfb8-4ebb-aaaa-80da344efa6b</id>
+		<updated>2021-11-03T18:30:02Z</updated>
+		<summary>Some text.</summary>
+		<content type="xhtml">
+			<div xmlns="http://www.w3.org/1999/xhtml">
+				<p>This is the entry content.</p>
+			</div>
+		</content>
+		<author>
+			<name>Alli Zom</name>
+			<email>allizom@mozilla.com</email>
+		</author>
+	</entry>
+
+	<entry>
+    <category term="a term" label="a label"/>
+		<title type="html">A title</title>
+		<link href="http://allizom.org/2021/11/03/314" />
+		<link rel="alternate" type="text/html" href="http://allizom.org/2021/11/03/314.html"/>
+		<link rel="edit" href="http://allizom.org/2021/11/03/314/edit"/>
+		<id>urn:uuid:2225c696-cfb8-4ebb-aaaa-80da344efa6b</id>
+		<updated>2021-11-03T10:30:02Z</updated>
+		<summary>A summary.</summary>
+		<content type="xhtml">
+			<div xmlns="http://www.w3.org/1999/xhtml">
+				<p>This is the entry content.</p>
+			</div>
+		</content>
+		<author>
+			<name>Rab Oof</name>
+			<email>raboof@foo.bar</email>
+		</author>
+    <category term="an other term" label="an other label"/>
+    <contributor>
+			<name>Contri Butor</name>
+			<email>cb@mozilla.com</email>
+		</contributor>
+	</entry>
+
+</feed>

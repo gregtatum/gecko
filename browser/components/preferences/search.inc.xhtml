@@ -11,7 +11,7 @@
       <html:h1 data-l10n-id="pane-search-title"/>
     </hbox>
 
-    <groupbox id="searchbarGroup" data-category="paneSearch" hidden="true">
+    <groupbox id="searchbarGroup" data-category="paneSearch" hidden="true" pine-supported="false">
       <label control="searchBarVisibleGroup"><html:h2 data-l10n-id="search-bar-header"/></label>
       <radiogroup id="searchBarVisibleGroup" preference="browser.search.widget.inNavBar" align="start">
         <radio id="searchBarHiddenRadio" value="false" data-l10n-id="search-bar-hidden"/>
@@ -24,7 +24,7 @@
     <!-- Default Search Engine -->
     <groupbox id="defaultEngineGroup" data-category="paneSearch" hidden="true">
       <label><html:h2 data-l10n-id="search-engine-default-header" /></label>
-      <description data-l10n-id="search-engine-default-desc-2" />
+      <description id="search-description" data-l10n-id="search-engine-default-desc-2" />
 
       <hbox>
         <!-- Please don't remove the wrapping hbox/vbox/box for these elements. It's used to properly compute the search tooltip position. -->
@@ -64,7 +64,8 @@
                   data-l10n-id="search-show-suggestions-above-history-option"
                   preference="browser.urlbar.showSearchSuggestionsFirst"/>
         <checkbox id="showSearchSuggestionsPrivateWindows"
-                  data-l10n-id="search-show-suggestions-private-windows"/>
+                  data-l10n-id="search-show-suggestions-private-windows"
+                  pine-supported="false"/>
         <hbox id="urlBarSuggestionPermanentPBLabel"
               align="center" class="indent">
           <label flex="1" data-l10n-id="search-suggestions-cant-show" />
@@ -76,7 +77,7 @@
 
     <groupbox id="oneClickSearchProvidersGroup" data-category="paneSearch" hidden="true">
       <label><html:h2 data-l10n-id="search-one-click-header2" /></label>
-      <description data-l10n-id="search-one-click-desc" />
+      <description id="search-one-click" data-l10n-id="search-one-click-desc" />
 
       <tree id="engineList" flex="1" rows="11" hidecolumnpicker="true" editable="true"
             seltype="single" allowunderflowscroll="true">
@@ -117,7 +118,7 @@
                   />
         </hbox>
       </hbox>
-      <hbox id="addEnginesBox" pack="start">
+      <hbox id="addEnginesBox" pack="start" pine-supported="false">
         <label id="addEngines" data-l10n-id="search-find-more-link" is="text-link"></label>
       </hbox>
     </groupbox>

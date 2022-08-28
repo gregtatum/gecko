@@ -1490,13 +1490,32 @@ nsresult nsXREDirProvider::GetUserDataDirectory(nsIFile** aFile, bool aLocal) {
   nsresult rv = GetUserDataDirectoryHome(getter_AddRefs(localDir), aLocal);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = AppendProfilePath(localDir, aLocal);
-  NS_ENSURE_SUCCESS(rv, rv);
+  // If there is no XREAppData then there is no information to use to build
+  // the profile path so just do nothing. This should only happen in xpcshell
+  // tests.
+  if (gAppData) {
+    rv = AppendProfilePath(localDir, gAppData->profile, aLocal);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   rv = EnsureDirectoryExists(localDir);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsXREDirProvider::SetUserDataProfileDirectory(localDir, aLocal);
+
+  localDir.forget(aFile);
+  return NS_OK;
+}
+
+nsresult nsXREDirProvider::GetDefaultUserDataDirectory(nsIFile** aFile,
+                                                       bool aLocal) {
+  nsCOMPtr<nsIFile> localDir;
+
+  nsresult rv = GetUserDataDirectoryHome(getter_AddRefs(localDir), aLocal);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = AppendProfilePath(localDir, nullptr, aLocal);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   localDir.forget(aFile);
   return NS_OK;
@@ -1542,22 +1561,14 @@ nsresult nsXREDirProvider::AppendSysUserExtensionPath(nsIFile* aFile) {
   return NS_OK;
 }
 
-nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, bool aLocal) {
+nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile,
+                                             const char* aProfilePath,
+                                             bool aLocal) {
   NS_ASSERTION(aFile, "Null pointer!");
 
-  // If there is no XREAppData then there is no information to use to build
-  // the profile path so just do nothing. This should only happen in xpcshell
-  // tests.
-  if (!gAppData) {
-    return NS_OK;
-  }
-
-  nsAutoCString profile;
   nsAutoCString appName;
   nsAutoCString vendor;
-  if (gAppData->profile) {
-    profile = gAppData->profile;
-  } else {
+  if (!aProfilePath || !*aProfilePath) {
     appName = gAppData->name;
     vendor = gAppData->vendor;
   }
@@ -1565,8 +1576,8 @@ nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, bool aLocal) {
   nsresult rv = NS_OK;
 
 #if defined(XP_MACOSX)
-  if (!profile.IsEmpty()) {
-    rv = AppendProfileString(aFile, profile.get());
+  if (aProfilePath && *aProfilePath) {
+    rv = AppendProfileString(aFile, aProfilePath);
   } else {
     // Note that MacOS ignores the vendor when creating the profile hierarchy -
     // all application preferences directories live alongside one another in
@@ -1576,8 +1587,8 @@ nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, bool aLocal) {
   NS_ENSURE_SUCCESS(rv, rv);
 
 #elif defined(XP_WIN)
-  if (!profile.IsEmpty()) {
-    rv = AppendProfileString(aFile, profile.get());
+  if (aProfilePath && *aProfilePath) {
+    rv = AppendProfileString(aFile, aProfilePath);
   } else {
     if (!vendor.IsEmpty()) {
       rv = aFile->AppendNative(vendor);
@@ -1600,9 +1611,9 @@ nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, bool aLocal) {
   // profile is already under ~/.cache or XDG_CACHE_HOME).
   if (!aLocal) folder.Assign('.');
 
-  if (!profile.IsEmpty()) {
+  if (aProfilePath && *aProfilePath) {
     // Skip any leading path characters
-    const char* profileStart = profile.get();
+    const char* profileStart = aProfilePath;
     while (*profileStart == '/' || *profileStart == '\\') profileStart++;
 
     // On the off chance that someone wanted their folder to be hidden don't

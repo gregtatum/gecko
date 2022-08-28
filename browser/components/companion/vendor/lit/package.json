@@ -1,0 +1,21 @@
+{
+  "name": "moz-lit-vendor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup -c",
+    "vendor-copy": "cp lit.all.js ../../content/lit.all.js",
+    "patch-lit-html": "patch lit.all.js lit-html-no-innerhtml.patch",
+    "vendor": "npm install && npm run build && npm run patch-lit-html && npm run vendor-copy"
+  },
+  "author": "",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "lit": "^2.2.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "rollup": "^2.56.2"
+  }
+}

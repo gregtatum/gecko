@@ -1,0 +1,9 @@
+. "$topsrcdir/browser/config/mozconfigs/linux64/common-opt"
+
+ac_add_options --enable-pinebuild
+
+if test "${MOZ_UPDATE_CHANNEL}" = "beta-pine"; then
+  ac_add_options --with-branding=browser/branding/beta-pinebuild
+fi
+
+. "$topsrcdir/build/mozconfig.common.override"

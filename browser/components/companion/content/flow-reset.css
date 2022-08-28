@@ -1,0 +1,59 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import url("chrome://browser/content/companion/lavender.css");
+
+html {
+  background: none;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-size: 13px;
+  color: white;
+  display: flex;
+}
+
+button {
+  background: white;
+  color: black;
+  border: 0.5px solid var(--flowreset-button-border-color);
+  box-shadow: 0px 2px 6px var(--flowreset-button-boxshadow-color);
+  border-radius: 50px;
+  padding: 6px 8px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+main {
+  align-self: flex-end;
+  text-align: center;
+  margin: 50px auto;
+}
+
+a {
+  color: var(--flowreset-button-text-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+button {
+  cursor: pointer;
+  background: var(--flowreset-button-background-color);
+  color: var(--flowreset-button-text-color);
+  border: none;
+  padding: 8px 14px;
+}
+
+p {
+  text-shadow: 0px 2px 14px var(--flowreset-textshadow-color);
+}
+
+* {
+  font-family: "Inter", system-ui;
+}

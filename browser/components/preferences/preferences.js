@@ -6,6 +6,7 @@
 /* import-globals-from main.js */
 /* import-globals-from home.js */
 /* import-globals-from search.js */
+/* import-globals-from simple.js */
 /* import-globals-from containers.js */
 /* import-globals-from privacy.js */
 /* import-globals-from sync.js */
@@ -193,11 +194,19 @@ function init_all() {
   Services.telemetry.setEventRecordingEnabled("aboutpreferences", true);
 
   register_module("paneGeneral", gMainPane);
-  register_module("paneHome", gHomePane);
+  if (!AppConstants.PINEBUILD) {
+    register_module("paneHome", gHomePane);
+  }
   register_module("paneSearch", gSearchPane);
+  if (AppConstants.PINEBUILD) {
+    register_module("paneSimple", gSimplePane);
+  }
   register_module("panePrivacy", gPrivacyPane);
   register_module("paneContainers", gContainersPane);
-  if (Services.prefs.getBoolPref("browser.preferences.experimental")) {
+  if (
+    !AppConstants.PINEBUILD &&
+    Services.prefs.getBoolPref("browser.preferences.experimental")
+  ) {
     // Set hidden based on previous load's hidden value.
     document.getElementById(
       "category-experimental"
@@ -209,7 +218,10 @@ function init_all() {
   }
 
   NimbusFeatures.moreFromMozilla.recordExposureEvent({ once: true });
-  if (NimbusFeatures.moreFromMozilla.getVariable("enabled")) {
+  if (
+    !AppConstants.PINEBUILD &&
+    NimbusFeatures.moreFromMozilla.getVariable("enabled")
+  ) {
     document.getElementById("category-more-from-mozilla").hidden = false;
     gMoreFromMozillaPane.option = NimbusFeatures.moreFromMozilla.getVariable(
       "template"
@@ -249,24 +261,29 @@ function init_all() {
 
   gotoPref().then(() => {
     let helpButton = document.getElementById("helpButton");
-    let helpUrl =
-      Services.urlFormatter.formatURLPref("app.support.baseURL") +
-      "preferences";
+    let helpUrl = AppConstants.PINEBUILD
+      ? "https://support.mozilla.org/products/flowstate"
+      : Services.urlFormatter.formatURLPref("app.support.baseURL") +
+        "preferences";
     helpButton.setAttribute("href", helpUrl);
 
-    document.getElementById("addonsButton").addEventListener("click", e => {
-      e.preventDefault();
-      if (e.button >= 2) {
-        // Ignore right clicks.
-        return;
-      }
-      let mainWindow = window.browsingContext.topChromeWindow;
-      mainWindow.BrowserOpenAddonsMgr();
-      AMTelemetry.recordLinkEvent({
-        object: "aboutPreferences",
-        value: "about:addons",
+    if (Services.prefs.getBoolPref("xpinstall.enabled", true)) {
+      document.getElementById("addonsButton").addEventListener("click", e => {
+        e.preventDefault();
+        if (e.button >= 2) {
+          // Ignore right clicks.
+          return;
+        }
+        let mainWindow = window.browsingContext.topChromeWindow;
+        mainWindow.BrowserOpenAddonsMgr();
+        AMTelemetry.recordLinkEvent({
+          object: "aboutPreferences",
+          value: "about:addons",
+        });
       });
-    });
+    } else {
+      document.getElementById("addonsButton").style.display = "none";
+    }
 
     document.dispatchEvent(
       new CustomEvent("Initialized", {
@@ -285,6 +302,7 @@ function telemetryBucketForCategory(category) {
     case "home":
     case "privacy":
     case "search":
+    case "simple":
     case "sync":
     case "searchresults":
       return category;
@@ -302,8 +320,8 @@ async function gotoPref(
   aShowReason = aCategory ? "click" : "initial"
 ) {
   let categories = document.getElementById("categories");
-  const kDefaultCategoryInternalName = "paneGeneral";
-  const kDefaultCategory = "general";
+  const kDefaultCategoryInternalName = "paneSimple";
+  const kDefaultCategory = "simple";
   let hash = document.location.hash;
   let category = aCategory || hash.substr(1) || kDefaultCategoryInternalName;
 
@@ -315,6 +333,7 @@ async function gotoPref(
     category = category.substring(0, breakIndex);
   }
   category = friendlyPrefCategoryNameToInternalName(category);
+  document.documentElement.classList.toggle("simple", category == "paneSimple");
   if (category != "paneSearchResults") {
     gSearchResultsPane.query = null;
     gSearchResultsPane.searchInput.value = "";
@@ -391,6 +410,24 @@ async function gotoPref(
     gLastCategory.subcategory !== subcategory
   ) {
     return;
+  }
+
+  if (AppConstants.PINEBUILD) {
+    // Hide settings that are incompatible with pinebuild
+    let hiddenSettings = document.querySelectorAll("[pine-supported='false']");
+    for (let element of hiddenSettings) {
+      element.setAttribute("data-hidden-from-search", "true");
+    }
+
+    // Update any l10n attributes that are different for pinebuild
+    const IdToL10nAttributeForPine = {
+      "search-description": "search-engine-default-desc-pine",
+      "search-one-click": "search-one-click-desc-pine",
+    };
+    Object.entries(IdToL10nAttributeForPine).forEach(([id, l10nId]) => {
+      const element = document.getElementById(id);
+      element?.setAttribute("data-l10n-id", l10nId);
+    });
   }
 
   search(category, "data-category");

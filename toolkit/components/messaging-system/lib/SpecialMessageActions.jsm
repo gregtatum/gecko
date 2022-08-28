@@ -353,6 +353,22 @@ const SpecialMessageActions = {
       case "CONFIGURE_HOMEPAGE":
         this.configureHomepage(action.data);
         break;
+      case "HIDE_COMPANION_UI": {
+        let companionBox = window.document.getElementById("companion-box");
+        if (companionBox.isOpen) {
+          companionBox.toggleVisible();
+        }
+        window.PineBuildUIUtils.hideToolbar();
+        break;
+      }
+      case "SHOW_COMPANION_UI": {
+        let companionBox = window.document.getElementById("companion-box");
+        if (!companionBox.isOpen) {
+          companionBox.toggleVisible();
+        }
+        window.PineBuildUIUtils.showToolbar();
+        break;
+      }
       case "ENABLE_TOTAL_COOKIE_PROTECTION":
         Services.prefs.setBoolPref(
           "privacy.restrict3rdpartystorage.rollout.enabledByDefault",

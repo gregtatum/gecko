@@ -1,0 +1,125 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.card {
+  display: block;
+  margin: 1em;
+  background: #F9F9FB;
+  border: 0.5px solid #AFAFBA;
+  box-sizing: border-box;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.card-content-wrapper {
+  display: flex;
+}
+
+.card.popupshowing,
+.card:hover {
+  background: #F9F9FB;
+  border: 0.5px solid #CFCFD8;
+}
+
+.contents {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.contents, .contents:visited, .contents:hover {
+  text-decoration: inherit;
+  color: inherit;
+}
+
+.info {
+  padding: 12px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.subtitle {
+  display: flex;
+  gap: 5px;
+}
+
+.snapshot-sitetitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.title {
+  font-size: 13px;
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.sub {
+  color: #5B5B66;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.info-divider::after {
+  content: "\00B7";
+  font-size: 30px;
+  line-height: 0;
+  position: relative;
+  top: 4px;
+}
+
+.card-image {
+  background: var(--light-bg-color);
+  border-radius: 8px 0 0 8px;
+  min-width: 70px;
+  background-size: cover;
+  background-position: center;
+}
+
+.card:not(.nopreview) .card-image img.favicon {
+  display: none;
+}
+
+.nopreview .card-image {
+  display: flex;
+}
+
+.nopreview img.favicon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  align-self: center;
+  margin: 0 auto;
+  -moz-context-properties: fill;
+  fill: #CFCFD8;
+}
+
+.options-button {
+  padding: 0;
+  margin-block: auto;
+  margin-inline: .5em 8px;
+  min-width: 24px;
+  min-height: unset;
+  height: 24px;
+  background: var(--light-bg-color) no-repeat center url("chrome://global/skin/icons/more.svg");
+}
+
+@media (prefers-contrast) {
+  .options-button {
+    -moz-context-properties: fill;
+    fill: var(--in-content-button-text-color);
+    background: var(--in-content-button-background) no-repeat center url("chrome://global/skin/icons/more.svg");
+  }
+
+  .options-button:hover {
+    -moz-context-properties: fill;
+    fill: var(--in-content-button-text-color-hover);
+    background: var(--in-content-button-background-hover) no-repeat center url("chrome://global/skin/icons/more.svg");
+  }
+}

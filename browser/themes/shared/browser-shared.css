@@ -25,6 +25,14 @@
 
 @namespace html url("http://www.w3.org/1999/xhtml");
 
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+* {
+  font-family: "Inter", system-ui;
+}
+}
+/** endif **/
+
 :root {
   --toolbar-bgcolor: var(--toolbar-non-lwt-bgcolor);
   --toolbar-bgimage: var(--toolbar-non-lwt-bgimage);
@@ -121,7 +129,7 @@
 
 @media not (prefers-contrast) {
   :root:-moz-lwtheme {
-    --focus-outline-color: #0061E0;
+    --focus-outline-color: #248287;
   }
 
   @media (prefers-color-scheme: dark) {

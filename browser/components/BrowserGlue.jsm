@@ -29,6 +29,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PlacesUIUtils: "resource:///modules/PlacesUIUtils.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   SearchSERPTelemetry: "resource:///modules/SearchSERPTelemetry.sys.mjs",
+  SessionManager: "resource:///modules/SessionManager.sys.mjs",
   SnapshotMonitor: "resource:///modules/SnapshotMonitor.sys.mjs",
   UrlbarPrefs: "resource:///modules/UrlbarPrefs.sys.mjs",
   UrlbarQuickSuggest: "resource:///modules/UrlbarQuickSuggest.sys.mjs",
@@ -64,6 +65,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   FxAccounts: "resource://gre/modules/FxAccounts.jsm",
   HomePage: "resource:///modules/HomePage.jsm",
   Integration: "resource://gre/modules/Integration.jsm",
+  LaunchOnOSLogin: "resource:///modules/LaunchOnOSLogin.jsm",
   Log: "resource://gre/modules/Log.jsm",
   LoginBreaches: "resource:///modules/LoginBreaches.jsm",
   NetUtil: "resource://gre/modules/NetUtil.jsm",
@@ -93,6 +95,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
   SessionStore: "resource:///modules/sessionstore/SessionStore.jsm",
   ShellService: "resource:///modules/ShellService.jsm",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.jsm",
+  Sounds: "resource:///modules/Sounds.jsm",
   SpecialMessageActions:
     "resource://messaging-system/lib/SpecialMessageActions.jsm",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.jsm",
@@ -232,6 +235,8 @@ let JSWINDOWACTORS = {
         AboutLoginsSyncOptions: { wantUntrusted: true },
         AboutLoginsUpdateLogin: { wantUntrusted: true },
         AboutLoginsExportPasswords: { wantUntrusted: true },
+        AboutLoginsOpenOriginLink: { wantUntrusted: true },
+        contextmenu: { capture: true },
       },
     },
     matches: ["about:logins", "about:logins?*", "about:loginsimportreport"],
@@ -511,6 +516,21 @@ let JSWINDOWACTORS = {
 
     messageManagerGroups: ["browsers"],
     allFrames: true,
+  },
+
+  DownloadsCommon: {
+    parent: {
+      moduleURI: "resource:///actors/DownloadsCommonParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///actors/DownloadsCommonChild.jsm",
+      events: {
+        DownloadGetData: { wantUntrusted: true },
+        DownloadLaunchDownload: { wantUntrusted: true },
+        DownloadDoCommand: { wantUntrusted: true },
+      },
+    },
+    matches: ["about:downloads*"],
   },
 
   EncryptedMedia: {
@@ -830,6 +850,27 @@ XPCOMUtils.defineLazyGetter(lazy, "gTabbrowserBundle", function() {
   );
 });
 
+XPCOMUtils.defineLazyGetter(lazy, "gIsXPCShell", function() {
+  let env = Cc["@mozilla.org/process/environment;1"].getService(
+    Ci.nsIEnvironment
+  );
+  return env.exists("XPCSHELL_TEST_PROFILE_DIR");
+});
+
+if (
+  AppConstants.PINEBUILD &&
+  AppConstants.platform == "win" &&
+  !Cu.isInAutomation &&
+  !lazy.gIsXPCShell &&
+  Services.prefs.getBoolPref("browser.startup.launchOnOSLogin", false)
+) {
+  const PINEBUILD_BACKGROUND_UI =
+    "chrome://browser/content/companion/pinebuildBackground.xhtml";
+  let features = "chrome,titlebar=no,alwaysontop,minimizable=yes";
+
+  Services.ww.openWindow(null, PINEBUILD_BACKGROUND_UI, "_blank", features, []);
+}
+
 const listeners = {
   observers: {
     "update-downloading": ["UpdateListener"],
@@ -1123,6 +1164,124 @@ BrowserGlue.prototype = {
 
   // initialization (called on application startup)
   _init: function BG__init() {
+    if (AppConstants.PINEBUILD) {
+      JSWINDOWACTORS.ContentfulPaintTracker = {
+        parent: {
+          moduleURI: "resource:///actors/ContentfulPaintTrackerParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/ContentfulPaintTrackerChild.jsm",
+          events: {
+            MozFirstContentfulPaint: { capture: true },
+          },
+        },
+      };
+
+      JSWINDOWACTORS.HistoryCarousel = {
+        parent: {
+          moduleURI: "resource:///actors/HistoryCarouselParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/HistoryCarouselChild.jsm",
+          events: {
+            HistoryCarouselInit: { wantUntrusted: true },
+          },
+        },
+        matches: ["about:historycarousel"],
+        remoteTypes: ["privilegedabout"],
+      };
+
+      JSWINDOWACTORS.Companion = {
+        parent: {
+          moduleURI: "resource:///actors/CompanionParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/CompanionChild.jsm",
+          events: {
+            CompanionInit: { wantUntrusted: true },
+          },
+        },
+        matches: [
+          "chrome://browser/content/companion/companion.xhtml",
+          "about:preferences",
+        ],
+      };
+
+      JSWINDOWACTORS.FlowReset = {
+        parent: {
+          moduleURI: "resource:///actors/FlowResetParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/FlowResetChild.jsm",
+          events: {
+            RestoreLastSession: { wantUntrusted: true },
+            DOMContentLoaded: {},
+          },
+        },
+        matches: ["about:flow-reset"],
+        remoteTypes: ["privilegedabout"],
+      };
+
+      JSWINDOWACTORS.Onboarding = {
+        parent: {
+          moduleURI: "resource:///actors/OnboardingParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/OnboardingChild.jsm",
+          events: {
+            LaunchLearnMore: { wantUntrusted: true },
+            OnboardingCompleted: { wantUntrusted: true },
+            OpenFxa: { wantUntrusted: true },
+            RecordEvent: { wantUntrusted: true },
+            SaveDataPrefs: { wantUntrusted: true },
+            GetOnboardingProgressPrefValue: { wantUntrusted: true },
+            SetOnboardingProgressPrefValue: { wantUntrusted: true },
+          },
+        },
+        matches: ["about:onboarding"],
+        remoteTypes: ["privilegedabout"],
+      };
+
+      JSWINDOWACTORS.DownloadsCommon.allFrames = true;
+      JSWINDOWACTORS.DownloadsCommon.remoteTypes = ["privilegedabout"];
+
+      JSWINDOWACTORS.AboutLogins.allFrames = true;
+      JSWINDOWACTORS.AboutLogins.remoteTypes = ["privilegedabout"];
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsBrowsePanel = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsClearSelection = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsLoginEditLogin = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsRemoveUpdateState = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.AboutLoginsShowBlankLogin = {
+        wantUntrusted: true,
+      };
+      JSWINDOWACTORS.AboutLogins.child.events.contextmenu = { capture: true };
+
+      JSWINDOWACTORS.ViewActivation = {
+        parent: {
+          moduleURI: "resource:///actors/ViewActivationParent.jsm",
+        },
+        child: {
+          moduleURI: "resource:///actors/ViewActivationChild.jsm",
+          events: {
+            keydown: { mozSystemGroup: true },
+            click: { mozSystemGroup: true },
+            wheel: { mozSystemGroup: true },
+          },
+        },
+        messageManagerGroups: ["browsers"],
+        includeParent: true,
+        allFrames: true,
+      };
+    }
+
     let os = Services.obs;
     [
       "notifications-open-settings",
@@ -1281,6 +1440,25 @@ BrowserGlue.prototype = {
     lazy.SaveToPocket.init();
 
     AboutHomeStartupCache.init();
+
+    if (AppConstants.PINEBUILD) {
+      // The Workshop's hidden window is running in the privileged about content
+      // process.
+      // AboutHomeStartupCache needs to deal with some stuff in the same
+      // privileged content process.
+      // Consequently, in order to avoid any failures with AboutHomeStartupCache,
+      // the hidden window creation has to be done after
+      // AboutHomeStartupCache.init().
+      const { WorkshopBootstrap } = ChromeUtils.import(
+        "resource:///modules/WorkshopBootstrap.jsm"
+      );
+      WorkshopBootstrap.createHiddenWindow();
+
+      const { WorkshopParentAccess } = ChromeUtils.import(
+        "resource:///modules/WorkshopParentAccess.jsm"
+      );
+      WorkshopParentAccess.init();
+    }
 
     Services.obs.notifyObservers(null, "browser-ui-startup-complete");
   },
@@ -1692,6 +1870,11 @@ BrowserGlue.prototype = {
 
     lazy.SnapshotMonitor.init();
 
+    if (AppConstants.PINEBUILD) {
+      lazy.SessionManager.init();
+      lazy.Sounds.play(lazy.Sounds.STARTUP);
+    }
+
     this._firstWindowTelemetry(aWindow);
     this._firstWindowLoaded();
 
@@ -2000,6 +2183,7 @@ BrowserGlue.prototype = {
       () => lazy.BrowserUsageTelemetry.uninit(),
       () => lazy.SearchSERPTelemetry.uninit(),
       () => lazy.Interactions.uninit(),
+      () => lazy.SessionManager.uninit(),
       () => lazy.PageDataService.uninit(),
       () => lazy.PageThumbs.uninit(),
       () => lazy.NewTabUtils.uninit(),
@@ -2323,7 +2507,10 @@ BrowserGlue.prototype = {
       AsanReporter.init();
     }
 
+    lazy.LaunchOnOSLogin.init();
+
     lazy.Sanitizer.onStartup();
+
     this._maybeShowRestoreSessionInfoBar();
     this._scheduleStartupIdleTasks();
     this._lateTasksIdleObserver = (idleService, topic, data) => {
@@ -2751,7 +2938,11 @@ BrowserGlue.prototype = {
       // pre-init buffer.
       {
         task: () => {
-          Services.fog.initializeFOG();
+          if (AppConstants.PINEBUILD) {
+            Services.fog.initializeFOG("", "pine");
+          } else {
+            Services.fog.initializeFOG();
+          }
         },
       },
 
@@ -2788,6 +2979,30 @@ BrowserGlue.prototype = {
       {
         task: () => {
           lazy.ASRouterNewTabHook.createInstance(lazy.ASRouterDefaultConfig());
+        },
+      },
+
+      {
+        condition: AppConstants.PINEBUILD,
+        task: () => {
+          // Use an increasing number to keep track of the current feature
+          // onboarding version.
+          const ONBOARDING_VERSION = 30;
+
+          // Show the onboarding content, if we have something new to show.
+          const prefBranch = Services.prefs.getBranch(
+            "browser.pinebuild.companion.onboarding."
+          );
+          const isEnabled = prefBranch.getBoolPref("enabled", false);
+          const lastSeenVersion = prefBranch.getIntPref("lastSeenVersion");
+
+          if (isEnabled && ONBOARDING_VERSION > lastSeenVersion) {
+            prefBranch.setIntPref("lastSeenVersion", ONBOARDING_VERSION);
+            const topWindow = lazy.BrowserWindowTracker.getTopWindow();
+            topWindow.gDialogBox.open(
+              "chrome://browser/content/companion/onboarding.html"
+            );
+          }
         },
       },
 
@@ -3341,7 +3556,10 @@ BrowserGlue.prototype = {
         if (bookmarksUrl) {
           // Import from bookmarks.html file.
           try {
-            if (Services.policies.isAllowed("defaultBookmarks")) {
+            if (
+              Services.policies.isAllowed("defaultBookmarks") &&
+              !(AppConstants.PINEBUILD && restoreDefaultBookmarks)
+            ) {
               await lazy.BookmarkHTMLUtils.importFromURL(bookmarksUrl, {
                 replace: true,
                 source: lazy.PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,
@@ -3500,12 +3718,49 @@ BrowserGlue.prototype = {
       });
   },
 
+  _migratePineBuildUI() {
+    const VERSION = 1;
+    const prefPineBuildUIVersion = "browser.companion.migration.version";
+    let currentVersion = Services.prefs.getIntPref(prefPineBuildUIVersion, 0);
+    if (currentVersion >= VERSION) {
+      return;
+    }
+
+    if (currentVersion < 1) {
+      // MR2-306: Force light theme until dark theme is supported
+      try {
+        lazy.AddonManager.getAddonsByTypes(["theme"]).then(async themes => {
+          let theme = themes.find(
+            t => t.id == "firefox-compact-light@mozilla.org"
+          );
+          if (theme) {
+            await theme.enable();
+          }
+        });
+      } catch (e) {
+        // Occurs in xpcshell test runs.
+        let env = Cc["@mozilla.org/process/environment;1"].getService(
+          Ci.nsIEnvironment
+        );
+        if (!env.exists("XPCSHELL_TEST_PROFILE_DIR")) {
+          throw e;
+        }
+      }
+    }
+
+    Services.prefs.setIntPref(prefPineBuildUIVersion, VERSION);
+  },
+
   // eslint-disable-next-line complexity
   _migrateUI: function BG__migrateUI() {
     // Use an increasing number to keep track of the current migration state.
     // Completely unrelated to the current Firefox release number.
     const UI_VERSION = 128;
     const BROWSER_DOCURL = AppConstants.BROWSER_CHROME_URL;
+
+    if (AppConstants.PINEBUILD) {
+      this._migratePineBuildUI();
+    }
 
     const PROFILE_DIR = Services.dirsvc.get("ProfD", Ci.nsIFile).path;
 
@@ -4374,6 +4629,9 @@ BrowserGlue.prototype = {
    * Only show the infobar when canRestoreLastSession and the pref value == 1
    */
   async _maybeShowRestoreSessionInfoBar() {
+    if (AppConstants.PINEBUILD) {
+      return;
+    }
     let count = Services.prefs.getIntPref(
       "browser.startup.couldRestoreSession.count",
       0
@@ -5007,10 +5265,10 @@ var ContentBlockingCategoriesPrefs = {
     // If PREF_CB_CATEGORY is not set match users to a Content Blocking category. Check if prefs fit
     // perfectly into strict or standard, otherwise match with custom. If PREF_CB_CATEGORY has previously been set,
     // a change of one of these prefs necessarily puts us in "custom".
-    if (this.prefsMatch("standard")) {
-      Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "standard");
-    } else if (this.prefsMatch("strict")) {
+    if (this.prefsMatch("strict")) {
       Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "strict");
+    } else if (this.prefsMatch("standard")) {
+      Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "standard");
     } else {
       Services.prefs.setStringPref(this.PREF_CB_CATEGORY, "custom");
     }

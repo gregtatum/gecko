@@ -1100,6 +1100,16 @@ DownloadsViewUI.DownloadElementShell.prototype = {
   },
 
   onButton() {
+    if (Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_CONTENT) {
+      let window = this.browserWindow || this.element.ownerGlobal;
+      window.dispatchEvent(
+        new CustomEvent("DownloadDoCommand", {
+          detail: { download: this.download, command: this.buttonCommandName },
+          bubbles: true,
+        })
+      );
+      return;
+    }
     this.doCommand(this.buttonCommandName);
   },
 

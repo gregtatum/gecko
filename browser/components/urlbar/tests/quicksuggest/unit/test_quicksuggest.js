@@ -174,6 +174,9 @@ add_task(async function init() {
   UrlbarPrefs.set("quicksuggest.shouldShowOnboardingDialog", false);
   UrlbarPrefs.set("quicksuggest.remoteSettings.enabled", true);
   UrlbarPrefs.set("merino.enabled", false);
+  // Disable the OpenCompanionSearch provider if it happens to be enabled, since
+  // it's unrelated to this test and will add another unrelated result.
+  UrlbarPrefs.set("opencompanionsearch.enabled", false);
 
   // Install a default test engine.
   let engine = await addTestSuggestionsEngine();

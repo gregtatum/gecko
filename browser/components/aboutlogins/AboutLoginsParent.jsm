@@ -91,20 +91,23 @@ const augmentVanillaLoginObject = login => {
 
 class AboutLoginsParent extends JSWindowActorParent {
   async receiveMessage(message) {
-    if (!this.browsingContext.embedderElement) {
+    // Do nothing if messages arrive after the browser element is gone.
+    if (!this.browsingContext.top.embedderElement) {
       return;
     }
 
-    // Only respond to messages sent from a privlegedabout process. Ideally
-    // we would also check the contentPrincipal.originNoSuffix but this
-    // check has been removed due to bug 1576722.
-    if (
-      this.browsingContext.embedderElement.remoteType !=
-      EXPECTED_ABOUTLOGINS_REMOTE_TYPE
-    ) {
-      throw new Error(
-        `AboutLoginsParent: Received ${message.name} message the remote type didn't match expectations: ${this.browsingContext.embedderElement.remoteType} == ${EXPECTED_ABOUTLOGINS_REMOTE_TYPE}`
-      );
+    if (this.browsingContext.top.embedderElement.id != "companion-browser") {
+      // Only respond to messages sent from a privlegedabout process. Ideally
+      // we would also check the contentPrincipal.originNoSuffix but this
+      // check has been removed due to bug 1576722.
+      if (
+        this.browsingContext.embedderElement.remoteType !=
+        EXPECTED_ABOUTLOGINS_REMOTE_TYPE
+      ) {
+        throw new Error(
+          `AboutLoginsParent: Received ${message.name} message the remote type didn't match expectations: ${this.browsingContext.embedderElement.remoteType} == ${EXPECTED_ABOUTLOGINS_REMOTE_TYPE}`
+        );
+      }
     }
 
     AboutLogins.subscribers.add(this.browsingContext);
@@ -170,11 +173,29 @@ class AboutLoginsParent extends JSWindowActorParent {
         this.#removeAllLogins();
         break;
       }
+      case "AboutLogins:BrowsePanel": {
+        Services.obs.notifyObservers(null, "companion-submenu-change");
+        break;
+      }
+      case "AboutLogins:CopyLoginDetail": {
+        this.#ownerGlobal.ConfirmationHint.show(null, "copyURL", {
+          rect: message.data.rect,
+          position: "after_end",
+        });
+        break;
+      }
+      case "AboutLogins:OpenOriginLink": {
+        let uri = Services.io.newURI(message.data.url);
+        this.browsingContext.topChromeWindow.openPinebuildCompanionLink(uri);
+        break;
+      }
     }
   }
 
   get #ownerGlobal() {
-    return this.browsingContext.embedderElement.ownerGlobal;
+    return this.browsingContext.embedderElement
+      ? this.browsingContext.embedderElement.ownerGlobal
+      : this.browsingContext.top.embedderElement.ownerGlobal;
   }
 
   #createLogin(newLogin) {
@@ -281,7 +302,9 @@ class AboutLoginsParent extends JSWindowActorParent {
     }
 
     let { isAuthorized, telemetryEvent } = await lazy.LoginHelper.requestReauth(
-      this.browsingContext.embedderElement,
+      this.browsingContext.embedderElement
+        ? this.browsingContext.embedderElement
+        : this.browsingContext.top.embedderElement,
       lazy.OS_AUTH_ENABLED,
       AboutLogins._authExpirationTime,
       messageText.value,
@@ -394,7 +417,9 @@ class AboutLoginsParent extends JSWindowActorParent {
     }
 
     let { isAuthorized, telemetryEvent } = await lazy.LoginHelper.requestReauth(
-      this.browsingContext.embedderElement,
+      this.browsingContext.embedderElement
+        ? this.browsingContext.embedderElement
+        : this.browsingContext.top.embedderElement,
       true,
       null, // Prompt regardless of a recent prompt
       messageText.value,
@@ -754,10 +779,13 @@ class AboutLoginsInternal {
       this.subscribers
     );
     for (let subscriber of subscribers) {
-      let browser = subscriber.embedderElement;
+      let browser = subscriber.embedderElement
+        ? subscriber.embedderElement
+        : subscriber.top.embedderElement;
       if (
         browser?.remoteType != EXPECTED_ABOUTLOGINS_REMOTE_TYPE ||
-        browser?.contentPrincipal?.originNoSuffix != ABOUT_LOGINS_ORIGIN
+        (browser?.contentPrincipal?.originNoSuffix != ABOUT_LOGINS_ORIGIN &&
+          subscriber.top.embedderElement.id != "companion-browser")
       ) {
         this.subscribers.delete(subscriber);
         continue;

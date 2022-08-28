@@ -7,13 +7,32 @@
 #define HIDDEN_WINDOW
 
 <?xml-stylesheet href="chrome://browser/skin/webRTC-menubar-indicator.css" type="text/css"?>
+#ifdef PINEBUILD
+<?xml-stylesheet href="chrome://browser/content/companion/pinebuildBackground.css" type="text/css"?>
+#endif
 
 <window id="main-window"
         xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         data-l10n-sync="true">
 
+#ifdef PINEBUILD
+  <linkset>
+    <html:link rel="localization" href="browser/pinebuildBackground.ftl"/>
+  </linkset>
+#endif
+
 #include macWindow.inc.xhtml
+
+#ifdef PINEBUILD
+<script src="chrome://browser/content/companion/pinebuildBackground.js"></script>
+<menu id="pinebuildBackground-menu" data-l10n-id="pinebuild-background-menu" contextmenu="true">
+  <menupopup>
+    <menuitem id="pinebuildBackground-newWindow" data-l10n-id="pinebuild-background-new-window" />
+    <menuitem id="pinebuildBackground-exitApplication" data-l10n-id="pinebuild-background-exit-application" />
+  </menupopup>
+</menu>
+#endif
 
 <!-- Dock menu -->
 <popupset>
@@ -25,8 +44,10 @@
          the application. -->
     <menuitem data-l10n-id="menu-file-new-window" oncommand="OpenBrowserWindowFromDockMenu();"
               id="macDockMenuNewWindow" />
+#ifndef PINEBUILD
     <menuitem data-l10n-id="menu-file-new-private-window" oncommand="OpenBrowserWindowFromDockMenu({private: true});"
               id="macDockMenuNewPrivateWindow" />
+#endif
   </menupopup>
 </popupset>
 

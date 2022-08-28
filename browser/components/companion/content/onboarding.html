@@ -1,0 +1,31 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/companion.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/onboarding.css">
+    <script src="chrome://browser/content/companion/close-dialog.js"></script>
+  </head>
+  <body role="dialog" aria-labelledby="release-notes-title">
+    <button id="dismiss" aria-label="Dismiss"></button>
+    <article id="release-notes" role="document" tabindex="0">
+      <h1 id="release-notes-title">What's new on <span class="application-name">flowstate</span></h1>
+      <h2 class="release-notes-date">August 30, 2022</h2>
+      <dl>
+        <dt>Icons have been updated</dt>
+        <dd>We’ve added a new set of icons to Flowstate.</dd>
+        <dt>Better favicons</dt>
+        <dd>We’ve updated favicons in the Active View Manager to reduce clipping and blurriness.</dd>
+        <dt>More conferencing integrations!</dt>
+        <dd>We’ve added support for joining other meeting platforms, like Jitsi and Microsoft Teams.</dd>
+        <dt>Disconnected? No problem.</dt>
+        <dd>Flowstate will now let you know if a service becomes disconnected.</dd>
+      </dl>
+    </article>
+    <footer><button class="primary" id="ok" aria-label="Dismiss">Got it</button></footer>
+  </body>
+</html>

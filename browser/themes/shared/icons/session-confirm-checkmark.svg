@@ -1,0 +1,12 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9ZM18 9C18 13.9706 13.9706 18 9 18C4.02944 18 0 13.9706 0 9C0 4.02944 4.02944 0 9 0C13.9706 0 18 4.02944 18 9ZM5.18258 8.77802L7.82458 11.421H8.45258L12.8176 7.05702C12.93 6.93866 12.9917 6.78108 12.9896 6.61788C12.9874 6.45468 12.9217 6.29876 12.8063 6.18335C12.6908 6.06794 12.5349 6.00217 12.3717 6.00005C12.2085 5.99794 12.0509 6.05964 11.9326 6.17202L8.13858 9.96702L6.06758 7.89502C5.95049 7.77766 5.79157 7.71163 5.62579 7.71144C5.46001 7.71125 5.30094 7.77693 5.18358 7.89402C5.06622 8.01112 5.00019 8.17003 5 8.33581C4.99981 8.5016 5.06549 8.66066 5.18258 8.77802Z" fill="url(#paint0_linear)"/>
+<defs>
+<linearGradient id="paint0_linear" x1="0" y1="0" x2="17.9946" y2="18.0054" gradientUnits="userSpaceOnUse">
+<stop stop-color="#0061E0"/>
+<stop offset="1" stop-color="#B500FF"/>
+</linearGradient>
+</defs>
+</svg>

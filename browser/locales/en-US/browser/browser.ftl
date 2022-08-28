@@ -121,6 +121,9 @@ urlbar-search-tips-redirect-2 = Start your search in the address bar to see sugg
 # search engine, e.g. google.com or amazon.com.
 urlbar-tabtosearch-onboard = Select this shortcut to find what you need faster.
 
+# Allows users to open Search results in the Companion from the Urlbar.
+urlbar-open-search-companion = Search within history
+
 ## Local search mode indicator labels in the urlbar
 
 urlbar-search-mode-bookmarks = Bookmarks
@@ -500,10 +503,12 @@ enable-devtools-popup-description = To use the F12 shortcut, first open DevTools
 
 ## URL Bar
 
+# Pinebuild todo: bump string revs when text is settled
+
 # This placeholder is used when not in search mode and the user's default search
 # engine is unknown.
 urlbar-placeholder =
-  .placeholder = Search or enter address
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used in search mode with search engines that search the
 # entire web.
@@ -511,8 +516,7 @@ urlbar-placeholder =
 #  $name (String): the name of a search engine that searches the entire Web
 #  (e.g. Google).
 urlbar-placeholder-search-mode-web-2 =
-  .placeholder = Search the Web
-  .aria-label = Search with { $name }
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used in search mode with search engines that search a
 # specific site (e.g., Amazon).
@@ -520,23 +524,19 @@ urlbar-placeholder-search-mode-web-2 =
 #  $name (String): the name of a search engine that searches a specific site
 #  (e.g. Amazon).
 urlbar-placeholder-search-mode-other-engine =
-  .placeholder = Enter search terms
-  .aria-label = Search { $name }
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching bookmarks.
 urlbar-placeholder-search-mode-other-bookmarks =
-  .placeholder = Enter search terms
-  .aria-label = Search bookmarks
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching history.
 urlbar-placeholder-search-mode-other-history =
-  .placeholder = Enter search terms
-  .aria-label = Search history
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching open tabs.
 urlbar-placeholder-search-mode-other-tabs =
-  .placeholder = Enter search terms
-  .aria-label = Search tabs
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # This placeholder is used when searching quick actions.
 urlbar-placeholder-search-mode-other-actions =
@@ -546,7 +546,7 @@ urlbar-placeholder-search-mode-other-actions =
 # Variables
 #  $name (String): the name of the user's default search engine
 urlbar-placeholder-with-name =
-  .placeholder = Search with { $name } or enter address
+  .placeholder = Where to next? Search the web, apps, history and more…
 
 # Variables
 #  $component (String): the name of the component which forces remote control.
@@ -629,6 +629,12 @@ urlbar-result-action-search-actions = Search Actions
 # urlbar results.
 urlbar-group-firefox-suggest =
   .label = { -firefox-suggest-brand-name }
+
+urlbar-group-recent-searches =
+  .label = Recent Searches
+
+urlbar-group-pinebuildquickactions =
+  .label = Quick Actions
 
 # A label shown above the search suggestions group in the urlbar results. It
 # should use sentence case.

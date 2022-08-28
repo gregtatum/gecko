@@ -10,6 +10,8 @@
   --autocomplete-popup-highlight-background: SelectedItem;
   --autocomplete-popup-highlight-color: SelectedItemText;
 
+  --urlbar-view-padding-block: 4px;
+
   --urlbar-popup-action-color: hsl(178, 100%, 28%);
 
   --urlbarView-action-slide-in-distance: 200px;
@@ -52,10 +54,13 @@
   display: block;
   text-shadow: none;
   overflow: clip;
-  margin-inline: calc(5px + var(--urlbar-container-padding));
-  width: calc(100% - 2 * (5px + var(--urlbar-container-padding)));
   /* Match urlbar-background's border. */
   border-inline: 1px solid transparent;
+}
+
+.urlbarView:not(.urlbarView-pinebuild) {
+  margin-inline: calc(5px + var(--urlbar-container-padding));
+  width: calc(100% - 2 * (5px + var(--urlbar-container-padding)));
 }
 
 .urlbarView-body-inner {
@@ -67,7 +72,7 @@
 }
 
 .urlbarView-results {
-  padding-block: 4px;
+  padding-block: var(--urlbar-view-padding-block);
   white-space: nowrap;
 }
 
@@ -94,7 +99,7 @@
   display: flex;
   flex-wrap: nowrap;
   overflow: hidden;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   padding-inline: var(--urlbarView-item-inline-padding);
   padding-block: 6px;
 }
@@ -234,7 +239,8 @@
 }
 
 .urlbarView-row:not([type=tip], [type=dynamic])[selected] > .urlbarView-row-inner,
-.urlbarView-row-inner[selected] {
+.urlbarView-row-inner[selected],
+.urlbarView-pinebuild .urlbarView-row[selected] > .urlbarView-row-inner {
   background-color: var(--autocomplete-popup-highlight-background);
   color: var(--autocomplete-popup-highlight-color);
 }
@@ -315,7 +321,7 @@
   background-repeat: no-repeat;
   margin-inline: 4px;
   -moz-context-properties: fill, fill-opacity;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
 }
 
 .urlbarView-button[selected] {
@@ -377,7 +383,7 @@
 /* The tip button is a Photon default button when unfocused and a
    primary button in all other states. */
 .urlbarView-tip-button {
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   font-size: 0.93em;
   background-color: var(--button-bgcolor);
   font-weight: 600;
@@ -650,7 +656,7 @@
 .urlbarView-row:is([type=switchtab], [type=remotetab]) > .urlbarView-row-inner > .urlbarView-no-wrap > .urlbarView-action {
   color: var(--urlbar-box-text-color);
   background-color: var(--urlbar-box-focus-bgcolor);
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   padding: 6px 8px;
   margin-block: -6px;
   margin-inline-start: 8px;
@@ -797,7 +803,7 @@
   min-width: 28px;
   height: 28px;
   margin-inline: 0 12px;
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
 }
 
 #urlbar .searchbar-engine-one-off-item:last-child {

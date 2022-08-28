@@ -1,0 +1,150 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+:host {
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  outline: 1px solid var(--avm-river-outline-color);
+}
+
+#river {
+  display: flex;
+  padding: 4px;
+  margin-inline-end: 0;
+  padding-inline-end: 0;
+  --river-collapse-amount: 16px;
+  overflow: hidden;
+  border-radius: 25px;
+}
+
+#river-overflow-button {
+  border-radius: 9999px;
+  border: 1px solid var(--avm-button-border-color);
+  background-color: var(--avm-button-bgcolor);
+  width: 24px;
+  height: 24px;
+  margin-inline-start: 12px;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  box-sizing: border-box;
+}
+
+#river-overflow-button:active {
+  background-color: var(--avm-button-active-bgcolor);
+}
+
+#river-overflow-button[hidden] {
+  display: none;
+}
+
+#river:not([containsActive]) {
+  padding-inline-end: 5px;
+}
+
+view-group {
+  background-color: var(--avm-view-group-element-bgcolor);
+}
+
+#river-overflow-button:focus-visible,
+view-group:focus-visible,
+#river-overflow-button:hover,
+view-group:hover {
+  background-color: var(--avm-view-group-element-hover-focus-bgcolor);
+  color: var(--avm-view-group-element-hover-focus-text-color);
+}
+
+#river-overflow-button:hover,
+view-group:hover {
+  outline: var(--avm-view-group-element-hover-outline);
+}
+
+#river-overflow-button:focus-visible,
+view-group:focus-visible {
+  outline: var(--avm-view-group-element-focus-outline);
+}
+
+view-group:focus-visible::part(icon-container),
+view-group:hover::part(icon-container) {
+  background-color: var(--avm-view-group-element-icon-hover-focus-bgcolor);
+}
+
+#river[hidden],
+view-group[top][hidden] {
+  display: none;
+  padding: 0;
+  margin: 0;
+}
+
+.view-groups-wrapper {
+  display: flex;
+}
+
+.view-groups-wrapper > view-group {
+  transition: translate 150ms cubic-bezier(.66,.61,.43,1.41);
+}
+.view-groups-wrapper > view-group::part(icon-container) {
+  transition: scale 100ms;
+}
+.view-groups-wrapper > view-group {
+  /* The icons will clip through each other as they scale/translate. Giving them
+     all the same z-index fixes that. */
+  z-index: 0;
+}
+
+view-group[top] {
+  z-index: 1;
+  margin-inline-end: 4px;
+}
+
+view-group[active]:last-of-type:not(:first-of-type) {
+  margin-inline-start: 12px;
+}
+
+view-group[active]:not(:last-of-type) {
+  margin-inline-end: 12px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) and (not (prefers-contrast)) {
+  .view-groups-wrapper > view-group {
+    margin-inline-start: calc(-1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper > view-group:first-of-type {
+    padding-inline-start: var(--river-collapse-amount);
+  }
+
+  .view-groups-wrapper > view-group[active] + view-group {
+    margin-inline-start: 0;
+  }
+
+  .view-groups-wrapper > view-group:not([active]):hover::part(icon-container) {
+    scale: 1.25;
+  }
+
+  .view-groups-wrapper:not([topisactive]):hover > view-group:not(:hover),
+  .view-groups-wrapper:hover > view-group[active] ~ view-group {
+    translate: calc(-1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper:hover > view-group:not([active]):hover ~ view-group {
+    translate: calc(1 * var(--river-collapse-amount));
+  }
+
+  .view-groups-wrapper:hover > view-group:is([active]):hover ~ view-group,
+  .view-groups-wrapper:hover > view-group:is([active]) ~ view-group:hover ~ view-group {
+    translate: 0;
+  }
+}
+
+#river:not([hidden]) + view-group[top] {
+  padding-inline-start: 12px;
+  margin-inline-start: 0;
+}
+
+#river[hidden] + view-group[top] {
+  border-start-start-radius: 25px;
+  border-end-start-radius: 25px;
+}

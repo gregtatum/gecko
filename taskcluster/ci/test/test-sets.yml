@@ -122,6 +122,10 @@ mochitest-valgrind:
 desktop-screenshot-capture:
     - browser-screenshots
 
+pinebuild:
+    - xpcshell
+    - mochitest-browser-chrome-pinebuild
+
 ### Specific platform test sets
 
 # Linux

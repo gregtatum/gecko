@@ -25,6 +25,11 @@ user_pref("browser.newtabpage.activity-stream.fxaccounts.endpoint", "");
 // Background thumbnails in particular cause grief, and disabling thumbnails
 // in general can't hurt - we re-enable them when tests need them.
 user_pref("browser.pagethumbnails.capturing_disabled", true);
+// Also disable places previews for the same reason.
+user_pref("places.previews.enabled", false);
+// Disable background page data fetch as we don't want it kicking off during
+// the tests when we don't need it.
+user_pref("browser.pagedata.enabled", false);
 // Tell the search service we are running in the US.  This also has the desired
 // side-effect of preventing our geoip lookup.
 user_pref("browser.search.region", "US");
@@ -80,6 +85,8 @@ user_pref("browser.topsites.contile.enabled", false);
 // Default Glean to "record but don't report" mode. Docs:
 // https://firefox-source-docs.mozilla.org/toolkit/components/glean/dev/preferences.html
 user_pref("telemetry.fog.test.localhost_port", -1);
+// Disable pinebuild onboarding in automation.
+user_pref("browser.pinebuild.companion.onboarding.enabled", false);
 // Disable overlay scrollbars on GTK for testing. A bunch of tests (specially
 // mochitests) assume scrollbars take space. We disable them on macOS (where
 // overlay is also the default) at the system level as well, so this is

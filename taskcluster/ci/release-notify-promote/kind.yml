@@ -36,3 +36,5 @@ jobs:
         shipping-product: firefox
     devedition:
         shipping-product: devedition
+    pinebuild:
+        shipping-product: pinebuild

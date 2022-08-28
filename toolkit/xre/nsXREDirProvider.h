@@ -80,6 +80,8 @@ class nsXREDirProvider final : public nsIDirectoryServiceProvider2,
 
   // GetUserDataDirectory gets the profile path from gAppData.
   static nsresult GetUserDataDirectory(nsIFile** aFile, bool aLocal);
+  // GetDefaultUserDataDirectory gets the profile path without gAppData->profile.
+  static nsresult GetDefaultUserDataDirectory(nsIFile** aFile, bool aLocal);
 
   /* make sure you clone it, if you need to do stuff to it */
   nsIFile* GetGREDir() { return mGREDir; }
@@ -129,7 +131,7 @@ class nsXREDirProvider final : public nsIDirectoryServiceProvider2,
 
   // Determine the profile path within the UAppData directory. This is different
   // on every major platform.
-  static nsresult AppendProfilePath(nsIFile* aFile, bool aLocal);
+  static nsresult AppendProfilePath(nsIFile* aFile, const char* aProfilePath, bool aLocal);
 
   static nsresult AppendSysUserExtensionPath(nsIFile* aFile);
 

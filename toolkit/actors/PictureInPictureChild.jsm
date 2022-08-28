@@ -17,6 +17,9 @@ ChromeUtils.defineModuleGetter(
   "DeferredTask",
   "resource://gre/modules/DeferredTask.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 ChromeUtils.defineModuleGetter(
   lazy,
   "KEYBOARD_CONTROLS",
@@ -154,6 +157,10 @@ class PictureInPictureLauncherChild extends JSWindowActorChild {
         this.keyToggle();
         break;
       }
+      case "PictureInPicture:CompanionToggle": {
+        this.companionToggle();
+        break;
+      }
     }
   }
 
@@ -208,15 +215,7 @@ class PictureInPictureLauncherChild extends JSWindowActorChild {
     });
   }
 
-  //
-  /**
-   * The keyboard was used to attempt to open Picture-in-Picture. If a video is focused,
-   * select that video. Otherwise find the first playing video, or if none, the largest
-   * dimension video. We suspect this heuristic will handle most cases, though we
-   * might refine this later on. Note that we assume that this method will only be
-   * called for the focused document.
-   */
-  keyToggle() {
+  toggleIn() {
     let doc = this.document;
     if (doc) {
       let video = doc.activeElement;
@@ -234,6 +233,21 @@ class PictureInPictureLauncherChild extends JSWindowActorChild {
         this.togglePictureInPicture(video);
       }
     }
+  }
+
+  /**
+   * The keyboard was used to attempt to open Picture-in-Picture. If a video is focused,
+   * select that video. Otherwise find the first playing video, or if none, the largest
+   * dimension video. We suspect this heuristic will handle most cases, though we
+   * might refine this later on. Note that we assume that this method will only be
+   * called for the focused document.
+   */
+  keyToggle() {
+    this.toggleIn();
+  }
+
+  companionToggle() {
+    this.toggleIn();
   }
 }
 
@@ -659,6 +673,12 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
     });
     this.addMouseButtonListeners();
     state.isTrackingVideos = true;
+    if (AppConstants.PINEBUILD) {
+      this.sendAsyncMessage(
+        "PictureInPicture:StartTrackingMouseOverVideos",
+        {}
+      );
+    }
   }
 
   /**
@@ -694,6 +714,9 @@ class PictureInPictureToggleChild extends JSWindowActorChild {
       this.onMouseLeaveVideo(oldOverVideo);
     }
     state.isTrackingVideos = false;
+    if (AppConstants.PINEBUILD) {
+      this.sendAsyncMessage("PictureInPicture:StopTrackingMouseOverVideos", {});
+    }
   }
 
   /**

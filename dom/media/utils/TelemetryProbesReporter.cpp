@@ -607,7 +607,6 @@ void TelemetryProbesReporter::ReportResultForVideoFrameStatistics(
     const uint32_t proportion = 10000 * droppedFrames / parsedFrames;
     Telemetry::Accumulate(
         Telemetry::VIDEO_DROPPED_FRAMES_PROPORTION_EXPONENTIAL, proportion);
-
     {
       const uint64_t droppedFrames = stats->GetDroppedDecodedFrames();
       const uint32_t proportion = 10000 * droppedFrames / parsedFrames;

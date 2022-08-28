@@ -98,6 +98,7 @@ class nsToolkitProfileService final : public nsIToolkitProfileService {
   void ClearProfileFromOtherInstalls(nsIToolkitProfile* aProfile);
   nsresult MaybeMakeDefaultDedicatedProfile(nsIToolkitProfile* aProfile,
                                             bool* aResult);
+  nsresult MaybeMigrateProfile(nsIFile* aFile, nsIToolkitProfile** aProfile);
   bool IsSnapEnvironment();
   bool UseLegacyProfiles();
   nsresult CreateDefaultProfile(nsIToolkitProfile** aResult);

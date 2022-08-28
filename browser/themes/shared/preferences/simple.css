@@ -1,0 +1,155 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+:root {
+  --simple-spacing: 16px;
+}
+
+:root.simple .main-content {
+  background: #f9f9fb;
+  padding-top: 40px;
+  -moz-box-align: center;
+}
+
+:root.simple .pane-container {
+  width: 680px;
+}
+
+:root:not(.simple) #viewAllSettingsContainer,
+:root.simple .navigation,
+:root.simple .sticky-container {
+  display: none;
+}
+
+:root.simple groupbox.simple {
+  background: var(--in-content-box-background);
+  border-radius: 4px;
+  box-shadow: var(--card-shadow);
+  padding: var(--simple-spacing);
+}
+
+h1.simple {
+  font-weight: 600;
+}
+
+h2.simple {
+  margin-block: var(--simple-spacing);
+}
+
+.simple > vbox > label > h3 {
+  margin-block: 0;
+  font-size: 1em;
+}
+
+:root.simple .face-smile,
+:root.simple .face-sad {
+  display: none;
+}
+
+#isNotDefaultPane,
+#isDefaultPane {
+  margin-inline-start: 0 !important;
+}
+
+#defaultEngineSimple::part(icon) {
+  height: 16px;
+  width: 16px;
+}
+
+#pinAppPane,
+.suggest-container {
+  margin-top: var(--simple-spacing);
+}
+
+.suggest-container {
+  -moz-box-pack: end;
+  -moz-box-align: start;
+}
+
+.suggest-text-labels {
+  -moz-box-flex: 1;
+}
+
+.subtext {
+  color: var(--in-content-deemphasized-text);
+}
+
+#viewAllSettingsContainer,
+#mozproductsViewMore {
+  -moz-box-pack: center;
+}
+
+#firefox-account-container {
+  display: grid;
+}
+
+#firefox-account-container > #fxaGroup {
+  margin-bottom: var(--simple-spacing);
+}
+
+#extra-services-container {
+  display: grid;
+  grid-row-gap: var(--simple-spacing);
+}
+
+.extra-services-header-container {
+  display: flex;
+  justify-content: space-between;
+}
+
+.extra-services-header-container > refresh-services-button,
+.extra-services-header-container > h3 {
+  align-self: center;
+}
+
+.mozproduct-row:not(:first-child) {
+  margin-top: var(--simple-spacing);
+}
+
+#mozproductGroup:not([viewall]) > .mozproduct-shuffle:not(:nth-child(-n+3)),
+#mozproductGroup[viewall] > #mozproductsViewMore {
+  display: none;
+}
+
+.mozproduct-icon {
+  width: 32px;
+  margin-inline-end: 16px;
+  margin-block: 6px;
+}
+
+.mozproduct-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mozproduct-name {
+  font-weight: 600;
+  font-size: 1.14em;
+  line-height: normal;
+}
+
+.mozproduct-description {
+  color: var(--in-content-deemphasized-text);
+  font-size: 85%;
+  white-space: nowrap;
+  line-height: normal;
+}
+
+#mozproduct-vpn-icon {
+  list-style-image: url(chrome://browser/content/companion/vpn.svg);
+}
+
+#mozproduct-rally-icon {
+  list-style-image: url(chrome://browser/content/companion/rally.svg);
+}
+
+#mozproduct-foundation-icon {
+  list-style-image: url(chrome://browser/content/companion/mozsocial.png);
+}
+
+#mozproduct-pocket-icon {
+  -moz-context-properties: fill;
+  fill: #ef4056;
+  list-style-image: url('chrome://global/skin/icons/pocket.svg');
+}

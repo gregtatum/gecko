@@ -1,0 +1,1164 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import url("chrome://browser/content/companion/default-colors.css");
+@import url("chrome://browser/content/companion/lavender.css");
+
+:root {
+  /* XXX: should these (and all the other companion stuff for that matter) be
+  expressed in em / some other unit? */
+
+  /* Overrides of traditional browser variables: */
+  --toolbarbutton-inner-padding: 7px;
+  --toolbarbutton-outer-padding: 7px;
+  --toolbarbutton-border-radius: 50%;
+  --urlbarbutton-border-radius: 4px;
+  --urlbar-border-radius: 20px;
+  --urlbar-min-height: 40px;
+  --urlbar-height: 44px;
+  --urlbarbutton-border-radius: 4px;
+  --urlbar-margin-inline: 8px;
+
+  /* pinebuild-specific variables: */
+  --companion-width: 340px;
+  --companion-min-width: 300px;
+  --companion-max-width: 600px;
+  --pinebuild-flow-reset-transition-duration: 1s;
+  /* I tried using --animation-timing-function for this, but it was too steep
+     a curve. We may want to define a different curve than ease-out though. */
+  --pinebuild-flow-reset-transition-timing: ease-out;
+  /* I tried overriding this w/o pinebuild prefix, but it seems to be reset
+   * to 64px later. I'll investigate at a later date */
+  --pinebuild-urlbar-toolbar-height: 40px;
+  --pinebuild-urlbar-toolbar-breakout-width: 720px;
+
+  --pinebuild-toast-transition-duration: .2s;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --pinebuild-global-background: -moz-default-background-color;
+  }
+}
+
+/* TODO: check this all in high-contrast mode */
+@media not (prefers-contrast) {
+  /* Awkwardly, we need the more specific selector here in order to ensure we
+     override it. */
+  :root:not(:-moz-lwtheme) {
+    --toolbar-field-background-color: var(--colors-cafe-20);
+  }
+}
+
+#urlbar[breakout][breakout-extend] {
+  --urlbar-border-radius: 24px;
+}
+
+:root:not([chromehidden~="toolbar"]) {
+  min-width: 1024px;
+}
+/* Styling for popup windows */
+
+:root[chromehidden~="toolbar"] #navigator-toolbox {
+  padding-inline-start: 0;
+}
+
+:root[chromehidden~="toolbar"] #PanelUI-menu-button,
+:root[chromehidden~="toolbar"] #pinebuild-search-icon-box,
+:root[chromehidden~="toolbar"] #pinebuild-mac-buttonbox {
+  display: none;
+}
+
+:root[chromehidden~="toolbar"] #urlbar-container {
+  margin-inline: 16px;
+  max-width: unset;
+}
+
+:root[chromehidden~="toolbar"] #urlbar-background {
+  border: none;
+  background-color: var(--urlbar-box-bgcolor);
+}
+
+:root[chromehidden~="toolbar"] #urlbar-input {
+  text-overflow: clip;
+}
+
+:root[chromehidden ~="toolbar"] #urlbar:hover #urlbar-background {
+  box-shadow: none;
+}
+
+/* So, this is a bit awkward. Here's the problem: we have a big image, which
+   we want to use as a background, and which could take more than a frame to
+   upload to the GPU. So, we want to display something in its place before
+   it's ready. In our case, we want to display a flat color in its place.
+   What we *could* do, is just have a background-color set on body, as well
+   as a background-image, and until the image is loaded, Gecko will show the
+   background-color. However, this isn't a nice experience, because the
+   background image will pop in all at once on top of the color. What would
+   be nicer is if we could fade the background image in on top of the color
+   over time once it's ready. Unfortunately, things get weird when you want
+   to do that. Read on in the comments below for more! */
+body {
+  /* We start with a transparent background color on the body. This will let
+     #global-background and #global-background-inner show through (since they
+     have a low z-index). This means we have a transparent-backgrounded body
+     sitting on top of a background image which sits on top of a background
+     color. We add a transition here so when we go out of flow-reset mode,
+     we can just fade our background color to solid, causing the image to
+     nicely transition out. If we tried to just animate the background image
+     itself, it would just pop away. */
+  background-color: transparent;
+  transition-property: opacity, background-color;
+  transition-duration: var(--pinebuild-flow-reset-transition-duration);
+  transition-timing-function: var(--pinebuild-flow-reset-transition-timing);
+}
+
+body[onboarding="with-browsing"] #nav-bar river-el::part(page-action-button),
+body[onboarding="with-browsing"] #nav-bar pinned-views::part(page-action-button) {
+  display: none;
+}
+
+body[browser-ready]:not([flow-reset],[onboarding="no-browsing"]) {
+  /* This is just our normal solid color background */
+  background-color: var(--pinebuild-global-background);
+}
+
+#global-background {
+  /* This is just a container with a background color that holds the div
+     that holds the image. We use position:absolute and a negative z-index
+     to have it sit behind all content. */
+  z-index: -100;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--pinebuild-starting-background-color);
+}
+
+body[onboarding="no-browsing"] {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+body[onboarding="no-browsing"] #global-background-inner {
+  background-image: url("chrome://browser/content/companion/onboarding.png");
+}
+
+body[flow-reset] #global-background-inner {
+  background-image: url("chrome://browser/content/companion/time_of_day_background.png");
+}
+
+#global-background-inner {
+  height: 100%;
+  width: 100%;
+  /* This is where the magic happens. The opacity of 0.01 kicks off the load
+     of the image, since it's *technically* visible, but it won't actually be
+     perceivable until we set the browser-ready attribute on the body, at
+     which point it will fade in per the transition: opacity rule. We could
+     implement this as an html:image, however, we get some nice logic for
+     free with it being a background through the background-size and
+     background-position attributes, which are awkward to achieve through
+     HTML/JS. */
+  opacity: 0.01;
+  background-color: transparent;
+  background-size: cover;
+  background-position: center;
+  transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --pinebuild-flow-reset-transition-duration: 0s;
+    --pinebuild-toast-transition-duration: 0;
+  }
+}
+
+/* We set the browser-ready attribute the frame after we detect our first
+   paint of content. This actually is a bit awkward and not 100% correct,
+   but it's the best I could figure out. This will nicely
+   let us fade everything in all together, but it becomes tricky if
+   the background image hasn't been loaded off disk yet, because then
+   we'll start our opacity fade in before we've started to upload the image
+   to the GPU. If this is the case, the GPU upload could take long enough
+   that the animation drops a bunch of frames and the image just kind of
+   pops in anyway. I don't have a better solution here. I haven't had this
+   show up in practice, but it could happen on machines with old school
+   platter drives. */
+body[browser-ready] #global-background-inner {
+  opacity: 1;
+}
+
+/* We also fade these things in during startup to get a smooth experience. */
+body[flow-reset]:not([browser-ready]) #navigator-toolbox,
+body[flow-reset]:not([browser-ready]) companion-manager,
+body[flow-reset]:not([browser-ready]) .browserStack > browser {
+  transition: opacity var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
+}
+
+body:not([browser-ready]) #navigator-toolbox,
+body:not([browser-ready]) companion-manager,
+body:not([browser-ready]) .browserStack > browser {
+  opacity: 0;
+}
+
+/* Oddly, despite the browser transitioning opacity above, the browser's
+   border immediately pops in. These two blocks fix that. */
+body[flow-reset] .browserStack > browser {
+  border-color: transparent;
+}
+
+.browserStack > browser {
+  border-color: var(--chrome-content-separator-color);
+  transition: border-color var(--pinebuild-flow-reset-transition-duration) var(--pinebuild-flow-reset-transition-timing);
+}
+
+:root[pinebuild] {
+  --chrome-content-separator-color: var(--colors-cafe-40);
+}
+
+@media (prefers-contrast) {
+  :root[pinebuild] {
+    --chrome-content-separator-color: ButtonText;
+  }
+}
+
+:root body:not([flow-reset],[onboarding="no-browsing"]) .browserStack > browser {
+  border-top: 1px solid var(--chrome-content-separator-color);
+}
+
+:root[companion] body:not([flow-reset],[onboarding="no-browsing"]) .browserStack > browser {
+  border-inline-start: 1px solid var(--chrome-content-separator-color);
+  border-start-start-radius: 8px;
+}
+
+:root[inDOMFullscreen] body:not([flow-reset]) .browserStack > browser {
+  border: none;
+  border-radius: 0;
+}
+
+#navigator-toolbox:not([shifted]),
+#navigator-toolbox:not(:-moz-lwtheme),
+#tabbrowser-tabpanels,
+#navigator-toolbox:not([shifted]) .browser-toolbar:not(.titlebar-color) {
+  background: none;
+}
+
+/* It turns out the padding looks weird if the flow-reset page is shifted. */
+#navigator-toolbox:not([shifted]) {
+  padding-inline-start: 8px;
+}
+
+#navigator-toolbox {
+  border-bottom: none;
+}
+
+#titlebar:not([hidden="true"]) + #nav-bar > #pinebuild-window-controls {
+  display: none;
+}
+
+#PersonalToolbar,
+#nav-bar-overflow-button,
+#page-action-buttons,
+#tracking-protection-icon-container,
+#identity-box,
+#nav-bar-customization-target > *:not(#urlbar-container, #profiler-button, #companion-sidebar-button, #active-view-manager, [id^="pinebuild-"], #session-setaside-button, toolbarspring:nth-of-type(1)) {
+  display: none;
+  -moz-box-flex: 1;
+}
+
+body[fxa-flow-onboarding] #companion-box,
+body[fxa-flow-onboarding] #session-setaside-button,
+body[fxa-flow-onboarding] #urlbar-container,
+body[onboarding] #companion-box,
+body[onboarding] #session-setaside-button,
+body[onboarding] #urlbar-container,
+body[onboarding] #companion-sidebar-button,
+body[onboarding] #PanelUI-button,
+body[onboarding="no-browsing"] #pinebuild-back-button,
+body[onboarding="no-browsing"] #pinebuild-reload-button,
+body[onboarding="no-browsing"] active-view-manager,
+body[flow-reset] #pinebuild-back-button,
+body[flow-reset] #pinebuild-reload-button,
+body[flow-reset] #session-setaside-button,
+body[flow-reset] active-view-manager {
+  display: none;
+}
+
+/* When we're in flow reset mode, the urlbar is detached from its container,
+   but still a child of it, so we can't make the container display: none.
+   However, if we leave it at its normal width, it creates an region of the
+   toolbar that can't be used to drag the window.  */
+body[flow-reset] #urlbar-container {
+  max-width: 0;
+}
+
+/* Show a translucent background for the toolbox in fullscreen shifted state
+   on macos. */
+body[flow-reset] #navigator-toolbox[shifted]:not(:-moz-lwtheme),
+body[flow-reset] #navigator-toolbox[shifted] {
+  background-color: rgba(255,255,255,0.74);
+}
+body[flow-reset] #navigator-toolbox[shifted] #nav-bar {
+  background: none;
+}
+
+body[historycarousel] #browser-outer > vbox {
+  display: grid;
+}
+
+body[historycarousel] #browser-outer > vbox > * {
+  grid-area: 1 / 1;
+}
+
+/**
+ * Instead of collapsing the other items in the vbox, we set the visibility to
+ * hidden. This is because we need the tabbrowser to still have dimensions in
+ * order to properly generate thumbnails for the history carousel. We don't set
+ * the opacity to 0 because that seems to allow these elements to still be
+ * keyboard focused.
+ */
+body[historycarousel="ready"] #browser-outer > vbox > :not(#historycarousel-container) {
+  visibility: hidden;
+}
+
+/**
+ * We bump the z-index to ensure that other transparent items in the vbox don't
+ * accidentally capture user input events.
+ */
+body[historycarousel="ready"] #browser-outer > vbox > #historycarousel-container {
+  position: relative;
+  z-index: 1;
+}
+
+#nav-bar:hover river-el::part(history),
+#nav-bar:hover pinned-views::part(history) {
+  display: flex;
+  position: initial;
+  opacity: 1;
+}
+
+#nav-bar:hover river-el::part(domain),
+#nav-bar:hover pinned-views::part(domain) {
+  display: none;
+}
+
+@media (-moz-windows-compositor) {
+  /* If we have the titlebar hidden, then we want to have the nav-bar act as the
+     titlebar. This will cause us to properly adjust the size and margins of it
+     based on OS-settings. For example, without this, the top few pixels of the
+     browser will be cut off when maximized. This amount varies based on things
+     like screen DPI, so we need to trust the widget code to handle it. To
+     accomplish this, we use the adjacent sibling combinator to see if the
+     titlebar (which should immediately precede the nav-bar) has the hidden
+     attribute. This is a little fragile, but due to the way we toggle this
+     attribute based on menubar visibility in browser.js:setToolbarVisibility
+     only when changed, and rely on xulstore to persist it, this is probably
+     our least fragile option. */
+  :root[sizemode="normal"] #titlebar[hidden] + #nav-bar {
+    appearance: auto;
+    -moz-default-appearance: -moz-window-titlebar;
+  }
+
+  :root[sizemode="maximized"] #titlebar[hidden] + #nav-bar {
+    appearance: auto;
+    -moz-default-appearance: -moz-window-titlebar-maximized;
+  }
+}
+
+#urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box {
+  /* Ensure that when the user clicks on the contents of this box, it focuses the url bar */
+  pointer-events: none;
+  border-radius: var(--urlbar-icon-border-radius);
+  fill: currentColor;
+  fill-opacity: var(--urlbar-icon-fill-opacity);
+}
+
+#urlbar:not(.searchButton) > #urlbar-input-container > #pinebuild-search-icon-box #search-icon {
+  -moz-context-properties: fill, fill-opacity;
+  background: url(chrome://global/skin/icons/search-glass.svg) no-repeat center;
+  width: 32px;
+  height: 32px;
+}
+
+@supports not -moz-bool-pref("browser.companion.tabdebugging") {
+  #TabsToolbar {
+    display: none;
+  }
+}
+
+#urlbar-container {
+  min-width: 50px;
+  max-width: 450px;
+  padding: 12px 0;
+  transition-property: max-width;
+  transition-timing-function: var(--animation-timing-function);
+  transition-duration: 0s;
+}
+
+[urlbar-exceeds-toolbar-bounds=true] #urlbar-container {
+  max-width: 720px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [urlbar-exceeds-toolbar-bounds=true] #urlbar-container {
+    transition-duration: 150ms;
+  }
+}
+
+[urlbar-exceeds-toolbar-bounds=true] #pinebuild-toolbar {
+  width: 270px;
+  overflow: hidden;
+}
+
+/* Hide the set aside session icon when the search menu's open */
+[urlbar-exceeds-toolbar-bounds=true] #session-setaside-button {
+  visibility: hidden;
+}
+
+#pinebuild-toolbar {
+  display: flex;
+  min-height: 64px;
+}
+
+[urlbar-exceeds-toolbar-bounds=true] .chromeclass-toolbar-additional {
+  display: none;
+}
+
+#urlbar::before {
+  content: '';
+  width: 20px;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--toolbar-bgcolor) 100%);
+  margin-left: -25px;
+  z-index: -1;
+  display: none;
+}
+
+#pinebuild-mac-buttonbox                {
+  position: relative;
+  appearance: auto;
+  -moz-default-appearance: -moz-window-button-box;
+  margin-inline: 12px;
+}
+
+/**
+ * The theme of pinebuild currently uses a border-radius to make the background
+ * color when hovered/active circular.
+ *
+ * Per https://drafts.csswg.org/css-backgrounds/#corner-clipping, border-radius clips
+ * at the content-edge, and not at the padding edge for replaced elements (which is
+ * what the toolbarbutton-icon image is). This means that the icons themselves become
+ * clipped at the corners. We work around this by not using a replaced element, and
+ * instead setting the background-image on our round toolbarbutton-icons directly.
+ */
+toolbar .toolbarbutton-1 > .toolbarbutton-icon {
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-color: var(--pinebuild-toolbarbutton-bgcolor);
+}
+
+@media (prefers-contrast) {
+  toolbar .toolbarbutton-1:not(:is([disabled],[open],:active)):hover .toolbarbutton-icon {
+    fill: var(--pinebuild-toolbarbutton-hover-fill);
+  }
+}
+
+:is(
+  panelview .toolbarbutton-1,
+  toolbarbutton.subviewbutton,
+  .widget-overflow-list .toolbarbutton-1,
+  .toolbaritem-combined-buttons:is(
+    :not([cui-areatype="toolbar"]),
+    [overflowedItem=true]
+  ) > toolbarbutton
+):not([disabled]):hover {
+  color: var(--pinebuild-panel-item-hover-color);
+}
+
+@media (prefers-contrast) {
+  .panel-footer {
+    --button-hover-bgcolor: color-mix(in srgb, currentColor 17%, transparent);
+  }
+}
+
+#pinebuild-back-button > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/back.svg");
+}
+
+#pinebuild-forward-button > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/forward.svg");
+  display: none;
+}
+
+@supports -moz-bool-pref("browser.companion.globalhistorydebugging") {
+  #pinebuild-forward-button {
+    display: -moz-box;
+  }
+}
+
+#pinebuild-reload-button > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/reload.svg");
+}
+
+#pinebuild-stop-button > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/close.svg");
+}
+
+#pinebuild-reload-button[displaystop],
+#pinebuild-reload-button:not([displaystop]) + #pinebuild-stop-button {
+  display: none;
+}
+
+@supports not -moz-bool-pref("browser.companion.snapshots") {
+  #pinebuild-snapshot-button {
+    display: none;
+  }
+}
+
+#pinebuild-snapshot-button {
+  background-image: url("chrome://global/skin/icons/highlights.svg");
+}
+
+#companion-sidebar-button > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/companion.svg");
+  border-radius: var(--companion-sidebar-button-border-radius);
+}
+
+/* When the companion is open, show the alternate icon */
+#companion-sidebar-button[checked] > .toolbarbutton-icon {
+  background-image: url("chrome://browser/skin/companion-selected.svg");
+}
+
+/**
+ * Normally, checked toolbarbuttons have a background colour applied to
+ * them. The Companion button is special, so we override it here unless
+ * hovered.
+ */
+#companion-sidebar-button[checked]:not(:hover) > .toolbarbutton-icon {
+  background-color: unset;
+}
+
+body:not([flow-reset]) #companion-sidebar-button[checked] {
+  fill: var(--companion-sidebar-button-selected-fill-color);
+}
+
+@media (-moz-windows-compositor) {
+  #companion-sidebar-button {
+    margin-inline: 16px;
+  }
+}
+
+#pinebuild-view-manager {
+  min-width: 50px;
+  -moz-box-flex: 1;
+}
+
+%ifdef MOZ_WIDGET_COCOA
+#pinebuild-window-controls {
+  display: none;
+}
+%else
+#pinebuild-mac-buttonbox {
+  display: none;
+}
+%endif
+
+#pinebuild-identity-box #identity-box[pageproxystate="invalid"] #identity-icon-box {
+  display: none;
+}
+
+#pinebuild-identity-box {
+  width: 10px;
+  min-width: 10px;
+  margin-left: 6px;
+}
+
+#pinebuild-identity-box #identity-box {
+  width: 10px;
+  min-width: 10px;
+  margin-right: 0px;
+}
+
+#pinebuild-identity-box #identity-icon-box {
+  padding: 0px;
+}
+
+#pinebuild-identity-box #identity-icon {
+  width: 10px;
+  height: 10px;
+}
+
+#pinebuild-identity-box #identity-permission-box,
+#pinebuild-identity-box #notification-popup-box {
+ display: none;
+}
+
+#overflow-panel-mainview {
+  width: 39ch;
+  padding-block: var(--arrowpanel-menuitem-padding-block);
+}
+
+#active-view-manager-overflow-panel {
+  font: menu;
+}
+
+/** Page Info Panel **/
+
+/* Page info security icons */
+/** TODO: Some icons are borrowed from Firefox and may need replacing when UX provides them **/
+
+#site-security-icon.aboutUI {
+  background-image: url(chrome://branding/content/icon16.png);
+}
+
+#site-security-icon.readerMode {
+  background-image: url("chrome://browser/content/companion/reader-mode.svg");
+}
+
+#site-security-icon.localResource {
+  background-image: url(chrome://global/skin/icons/page-portrait.svg);
+}
+
+#site-security-icon.verifiedDomain {
+  background-image: url(chrome://global/skin/icons/security.svg);
+}
+
+#site-security-icon.certErrorPage,
+#site-security-icon.weakCipher,
+#site-security-icon.mixedDisplayContent,
+#site-security-icon.mixedDisplayContentLoadedActiveBlocked {
+  background-image: url(chrome://global/skin/icons/security-warning.svg);
+}
+
+#site-security-icon.httpsOnlyErrorPage,
+#site-security-icon.notSecure,
+#site-security-icon.mixedActiveContent {
+  background-image: url(chrome://global/skin/icons/security-broken.svg);
+}
+
+#site-security-icon.unknownIdentity {
+  background-image: url(chrome://global/skin/icons/defaultFavicon.svg);
+}
+
+/** END Page info security icons **/
+
+#page-action-panel {
+  margin-inline-end: -20px;
+  margin-block-start: 7px;
+  min-width: 285px;
+  --panel-border-radius: 16px;
+}
+
+#page-action-panel-sections {
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+
+#page-actions-section {
+  display: flex;
+}
+
+#page-actions-section > toolbarbutton {
+  appearance: none;
+  -moz-box-orient: vertical;
+  width: 62px;
+  padding: 0;
+  margin: 0;
+}
+
+#page-actions-section > toolbarbutton:not(:first-of-type) {
+  margin-inline-start: 8px;
+}
+
+#page-actions-section > toolbarbutton > .toolbarbutton-icon {
+  padding: 15px;
+  border: 1px solid var(--page-action-menu-button-border-color);
+  border-radius: 100px;
+  -moz-context-properties: fill;
+  fill: var(--page-action-menu-button-fill-color);
+  background-size: 15px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: var(--page-action-menu-button-bgcolor);
+}
+
+#page-actions-section > toolbarbutton:hover > .toolbarbutton-icon {
+  background-color: var(--button-hover-bgcolor);
+  fill: var(--page-action-menu-button-hover-fill);
+}
+
+#page-actions-section > toolbarbutton:active > .toolbarbutton-icon {
+  background-color: var(--button-active-bgcolor);
+  fill: var(--page-action-menu-button-active-fill);
+}
+
+#page-actions-section > toolbarbutton:focus-visible {
+  outline: 2px solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset, 2px);
+}
+
+#page-action-pin-view > .toolbarbutton-icon,
+#page-action-pin-app > .toolbarbutton-icon {
+  background-image: url("chrome://browser/content/companion/pin.svg");
+}
+
+#page-action-copy-url > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/edit-copy.svg");
+}
+
+#page-action-close-view > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/close.svg");
+}
+
+#page-action-mute > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/media/audio-muted.svg");
+}
+
+#page-action-mute[unmute] > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/media/audio.svg");
+}
+
+#page-action-reader-mode > .toolbarbutton-icon {
+  background-image: url("chrome://browser/content/companion/reader-mode.svg");
+}
+
+#page-action-more > .toolbarbutton-icon {
+  background-image: url("chrome://global/skin/icons/more.svg");
+}
+
+#page-actions-section > toolbarbutton > .toolbarbutton-text {
+  margin-block-start: 8px;
+  color: var(--page-action-menu-button-color);
+}
+
+#site-info-section {
+  display: flex;
+  flex-direction: column;
+  padding-inline: 4px;
+}
+
+#site-info-url-section,
+#site-info-title-section {
+  display: flex;
+}
+
+#site-info-title-section {
+  margin-block-start: 28px;
+}
+
+#site-info-edit-icon {
+  background: url("chrome://global/skin/icons/edit.svg") no-repeat right;
+  width: 16px;
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+#site-info-title:focus ~ #site-info-edit-icon,
+#site-info-title-section:not(:hover) #site-info-edit-icon {
+  background: none;
+}
+
+#site-info-title:focus ~ #site-info-edit-icon {
+  display: none;
+}
+
+#site-info-url:focus-visible,
+#site-info-title:focus-visible {
+  outline: 0.5px solid var(--page-action-menu-textfield-focused-border-color);
+  border-radius: 4px;
+  background-color: var(--page-action-menu-textfield-focused-bgcolor);
+  text-overflow: unset;
+}
+
+#site-info-title {
+  font-size: 14px;
+  margin: 6px 0;
+  padding-block: 6px;
+  border: none;
+  flex: 1;
+  overflow: hidden;
+}
+
+#site-info-title,
+#site-info-url {
+  border-radius: 4px;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-contrast) {
+  #site-info-title,
+  #site-info-url {
+    background-color: ButtonFace;
+    color: ButtonText;
+    outline: 1px solid WindowText;
+  }
+  #site-info-title:focus-within,
+  #site-info-url:focus-within {
+    background-color: ButtonText;
+    color: ButtonFace;
+  }
+  /**
+   * In high-contrast mode, we have outlines around the text inputs, so we
+   * don't need the icon here to indicate that the field is editable.
+   */
+  #site-info-edit-icon {
+    display: none;
+  }
+}
+
+#site-info-url {
+  flex: 1;
+  margin: 0;
+  border: 0;
+  padding-block: 4px;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+@media not (prefers-contrast) {
+  #site-info-url {
+    background-color: var(--page-action-menu-url-textfield-bgcolor);
+    color: var(--page-action-menu-url-textfield-color);
+  }
+}
+
+#site-security-info-section,
+#site-info-title,
+#site-info-url {
+  padding-inline: 8px;
+}
+
+#site-security-info-section {
+  margin-block: 6px;
+}
+
+#site-security-icon {
+  height: 12px;
+  width: 12px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  /**
+   * Our site security icons have a 2px margin around them, which
+   * makes aligning them to the spec a bit difficult. We work around
+   * this by shaving off the 2px with a negative margin.
+   */
+  margin-inline: -2px;
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+#site-security-info {
+  padding-inline-start: 6px;
+  display: flex;
+  align-items: center;
+}
+
+/** END Page Info Panel **/
+
+/** Urlbar **/
+#urlbar-page-overlay {
+  transition-property: background-color;
+  transition-timing-function: var(--animation-timing-function);
+  transition-duration: 0s;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #urlbar-page-overlay {
+    transition-duration: 150ms;
+  }
+}
+
+#urlbar-input {
+  text-overflow: ellipsis;
+}
+
+#urlbar[breakout][breakout-extend] #urlbar-page-overlay {
+  display: block;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: -1;
+}
+
+#urlbar[breakout][breakout-extend][breakout-extend-animate] #urlbar-page-overlay {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+#urlbar[breakout][breakout-extend] {
+  left: 8px;
+  top: 8px;
+  max-width: var(--pinebuild-urlbar-toolbar-breakout-width);
+}
+
+#urlbar-background {
+  border-radius: var(--urlbar-border-radius);
+}
+
+body:not([flow-reset]) #urlbar-background {
+  border: var(--urlbar-default-border);
+}
+
+body:not([flow-reset]) #urlbar[focused]:not([suppress-focus-border]) > #urlbar-background {
+  outline-color: var(--colors-border-focus);
+}
+
+body:not([flow-reset]) #urlbar:hover #urlbar-background {
+  box-shadow: -1px 2px 6px 0px rgba(132, 106, 65, 0.13);
+}
+
+body:not([flow-reset]) #urlbar[open] > .urlbarView > .urlbarView-body-outer > .urlbarView-body-inner {
+  border: unset;
+}
+
+/* Search breakout menu */
+
+#urlbar[breakout][breakout-extend] > #urlbar-input-container {
+  height: var(--pinebuild-urlbar-toolbar-height);
+  border-radius: 24px;
+  margin: 8px;
+}
+
+body:not([flow-reset]) #urlbar[breakout][breakout-extend] > #urlbar-input-container {
+  width: calc(100% - 16px);
+  border: 1px solid var(--colors-lavender-70);
+  background-color: var(--urlbar-breakout-background);
+}
+
+body[flow-reset] {
+  /* Shrink the --urlbar-height just a bit on the flow-reset page. */
+  --urlbar-height: 42px;
+}
+
+@media not (prefers-contrast) {
+  body[flow-reset] {
+    --toolbarbutton-icon-fill: white;
+    --toolbarbutton-hover-background: rgba(0,0,0, 0.2);
+  }
+}
+
+body[flow-reset] #urlbar[breakout],
+body[flow-reset] #urlbar[breakout][breakout-extend] {
+  display: block;
+  position: fixed;
+  top: calc((var(--pinebuild-urlbar-toolbar-height) + 35%));
+  left: var(--companion-width);
+  right: 0;
+  width: -moz-available;
+  border-radius: calc(var(--urlbar-border-radius) * 2);
+  z-index: 999;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+body[flow-reset] #urlbar:not([open])[breakout] > #urlbar-background,
+body[flow-reset] #urlbar[breakout] > #urlbar-input-container {
+  height: calc(1.5 * var(--urlbar-height));
+  font-size: 16px;
+  /* We use a margin variable in a padding rule because the Flowstate Urlbar
+     shifts some of the Firefox Urlbar global margin rules to instead apply to
+     individual elements. We must reflect that margin in the unopened flow-reset
+     Urlbar so that the search icon doesn't jump when the Urlbar is opened. */
+  padding-inline: calc(var(--urlbar-margin-inline) + var(--urlbar-container-padding));
+}
+
+body[flow-reset] #urlbar-background {
+  background: var(--urlbar-default-background);
+  border-radius: calc(var(--urlbar-border-radius) * 2);
+}
+
+body[flow-reset] #urlbar[open] #urlbar-background {
+  border-radius: var(--urlbar-border-radius);
+}
+
+/** END Urlbar **/
+
+.browser-toolbar:not(.titlebar-color) {
+  --toolbar-bgcolor: white;
+}
+
+#session-setaside-button > .toolbarbutton-icon {
+  background-image: url("chrome://browser/content/companion/session-setaside.svg");
+}
+
+.confirmation {
+  position: fixed;
+  top: 100px;
+  left: calc(50% + var(--companion-width) / 2);
+  background: white;
+  border: 0.5px solid #CFCFD8;
+  box-shadow: 0px 2px 6px rgba(58, 57, 68, 0.2);
+  border-radius: 50px;
+  padding: 6px 8px;
+  font-weight: 600;
+  transition: opacity 500ms;
+  line-height: 18px;
+  transform: translateX(-50%);
+}
+
+.confirmation > img {
+  vertical-align: middle;
+}
+
+.confirmation.fadeout {
+  opacity: 0;
+}
+
+@media (prefers-contrast) {
+  .confirmation {
+    color: WindowText;
+    background: Window;
+  }
+}
+
+@media not (prefers-contrast) {
+  /* Switch to white fill when in flow-reset state, since the background is darker. */
+  body[flow-reset] #companion-sidebar-button:not([checked]) > .toolbarbutton-icon {
+    background-image: url("chrome://browser/skin/companion.svg");
+    fill: var(--companion-sidebar-button-flow-reset-fill-color);
+  }
+
+  body[flow-reset] #companion-sidebar-button[checked] > .toolbarbutton-icon {
+    background-image: url("chrome://browser/skin/companion-selected.svg");
+    background-color: var(--companion-sidebar-button-selected-flow-reset-bg-color);
+  }
+
+  /* Specifically the hamburger menu is getting the lighter pressed color, so
+   * overriding that to look better on the darker flow-reset background */
+  body[flow-reset] #PanelUI-menu-button[open] .toolbarbutton-badge-stack {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+}
+
+companion-manager {
+  background: var(--colors-cafe-20);
+  border-radius: 16px;
+  margin: 0 16px 16px;
+}
+
+body[flow-reset] companion-manager {
+  /* --colors-cafe-20 */
+  background: rgba(250, 247, 242, 0.5);
+  border: 0.5px solid rgba(250, 247, 242, 0.8);
+}
+
+#companion-browser {
+  border-radius: 16px;
+}
+
+.sidebar-splitter {
+  border: none;
+}
+
+.titlebar-buttonbox-container {
+  -moz-box-align: center;
+}
+
+@media (-moz-windows-compositor) {
+  .titlebar-button {
+    padding: 10px;
+    border-radius: 4px;
+    /* Unfortunately this !important is needed to override a
+       `margin: 0 !important;` inside browser-aero.css */
+    margin: 4px !important;
+    opacity: 1;
+  }
+  @media (prefers-contrast) {
+    .titlebar-button {
+      border: var(--pinebuild-toolbarbutton-border);
+      stroke: ButtonText;
+    }
+  }
+
+  @media not (prefers-contrast) {
+    [flow-reset] .titlebar-button {
+      stroke: var(--colors-white);
+    }
+  }
+
+  .titlebar-buttonbox-container {
+    margin-inline: 16px 20px;
+  }
+}
+
+:root[chromehidden~="toolbar"] #pinebuild-toolbar,
+:root[chromehidden~="toolbar"] #session-setaside-button {
+  display: none;
+}
+
+toolbar .toolbarbutton-1 > .toolbarbutton-icon {
+  width: 32px;
+  height: 32px;
+}
+
+toolbar .toolbarbutton-1 > .toolbarbutton-icon,
+toolbar .toolbarbutton-1 > .toolbarbutton-badge-stack {
+  border: var(--pinebuild-toolbarbutton-border);
+}
+
+toolbar .toolbarbutton-1 {
+  margin-inline-end: 8px;
+  padding: 0;
+}
+
+/* The Forward button is currently disabled, so removing the margin on it */
+#pinebuild-forward-button {
+  margin: 0;
+}
+
+#companion-toast {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(var(--companion-width) - 32px);
+  box-sizing: border-box;
+  margin: 32px;
+  background: white;
+  box-shadow: var(--pinebuild-toast-box-shadow);
+  filter: var(--pinebuild-toast-drop-shadow);
+  border-radius: 12px;
+  overflow: hidden;
+  transform: translateY(200px);
+  transition: var(--pinebuild-toast-transition-duration) ease-in-out;
+}
+
+#companion-downloads-browser {
+  width: 100%;
+}
+
+#companion-toast.show {
+  transform: translateY(0);
+}
+
+.toast-notification {
+  height: var(--downloads-item-height);
+  overflow: hidden;
+}
+
+.toast-notification::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  cursor: pointer;
+}
+
+.download-notification {
+  display: block;
+  width: calc(var(--companion-width) - 32px);
+}
+
+#appMenu-new-private-window-button2 {
+  color: #B7B6B3;
+}
+
+#appMenu-new-private-window-button2.subviewbutton[shortcut]::after {
+  display: none;
+}

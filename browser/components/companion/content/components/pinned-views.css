@@ -1,0 +1,79 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#pinned-views[hidden] {
+  display: none;
+}
+
+#pinned-views {
+  display: flex;
+  border: 1px dashed var(--button-active-bgcolor);
+  border-radius: 100px;
+  align-items: center;
+}
+
+#pinned-views[hasviews] {
+  border: none;
+}
+
+#pin-icon {
+  -moz-context-properties: fill;
+  fill: var(--toolbarbutton-icon-fill);
+  margin: 10px;
+  width: 15px;
+  height: 15px;
+}
+
+view-group {
+  background-color: var(--avm-pinned-view-group-element-bgcolor);
+  margin-inline: 4px;
+  border-radius: 100px;
+  height: 32px;
+  padding: 4px;
+}
+
+view-group:focus-visible,
+view-group:hover {
+  background-color: var(--avm-pinned-view-group-element-hover-focus-bgcolor);
+  color: var(--avm-view-group-element-hover-focus-text-color);
+}
+
+view-group:hover {
+  outline: var(--avm-view-group-element-hover-outline);
+}
+
+view-group:focus-visible {
+  outline: var(--avm-view-group-element-focus-outline);
+}
+
+view-group:focus-visible::part(icon-container),
+view-group:hover::part(icon-container) {
+  background-color: var(--avm-view-group-element-icon-hover-focus-bgcolor);
+}
+
+view-group:first-of-type {
+  margin-inline-start: 0;
+}
+
+view-group:last-of-type {
+  margin-inline-end: 0;
+}
+
+view-group[dragging] {
+  display: none;
+}
+
+view-group[draggingover],
+#pin-icon[draggingover] {
+  border-inline-end: 32px solid transparent;
+}
+
+view-group:not([app]) + view-group[app]::before {
+  content: "";
+  position: relative;
+  width: 1px;
+  border-inline-start: 1px solid var(--avm-pinned-views-separator-color);
+  height: 100%;
+  inset-inline-start: -8px;
+}

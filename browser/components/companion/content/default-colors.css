@@ -1,0 +1,97 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+:root {
+  --toolbarbutton-icon-fill: ButtonText;
+  --button-hover-bgcolor: var(--toolbarbutton-icon-fill);
+  --toolbarbutton-hover-background: var(--toolbarbutton-icon-fill);
+  --toolbarbutton-active-background: SelectedItem;
+  --button-active-bgcolor: var(--toolbarbutton-active-background);
+  --pinebuild-toolbarbutton-border: 1px solid var(--toolbarbutton-icon-fill);
+  --pinebuild-toolbarbutton-bgcolor: ButtonFace;
+  --pinebuild-toolbarbutton-hover-bgcolor: var(--toolbarbutton-icon-fill);
+  --pinebuild-toolbarbutton-hover-fill: var(--pinebuild-toolbarbutton-bgcolor);
+  --pinebuild-panel-item-hover-color: var(--pinebuild-toolbarbutton-bgcolor);
+  --companion-sidebar-button-flow-reset-fill-color: var(--toolbarbutton-icon-fill);
+  --companion-sidebar-button-selected-fill-color: var(--toolbarbutton-icon-fill);
+  --companion-sidebar-button-selected-flow-reset-bg-color: var(--pinebuild-toolbarbutton-bgcolor);
+  --companion-sidebar-button-border-radius: 8px;
+  --avm-button-border-color: var(--toolbarbutton-icon-fill);
+  --avm-button-fill-color: var(--toolbarbutton-icon-fill);
+  --avm-button-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
+  --avm-button-hover-bgcolor: var(--toolbarbutton-icon-fill);
+  --avm-button-hover-fill: var(--pinebuild-toolbarbutton-bgcolor);
+  --avm-button-active-fill: var(--toolbarbutton-icon-fill);
+  --avm-button-active-bgcolor: var(--toolbarbutton-active-background);
+  --page-action-menu-button-border-color: var(--toolbarbutton-icon-fill);
+  --page-action-menu-button-fill-color: var(--toolbarbutton-icon-fill);
+  --page-action-menu-button-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
+  --page-action-menu-button-color: var(--toolbarbutton-icon-fill);
+  --page-action-menu-textfield-focused-border-color: var(--toolbarbutton-icon-fill);
+  --page-action-menu-textfield-focused-bgcolor: var(--pinebuild-toolbarbutton-bgcolor);
+  --page-action-menu-button-hover-fill: var(--pinebuild-toolbarbutton-bgcolor);
+  --page-action-menu-button-active-fill: var(--toolbarbutton-icon-fill);
+
+  --avm-workspace-bgcolor: transparent;
+  --avm-workspace-contains-pins-bgcolor: transparent;
+  --avm-workspace-box-shadow-color: transparent;
+  --avm-workspace-border-color: WindowText;
+  --avm-workspace-contains-pins-border-color: WindowText;
+  --avm-workspace-selected-river-bgcolor: transparent;
+  --avm-workspace-indicator-button-color: WindowText;
+
+  --avm-workspace-default-indicator-button-bgcolor: ButtonFace;
+  --avm-workspace-default-indicator-button-unselected-bgcolor: ButtonFace;
+  --avm-workspace-default-indicator-button-unselected-border-color: ButtonText;
+  --avm-workspace-default-indicator-button-unselected-color: ButtonText;
+  --avm-workspace-default-selected-bgcolor: transparent;
+  --avm-workspace-default-selected-border-color: WindowText;
+  --avm-workspace-default-selected-box-shadow-color: transparent;
+  --avm-workspace-1-indicator-button-bgcolor: ButtonFace;
+  --avm-workspace-1-indicator-button-unselected-bgcolor: ButtonFace;
+  --avm-workspace-1-indicator-button-unselected-border-color: ButtonText;
+  --avm-workspace-1-indicator-button-unselected-color: ButtonText;
+  --avm-workspace-1-selected-bgcolor: transparent;
+  --avm-workspace-1-selected-border-color: WindowText;
+  --avm-workspace-1-selected-box-shadow-color: transparent;
+  --avm-workspace-2-indicator-button-bgcolor: ButtonFace;
+  --avm-workspace-2-indicator-button-unselected-bgcolor: ButtonFace;
+  --avm-workspace-2-indicator-button-unselected-border-color: ButtonText;
+  --avm-workspace-2-indicator-button-unselected-color: ButtonText;
+  --avm-workspace-2-selected-bgcolor: transparent;
+  --avm-workspace-2-selected-border-color: WindowText;
+  --avm-workspace-2-selected-box-shadow-color: transparent;
+
+  --avm-pinned-views-separator-color: WindowText;
+  --avm-river-outline-color: WindowText;
+  --avm-view-group-element-bgcolor: ButtonFace;
+  --avm-view-group-element-hover-focus-bgcolor: ButtonText;
+  --avm-view-group-element-hover-focus-text-color: ButtonFace;
+  --avm-view-group-element-hover-outline: 1px solid ButtonFace;
+  --avm-view-group-element-focus-outline: 1px solid ButtonFace;
+  --avm-pinned-view-group-element-bgcolor: ButtonFace;
+  --avm-pinned-view-group-element-hover-focus-bgcolor: ButtonText;
+  --avm-view-group-element-icon-border-color: var(--toolbarbutton-icon-fill);;
+  --avm-view-group-element-icon-bgcolor: ButtonFace;
+  --avm-view-group-element-icon-hover-focus-bgcolor: ButtonText;
+  --avm-view-group-element-active-icon-shadow-color: transparent;
+  --avm-view-group-element-active-icon-bgcolor: SelectedItem;
+  --avm-view-group-element-breadcrumb-stroke-color: var(--toolbarbutton-icon-fill);;
+  --avm-view-group-element-breadcrumb-fill-color: var(--pinebuild-toolbarbutton-bgcolor);
+  --avm-view-group-element-breadcrumb-hover-stroke-color: ButtonText;
+  --avm-view-group-element-breadcrumb-hover-fill-color: SelectedItem;
+  --avm-view-group-element-breadcrumb-active-stroke-color: SelectedItem;
+  --avm-view-group-element-breadcrumb-active-fill-color: SelectedItem;
+
+  --urlbar-default-border: 1px solid var(--toolbarbutton-icon-fill);
+  --urlbar-default-background: ButtonFace;
+
+  --urlbar-companionlink-hover-bgcolor: ButtonFace;
+  --urlbar-companionlink-hover-border: .5px solid var(--toolbarbutton-icon-fill);
+  --urlbar-companionlink-selected-bgcolor: ButtonText;
+  --urlbar-companionlink-selected-border: .5px solid SelectedItem;
+  --urlbar-companionlink-selected-outline: 1.5px solid SelectedItem;
+  --urlbar-companionlink-active-bgcolor: ButtonText;
+  --urlbar-companionlink-active-border: .5px solid var(--toolbarbutton-icon-fill);
+}

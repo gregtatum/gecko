@@ -1,0 +1,261 @@
+/**
+ * Copyright 2021 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import logic from "logic";
+
+import { bsearchMaybeExists, bsearchForInsert } from "shared/util";
+
+import { conversationMessageComparator } from "./comparators";
+
+import { BaseTOC } from "./base_toc";
+
+/**
+ * Represent ordered lists of data that are always memory resident and may
+ * dynamically change in order and contents.  Initially created for use by
+ * derived views, but could envolve as use-cases arise.  Or more TOC
+ * implementations should be created.
+ */
+export class DynamicFullTOC extends BaseTOC {
+  constructor({
+    comparator,
+    idKey,
+    topOrderingKey,
+    onFlush,
+    metaHelpers,
+    onForgotten,
+  }) {
+    super({ metaHelpers, onForgotten });
+
+    logic.defineScope(this, "DynamicFullTOC");
+
+    this.type = "DynamicFullTOC";
+    this.overlayNamespace = null;
+    this.heightAware = false;
+
+    this.items = [];
+    this._comparator = comparator;
+    this._idKey = idKey;
+    this._topOrderingKey = topOrderingKey;
+    this._onFlush = onFlush;
+    // leave the overlay-resolver usage in our copied/pasted code in place.
+    this._overlayResolver = () => {};
+
+    this.__deactivate(true);
+  }
+
+  __activateTOC() {
+    return Promise.resolve();
+  }
+
+  __deactivateTOC(/*firstTime*/) {}
+
+  get length() {
+    return this.items.length;
+  }
+
+  get totalHeight() {
+    return this.items.length;
+  }
+
+  addItem(item) {
+    const newIndex = bsearchForInsert(this.items, item, this._comparator);
+    this.items.splice(newIndex, 0, item);
+  }
+
+  updateItem(/*item*/) {}
+
+  removeItem(/*id*/) {}
+
+  setItems(items) {
+    this.items = items.concat();
+    // XXX true is currently a temporary hack for us to indicate that we should
+    // treat all data as invalidated.
+    this.items.sort(this._comparator);
+    this.emit("change", true);
+  }
+
+  /**
+   * Explicitly report dirtying, intended for use by lazy owners that provide
+   * an `onFlush` handler.  You do not need to call this if you keep us
+   * up-to-date at all times using addItem/updateItem/removeItem.
+   */
+  reportDirty() {
+    this.emit("change", null);
+  }
+
+  /**
+   * Invoked by `WindowedListProxy.flush` as the first thing it does if we
+   * reported ourselves as dirty since the last flush.
+   */
+  flush() {
+    if (this._onFlush) {
+      this._onFlush();
+    }
+  }
+
+  /**
+   * Handle the addition or removal of a message from the TOC.  Note that while
+   * we originally tried to stick with the invariant that message dates were
+   * immutable, we decided to allow them to change in the case of drafts to
+   * allow for simpler conceptual handling.
+   *
+   * @param {MessageId} change.id
+   * @param {DateTS} [preDate]
+   *   If the message already existed, its date before the change.  If the
+   *   message did not previously exist, this is null.
+   * @param {DateTS} [postDate]
+   *   If the message has not been deleted, its date after the change.  (Which
+   *   should be the same as the date before the change unless the message is a
+   *   modified draft.)  If the message has been deleted, this is null.
+   * @param {MessageInfo} item
+   * @param {Boolean} freshlyAdded
+   */
+  onTOCChange({ id, preDate, postDate, item, freshlyAdded, matchInfo }) {
+    let metadataOnly = item && !freshlyAdded;
+
+    if (freshlyAdded) {
+      // - Added!
+      const newKey = { date: postDate, id, matchInfo };
+      const newIndex = bsearchForInsert(
+        this.items,
+        newKey,
+        conversationMessageComparator
+      );
+      this.idsWithDates.splice(newIndex, 0, newKey);
+    } else if (!item) {
+      // - Deleted!
+      const oldKey = { date: preDate, id };
+      const oldIndex = bsearchMaybeExists(
+        this.idsWithDates,
+        oldKey,
+        conversationMessageComparator
+      );
+      this.idsWithDates.splice(oldIndex, 1);
+    } else if (preDate !== postDate) {
+      // - Message date changed (this should only happen for drafts)
+      const oldKey = { date: preDate, id };
+      const oldIndex = bsearchMaybeExists(
+        this.idsWithDates,
+        oldKey,
+        conversationMessageComparator
+      );
+      this.idsWithDates.splice(oldIndex, 1);
+
+      const newKey = { date: postDate, id, matchInfo };
+      const newIndex = bsearchForInsert(
+        this.idsWithDates,
+        newKey,
+        conversationMessageComparator
+      );
+      this.idsWithDates.splice(newIndex, 0, newKey);
+
+      // We're changing the ordering.
+      metadataOnly = false;
+    }
+
+    this.emit("change", id, metadataOnly);
+  }
+
+  /**
+   * Return an array of the conversation id's occupying the given indices.
+   */
+  sliceIds(begin, end) {
+    const idKey = this._idKey;
+    const ids = [];
+    const items = this.items;
+    for (let i = begin; i < end; i++) {
+      ids.push(items[i][idKey]);
+    }
+    return ids;
+  }
+
+  /**
+   * Generate an ordering key that is from the distant future, effectively
+   * latching us to the top.  We use this for the coordinate-space case where
+   * there is nothing loaded yet.
+   */
+  getTopOrderingKey() {
+    return this._topOrderingKey;
+  }
+
+  getOrderingKeyForIndex(index) {
+    if (this.items.length === 0) {
+      return this.getTopOrderingKey();
+    } else if (index < 0) {
+      index = 0;
+    } else if (index >= this.items.length) {
+      index = this.items.length - 1;
+    }
+    return this.items[index];
+  }
+
+  findIndexForOrderingKey(key) {
+    const index = bsearchForInsert(this.items, key, this._comparator);
+    return index;
+  }
+
+  getDataForSliceRange(
+    beginInclusive,
+    endExclusive,
+    alreadyKnownData,
+    alreadyKnownOverlays
+  ) {
+    beginInclusive = Math.max(0, beginInclusive);
+    endExclusive = Math.min(endExclusive, this.items.length);
+
+    const overlayResolver = this._overlayResolver;
+
+    // State and overlay data to be sent to our front-end view counterpart.
+    // This is (needed) state information we have synchronously available from
+    // the db cache and (needed) overlay information (which can always be
+    // synchronously derived.)
+    const sendState = new Map();
+    // The new known set which is the stuff from alreadyKnownData we reused plus
+    // the data we were able to provide synchronously.  (And the stuff we have
+    // to read from the DB does NOT go in here.)
+    const newKnownSet = new Set();
+
+    const items = this.items;
+    const idKey = this._idKey;
+    const ids = [];
+    for (let i = beginInclusive; i < endExclusive; i++) {
+      const id = items[i][idKey];
+      ids.push(id);
+      const haveData = alreadyKnownData.has(id);
+      const haveOverlays = alreadyKnownOverlays.has(id);
+      if (haveData && haveOverlays) {
+        newKnownSet.add(id);
+        continue;
+      }
+
+      if (haveData) {
+        // only need overlays
+        sendState.set(id, [null, overlayResolver(id)]);
+      } else {
+        newKnownSet.add(id);
+        sendState.set(id, [items[i], overlayResolver(id)]);
+      }
+    }
+
+    return {
+      ids,
+      state: sendState,
+      pendingReads: null,
+      readPromise: null,
+      newValidDataSet: newKnownSet,
+    };
+  }
+}

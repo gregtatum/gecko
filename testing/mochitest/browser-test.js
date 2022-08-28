@@ -934,6 +934,13 @@ Tester.prototype = {
             }
           }
 
+          if (AppConstants.PINEBUILD) {
+            // Remove the companion browser element. This will prevent false
+            // positives for tests that were the last to touch the companion.
+            // They will thus not be blamed for leaking a document.
+            document.getElementById("companion-browser").remove();
+          }
+
           // Destroy BackgroundPageThumbs resources.
           let { BackgroundPageThumbs } = ChromeUtils.import(
             "resource://gre/modules/BackgroundPageThumbs.jsm"

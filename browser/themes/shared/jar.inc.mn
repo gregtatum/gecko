@@ -122,6 +122,8 @@
   skin/classic/browser/preferences/preferences.css             (../shared/preferences/preferences.css)
   skin/classic/browser/preferences/privacy.css                 (../shared/preferences/privacy.css)
   skin/classic/browser/preferences/rally-logo.svg              (../shared/preferences/rally-logo.svg)
+  skin/classic/browser/preferences/simple.css                  (../shared/preferences/simple.css)
+  skin/classic/browser/preferences/services.css                (../shared/preferences/services.css)
   skin/classic/browser/preferences/search-arrow-indicator.svg  (../shared/preferences/search-arrow-indicator.svg)
   skin/classic/browser/preferences/search-bar.svg              (../shared/preferences/search-bar.svg)
   skin/classic/browser/preferences/vpn-logo.svg                (../shared/preferences/vpn-logo.svg)
@@ -214,7 +216,11 @@
   skin/classic/browser/window.svg                     (../shared/icons/window.svg)
   skin/classic/browser/zoom-out.svg                   (../shared/icons/zoom-out.svg)
   skin/classic/browser/ion.svg                        (../shared/icons/ion.svg)
-
+#ifdef PINEBUILD
+  skin/classic/browser/session-confirm-checkmark.svg  (../shared/icons/session-confirm-checkmark.svg)
+  skin/classic/browser/companion.svg                  (../shared/icons/companion.svg)
+  skin/classic/browser/companion-selected.svg         (../shared/icons/companion-selected.svg)
+#endif
 
   skin/classic/browser/search-engine-placeholder.png           (../shared/search/search-engine-placeholder.png)
   skin/classic/browser/search-engine-placeholder@2x.png        (../shared/search/search-engine-placeholder@2x.png)

@@ -74,3 +74,24 @@ jobs:
                 - releases/bouncer_firefox_devedition.py
         treeherder:
             platform: devedition-release/opt
+
+    pinebuild:
+        shipping-product: pinebuild
+        index:
+            product: pinebuild
+            job-name: pinebuild-release-bouncer-check
+        run:
+            config:
+                - releases/bouncer_pinebuild_beta.py
+            extra-config:
+                by-release-level:
+                    production:
+                        bouncer_prefix: "https://download.mozilla.org/"
+                        locales: ['en-US']
+                    staging:
+                        bouncer_prefix: "https://bouncer-bouncer-releng.stage.mozaws.net/"
+                        cdn_urls:
+                            - ftp.stage.mozaws.net
+                        locales: ['en-US']
+        treeherder:
+            platform: pinebuild-release/opt

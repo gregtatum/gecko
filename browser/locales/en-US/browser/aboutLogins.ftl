@@ -149,7 +149,9 @@ confirmation-dialog-dismiss-button =
   .title = Cancel
 
 about-logins-confirm-remove-dialog-title = Remove this login?
+about-logins-companion-confirm-remove-password-title = Remove this password?
 confirm-delete-dialog-message = This action cannot be undone.
+companion-confirm-delete-dialog-message = This cannot be undone.
 about-logins-confirm-remove-dialog-confirm-button = Remove
 
 about-logins-confirm-remove-all-dialog-confirm-button-label =
@@ -342,6 +344,17 @@ about-logins-import-report-error =
       *[other] <div data-l10n-name="count">{ $count }</div> <div data-l10n-name="details">Errors</div> <div data-l10n-name="not-imported">(not imported)</div>
   }
 
+
+about-logins-header-add-password = Add password
+about-logins-header-login-list = Passwords
+about-logins-header-edit-password = Edit password
+about-logins-back-button =
+  .aria-label = Back
+about-logins-remove-password = Remove password
+
 ## Logins import report page
 
 about-logins-import-report-page-title = Import Summary Report
+
+pro-client-copy-username = Copy Username
+pro-client-copy-password = Copy Password

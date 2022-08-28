@@ -61,6 +61,8 @@ FINAL_TARGET_FILES.actors += [
     "DecoderDoctorParent.jsm",
     "DOMFullscreenChild.jsm",
     "DOMFullscreenParent.jsm",
+    "DownloadsCommonChild.jsm",
+    "DownloadsCommonParent.jsm",
     "EncryptedMediaChild.jsm",
     "EncryptedMediaParent.jsm",
     "FormValidationChild.jsm",

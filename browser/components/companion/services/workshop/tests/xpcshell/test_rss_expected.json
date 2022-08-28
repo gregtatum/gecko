@@ -1,0 +1,41 @@
+{
+  "rss": {
+    "version": "2.0",
+    "channel": {
+      "title": "Allizom news",
+      "link": "https://allizom.org",
+      "description": "Liftoff to Space Exploration.",
+      "language": "en-us",
+      "managingEditor": "editor@allizom.com",
+      "webMaster": "webmaster@allizom.com",
+      "pubDate": "2021-11-03T03:14:15.000Z",
+      "lastBuildDate": "2021-11-03T03:14:16.000Z",
+      "generator": "Firefox test",
+      "docs": "http://allizom.org/rss",
+      "item": [
+        {
+          "title": "Test 1",
+          "description": "This is a string for test 1 with an url inside\n            <a href=\"http://allizom.org/test-1.htm\">Test 1</a>.",
+          "link": "https://allizom.org/news/2021/test-1.asp",
+          "author": "alli.zom@mozilla.org (Alli Zom)",
+          "guid": "https://allizom.org/2021/11/03.html#item314",
+          "pubDate": "2021-11-03T03:14:15.000Z"
+        },
+        {
+          "description": "Test 2 has no title",
+          "guid": "https://allizom.org/2021/11/03.html#item271",
+          "pubDate": "2021-11-03T04:14:15.000Z"
+        },
+        {
+          "title": "A title for test 3",
+          "description": "No description",
+          "link": "https://allizom.org/news/2021/news.asp",
+          "category": ["A category"],
+          "comments": "https://allizom.org/a_comment.html",
+          "guid": "https://allizom.org/2021/11/03.html#item159",
+          "pubDate": "2021-11-03T03:14:17.000Z"
+        }
+      ]
+    }
+  }
+}

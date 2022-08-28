@@ -23,6 +23,10 @@
     <command id="cmd_newNavigatorTabNoEvent" oncommand="BrowserOpenTab();"/>
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="saveBrowser(gBrowser.selectedBrowser);"/>
+#ifdef PINEBUILD
+    <command id="Browser:SaveSnapshot" oncommand="Snapshots.add({ url: gBrowser.currentURI.spec, userPersisted: Snapshots.USER_PERSISTED.MANUAL });" disabled="true"/>
+    <command id="Browser:ToggleCompanion" oncommand="document.getElementById('companion-box').toggleVisible();"/>
+#endif
 
     <command id="Browser:SendLink"
              oncommand="MailIntegration.sendLinkForBrowser(gBrowser.selectedBrowser);"/>
@@ -32,10 +36,19 @@
     <command id="cmd_printPreviewToggle" oncommand="PrintUtils.togglePrintPreview(gBrowser.selectedBrowser.browsingContext);"/>
     <command id="cmd_file_importFromAnotherBrowser" oncommand="MigrationUtils.showMigrationWizard(window, [MigrationUtils.MIGRATION_ENTRYPOINT_FILE_MENU]);"/>
     <command id="cmd_help_importFromAnotherBrowser" oncommand="MigrationUtils.showMigrationWizard(window, [MigrationUtils.MIGRATION_ENTRYPOINT_HELP_MENU]);"/>
+
+#ifdef PINEBUILD
+    <command id="cmd_close" oncommand="gStageManager.closeCurrentView();"/>
+    <command id="Browser:StartNewWorkspace" oncommand="gStageManager.createWorkspace();"/>
+#else
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow(event);"/>
+#endif
+
     <command id="cmd_closeWindow" oncommand="BrowserTryToCloseWindow(event)"/>
     <command id="cmd_toggleMute" oncommand="gBrowser.toggleMuteAudioOnMultiSelectedTabs(gBrowser.selectedTab)"/>
+#ifndef PINEBUILD
     <command id="cmd_CustomizeToolbars" oncommand="gCustomizeMode.enter()"/>
+#endif
     <command id="cmd_toggleOfflineStatus" oncommand="BrowserOffline.toggleOfflineStatus();"/>
     <command id="cmd_quitApplication" oncommand="goQuitApplication(event)"/>
 
@@ -89,10 +102,19 @@
     <command id="Tools:Downloads" oncommand="BrowserDownloadsUI();"/>
     <command id="Tools:Addons" oncommand="BrowserOpenAddonsMgr();"/>
     <command id="Tools:Sanitize" oncommand="Sanitizer.showUI(window);"/>
+#ifdef PINEBUILD
+    <command id="Tools:PrivateBrowsingComingSoon"
+      oncommand="PineBuildUIUtils.openPrivateWindowDialog()"/>
+#else
     <command id="Tools:PrivateBrowsing"
       oncommand="OpenBrowserWindow({private: true});"/>
+#endif
     <command id="Browser:Screenshot" oncommand="ScreenshotsUtils.notify(window, 'shortcut')"/>
-    <command id="History:UndoCloseTab" oncommand="undoCloseTab();" data-l10n-args='{"tabCount": 1}'/>
+    <command id="History:UndoCloseTab"
+#ifndef PINEBUILD
+      disabled="true"
+#endif
+      oncommand="undoCloseTab();" data-l10n-args='{"tabCount": 1}'/>
     <command id="History:UndoCloseWindow" oncommand="undoCloseWindow();"/>
 
     <command id="wrCaptureCmd" oncommand="gGfxUtils.webrenderCapture();" disabled="true"/>
@@ -117,8 +139,13 @@
          data-l10n-id="window-new-shortcut"
          command="cmd_newNavigator"
          modifiers="accel" reserved="true"/>
+#ifdef PINEBUILD
+    <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
+         command="Browser:OpenLocation" reserved="true"/>
+#else
     <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
          command="cmd_newNavigatorTabNoEvent" reserved="true"/>
+#endif
     <key id="focusURLBar" data-l10n-id="location-open-shortcut" command="Browser:OpenLocation"
          modifiers="accel"/>
 #ifndef XP_MACOSX
@@ -172,6 +199,9 @@
          data-l10n-id="text-action-undo-shortcut"
          modifiers="accel"
          internal="true"/>
+#ifdef PINEBUILD
+    <key id="key_saveSnapshot" data-l10n-id="bookmark-this-page-shortcut" command="Browser:SaveSnapshot" modifiers="accel"/>
+#endif
     <key id="key_redo"
 #ifdef XP_UNIX
          data-l10n-id="text-action-undo-shortcut"
@@ -255,16 +285,18 @@
     <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findAgain"/>
     <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findPrevious" modifiers="shift"/>
 
+#ifndef PINEBUILD
+    <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
     <key id="addBookmarkAsKb" data-l10n-id="bookmark-this-page-shortcut" command="Browser:AddBookmarkAs" modifiers="accel"/>
     <key id="bookmarkAllTabsKb"
          data-l10n-id="bookmark-this-page-shortcut"
          oncommand="PlacesUIUtils.showBookmarkPagesDialog(PlacesCommandHook.uniqueCurrentPages);"
          modifiers="accel,shift"/>
-    <key id="manBookmarkKb" data-l10n-id="bookmark-show-library-shortcut" command="Browser:ShowAllBookmarks" modifiers="accel,shift"/>
     <key id="viewBookmarksSidebarKb"
          data-l10n-id="bookmark-show-sidebar-shortcut"
          modifiers="accel"
          oncommand="SidebarUI.toggle('viewBookmarksSidebar');"/>
+#endif
     <key id="viewBookmarksToolbarKb"
          data-l10n-id="bookmark-show-toolbar-shortcut"
          oncommand="BookmarkingUI.toggleBookmarksToolbar('shortcut');"
@@ -276,6 +308,7 @@
     <key id="key_stop_mac" modifiers="accel" data-l10n-id="nav-stop-shortcut" command="Browser:Stop"/>
 #endif
 
+#ifndef PINEBUILD
     <key id="key_gotoHistory"
          data-l10n-id="history-sidebar-shortcut"
 #ifdef XP_MACOSX
@@ -284,6 +317,7 @@
          modifiers="accel"
 #endif
          oncommand="SidebarUI.toggle('viewHistorySidebar');"/>
+#endif
 
     <key id="key_fullZoomReduce" data-l10n-id="full-zoom-reduce-shortcut" command="cmd_fullZoomReduce"  modifiers="accel"/>
     <key                         data-l10n-id="full-zoom-reduce-shortcut-alt-a" command="cmd_fullZoomReduce"  modifiers="accel"/>
@@ -298,7 +332,13 @@
 
     <key id="key_switchTextDirection" data-l10n-id="bidi-switch-direction-shortcut" command="cmd_switchTextDirection" modifiers="accel,shift" />
 
-    <key id="key_privatebrowsing" command="Tools:PrivateBrowsing" data-l10n-id="private-browsing-shortcut"
+    <key id="key_privatebrowsing"
+#ifdef PINEBUILD
+         command="Tools:PrivateBrowsingComingSoon"
+#else
+         command="Tools:PrivateBrowsing"
+#endif
+         data-l10n-id="private-browsing-shortcut"
          modifiers="accel,shift" reserved="true"/>
     <key id="key_screenshot" data-l10n-id="screenshot-shortcut" command="Browser:Screenshot" modifiers="accel,shift"/>
     <key id="key_sanitize" command="Tools:Sanitize" keycode="VK_DELETE" modifiers="accel,shift"/>
@@ -321,7 +361,9 @@
 #endif
          reserved="true"/>
 
+#ifndef PINEBUILD
     <key id="key_undoCloseTab" command="History:UndoCloseTab" data-l10n-id="tab-new-shortcut" modifiers="accel,shift"/>
+#endif
     <key id="key_undoCloseWindow" command="History:UndoCloseWindow" data-l10n-id="window-new-shortcut" modifiers="accel,shift"/>
 
 #ifdef XP_GNOME

@@ -229,6 +229,14 @@ if (AppConstants.MOZ_CRASHREPORTER) {
   });
 }
 
+// Pine 'Make recommendations better' pref
+if (AppConstants.PINEBUILD) {
+  Preferences.add({
+    id: "browser.pinebuild.webUsage.enabled",
+    type: "bool",
+  });
+}
+
 function setEventListener(aId, aEventType, aCallback) {
   document
     .getElementById(aId)
@@ -835,6 +843,11 @@ var gPrivacyPane = {
         this.initOptOutStudyCheckbox();
       }
       this.initAddonRecommendationsCheckbox();
+    }
+
+    // Set Learn More link href for Pine 'Make Recommendations Be†ter' pref
+    if (AppConstants.PINEBUILD) {
+      this.initPineBetterRecommendationsLink();
     }
 
     let signonBundle = document.getElementById("signonBundle");
@@ -2778,6 +2791,13 @@ var gPrivacyPane = {
     });
   },
 
+  initPineBetterRecommendationsLink() {
+    this._setupLearnMoreLink(
+      "browser.pinebuild.privacyPolicyURL",
+      "betterBrowsingEnabledLabel"
+    );
+  },
+
   initPrivacySegmentation() {
     // Section visibility
     let section = document.getElementById("privacySegmentationSection");
@@ -2893,6 +2913,11 @@ var gPrivacyPane = {
   },
 
   initAddonRecommendationsCheckbox() {
+    // Not currently enabled for pine builds.
+    if (AppConstants.PINEBUILD) {
+      return;
+    }
+
     // Setup the learn more link.
     const url =
       Services.urlFormatter.formatURLPref("app.support.baseURL") +

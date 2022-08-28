@@ -190,6 +190,10 @@ if (AppConstants.MOZ_UPDATER) {
   if (AppConstants.MOZ_MAINTENANCE_SERVICE) {
     Preferences.addAll([{ id: "app.update.service.enabled", type: "bool" }]);
   }
+
+  if (AppConstants.PINEBUILD) {
+    Preferences.addAll([{ id: "browser.pinebuild.sounds", type: "bool" }]);
+  }
 }
 
 XPCOMUtils.defineLazyGetter(this, "gHasWinPackageId", () => {
@@ -446,10 +450,12 @@ var gMainPane = {
       "change",
       gMainPane.updateBrowserStartupUI
     );
-    Preferences.get("browser.startup.homepage").on(
-      "change",
-      gMainPane.updateBrowserStartupUI
-    );
+    if (!AppConstants.PINEBUILD) {
+      Preferences.get("browser.startup.homepage").on(
+        "change",
+        gMainPane.updateBrowserStartupUI
+      );
+    }
     gMainPane.updateBrowserStartupUI();
 
     if (AppConstants.HAVE_SHELL_SERVICE) {
@@ -938,6 +944,11 @@ var gMainPane = {
    * on the value of the browser.privatebrowsing.autostart pref.
    */
   updateBrowserStartupUI() {
+    if (AppConstants.PINEBUILD) {
+      // Session restore is not available in pinebuild
+      document.getElementById("startupPageBox").hidden = true;
+    }
+
     const pbAutoStartPref = Preferences.get(
       "browser.privatebrowsing.autostart"
     );

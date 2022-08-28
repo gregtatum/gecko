@@ -388,9 +388,15 @@ var FullScreen = {
     if (shiftSize > 0) {
       toolbox.style.setProperty("transform", `translateY(${shiftSize}px)`);
       toolbox.style.setProperty("z-index", "2");
+      if (AppConstants.PINEBUILD) {
+        toolbox.setAttribute("shifted", true);
+      }
     } else {
       toolbox.style.removeProperty("transform");
       toolbox.style.removeProperty("z-index");
+      if (AppConstants.PINEBUILD) {
+        toolbox.removeAttribute("shifted");
+      }
     }
   },
 

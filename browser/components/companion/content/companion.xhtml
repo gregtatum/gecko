@@ -1,0 +1,389 @@
+<?xml version="1.0"?>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this file,
+   - You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<?xml-stylesheet href="chrome://global/skin/global.css"?>
+
+<?xml-stylesheet href="chrome://global/skin/in-content/common.css"?>
+<?xml-stylesheet href="chrome://browser/skin/searchbar.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/skin/browser.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/companion.css"?>
+<?xml-stylesheet href="chrome://browser/content/companion/fonts.css" type="text/css"?>
+
+<?xml-stylesheet href="sessions.css" type="text/css"?>
+<?xml-stylesheet href="card.css" type="text/css"?>
+
+<html
+  id="companion"
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  forcedarkmode="true"
+  chromemargin="0,-1,-1,-1"
+  windowtype="Firefox:Companion"
+  persist="screenX screenY width height sizemode"
+>
+<head>
+  <title>Firefox Companion</title>
+  <script type="module" src="calendar.js" />
+  <script type="module" src="browse.js" />
+  <script type="module" src="media.js" />
+  <script type="module" src="sessions.js" />
+  <script type="module" src="snapshot-groups.js" />
+  <script type="module" src="onboarding-services.js" />
+  <script type="module" src="snapshots.js" />
+  <script type="module" src="stagemanagerdebugging.js" />
+  <script type="module" src="companion.js" />
+  <script type="module" src="relative-time.js" />
+  <script type="module" src="history.js" />
+
+  <script src="chrome://global/content/customElements.js"/>
+  <script src="chrome://global/content/elements/panel-list.js"/>
+
+  <script type="module" src="chrome://browser/content/companion/widgets/favicon-circle.js"/>
+
+  <link rel="localization" href="browser/browser.ftl"/>
+  <link rel="localization" href="browser/companion.ftl"/>
+  <link rel="localization" href="toolkit/global/videocontrols.ftl"/>
+
+  <link rel="preload" href="chrome://global/skin/in-content/common.css" as="style"/>
+  <link rel="preload" href="chrome://browser/content/companion/fonts.css" as="style"/>
+  <link rel="preload" href="chrome://browser/content/companion/history.css" as="style"/>
+</head>
+<html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" flow-reset-startup="true">
+
+  <script src="chrome://browser/content/utilityOverlay.js"/>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-media-list">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+    <style>
+      :host {
+        grid-template-columns: 1fr auto;
+        display: grid;
+        grid-template-areas:
+                  "title buttons"
+                  "list list";
+      }
+      .list-title {
+        grid-area: title;
+      }
+      h2 {
+        font-size: 1em;
+        margin-left: 10px;
+      }
+      .mute-all {
+        grid-area: buttons;
+        align-self: center;
+        margin-right: 10px;
+      }
+      .media-list {
+        grid-area: list;
+        min-width: 0;
+      }
+    </style>
+    <h2 class="list-title"/>
+    <button class="mute-all">Mute all</button>
+    <div class="media-list">
+      <slot/>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-window-list">
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css"/>
+    <style>
+      :host {
+        grid-template-columns: 1fr auto;
+        display: grid;
+        grid-template-areas:
+                  "title buttons"
+                  "list list";
+      }
+      .list-title {
+        grid-area: title;
+      }
+      .add-pinned-tab {
+        grid-area: buttons;
+        align-self: center;
+      }
+      .window-list {
+        grid-area: list;
+      }
+    </style>
+    <h2 class="list-title"/>
+    <button class="add-pinned-tab">Add</button>
+    <div class="window-list">
+      <slot/>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-window">
+    <div class="label"></div>
+    <slot />
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-app">
+    <div class="app card">
+      <div class="app-overview">
+        <img class="favicon"/>
+        <p class="title"/>
+        <button class="switch-to-app">View</button>
+      </div>
+      <details hidden="true"><summary></summary><div class="extra-details-content"></div></details>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-media">
+    <div class="artwork-background"></div>
+    <div class="play-pause artwork"><button class="playing"></button></div>
+    <button class="mute"></button>
+    <button class="unmute"></button>
+    <div class="metadata">
+      <span class="title"></span>
+      <span class="artist"></span>
+    </div>
+    <button class="prev" data-l10n-id="companion-videocontrols-previous-button"></button>
+    <button class="next" data-l10n-id="companion-videocontrols-next-button"></button>
+    <button data-l10n-id="companion-picture-in-picture-label" class="pip"></button>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-email">
+    <div class="from-date">
+      <div class="from"/>
+      <div class="date"/>
+    </div>
+    <div class="subject"/>
+    <div class="snippet"/>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot-list">
+    <h2 class="list-title"/>
+    <div class="snapshots-panel"/>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot-list-details">
+    <section class="details">
+      <img/>
+      <h2></h2>
+      <h3></h3>
+    </section>
+    <div id="snapshot-list"></div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-snapshot">
+    <div class="card-content-wrapper">
+      <a class="snapshot-contents contents" href="#">
+        <div class="card-image">
+          <img class="favicon" hidden="hidden"/>
+        </div>
+        <div class="info">
+          <span class="title text-body-l-med"/>
+          <div class="subtitle text-body-s">
+            <img class="inline-favicon favicon" hidden="hidden"/>
+            <span class="snapshot-sitetitle sub"/>
+            <span class="info-divider sub"/>
+            <span class="snapshot-date sub"/>
+          </div>
+        </div>
+      </a>
+      <button
+            class="options-button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            data-l10n-id="snapshot-options"
+            data-action="toggle-panel"></button>
+    </div>
+    <panel-list>
+      <panel-item data-l10n-id="snapshot-dismiss" data-action="dismiss"></panel-item>
+      <panel-item data-l10n-id="snapshot-not-relevant" data-action="not-relevant"></panel-item>
+      <panel-item data-l10n-id="snapshot-personal" data-action="personal"></panel-item>
+    </panel-list>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-list">
+    <div class="last-sessions-panel"/>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-session-card">
+    <div class="session-card contents">
+      <div class="info">
+        <span class="title"/>
+        <span class="pages sub" data-l10n-id="session-pages-count"/>
+        <span class="info-divider sub"/>
+        <span class="date sub"/>
+      </div>
+      <button class="session-card-toggle" data-l10n-id="session-card-toggle"></button>
+      <div class="icons"/>
+    </div>
+    <div class="extended">
+      <button id="session-hide" data-action="hide-session" hidden="true"></button>
+      <button class="restore-button primary" data-action="restore-session" data-l10n-id="restore-session" aria-hidden="true"></button>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-viewer">
+    <link
+      rel="stylesheet"
+      href="chrome://global/skin/in-content/common.css"
+    />
+    <link
+      rel="stylesheet"
+      href="chrome://browser/content/companion/fonts.css"
+    />
+    <link rel="stylesheet" href="history.css"/>
+    <xul:search-textbox class="history-search-input" data-l10n-id="history-results-search-input" data-l10n-attrs="placeholder"/>
+    <h2 class="total-before-limit text-body-s"/>
+    <h2 class="recently-viewed text-heading-s" data-l10n-id="history-recently-viewed"/>
+    <div class="separator" role="presentation" invisible="true"/>
+    <ol class="history-result-list"/>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-viewer-footer">
+    <footer>
+      <div class="bottom-separator">
+        <div class="line" role="presentation"/>
+        <div class="limit-out-of-total text-body-m" data-l10n-id="history-results-limit-out-of-total" data-l10n-args='{"total": 0, "totalBeforeLimit": 0}'/>
+        <div class="line" role="presentation"/>
+      </div>
+      <div class="refine-query text-body-m" data-l10n-id="history-results-refine-query" />
+    </footer>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-history-result">
+    <link
+      rel="stylesheet"
+      href="chrome://global/skin/in-content/common.css"
+    />
+    <link
+      rel="stylesheet"
+      href="chrome://browser/content/companion/fonts.css"
+    />
+    <link rel="stylesheet" href="history.css"/>
+    <button class="history-result-button">
+      <favicon-circle class="history-result-icon" aria-hidden="true"/>
+      <div class="history-result-info">
+        <div class="history-result-title text-body-l-med"/>
+        <div class="history-result-url text-body-s"/>
+        <div class="history-result-last-visited text-body-s"/>
+      </div>
+    </button>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-browse-list">
+    <div class="browse">
+      <button class="snapshot-groups" data-l10n-id="browse-list-snapshot-groups" data-pref="browser.companion.snapshot-groups.enabled" is="named-deck-button" deck="companion-deck" name="snapshot-groups"></button>
+      <button class="sessions" data-l10n-id="browse-list-sessions" is="named-deck-button" deck="companion-deck" name="sessions"></button>
+      <button class="downloads" data-l10n-id="browse-list-downloads" is="named-deck-button" deck="companion-deck" name="downloads"></button>
+      <button class="passwords" data-l10n-id="browse-list-passwords" data-pref="browser.companion.passwords.enabled" is="named-deck-button" deck="companion-deck" name="passwords"></button>
+      <button class="calendar" data-l10n-id="browse-list-calendar" data-pref="browser.pinebuild.calendar.browseEnabled" is="named-deck-button" deck="companion-deck" name="calendar"></button>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-passwords-panel">
+    <div class="passwords-panel browse-section-panel" hidden="true">
+      <xul:browser id="companion-login-browser" type="content" src="about:logins"></xul:browser>
+    </div>
+  </template>
+
+  <template xmlns="http://www.w3.org/1999/xhtml" id="template-calendar-panel">
+    <section-panel class="calendar-panel browse-section-panel" heading-l10n-id="companion-browse-calendar-header" hidden="true">
+      <calendar-event-list id="browse-event-list" listtype="browse"></calendar-event-list>
+    </section-panel>
+  </template>
+
+  <div class="companion-main">
+    <html:button-group class="tab-button-group">
+      <html:button class="tab-button ghost-button" name="now" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-now"></span></html:button>
+      <html:button class="tab-button ghost-button" name="browse" is="named-deck-button" deck="companion-deck"><img /><span data-l10n-id="companion-deck-browse"></span></html:button>
+      <html:button class="tab-button ghost-button history" name="history" is="named-deck-button" deck="companion-deck" data-pref="browser.urlbar.opencompanionsearch.enabled"><img /><span data-l10n-id="companion-deck-history"></span></html:button>
+    </html:button-group>
+    <html:named-deck id="companion-deck">
+      <template xmlns="http://www.w3.org/1999/xhtml" name="blank">
+        <div></div>
+      </template>
+      <template xmlns="http://www.w3.org/1999/xhtml" name="now" id="scroll">
+        <div>
+          <section id="flow-reset-placeholder">
+            <button id="flow-reset-close" onclick="exitFlowReset()"></button>
+            <div id="flow-reset-text">
+              <h3 data-l10n-id="session-cleared-title"/>
+              <small data-l10n-id="session-cleared">
+                <a id="session-cleared-link" href="#" data-l10n-name="session-cleared-link" onclick="exitFlowReset(true)"></a>
+              </small>
+            </div>
+            <img id="flow-reset-image" src="chrome://browser/content/companion/flow-reset-bg1.png" />
+          </section>
+          <section id="now-content">
+            <stagemanager-debugging></stagemanager-debugging>
+            <services-onboarding></services-onboarding>
+            <calendar-event-list listtype="now"></calendar-event-list>
+            <media-list></media-list>
+            <suggested-snapshot-list></suggested-snapshot-list>
+          </section>
+        </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" id="scroll-browse" name="browse">
+        <div>
+          <browse-list></browse-list>
+          <last-session-list>
+            <h2 class="list-title" id="last-session-list-title" data-l10n-id="last-session-title" hidden="true" />
+          </last-session-list>
+          <recent-snapshot-list></recent-snapshot-list>
+        </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="history">
+        <div class="history-panel">
+          <div class="history-panel-header">
+            <span class="history-panel-heading">
+              <h1 class="text-heading-m-med" data-l10n-id="history-section-header"></h1>
+            </span>
+            <button data-l10n-id="history-section-close-button" class="history-section-close ghost-button" />
+          </div>
+          <div class="history-panel-content">
+            <e-history-viewer id="history-viewer" />
+          </div>
+        </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" id="sessions" name="sessions">
+        <section-panel heading-l10n-id="session-section-header">
+          <full-session-list></full-session-list>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" id="downloads" name="downloads">
+        <section-panel class="downloads-panel" heading-l10n-id="downloads-section-header">
+          <xul:browser id="companion-downloads-browser" type="content" src="about:downloads"></xul:browser>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="passwords">
+        <div class="passwords-panel browse-section-panel" id="template-passwords-panel">
+          <xul:browser id="companion-login-browser" type="content" src="about:logins"></xul:browser>
+        </div>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="calendar">
+        <section-panel class="calendar-panel browse-section-panel" id="template-calendar-panel" heading-l10n-id="companion-browse-calendar-header">
+          <calendar-event-list id="browse-event-list" listtype="browse"></calendar-event-list>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups">
+        <section-panel heading-l10n-id="snapshot-group-section-header">
+          <snapshot-group-list id="snapshot-groups"></snapshot-group-list>
+        </section-panel>
+      </template>
+
+      <template xmlns="http://www.w3.org/1999/xhtml" name="snapshot-groups-detail">
+        <section-panel>
+          <snapshot-group-list-detail id="snapshot-groups-detail"></snapshot-group-list-detail>
+        </section-panel>
+      </template>
+    </html:named-deck>
+  </div>
+
+</html:body>
+</html>

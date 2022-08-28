@@ -59,6 +59,9 @@ class nsAppStartup final : public nsIAppStartup,
   bool mStartupCrashTrackingEnded;  // Whether startup crash tracking has
                                     // already ended
   bool mWasSilentlyStarted;         // Was this startup a silent start?
+#if defined(XP_MACOSX) && defined(PINEBUILD)
+  bool mHaveBackgroundMenubarIcon;  // Do we have a background menubar icon?
+#endif
 
 #if defined(XP_WIN)
   // If true, allow the process to live on after the last window is closed

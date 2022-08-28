@@ -14,6 +14,13 @@ var EXPORTED_SYMBOLS = ["AppConstants"];
 
 // Immutable for export.
 var AppConstants = Object.freeze({
+  PINEBUILD:
+#ifdef PINEBUILD
+  true,
+#else
+  false,
+#endif
+
   // See this wiki page for more details about channel specific build
   // defines: https://wiki.mozilla.org/Platform/Channel-specific_build_defines
   NIGHTLY_BUILD:

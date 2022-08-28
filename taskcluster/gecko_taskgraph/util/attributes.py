@@ -23,6 +23,8 @@ RELEASE_PROJECTS = {
     "comm-esr91",
     "comm-esr102",
     "oak",
+    "pine",
+    "pine-stable",
 }
 
 RELEASE_PROMOTION_PROJECTS = {

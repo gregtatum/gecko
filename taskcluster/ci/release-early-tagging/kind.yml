@@ -44,3 +44,12 @@ jobs:
             symbol: Rel(TagBuild)
             tier: 1
             kind: build
+
+    pinebuild:
+        name: pinebuild-tag-buildN
+        shipping-product: pinebuild
+        treeherder:
+            platform: pinebuild-release/opt
+            symbol: Rel(TagBuild)
+            tier: 1
+            kind: build

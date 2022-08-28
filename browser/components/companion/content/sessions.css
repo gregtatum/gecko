@@ -1,0 +1,114 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.extended {
+  display: none;
+  justify-content: space-between;
+  padding: 8px;
+}
+
+.expanded .card-image {
+  display: flex;
+  border-radius: 0 8px 0 0;
+}
+
+.expanded > .extended {
+  display: flex;
+}
+
+.expanded .icon {
+  transform: unset !important;
+  border: 0;
+}
+
+.icon:nth-child(2) { transform: translate(-25px); }
+.icon:nth-child(3) { transform: translate(-50px); }
+.icon:nth-child(4) { transform: translate(-75px); }
+.icon:nth-child(5) { transform: translate(-100px); }
+.icon:nth-child(6) { display: none; }
+.icon:nth-child(7) { display: none; }
+
+.icons {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  width: 7em;
+  overflow: hidden;
+}
+
+.expanded .icons {
+  border-radius: 20px;
+  margin: 0 10px;
+  width: 100%;
+  background: #F0F0F4;
+}
+
+.icons span {
+  display: none;
+}
+
+.expanded .icons span {
+  display: block;
+  font-size: smaller;
+  height: 24px;
+  width: 24px;
+  text-align: center;
+  background: transparent;
+  line-height: 24px;
+}
+
+.session-card {
+  padding-inline-end: 32px;
+  position: relative;
+  align-items: center;
+}
+
+.expanded .session-card {
+  align-items: unset;
+}
+
+.session-card-toggle {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 0;
+}
+
+.session-card-toggle::after {
+  content: "";
+  position: absolute;
+  background: center center no-repeat url(chrome://global/skin/icons/arrow-down.svg);
+  width: 30px;
+  height: 30px;
+  top: 0px;
+  inset-inline-end: 0;
+  transition-duration: 0.2s;
+  transition-property: transform;
+}
+
+.session-card-toggle:focus-visible {
+  outline-offset: initial;
+}
+
+.expanded.session.card .session-card-toggle::after {
+  transform: rotate(180deg);
+}
+
+.expanded .session-card {
+  flex-direction: column;
+}
+
+.extended button {
+  min-width: unset;
+  width: 100%;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+#session-hide {
+  width: 24px;
+  height: 24px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: url("chrome://browser/content/aboutlogins/icons/password-hide.svg");
+}

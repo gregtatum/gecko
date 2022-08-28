@@ -16,6 +16,9 @@ const { Observers } = ChromeUtils.import(
 const { TelemetryUtils } = ChromeUtils.import(
   "resource://gre/modules/TelemetryUtils.jsm"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const lazy = {};
 
@@ -435,7 +438,11 @@ var TelemetryReportingPolicyImpl = {
       TelemetryUtils.Preferences.BypassNotification,
       false
     );
-    if (this.isUserNotifiedOfCurrentPolicy || bypassNotification) {
+    if (
+      this.isUserNotifiedOfCurrentPolicy ||
+      bypassNotification ||
+      AppConstants.PINEBUILD
+    ) {
       this._log.trace(
         "_shouldNotify - User already notified or bypassing the policy."
       );

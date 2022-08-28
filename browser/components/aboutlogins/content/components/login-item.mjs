@@ -5,6 +5,7 @@
 import {
   recordTelemetryEvent,
   promptForPrimaryPassword,
+  showConfirmationDialog,
 } from "../aboutLoginsUtils.mjs";
 
 export default class LoginItem extends HTMLElement {
@@ -93,6 +94,9 @@ export default class LoginItem extends HTMLElement {
     this._vulnerableAlertLearnMoreLink = this._vulnerableAlert.querySelector(
       ".alert-learn-more-link"
     );
+    this._removePasswordButton = this.shadowRoot.querySelector(
+      ".remove-login-button"
+    );
 
     this.render();
 
@@ -111,10 +115,13 @@ export default class LoginItem extends HTMLElement {
     this._originDisplayInput.addEventListener("click", this);
     this._revealCheckbox.addEventListener("click", this);
     this._vulnerableAlertLearnMoreLink.addEventListener("click", this);
+    this._removePasswordButton.addEventListener("click", this);
     window.addEventListener("AboutLoginsInitialLoginSelected", this);
     window.addEventListener("AboutLoginsLoginSelected", this);
     window.addEventListener("AboutLoginsShowBlankLogin", this);
     window.addEventListener("AboutLoginsRemaskPassword", this);
+    window.addEventListener("AboutLoginsLoginEditLogin", this);
+    window.addEventListener("AboutLoginsRemoveUpdateState", this);
   }
 
   focus() {
@@ -251,6 +258,13 @@ export default class LoginItem extends HTMLElement {
     );
     this._updatePasswordRevealState();
     this._updateOriginDisplayState();
+
+    if (
+      window.AboutLoginsUtils?.pineBuild &&
+      window.AboutLoginsUtils?.platform != "win"
+    ) {
+      this._saveChangesButton.parentElement.append(this._saveChangesButton);
+    }
   }
 
   setBreaches(breachesByLoginGUID) {
@@ -299,6 +313,39 @@ export default class LoginItem extends HTMLElement {
     this.render();
   }
 
+  async handleEditButton() {
+    let primaryPasswordAuth = await promptForPrimaryPassword(
+      "about-logins-edit-login-os-auth-dialog-message"
+    );
+    if (!primaryPasswordAuth) {
+      window.dispatchEvent(
+        new CustomEvent("AboutLoginsEditToggleEditing", {
+          detail: { message: "cancel" },
+        })
+      );
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent("AboutLoginsEditToggleEditing", {
+        detail: { message: "success" },
+      })
+    );
+    this._toggleEditing();
+    this.render();
+
+    this._recordTelemetryEvent({
+      object: "existing_login",
+      method: "edit",
+    });
+  }
+
+  toggleUpdateState() {
+    if (this.classList.contains("in-companion")) {
+      delete this.dataset.isNewLogin;
+      delete this.dataset.editing;
+    }
+  }
+
   async handleEvent(event) {
     switch (event.type) {
       case "AboutLoginsInitialLoginSelected": {
@@ -309,13 +356,22 @@ export default class LoginItem extends HTMLElement {
         this.confirmPendingChangesOnEvent(event, event.detail);
         break;
       }
+      case "AboutLoginsLoginEditLogin": {
+        this.setLogin(event.detail.login);
+        await this.handleEditButton();
+        break;
+      }
+      case "AboutLoginsRemoveUpdateState": {
+        this.toggleUpdateState();
+        break;
+      }
       case "AboutLoginsShowBlankLogin": {
         this.confirmPendingChangesOnEvent(event, {});
         break;
       }
       case "auxclick": {
         if (event.button == 1) {
-          this._handleOriginClick();
+          this._handleOriginClick(event);
         }
         break;
       }
@@ -354,14 +410,34 @@ export default class LoginItem extends HTMLElement {
           let wasExistingLogin = !!this._login.guid;
           if (wasExistingLogin) {
             if (this.hasPendingChanges()) {
-              this.showConfirmationDialog("discard-changes", () => {
-                this.setLogin(this._login);
-              });
+              showConfirmationDialog(
+                {
+                  type: "discard-changes",
+                  existingLogin: !!this._login.guid,
+                },
+                () => {
+                  this.setLogin(this._login);
+                }
+              );
             } else {
               this.setLogin(this._login);
+              window.dispatchEvent(
+                new CustomEvent("AboutLoginsRemoveUpdateState", {
+                  bubbles: true,
+                  detail: { newHeaderL10nId: "about-logins-header-login-list" },
+                })
+              );
             }
           } else if (!this.hasPendingChanges()) {
-            window.dispatchEvent(new CustomEvent("AboutLoginsClearSelection"));
+            window.dispatchEvent(
+              new CustomEvent("AboutLoginsClearSelection", {
+                bubbles: true,
+                detail: { newHeaderL10nId: "about-logins-header-login-list" },
+              })
+            );
+
+            this.toggleUpdateState();
+
             this._recordTelemetryEvent({
               object: "new_login",
               method: "cancel",
@@ -371,15 +447,26 @@ export default class LoginItem extends HTMLElement {
             this._toggleEditing(false);
             this.render();
           } else {
-            this.showConfirmationDialog("discard-changes", () => {
-              window.dispatchEvent(
-                new CustomEvent("AboutLoginsClearSelection")
-              );
+            showConfirmationDialog(
+              {
+                type: "discard-changes",
+                existingLogin: !!this._login.guid,
+              },
+              () => {
+                window.dispatchEvent(
+                  new CustomEvent("AboutLoginsClearSelection", {
+                    bubbles: true,
+                    detail: {
+                      newHeaderL10nId: "about-logins-header-login-list",
+                    },
+                  })
+                );
 
-              this.setLogin({}, { skipFocusChange: true });
-              this._toggleEditing(false);
-              this.render();
-            });
+                this.setLogin({}, { skipFocusChange: true });
+                this._toggleEditing(false);
+                this.render();
+              }
+            );
           }
 
           return;
@@ -437,32 +524,28 @@ export default class LoginItem extends HTMLElement {
           });
           return;
         }
-        if (classList.contains("delete-button")) {
-          this.showConfirmationDialog("delete", () => {
-            document.dispatchEvent(
-              new CustomEvent("AboutLoginsDeleteLogin", {
-                bubbles: true,
-                detail: this._login,
-              })
-            );
-          });
+        if (
+          classList.contains("delete-button") ||
+          classList.contains("remove-login-button")
+        ) {
+          showConfirmationDialog(
+            {
+              type: "delete",
+              existingLogin: !!this._login.guid,
+            },
+            () => {
+              document.dispatchEvent(
+                new CustomEvent("AboutLoginsDeleteLogin", {
+                  bubbles: true,
+                  detail: this._login,
+                })
+              );
+            }
+          );
           return;
         }
         if (classList.contains("edit-button")) {
-          let primaryPasswordAuth = await promptForPrimaryPassword(
-            "about-logins-edit-login-os-auth-dialog-message"
-          );
-          if (!primaryPasswordAuth) {
-            return;
-          }
-
-          this._toggleEditing();
-          this.render();
-
-          this._recordTelemetryEvent({
-            object: "existing_login",
-            method: "edit",
-          });
+          await this.handleEditButton();
           return;
         }
         if (
@@ -481,7 +564,7 @@ export default class LoginItem extends HTMLElement {
           return;
         }
         if (classList.contains("origin-input")) {
-          this._handleOriginClick();
+          this._handleOriginClick(event);
         }
         if (classList.contains("alert-learn-more-link")) {
           if (event.currentTarget.closest(".breach-alert")) {
@@ -507,6 +590,12 @@ export default class LoginItem extends HTMLElement {
         if (!this.hasPendingChanges()) {
           this._toggleEditing(false);
           this.render();
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsRemoveUpdateState", {
+              bubbles: true,
+              detail: { newHeaderL10nId: "about-logins-header-login-list" },
+            })
+          );
           return;
         }
         let loginUpdates = this._loginFromForm();
@@ -519,6 +608,13 @@ export default class LoginItem extends HTMLElement {
             })
           );
 
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsRemoveUpdateState", {
+              bubbles: true,
+              detail: { newHeaderL10nId: "about-logins-header-login-list" },
+            })
+          );
+
           this._recordTelemetryEvent({
             object: "existing_login",
             method: "save",
@@ -528,6 +624,12 @@ export default class LoginItem extends HTMLElement {
             new CustomEvent("AboutLoginsCreateLogin", {
               bubbles: true,
               detail: loginUpdates,
+            })
+          );
+          window.dispatchEvent(
+            new CustomEvent("AboutLoginsRemoveUpdateState", {
+              bubbles: true,
+              detail: { newHeaderL10nId: "about-logins-header-login-list" },
             })
           );
 
@@ -563,65 +665,26 @@ export default class LoginItem extends HTMLElement {
   confirmPendingChangesOnEvent(event, login) {
     if (this.hasPendingChanges()) {
       event.preventDefault();
-      this.showConfirmationDialog("discard-changes", () => {
-        // Clear any pending changes
-        this.setLogin(login);
+      showConfirmationDialog(
+        {
+          type: "discard-changes",
+          existingLogin: !!this._login.guid,
+        },
+        () => {
+          // Clear any pending changes
+          this.setLogin(login);
 
-        window.dispatchEvent(
-          new CustomEvent(event.type, {
-            detail: login,
-            cancelable: false,
-          })
-        );
-      });
+          window.dispatchEvent(
+            new CustomEvent(event.type, {
+              detail: login,
+              cancelable: false,
+            })
+          );
+        }
+      );
     } else {
       this.setLogin(login, { skipFocusChange: true });
     }
-  }
-
-  /**
-   * Shows a confirmation dialog.
-   * @param {string} type The type of confirmation dialog to display.
-   * @param {boolean} onConfirm Optional, the function to execute when the confirm button is clicked.
-   */
-  showConfirmationDialog(type, onConfirm = () => {}) {
-    const dialog = document.querySelector("confirmation-dialog");
-    let options;
-    switch (type) {
-      case "delete": {
-        options = {
-          title: "about-logins-confirm-remove-dialog-title",
-          message: "confirm-delete-dialog-message",
-          confirmButtonLabel:
-            "about-logins-confirm-remove-dialog-confirm-button",
-        };
-        break;
-      }
-      case "discard-changes": {
-        options = {
-          title: "confirm-discard-changes-dialog-title",
-          message: "confirm-discard-changes-dialog-message",
-          confirmButtonLabel: "confirm-discard-changes-dialog-confirm-button",
-        };
-        break;
-      }
-    }
-    let wasExistingLogin = !!this._login.guid;
-    let method = type == "delete" ? "delete" : "cancel";
-    let dialogPromise = dialog.show(options);
-    dialogPromise.then(
-      () => {
-        try {
-          onConfirm();
-        } catch (ex) {}
-        this._recordTelemetryEvent({
-          object: wasExistingLogin ? "existing_login" : "new_login",
-          method,
-        });
-      },
-      () => {}
-    );
-    return dialogPromise;
   }
 
   hasPendingChanges() {
@@ -721,8 +784,13 @@ export default class LoginItem extends HTMLElement {
    *
    * @param {login} login The login that was modified in storage. The login object is
    *                      a plain JS object representation of nsILoginInfo/nsILoginMetaInfo.
+   * @param {boolean} skipPrompt An optional parameter. If present & true, will skip showing
+   *                             the confirmation dialog. Used from the LoginModified chrome-
+   *                             to-content event, in order to cleanly exit the edit view
+   *                             when a login is modified behind the scenes, rather than by
+   *                             user input.
    */
-  loginModified(login) {
+  loginModified(login, { skipPrompt } = {}) {
     if (this._login.guid != login.guid) {
       return;
     }
@@ -730,10 +798,16 @@ export default class LoginItem extends HTMLElement {
     let valuesChanged =
       this.dataset.editing &&
       !window.AboutLoginsUtils.doLoginsMatch(login, this._loginFromForm());
-    if (valuesChanged) {
-      this.showConfirmationDialog("discard-changes", () => {
-        this.setLogin(login);
-      });
+    if (valuesChanged && !skipPrompt) {
+      showConfirmationDialog(
+        {
+          type: "discard-changes",
+          existingLogin: !!this._login.guid,
+        },
+        () => {
+          this.setLogin(login);
+        }
+      );
     } else {
       this.setLogin(login);
     }
@@ -755,7 +829,17 @@ export default class LoginItem extends HTMLElement {
     this._toggleEditing(false);
   }
 
-  _handleOriginClick() {
+  _handleOriginClick(event) {
+    event.preventDefault();
+
+    window.dispatchEvent(
+      new CustomEvent("AboutLoginsOpenOriginLink", {
+        bubbles: true,
+        composed: true,
+        detail: { url: event.target.href },
+      })
+    );
+
     this._recordTelemetryEvent({
       object: "existing_login",
       method: "open_site",

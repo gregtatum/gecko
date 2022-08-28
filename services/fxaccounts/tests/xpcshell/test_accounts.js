@@ -1164,7 +1164,7 @@ add_test(async function test_getOAuthTokenWithSessionToken() {
   ) => {
     oauthTokenCalled = true;
     Assert.equal(sessionTokenHex, "alice's session token");
-    Assert.equal(clientId, "5882386c6d801776");
+    Assert.equal(clientId, FX_OAUTH_CLIENT_ID);
     Assert.equal(scope, "profile");
     Assert.equal(ttl, undefined);
     return MOCK_TOKEN_RESPONSE;

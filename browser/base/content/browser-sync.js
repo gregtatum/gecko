@@ -24,6 +24,7 @@ ChromeUtils.defineModuleGetter(
 );
 
 XPCOMUtils.defineLazyModuleGetters(this, {
+  OAuthConnect: "resource:///modules/OAuth2.jsm",
   SyncedTabs: "resource://services-sync/SyncedTabs.jsm",
 });
 
@@ -1194,9 +1195,29 @@ var gSync = {
     }
   },
 
-  async openFxAEmailFirstPage(entryPoint) {
+  async openFxAEmailFirstPage(entryPoint, email) {
     const url = await FxAccounts.config.promiseConnectAccountURI(entryPoint);
-    switchToTabHavingURI(url, true, { replaceQueryString: true });
+    if (AppConstants.PINEBUILD) {
+      let pairURI = await FxAccounts.config.promisePairingURI();
+      // The regular flow leaves a tab laying around that doesn't make sense in
+      // PINEBUILD. We'll use the oauth flow handler to register our listeners
+      // to clean up after the sign in.
+      const redirectionEndpoints = [
+        pairURI,
+        "https://accounts.firefox.com/connect_another_device",
+      ];
+      let params = {
+        url,
+        redirectionEndpoints,
+        serviceType: "fxa",
+      };
+      if (email) {
+        params.email = email;
+      }
+      await OAuthConnect.connect(params);
+    } else {
+      switchToTabHavingURI(url, true, { replaceQueryString: true });
+    }
   },
 
   async openFxAEmailFirstPageFromFxaMenu(panel = undefined) {

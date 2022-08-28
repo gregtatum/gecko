@@ -1139,6 +1139,9 @@ function makeURLAbsolute(aBase, aUrl) {
 }
 
 function getHelpLinkURL(aHelpTopic) {
+  if (AppConstants.PINEBUILD && aHelpTopic === "firefox-help") {
+    return "https://support.mozilla.org/products/flowstate";
+  }
   var url = Services.urlFormatter.formatURLPref("app.support.baseURL");
   return url + aHelpTopic;
 }

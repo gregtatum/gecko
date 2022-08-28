@@ -1,0 +1,29 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.workspace {
+  display: flex;
+}
+
+.workspace[empty=true] {
+  border-radius: 100%;
+}
+
+.workspace[empty=true] > .workspace-indicator-button {
+  margin: 8px;
+}
+
+.workspace-indicator-button {
+  width: 24px;
+  height: 24px;
+  margin: auto 12px;
+  display: flex;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--avm-workspace-indicator-button-color);
+}
+
+.workspace-indicator-button[hidden] {
+  display: none;
+}

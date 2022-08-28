@@ -12,6 +12,10 @@
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -69,6 +73,10 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // the mean of all origin frecencies plus one standard deviation multiplied by
   // this value.  See UrlbarProviderPlaces.
   ["autoFill.stddevMultiplier", [0.0, "float"]],
+
+  // Whether to show a link for using the search functionality provided by the
+  // active view if the the view utilizes OpenSearch.
+  ["contextualSearch.enabled", AppConstants.PINEBUILD],
 
   // Whether best match results can be blocked. This pref is a fallback for the
   // Nimbus variable `bestMatchBlockingEnabled`.
@@ -244,11 +252,17 @@ const PREF_URLBAR_DEFAULTS = new Map([
   // Whether results will include sponsored quick suggest suggestions.
   ["suggest.quicksuggest.sponsored", false],
 
+  // Add a result that lets the user open search results in the companion.
+  ["opencompanionsearch.enabled", false],
+
   // Whether results will include search suggestions.
   ["suggest.searches", false],
 
   // Whether results will include top sites and the view will open on focus.
   ["suggest.topsites", true],
+
+  // Whether results will include QuickActions.
+  ["suggest.pinebuildquickactions", AppConstants.PINEBUILD],
 
   // JSON'ed array of blocked quick suggest URL digests.
   ["quicksuggest.blockedDigests", ""],

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed version="0.3" xmlns="http://purl.org/atom/ns#">
+  <title>Gmail - Inbox for foo@mozilla.com</title>
+  <tagline>New messages in your Gmail Inbox</tagline>
+  <fullcount>35826</fullcount>
+  <link rel="alternate" href="https://mail.google.com/mail/u/0" type="text/html" />
+  <modified>2022-01-06T16:06:34Z</modified>
+  <entry>
+    <title>A title</title>
+    <summary>A summary</summary>
+    <link rel="alternate" href="https://mail.google.com/mail/u/0?account_id=foo@mozilla.com&amp;message_id=112358d&amp;view=conv&amp;extsrc=atom" type="text/html" />
+    <modified>2022-01-06T16:00:52Z</modified>
+    <issued>2022-01-06T16:00:52Z</issued>
+    <id>tag:gmail.google.com,2004:314159</id>
+    <author>
+      <name>Cool Guy</name>
+      <email>cguy@mozilla.com</email>
+    </author>
+  </entry>
+</feed>

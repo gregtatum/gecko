@@ -44,6 +44,7 @@ const kPrefUIDensity = "browser.uidensity";
 const kPrefAutoTouchMode = "browser.touchmode.auto";
 const kPrefAutoHideDownloadsButton = "browser.download.autohideButton";
 const kPrefProtonToolbarVersion = "browser.proton.toolbar.version";
+const kPrefPinebuildToolbarVersion = "browser.pinebuild.toolbar.version";
 const kPrefHomeButtonUsed = "browser.engagement.home-button.has-used";
 const kPrefLibraryButtonUsed = "browser.engagement.library-button.has-used";
 const kPrefSidebarButtonUsed = "browser.engagement.sidebar-button.has-used";
@@ -218,6 +219,7 @@ var CustomizableUIInternal = {
     this.loadSavedState();
     this._updateForNewVersion();
     this._updateForNewProtonVersion();
+    this._updateForNewPinebuildVersion();
     this._markObsoleteBuiltinButtonsSeen();
 
     this.registerArea(
@@ -231,6 +233,7 @@ var CustomizableUIInternal = {
     );
 
     let navbarPlacements = [
+      AppConstants.PINEBUILD ? "pinebuild-toolbar" : null,
       "back-button",
       "forward-button",
       "stop-reload-button",
@@ -238,11 +241,13 @@ var CustomizableUIInternal = {
         ? null
         : "home-button",
       "spring",
+      AppConstants.PINEBUILD ? "session-setaside-button" : null,
       "urlbar-container",
       "spring",
       "save-to-pocket-button",
       "downloads-button",
       AppConstants.MOZ_DEV_EDITION ? "developer-button" : null,
+      AppConstants.PINEBUILD ? null : "sidebar-button",
       "fxa-toolbar-menu-button",
     ].filter(name => name);
 
@@ -250,7 +255,7 @@ var CustomizableUIInternal = {
       CustomizableUI.AREA_NAVBAR,
       {
         type: CustomizableUI.TYPE_TOOLBAR,
-        overflowable: true,
+        overflowable: !AppConstants.PINEBUILD,
         defaultPlacements: navbarPlacements,
         defaultCollapsed: false,
       },
@@ -670,6 +675,56 @@ var CustomizableUIInternal = {
     Services.prefs.setIntPref(kPrefProtonToolbarVersion, VERSION);
   },
 
+  _updateForNewPinebuildVersion() {
+    if (!AppConstants.PINEBUILD) {
+      return;
+    }
+
+    const VERSION = 2;
+    let currentVersion = Services.prefs.getIntPref(
+      kPrefPinebuildToolbarVersion,
+      0
+    );
+
+    if (currentVersion >= VERSION) {
+      return;
+    }
+
+    let placements = gSavedState?.placements?.[CustomizableUI.AREA_NAVBAR];
+
+    if (!placements) {
+      // The profile was created with this version, so no need to migrate.
+      Services.prefs.setIntPref(kPrefPinebuildToolbarVersion, VERSION);
+      return;
+    }
+
+    // Make pinebuild-toolbar a child of the toolbar rather than a sibling
+    if (currentVersion < 1) {
+      let toolbarIndex = placements.indexOf("pinebuild-toolbar");
+      if (toolbarIndex >= 0) {
+        // Fix UI order for users who experienced a bug where pinebuild-toolbar
+        // was in the wrong spot.
+        placements.splice(toolbarIndex, 1);
+      }
+      placements.unshift("pinebuild-toolbar");
+    }
+    if (currentVersion < 2) {
+      let setAsideSessionIndex = placements.indexOf("session-setaside-button");
+      let urlbarIndex = placements.indexOf("urlbar-container");
+      if (setAsideSessionIndex == urlbarIndex + 1) {
+        // If the set aside session button is immediately after the urlbar,
+        // which was the old style, swap them, since it's supposed to be right
+        // before it. Otherwise, it's in a state we don't recognize, so just
+        // leave it.
+        let tmp = placements[urlbarIndex];
+        placements[urlbarIndex] = placements[setAsideSessionIndex];
+        placements[setAsideSessionIndex] = tmp;
+      }
+    }
+
+    Services.prefs.setIntPref(kPrefPinebuildToolbarVersion, VERSION);
+  },
+
   /**
    * _markObsoleteBuiltinButtonsSeen
    * when upgrading, ensure obsoleted buttons are in seen state.
@@ -938,6 +993,9 @@ var CustomizableUIInternal = {
   },
 
   registerToolbarNode(aToolbar) {
+    if (!aToolbar) {
+      return;
+    }
     let area = aToolbar.id;
     if (gBuildAreas.has(area) && gBuildAreas.get(area).has(aToolbar)) {
       return;

@@ -5,6 +5,7 @@
 import {
   recordTelemetryEvent,
   setKeyboardAccessForNonDialogElements,
+  showConfirmationDialog,
 } from "./aboutLoginsUtils.mjs";
 
 // The init code isn't wrapped in a DOMContentLoaded/load event listener so the
@@ -16,6 +17,8 @@ const gElements = {
   loginItem: document.querySelector("login-item"),
   loginFilter: document.querySelector("login-filter"),
   menuButton: document.querySelector("menu-button"),
+  sectionPanel: document.querySelector("section-panel"),
+  headerTitle: document.querySelector("#panel-header-title"),
   // removeAllLogins button is nested inside of menuButton
   get removeAllButton() {
     return this.menuButton.shadowRoot.querySelector(
@@ -39,6 +42,11 @@ function handleAllLogins(logins) {
   updateNoLogins();
 }
 
+function toggleHeaderValue(fluentId) {
+  document.documentElement.classList.toggle("login-item-view");
+  document.l10n.setAttributes(gElements.headerTitle, fluentId);
+}
+
 let fxaLoggedIn = null;
 let passwordSyncEnabled = null;
 
@@ -48,6 +56,60 @@ function handleSyncState(syncState) {
   fxaLoggedIn = syncState.loggedIn;
   passwordSyncEnabled = syncState.passwordSyncEnabled;
 }
+
+/**
+ * Handles returning to the list view when clicking the header back button.
+ */
+function exitDetailView() {
+  // To support back navigation to the login list page, we clear the
+  // current selection and manipulate pref values to hide the
+  // login item.
+  window.dispatchEvent(
+    new CustomEvent("AboutLoginsClearSelection", {
+      bubbles: true,
+      detail: { newHeaderL10nId: "about-logins-header-login-list" },
+    })
+  );
+  window.dispatchEvent(
+    new CustomEvent("AboutLoginsRemoveUpdateState", {
+      bubbles: true,
+      detail: { newHeaderL10nId: "about-logins-header-login-list" },
+    })
+  );
+
+  if (gElements.loginItem.dataset.hasOwnProperty("editing")) {
+    delete gElements.loginItem.dataset.editing;
+  }
+
+  gElements.loginList.classList.remove("editing");
+  gElements.loginList.classList.remove("create-login-selected");
+  gElements.loginList.classList.remove("login-selected");
+}
+
+gElements.sectionPanel.addEventListener("section-panel-back", event => {
+  // If in the login list view, go back to companion browse.
+  // If in any other login view, go back to password list.
+  if (gElements.loginItem.dataset.hasOwnProperty("editing")) {
+    // If user has changed login details, confirm whether to discard
+    // before moving back to the list.
+    if (gElements.loginItem.hasPendingChanges()) {
+      showConfirmationDialog(
+        {
+          type: "discard-changes",
+          existingLogin: !!gElements.loginItem._login.guid,
+        },
+        exitDetailView
+      );
+    } else {
+      exitDetailView();
+    }
+  } else {
+    event.explicitOriginalTarget.blur();
+    document.dispatchEvent(
+      new CustomEvent("AboutLoginsBrowsePanel", { bubbles: true })
+    );
+  }
+});
 
 window.addEventListener("AboutLoginsChromeToContent", event => {
   switch (event.detail.messageType) {
@@ -81,7 +143,12 @@ window.addEventListener("AboutLoginsChromeToContent", event => {
     }
     case "LoginModified": {
       gElements.loginList.loginModified(event.detail.value);
-      gElements.loginItem.loginModified(event.detail.value);
+      gElements.loginItem.loginModified(event.detail.value, {
+        skipPrompt: true,
+      });
+      // Ensure clean exit from edit view if this is called by
+      // autofill to increment the login's usage count.
+      exitDetailView();
       break;
     }
     case "LoginRemoved": {
@@ -142,6 +209,10 @@ window.addEventListener("AboutLoginsChromeToContent", event => {
     case "UpdateVulnerableLogins": {
       gElements.loginList.updateVulnerableLogins(event.detail.value);
       gElements.loginItem.updateVulnerableLogins(event.detail.value);
+      break;
+    }
+    case "HeaderChange": {
+      toggleHeaderValue(event.detail.value);
       break;
     }
   }

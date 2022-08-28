@@ -3463,6 +3463,9 @@ static bool TelemetryPrefValue() {
   // toolkit.telemetry.enabled determines whether we send "extended" data.
   // We only want extended data from pre-release channels due to size.
 
+#  ifdef PINEBUILD
+  return true;
+#  else
   constexpr auto channel = MOZ_STRINGIFY(MOZ_UPDATE_CHANNEL) ""_ns;
 
   // Easy cases: Nightly, Aurora, Beta.
@@ -3471,12 +3474,12 @@ static bool TelemetryPrefValue() {
     return true;
   }
 
-#  ifndef MOZILLA_OFFICIAL
+#    ifndef MOZILLA_OFFICIAL
   // Local developer builds: non-official builds on the "default" channel.
   if (channel.EqualsLiteral("default")) {
     return true;
   }
-#  endif
+#    endif
 
   // Release Candidate builds: builds that think they are release builds, but
   // are shipped to beta users.
@@ -3490,6 +3493,7 @@ static bool TelemetryPrefValue() {
   }
 
   return false;
+#  endif
 }
 
 /* static */
@@ -5904,8 +5908,10 @@ static const PrefListEntry sParentOnlyPrefBranchList[] = {
     PREF_LIST_ENTRY("browser.download.lastDir"),
     PREF_LIST_ENTRY("browser.newtabpage.pinned"),
     PREF_LIST_ENTRY("browser.uiCustomization.state"),
+#ifndef PINEBUILD
     PREF_LIST_ENTRY("browser.urlbar"),
     PREF_LIST_ENTRY("browser.urlbar.resultGroups"),
+#endif
     PREF_LIST_ENTRY("devtools.debugger.pending-selected-location"),
     PREF_LIST_ENTRY("identity.fxaccounts.account.device.name"),
     PREF_LIST_ENTRY("identity.fxaccounts.account.telemetry.sanitized_uid"),

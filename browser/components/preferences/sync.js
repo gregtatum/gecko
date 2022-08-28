@@ -89,6 +89,20 @@ var gSyncPane = {
       this._populateComputerName(cachedComputerName);
     }
     this.page = maybeAcct ? FXA_PAGE_LOGGED_IN : FXA_PAGE_LOGGED_OUT;
+    if (this.page === FXA_PAGE_LOGGED_OUT) {
+      this._updateLoggedOutDescription();
+    }
+  },
+
+  // Change the description to reflect what we sync for pine builds.
+  _updateLoggedOutDescription() {
+    if (AppConstants.PINEBUILD) {
+      const description = document.getElementById("noFxaDescription");
+      description?.setAttribute(
+        "data-l10n-id",
+        "sync-signedout-description-pine"
+      );
+    }
   },
 
   _init() {
@@ -340,6 +354,7 @@ var gSyncPane = {
     let state = UIState.get();
     if (state.status == UIState.STATUS_NOT_CONFIGURED) {
       this.page = FXA_PAGE_LOGGED_OUT;
+      this._updateLoggedOutDescription();
       return;
     }
     this.page = FXA_PAGE_LOGGED_IN;
@@ -450,7 +465,22 @@ var gSyncPane = {
     const url = await FxAccounts.config.promiseConnectAccountURI(
       this._getEntryPoint()
     );
-    this.replaceTabWithUrl(url);
+    if (AppConstants.PINEBUILD) {
+      // The regular flow leaves a tab laying around that doesn't make sense in
+      // PINEBUILD. We'll use the oauth flow handler to register our listeners
+      // to clean up after the sign in.
+      const redirectionEndpoints = [
+        "https://accounts.firefox.com/pair",
+        "https://accounts.firefox.com/connect_another_device",
+      ];
+      await OAuthConnect.connect({
+        url,
+        redirectionEndpoints,
+        serviceType: "fxa",
+      });
+    } else {
+      this.replaceTabWithUrl(url);
+    }
   },
 
   async reSignIn() {
@@ -542,7 +572,7 @@ var gSyncPane = {
 
   // Disconnect the account, including everything linked.
   unlinkFirefoxAccount(confirm) {
-    window.browsingContext.topChromeWindow.gSync.disconnect({
+    return window.browsingContext.topChromeWindow.gSync.disconnect({
       confirm,
     });
   },
@@ -588,6 +618,20 @@ var gSyncPane = {
       window.addEventListener("unload", () => {
         Services.prefs.removeObserver(prefName, obs);
       });
+    }
+    if (AppConstants.PINEBUILD) {
+      document.querySelector(
+        "[engine_preference='services.sync.engine.addons']"
+      ).hidden = true;
+      document.querySelector(
+        "[engine_preference='services.sync.engine.prefs']"
+      ).hidden = true;
+      document.querySelector(
+        "[engine_preference='services.sync.engine.tabs']"
+      ).hidden = true;
+      document.querySelector(
+        "[engine_preference='services.sync.engine.bookmarks']"
+      ).hidden = true;
     }
   },
 };

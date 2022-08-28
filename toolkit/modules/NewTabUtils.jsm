@@ -6,6 +6,9 @@
 
 var EXPORTED_SYMBOLS = ["NewTabUtils"];
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
@@ -101,7 +104,7 @@ const ACTIVITY_STREAM_DEFAULT_RECENT = 5 * 24 * 60 * 60;
 // The fallback value for the width of smallFavicon in pixels.
 // This value will be multiplied by the current window's devicePixelRatio.
 // If devicePixelRatio cannot be found, it will be multiplied by 2.
-const DEFAULT_SMALL_FAVICON_WIDTH = 16;
+const DEFAULT_SMALL_FAVICON_WIDTH = AppConstants.PINEBUILD ? 28 : 16;
 
 const POCKET_UPDATE_TIME = 24 * 60 * 60 * 1000; // 1 day
 const POCKET_INACTIVE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -776,7 +779,11 @@ var ActivityStreamProvider = {
 
   /**
    * Shared WHERE expression filtering out undesired pages, e.g., hidden,
-   * unvisited, and non-http/s urls. Assumes moz_places is in FROM / JOIN.
+   * unvisited, and non-http/s urls. Assumes moz_places is in FROM / JOIN. If
+   * the pinebuild is enabled, we additionally filter based off of whether
+   * we have a snapshot for the place in moz_places_metadata_snapshots, to
+   * ensure that pages which the user hasn't sufficiently interacted with don't
+   * show up.
    *
    * NB: SUBSTR(url) is used even without an index instead of url_hash because
    * most desired pages will match http/s, so it will only run on the ~10s of
@@ -789,6 +796,11 @@ var ActivityStreamProvider = {
     AND last_visit_date > 0
     AND (SUBSTR(url, 1, 6) == "https:"
       OR SUBSTR(url, 1, 5) == "http:")
+    ${
+      AppConstants.PINEBUILD
+        ? "AND EXISTS(SELECT 1 FROM moz_places_metadata_snapshots s WHERE id = s.place_id)"
+        : ""
+    }
   `,
 
   /**

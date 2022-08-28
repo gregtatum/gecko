@@ -10,6 +10,9 @@ const { Interactions } = ChromeUtils.importESModule(
 const { Snapshots } = ChromeUtils.importESModule(
   "resource:///modules/Snapshots.sys.mjs"
 );
+const { SessionManager } = ChromeUtils.importESModule(
+  "resource:///modules/SessionManager.sys.mjs"
+);
 const { PlacesUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/PlacesUtils.sys.mjs"
 );
@@ -156,6 +159,15 @@ class TableViewer {
     let index = this.columnMap.size;
     for (let row of rows) {
       for (let [column, details] of this.columnMap.entries()) {
+        if (column == "button") {
+          viewer.children[index].textContent = "";
+          let button = document.createElement("button");
+          button.textContent = details.header;
+          button.onclick = details.clickHandler.bind(null, row);
+          viewer.children[index].appendChild(button);
+          index++;
+          continue;
+        }
         let value = row[column];
 
         if (details.includeTitle) {
@@ -452,6 +464,53 @@ const placesStatsHandler = new (class extends TableViewer {
   }
 })();
 
+/**
+ * Viewer definition for the Snapshots data.
+ */
+const sessionsHandler = new (class extends TableViewer {
+  title = "Sessions";
+  cssGridTemplateColumns = "repeat(3, max-content);";
+
+  /**
+   * @see TableViewer.columnMap
+   */
+  columnMap = new Map([
+    [
+      "guid",
+      {
+        header: "Session Guid",
+      },
+    ],
+    [
+      "lastSavedAt",
+      {
+        header: "Last Saved At",
+        modifier: r => r?.toLocaleString() ?? "",
+      },
+    ],
+    [
+      "button",
+      {
+        header: "Restore",
+        clickHandler: r =>
+          SessionManager.replaceSession(
+            window.browsingContext.topChromeWindow,
+            r.guid
+          ),
+      },
+    ],
+  ]);
+
+  /**
+   * Loads the current metadata from the database and updates the display.
+   */
+  async updateDisplay() {
+    this.displayData(
+      await SessionManager.query({ limit: 100, includeActive: true })
+    );
+  }
+})();
+
 function checkPrefs() {
   if (
     !Services.prefs.getBoolPref("browser.places.interactions.enabled", false)
@@ -481,6 +540,9 @@ function show(selectedButton) {
     case "places-stats":
       (gCurrentHandler = placesStatsHandler).start();
       break;
+    case "sessions":
+      (gCurrentHandler = sessionsHandler).start();
+      break;
   }
 }
 
@@ -494,6 +556,12 @@ function setupListeners() {
   document.getElementById("export").addEventListener("click", async e => {
     e.preventDefault();
     const data = await metadataHandler.export();
+
+    Services.obs.notifyObservers(
+      null,
+      "interactions-exported",
+      JSON.stringify(data)
+    );
 
     const blob = new Blob([JSON.stringify(data)], {
       type: "text/json;charset=utf-8",

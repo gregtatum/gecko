@@ -1800,6 +1800,7 @@ STATIC_ATOMS = [
     Atom("mtd_", "mtd"),
     Atom("mtext_", "mtext"),
     Atom("mtr_", "mtr"),
+    Atom("multideck", "multideck"),
     Atom("munder_", "munder"),
     Atom("munderover_", "munderover"),
     Atom("naturalnumbers_", "naturalnumbers"),

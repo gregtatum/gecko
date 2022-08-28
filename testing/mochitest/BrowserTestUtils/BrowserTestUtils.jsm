@@ -308,7 +308,12 @@ var BrowserTestUtils = {
 
     // Hiding a parent element will hide all its children
     if (element.parentNode != element.ownerDocument) {
-      return BrowserTestUtils.is_hidden(element.parentNode);
+      let parent = element.parentNode;
+
+      if (element.ownerGlobal.ShadowRoot.isInstance(parent)) {
+        parent = parent.host;
+      }
+      return BrowserTestUtils.is_hidden(parent);
     }
 
     return false;
@@ -1236,15 +1241,24 @@ var BrowserTestUtils = {
    *        the specified name resolves the returned promise.
    * @param {bool} wantsUntrusted [optional]
    *        True to receive synthetic events dispatched by web content.
+   * @param {AbortSignal} signal [optional]
+   *        If passed, this can be used to abort the need for the event listener
+   *        before the event fires. Calling signal.abort() causes waitForEvent to
+   *        clean itself up without waiting for the eventName to fire, and then
+   *        resolve the Promise with `null`.
    *
    * @note Because this function is intended for testing, any error in checkFn
    *       will cause the returned promise to be rejected instead of waiting for
    *       the next event, since this is probably a bug in the test.
    *
    * @returns {Promise}
-   * @resolves The Event object.
+   * @resolves The Event object, or null if signal.abort() was called.
    */
-  waitForEvent(subject, eventName, capture, checkFn, wantsUntrusted) {
+  waitForEvent(subject, eventName, capture, checkFn, wantsUntrusted, signal) {
+    if (signal?.aborted) {
+      return Promise.resolve(null);
+    }
+
     let startTime = Cu.now();
     let innerWindowId = subject.ownerGlobal?.windowGlobalChild.innerWindowId;
 
@@ -1258,7 +1272,7 @@ var BrowserTestUtils = {
           checkFn = null;
         }
         try {
-          if (checkFn && !checkFn(event)) {
+          if (checkFn && event.type != "abort" && !checkFn(event)) {
             return;
           }
           subject.removeEventListener(eventName, listener, capture);
@@ -1283,6 +1297,9 @@ var BrowserTestUtils = {
       }
 
       subject.addEventListener(eventName, listener, capture, wantsUntrusted);
+      if (signal) {
+        signal.addEventListener("abort", listener);
+      }
 
       TestUtils.promiseTestFinished?.then(() => {
         if (removed) {

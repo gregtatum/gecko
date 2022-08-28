@@ -139,6 +139,70 @@ set-as-my-default-browser =
     .label = Make Default…
     .accesskey = D
 
+preferences-pane-simple-title = Settings
+preferences-quick-setup-header = Quick set-up
+preferences-primary-browser-header = Primary browser
+preferences-simple-is-not-default = { -brand-short-name } is not your primary browser
+preferences-simple-is-default = { -brand-short-name } is your primary browser
+preferences-simple-set-as-default =
+    .label = Set as primary browser
+preferences-pin-to-taskbar-label = Pin { -brand-short-name } to system taskbar
+preferences-pin-to-taskbar-button =
+    .label = Pin to taskbar
+preferences-sounds =
+    .label = Enable { -brand-short-name } sounds
+preferences-simple-search-header = Search
+preferences-default-search-engine-label = Default search engine
+preferences-simple-suggests-label-2 =
+    .label = Enable { -firefox-suggest-brand-name }
+preferences-simple-suggests-subtext-2 = { -firefox-suggest-brand-name } connects you to history and cloud data
+preferences-simple-view-all-settings =
+    .label = View all settings
+preferences-services-header = Your accounts
+preferences-extra-services-header = Extra Services
+preferences-services-disconnect-button = Disconnect
+preferences-services-connect-button = Connect
+# The service status string should be in ALL CAPS for style purposes, if your locale allows it
+preferences-services-status = STATUS
+preferences-services-disconnected-status = Not connected
+preferences-services-connected-status = Connected
+preferences-services-connecting-status = Connecting
+preferences-services-error-status = Error
+preferences-services-google-account = Google Services
+preferences-services-google-mozilla-account = Google Services (Mozilla)
+preferences-services-microsoft-account = Microsoft 365
+preferences-services-firefox-account = { -fxaccount-brand-name }
+preferences-services-google-labels = Gmail, Google Calendar, Google Meet
+preferences-services-microsoft-labels = Outlook, Microsoft Teams, OneDrive
+preferences-services-firefox-account-labels = Seamless experience across devices
+preferences-services-fxa-sign-in = Sign In
+preferences-services-fxa-sign-out = Sign Out
+# Variables:
+#   $deviceCount (Number) - number of devices connected to FxA
+preferences-services-devices-label =
+    { $deviceCount ->
+        [one] You have { $deviceCount } device connected
+       *[other] You have { $deviceCount } devices connected
+    }
+preferences-mozproducts-header = More from { -vendor-short-name }
+preferences-mozproduct-vpn-name = { -mozilla-vpn-brand-name }
+preferences-mozproduct-vpn-description = Security, reliability and speed — on every device. anywhere you go.
+preferences-mozproduct-rally-name = { -rally-brand-name }
+preferences-mozproduct-rally-description = Donate your data to research studies for a better internet.
+preferences-mozproduct-foundation-name = Mozilla Foundation
+preferences-mozproduct-foundation-description = The not-for-profit that stands for a better web.
+preferences-mozproduct-pocket-name = { -pocket-brand-name }
+preferences-mozproduct-pocket-description = Discover, capture and savor content that fascinates you.
+preferences-mozproduct-view-more = View more
+preferences-mozproduct-get-vpn =
+    .label = Get { -mozilla-vpn-brand-name }
+preferences-mozproduct-get-rally =
+    .label = Get { -rally-short-name }
+preferences-mozproduct-get-pocket =
+    .label = Get { -pocket-brand-name }
+preferences-mozproduct-support =
+    .label = Support
+
 startup-restore-windows-and-tabs =
     .label = Open previous windows and tabs
     .accesskey = s
@@ -728,6 +792,7 @@ search-bar-shown =
 
 search-engine-default-header = Default Search Engine
 search-engine-default-desc-2 = This is your default search engine in the address bar and search bar. You can switch it at any time.
+search-engine-default-desc-pine = This is your default search engine in the address bar. You can switch it at any time.
 search-engine-default-private-desc-2 = Choose a different default search engine for Private Windows only
 search-separate-default-engine =
     .label = Use this search engine in Private Windows
@@ -762,6 +827,7 @@ search-suggestions-cant-show = Search suggestions will not be shown in location 
 search-one-click-header2 = Search Shortcuts
 
 search-one-click-desc = Choose the alternative search engines that appear below the address bar and search bar when you start to enter a keyword.
+search-one-click-desc-pine = Choose the alternative search engines that appear below the address bar when you start to enter a keyword.
 
 search-choose-engine-column =
     .label = Search Engine
@@ -812,6 +878,7 @@ containers-remove-button =
 
 sync-signedout-caption = Take Your Web With You
 sync-signedout-description2 = Synchronize your bookmarks, history, tabs, passwords, add-ons, and settings across all your devices.
+sync-signedout-description-pine = Synchronize your history and passwords across all your devices.
 
 sync-signedout-account-signin3 =
     .label = Sign in to sync…
@@ -1344,6 +1411,10 @@ collection-studies-link = View { -brand-short-name } studies
 addon-recommendations =
     .label = Allow { -brand-short-name } to make personalized extension recommendations
 addon-recommendations-link = Learn more
+
+better-recommendations =
+  .label = Send websites you visit anonymously to { -vendor-short-name } to improve snapshot suggestions and other features
+better-recommendations-link = Learn more
 
 # This message is displayed above disabled data sharing options in developer builds
 # or builds with no Telemetry support available.

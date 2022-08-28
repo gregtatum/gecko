@@ -1,0 +1,362 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@media not (prefers-contrast) {
+  :root {
+    --in-content-link-color: var(--colors-lavender-90);
+    --in-content-link-color-visited: var(--colors-lavender-100);
+    --in-content-link-color-hover: var(--colors-lavender-120);
+  }
+}
+
+:root {
+  background: none;
+}
+
+button.secondary {
+  background-color: var(--button-background-secondary);
+  border: 1px solid var(--button-border-secondary);
+  color: var(--button-text-secondary);
+}
+
+button.secondary:hover {
+  background-color: var(--button-background-secondary-hover);
+  border: 1px solid var(--button-border-secondary-hover);
+  color: var(--button-text-secondary-hover);
+}
+
+button.secondary:active {
+  background-color: var(--button-background-secondary-active);
+  border: 1px solid var(--button-border-secondary-active);
+  color: var(--button-text-secondary-hover);
+}
+
+button.secondary:focus {
+  background-color: var(--button-background-secondary-focus);
+  border: 1px solid var(--button-border-secondary-focus);
+  color: var(--button-text-secondary-focus);
+}
+
+body {
+  justify-content: center;
+}
+
+.onboarding-flow-card {
+  background: Window;
+  border: 1px solid WindowFrame;
+  border-radius: 40px;
+  box-sizing: border-box;
+  color: WindowText;
+  font-size: 14px;
+  height: 643px;
+  line-height: 20px;
+  margin: 0 auto;
+  text-align: center;
+  width: 1080px;
+}
+
+@media not (prefers-contrast) {
+  .onboarding-flow-card {
+    border: unset;
+    box-shadow: var(--pinebuild-onboarding-box-shadow);
+    color: var(--colors-darkgrey-30);
+  }
+}
+
+.onboarding-flow-card a {
+  text-decoration: underline;
+}
+
+.onboarding-flow-card h2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.onboarding-flow-card button {
+  border-radius: 8px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-inline: 0;
+  width: 100%;
+}
+
+.onboarding-card-text-container {
+  border-radius: 12px;
+  border: 1px solid WindowFrame;
+  box-sizing: border-box;
+  color: WindowText;
+  display: flex;
+  flex-direction: column;
+  height: 345px;
+  left: 55%;
+  padding: 18px;
+  position: absolute;
+  top: 25%;
+  width: 360px;
+}
+
+.onboarding-card-text-container > p {
+  flex: content;
+}
+
+.onboarding-card-text-container img {
+  margin: 1em auto;
+}
+
+@media not (prefers-contrast) {
+  .onboarding-card-text-container {
+    background: var(--colors-white);
+    border-color: transparent;
+    box-shadow: var(--pinebuild-onboarding-box-shadow);
+    color: var(--colors-darkgrey-30);
+  }
+}
+
+.onboarding-card-text-halvsies {
+  background: var(--colors-white);
+  border-bottom-right-radius: 36px;
+  border-top-right-radius: 36px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin-left: 50%;
+  padding: 1em 3em 1em 5em;
+}
+
+/* Onboarding: welcome card */
+.onboarding-welcome-card p {
+  line-height: 16px;
+  margin-inline: 2em;
+  margin-top: 0;
+}
+
+.onboarding-connect-account-card p {
+  margin-top: 0;
+}
+
+.onboarding-connect-account-card h2,
+.onboarding-account-connected-card h2 {
+  margin-inline: 2em;
+}
+
+/* Onboarding: final card */
+.onboarding-ready-card .onboarding-card-text-container {
+  background: unset;
+  box-shadow: unset;
+  height: unset;
+  width: auto;
+  left: 60%;
+  top: 35%;
+}
+
+.onboarding-ready-card h2 {
+  margin-inline: 0;
+}
+
+/* onboarding: privacy policy card */
+.onboarding-privacy-policy-card {
+  text-align: start;
+}
+
+.onboarding-privacy-policy-card .onboarding-card-text-halvsies {
+  padding-inline-end: 0.5em;
+}
+
+.onboarding-privacy-policy-card .onboarding-card-text-scroll {
+  margin-block-end: 1em;
+  padding-block-start: 129px;
+  padding-inline-end: 3em;
+}
+
+.onboarding-privacy-policy-card .onboarding-buttons-row {
+  margin-inline-end: 3em;
+}
+
+.onboarding-card-text-scroll {
+  overflow-y: scroll;
+}
+
+.onboarding-card-text-scroll h2 {
+  margin-inline: 0;
+}
+
+/* onboarding: data prefs card */
+.onboarding-data-prefs-card {
+  text-align: start;
+}
+
+.onboarding-data-prefs-label-heading,
+.onboarding-data-prefs-label-detail {
+  display: block;
+}
+
+.onboarding-data-prefs-label-heading {
+  font-weight: 700;
+}
+
+.onboarding-data-prefs-label-detail {
+  font-size: 12px;
+}
+
+.onboarding-data-prefs-card p {
+  margin-inline-end: 5em;
+}
+
+.onboarding-data-prefs-card h2 {
+  margin-inline-start: 0;
+  margin-inline-end: 5em;
+}
+
+.onboarding-data-prefs-card img {
+  margin-top: 129px;
+}
+
+.onboarding-data-prefs-card .onboarding-privacy-learn-more {
+  margin-inline-start: 4px;
+}
+
+.onboarding-data-prefs-card .onboarding-privacy-learn-more:visited:hover {
+  color: var(--in-content-link-color-hover);
+}
+
+.onboarding-data-prefs-card fieldset {
+  border: none;
+  flex: content;
+  padding: 0;
+  text-align: start;
+}
+
+.onboarding-flow-card fieldset label {
+  clear: both;
+  display: block;
+  margin-block-end: 1em;
+}
+
+.onboarding-data-prefs-card input[type="checkbox"] {
+  float: right;
+  margin-block: 1.5em;
+  margin-inline-start: 3em;
+}
+
+.onboarding-data-prefs-card input[type="checkbox"].toggle-button {
+  --dot-size: 12px;
+  --button-width: 30px;
+  --dot-transform-x: 14px;
+  border: none;
+}
+
+.onboarding-flow-card input[type="email"] {
+  box-sizing: border-box;
+  display: block;
+  margin-inline: 0;
+  width: 100%;
+}
+
+@media not (prefers-contrast) {
+  .onboarding-flow-card input[type="email"] {
+    background: var(--colors-white);
+    border: 1px solid var(--pine-onboarding-input-border-color);
+  }
+}
+
+.onboarding-buttons-row {
+  display: flex;
+  gap: 1em;
+  justify-items: flex-end;
+}
+
+.onboarding-buttons-row > * {
+  width: 100%;
+}
+
+@media not (prefers-contrast) {
+  .onboarding-bg-1 {
+    background: left center no-repeat url("chrome://browser/content/companion/onboarding-flow-img/flowstate-onboarding-1.png");
+    background-color: var(--pinebuild-onboarding-card-background-color);
+    background-size: contain;
+  }
+
+  .onboarding-bg-2 {
+    background: center center no-repeat url("chrome://browser/content/companion/onboarding-flow-img/flowstate-onboarding-2.png");
+    background-size: contain;
+  }
+
+  .onboarding-bg-3 {
+    background: left center no-repeat url("chrome://browser/content/companion/onboarding-flow-img/flowstate-onboarding-3.png");
+    background-size: contain;
+    background-color: var(--pinebuild-onboarding-card-background-color);
+  }
+}
+
+.onboarding-forward-nav,
+.onboarding-backward-nav {
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+}
+
+.onboarding-forward-nav {
+  background: center center no-repeat url("chrome://global/skin/icons/arrow-right.svg");
+}
+
+.onboarding-backward-nav {
+  background: center center no-repeat url("chrome://global/skin/icons/arrow-left.svg");
+}
+
+@media not (prefers-contrast) {
+  .onboarding-forward-nav {
+    background-color: var(--pine-onboarding-nav-button-background-color);
+  }
+
+  .onboarding-backward-nav {
+    background-color: var(--pine-onboarding-nav-button-background-color);
+  }
+}
+
+.onboarding-forward-nav {
+  right: 20px;
+}
+
+.onboarding-backward-nav {
+  left: 20px;
+}
+
+.onboarding-flow-breadcrumbs {
+  position: relative;
+  text-align: center;
+  top: 1em;
+}
+
+.onboarding-flow-breadcrumbs span {
+  background-color: ButtonFace;
+  border: 1px solid ButtonShadow;
+  border-radius: 50%;
+  display: inline-block;
+  height: 7px;
+  margin-inline: 6px;
+  width: 7px;
+}
+
+.onboarding-flow-breadcrumbs span[data-active="true"] {
+  background-color: ButtonText;
+  border-radius: 10px;
+  opacity: unset;
+  width: 26px;
+}
+
+@media not (prefers-contrast) {
+  .onboarding-flow-breadcrumbs span {
+    background-color: var(--pine-onboarding-breadcrumb-color);
+    border-color: transparent;
+    opacity: var(--pine-onboarding-breadcrumb-inactive-opacity);
+  }
+
+  .onboarding-flow-breadcrumbs span[data-active="true"] {
+    background-color: var(--pine-onboarding-breadcrumb-active-color);
+  }
+}

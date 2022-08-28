@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 <hbox flex="1" id="browser">
+#ifndef PINEBUILD
   <vbox id="sidebar-box" hidden="true" class="chromeclass-extrachrome">
     <box id="sidebar-header" align="center">
       <toolbarbutton id="sidebar-switcher-target" class="tabbable">
@@ -19,8 +20,16 @@
   </vbox>
 
   <splitter id="sidebar-splitter" class="chromeclass-extrachrome sidebar-splitter" hidden="true"/>
+#endif
   <vbox id="appcontent" flex="1">
     <!-- gNotificationBox will be added here lazily. -->
+#ifdef PINEBUILD
+    <!-- We insert a hidden dummy sidebar-switcher-target toolbarbutton here to keep the
+         WebExtension Menus API mechanism happy, since it expects this node to exist somewhere
+         in the DOM. -->
+    <toolbarbutton id="sidebar-switcher-target" flex="1" class="tabbable" hidden="true"/>
+    <box id="companionLinkTransitionOverlay"/>
+#endif
     <tabbox id="tabbrowser-tabbox"
             flex="1" tabcontainer="tabbrowser-tabs">
       <tabpanels id="tabbrowser-tabpanels"

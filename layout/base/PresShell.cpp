@@ -5408,6 +5408,14 @@ void PresShell::AddCanvasBackgroundColorItem(
 }
 
 bool PresShell::IsTransparentContainerElement() const {
+#ifdef PINEBUILD
+  if (XRE_IsContentProcess() &&
+      IsPrivilegedAboutRemoteType(
+          ContentChild::GetSingleton()->GetRemoteType())) {
+    return true;
+  }
+#endif
+
   nsPresContext* pc = GetPresContext();
   if (!pc->IsRootContentDocumentCrossProcess()) {
     if (pc->IsChrome()) {

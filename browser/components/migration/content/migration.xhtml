@@ -18,6 +18,7 @@
   <html:link rel="localization" href="branding/brand.ftl"/>
   <html:link rel="localization" href="toolkit/global/wizard.ftl"/>
   <html:link rel="localization" href="browser/migration.ftl"/>
+  <html:link rel="localization" href="browser/browserPinebuild.ftl"/>
 </linkset>
 
 <script src="chrome://global/content/customElements.js"/>
@@ -26,7 +27,11 @@
 <wizard data-branded="true">
   <wizardpage id="importSource" pageid="importSource" next="selectProfile"
               data-header-label-id="import-source-page-title">
+#ifndef PINEBUILD
     <description id="importAll" control="importSourceGroup" data-l10n-id="import-from"></description>
+#else
+    <description id="importAll" control="importSourceGroup" data-l10n-id="pinebuild-import-from"></description>
+#endif
     <description id="importBookmarks" control="importSourceGroup" data-l10n-id="import-from-bookmarks" hidden="true" ></description>
 
     <radiogroup id="importSourceGroup" align="start">

@@ -1,0 +1,172 @@
+/**
+ * Copyright 2021 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import logic from "logic";
+
+import { makeDaysAgo } from "shared/date";
+import { makeFolderNamespacedConvId } from "shared/id_conversions";
+import { engineBackEndFacts } from "../../engine_glue";
+
+/**
+ * For details see `README.md`, but the core things to know are:
+ * - We synchronize using `singleEvents` with a time window that is
+ *   characterized by:
+ *   - Our minimum sync buffer: the point at which we abandon our current
+ *     syncToken so that we can establish a new sync time window.
+ *   - Our sync padding buffer: the amount of time we establish the window into
+ *     the future (beyond the minimum sync buffer).  This is done both for the
+ *     potential to consult future days (speculative) but also and primarily so
+ *     that we're not constantly having to resynchronize.
+ * - Our identifiers are the `recurrentEventId` as the conversation id and the
+ *   event `id` as the message id and this avoids any need for us to maintain
+ *   an additional aggregate mapping here in the sync state.
+ *   - However this choice does mean that when it comes time to move our sync
+ *     window, we do need to use the `TBL_MSG_IDS_BY_FOLDER` index to help
+ *     figure out what data needs to be evicted.
+ */
+export default class GapiCalFolderSyncStateHelper {
+  constructor(ctx, rawSyncState, accountId, folderId, why) {
+    logic.defineScope(this, "GapiSyncState", { ctxId: ctx.id, why });
+
+    const [min, max] = engineBackEndFacts.get("gapi").syncRangeInDays;
+
+    if (!rawSyncState) {
+      logic(ctx, "creatingDefaultSyncState", {});
+      rawSyncState = {
+        syncToken: null,
+        etag: null,
+        // Stores the etag/lastModified state for the gmail inbox feed
+        // (see tasks/sync_inbox_count.js) so a conditional fetch can be
+        // performed; the contents are not cached.
+        inboxFeedCacheState: null,
+        // The timestamp of the most recent `updated` value for the calendar.
+        // This should be used in preference to locally generated wall-clock
+        // values when trying to ask the server for things that have changed,
+        // specifically via `updatedMin`.
+        calUpdatedTS: null,
+        rangeOldestTS: makeDaysAgo(-min),
+        // For now we're syncing ~8 weeks into the future in order to provide
+        // some buffer time to make sure the time window shifting is reliable.
+        rangeNewestTS: makeDaysAgo(-max),
+        syncDate: 0,
+      };
+    }
+
+    this._accountId = accountId;
+    this.folderId = folderId;
+    this.rawSyncState = rawSyncState;
+
+    // A map grouping events by their `recurringEventId` or for non-recurring
+    // events (/ the recurrent event) their own id.  The value is a Map of the
+    // instance events keyed by their own id.
+    this.eventChangesByRecurringEventId = new Map();
+
+    // A running list of tasks to spin-off
+    this.tasksToSchedule = [];
+  }
+
+  get syncToken() {
+    return this.rawSyncState.syncToken;
+  }
+
+  set syncToken(nextSyncToken) {
+    this.rawSyncState.syncToken = nextSyncToken;
+  }
+
+  get syncDate() {
+    return this.rawSyncState.syncDate;
+  }
+
+  set syncDate(syncDate) {
+    this.rawSyncState.syncDate = syncDate;
+  }
+
+  get etag() {
+    return this.rawSyncState.etag;
+  }
+
+  set etag(etag) {
+    this.rawSyncState.etag = etag;
+  }
+
+  set updatedTime(updatedTimeDateStr) {
+    this.rawSyncState.calUpdatedTS = Date.parse(updatedTimeDateStr);
+  }
+
+  get timeMinDateStr() {
+    return new Date(this.rawSyncState.rangeOldestTS).toISOString();
+  }
+
+  get timeMaxDateStr() {
+    return new Date(this.rawSyncState.rangeNewestTS).toISOString();
+  }
+
+  _makeUidConvTask({
+    convId,
+    eventMap,
+    priority,
+    calUpdatedTS,
+    rangeOldestTS,
+    rangeNewestTS,
+  }) {
+    let task = {
+      type: "cal_sync_conv",
+      accountId: this._accountId,
+      folderId: this.folderId,
+      convId,
+      calUpdatedTS,
+      rangeOldestTS,
+      rangeNewestTS,
+      eventMap,
+      priority,
+    };
+    this.tasksToSchedule.push(task);
+    return task;
+  }
+
+  ingestEvent(event, priority = 0) {
+    const recurringId = event.recurringEventId || event.id;
+    let data = this.eventChangesByRecurringEventId.get(recurringId);
+    if (!data) {
+      data = { eventMap: new Map(), priority };
+      this.eventChangesByRecurringEventId.set(recurringId, data);
+    }
+    data.eventMap.set(event.id, event);
+    data.priority = priority > data.priority ? priority : data.priority;
+  }
+
+  /**
+   * Statefully process events, generating synchronization tasks as necessary as
+   * a byproduct.
+   */
+  processEvents() {
+    for (const [
+      recurringId,
+      { eventMap, priority },
+    ] of this.eventChangesByRecurringEventId.entries()) {
+      const convId = makeFolderNamespacedConvId(this.folderId, recurringId);
+      this._makeUidConvTask({
+        convId,
+        eventMap,
+        priority,
+        calUpdatedTS: this.rawSyncState.calUpdatedTS,
+        rangeOldestTS: this.rawSyncState.rangeOldestTS,
+        rangeNewestTS: this.rawSyncState.rangeNewestTS,
+      });
+    }
+    this.eventChangesByRecurringEventId.clear();
+  }
+}

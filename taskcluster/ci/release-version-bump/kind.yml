@@ -57,3 +57,12 @@ jobs:
             symbol: Rel(VerBump)
             tier: 1
             kind: build
+
+    pinebuild:
+        name: pinebuild-version-bump
+        shipping-product: pinebuild
+        treeherder:
+            platform: pinebuild-release/opt
+            symbol: Rel(VerBump)
+            tier: 1
+            kind: build

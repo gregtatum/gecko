@@ -13,6 +13,9 @@
 <?xml-stylesheet href="chrome://browser/skin/preferences/search.css"?>
 <?xml-stylesheet href="chrome://browser/skin/preferences/containers.css"?>
 <?xml-stylesheet href="chrome://browser/skin/preferences/privacy.css"?>
+#ifdef PINEBUILD
+<?xml-stylesheet href="chrome://browser/skin/preferences/simple.css"?>
+#endif
 
 <!DOCTYPE html>
 
@@ -54,6 +57,10 @@
   <link rel="localization" href="security/certificates/deviceManager.ftl"/>
   <link rel="localization" href="security/certificates/certManager.ftl"/>
   <link rel="localization" href="preview/firefoxSuggest.ftl"/>
+#ifdef PINEBUILD
+  <link rel="localization" href="browser/companion.ftl"/>
+  <link rel="preload" href="chrome://browser/skin/preferences/services.css" as="style"/>
+#endif
 
   <link rel="shortcut icon" href="chrome://global/skin/icons/settings.svg"/>
 
@@ -62,6 +69,10 @@
   <script src="chrome://browser/content/preferences/preferences.js"/>
   <script src="chrome://browser/content/preferences/extensionControlled.js"/>
   <script src="chrome://browser/content/preferences/findInPage.js"/>
+#ifdef PINEBUILD
+  <script type="module" src="chrome://browser/content/companion/refresh-services-button.js"/>
+  <script type="module" src="chrome://browser/content/companion/workshop-services.js" />
+#endif
 </head>
 
 <html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -88,7 +99,7 @@
           <image class="category-icon"/>
           <label class="category-name" flex="1" data-l10n-id="pane-general-title"></label>
         </richlistitem>
-
+        #ifndef PINEBUILD
         <richlistitem id="category-home"
                       class="category"
                       value="paneHome"
@@ -99,6 +110,7 @@
           <image class="category-icon"/>
           <label class="category-name" flex="1" data-l10n-id="pane-home-title"></label>
         </richlistitem>
+        #endif
 
         <richlistitem id="category-search"
                       class="category"
@@ -140,7 +152,7 @@
           <image class="category-icon"/>
           <label class="category-name" flex="1" data-l10n-id="pane-sync-title3"></label>
         </richlistitem>
-
+        #ifndef PINEBUILD
         <richlistitem id="category-experimental"
                       class="category"
                       hidden="true"
@@ -162,12 +174,13 @@
           <image class="category-icon"/>
           <label class="category-name" flex="1" data-l10n-id="more-from-moz-title"></label>
         </richlistitem>
+        #endif
       </richlistbox>
 
       <spacer flex="1"/>
 
       <vbox class="sidebar-footer-list">
-        <html:a id="addonsButton" class="sidebar-footer-link" href="about:addons">
+        <html:a id="addonsButton" class="sidebar-footer-link" href="about:addons" pine-supported="false">
           <image class="sidebar-footer-icon addons-icon"/>
           <label class="sidebar-footer-label" flex="1" data-l10n-id="addons-button-label"></label>
         </html:a>
@@ -182,7 +195,11 @@
       <key data-l10n-id="focus-search" key="" modifiers="accel" id="focusSearch1"/>
     </keyset>
 
+#ifdef PINEBUILD
+    <vbox class="main-content" flex="1">
+#else
     <vbox class="main-content" flex="1" align="start">
+#endif
       <vbox class="pane-container">
         <hbox class="sticky-container">
           <hbox class="sticky-inner-container" pack="end" align="start">
@@ -203,14 +220,19 @@
         </hbox>
         <vbox id="mainPrefPane">
 #include searchResults.inc.xhtml
+#ifdef PINEBUILD
+#include simple.inc.xhtml
+#endif
 #include main.inc.xhtml
+#ifndef PINEBUILD
 #include home.inc.xhtml
+#include experimental.inc.xhtml
+#include moreFromMozilla.inc.xhtml
+#endif
 #include search.inc.xhtml
 #include privacy.inc.xhtml
 #include containers.inc.xhtml
 #include sync.inc.xhtml
-#include experimental.inc.xhtml
-#include moreFromMozilla.inc.xhtml
         </vbox>
       </vbox>
     </vbox>

@@ -41,3 +41,7 @@ jobs:
     devedition:
         name: release-devedition_mark_as_shipped
         shipping-product: devedition
+
+    pinebuild:
+        name: release-pinebuild_mark_as_shipped
+        shipping-product: pinebuild

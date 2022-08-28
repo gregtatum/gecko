@@ -1,0 +1,335 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@media not (prefers-contrast) {
+  :root {
+    /* Full Color Palette */
+
+    /* Lavender */
+    --colors-lavender-10: #f3f0fa;
+    --colors-lavender-20: #efe9fb;
+    --colors-lavender-30: #e4d9fa;
+    --colors-lavender-40: #dbcdf9;
+    --colors-lavender-50: #cfbcf7;
+    --colors-lavender-60: #b79bf2;
+    --colors-lavender-70: #9974e8;
+    --colors-lavender-80: #845bdc;
+    --colors-lavender-90: #6940c2;
+    --colors-lavender-100: #562ea6;
+    --colors-lavender-110: #452487;
+    --colors-lavender-120: #371e69;
+
+    /* Cafe au Lait */
+    --colors-cafe-10: #fffefc;
+    --colors-cafe-20: #faf7f2;
+    --colors-cafe-30: #f3ece0;
+    --colors-cafe-40: #f0e8da;
+    --colors-cafe-50: #f0e6d5;
+    --colors-cafe-60: #ebdec7;
+    --colors-cafe-70: #e0ceac;
+    --colors-cafe-80: #ceb382;
+    --colors-cafe-90: #bc9d65;
+    --colors-cafe-100: #9b8052;
+    --colors-cafe-110: #846a41;
+    --colors-cafe-120: #695333;
+
+    /* Teal */
+    --colors-teal-10: #edfaf9;
+    --colors-teal-20: #e1faf9;
+    --colors-teal-30: #d4f7f6;
+    --colors-teal-40: #aef2f2;
+    --colors-teal-50: #84e8e8;
+    --colors-teal-60: #67d8dc;
+    --colors-teal-70: #40bec2;
+    --colors-teal-80: #2ea0a6;
+    --colors-teal-90: #248287;
+    --colors-teal-100: #1e6569;
+
+    /* Yellow */
+    --colors-yellow-10: #fcfad2;
+    --colors-yellow-20: #faf6b1;
+    --colors-yellow-30: #f5f17d;
+    --colors-yellow-40: #f0eb4a;
+    --colors-yellow-50: #eae419;
+
+    /* Light Grey */
+    --colors-lightgrey-10: #fafafa;
+    --colors-lightgrey-20: #f7f7f8;
+    --colors-lightgrey-30: #f2f0f1;
+    --colors-lightgrey-40: #edebeb;
+    --colors-lightgrey-50: #e5e2e2;
+    --colors-lightgrey-60: #dbd9d7;
+    --colors-lightgrey-70: #c9c7c5;
+    --colors-lightgrey-80: #b7b6b3;
+    --colors-lightgrey-90: #a4a4a1;
+    --colors-lightgrey-100: #92928f;
+    --colors-lightgrey-110: #7f807d;
+    --colors-lightgrey-120: #6d6e6b;
+
+    /* Dark Grey */
+    --colors-darkgrey-10: #60605c;
+    --colors-darkgrey-20: #4f504c;
+    --colors-darkgrey-30: #4a4b49;
+    --colors-darkgrey-40: #444544;
+    --colors-darkgrey-50: #404140;
+    --colors-darkgrey-60: #2f2f2e;
+    --colors-darkgrey-70: #232423;
+    --colors-darkgrey-80: #202120;
+    --colors-darkgrey-90: #161616;
+    --colors-darkgrey-100: #0e0f0f;
+
+    /* Black/White */
+    --colors-black: #000000;
+    --colors-white: #ffffff;
+
+    /* Red */
+    --colors-red-10: #e85474;
+    --colors-red-20: #e53e62;
+    --colors-red-30: #e11e48;
+
+    /* Blue */
+    --colors-blue-10: #637cff;
+
+    /* Background Colors */
+    --calendar-button-secondary-background: var(--colors-lightgrey-20);
+    --calendar-button-secondary-background-hover: var(--colors-lightgrey-40);
+    --calendar-button-secondary-background-active: var(--colors-lightgrey-50);
+    --calendar-host-image-background: var(--colors-lightgrey-30);
+    --action-button-background: var(--colors-lightgrey-30);
+    --action-button-background-hover: var(--colors-lightgrey-50);
+    --action-button-background-active: var(--colors-lightgrey-60);
+    --action-button-background-disabled: var(--colors-lightgrey-60);
+    --button-background-primary: var(--colors-lavender-80);
+    --button-background-primary-hover: var(--colors-lavender-120);
+    --button-background-primary-active: var(--colors-lavender-100);
+    --button-background-secondary: var(--colors-lavender-20);
+    --button-background-secondary-hover: var(--colors-lavender-40);
+    --button-background-secondary-active: var(--colors-lavender-60);
+    --button-background-secondary-focus: var(--colors-lavender-60);
+
+    /* Border Colors */
+    --notification-icon-border-color: var(--colors-lightgrey-30);
+    --notification-card-border-color: var(--colors-cafe-40);
+    --action-button-border-color: var(--colors-lightgrey-30);
+    --action-button-border-color-hover: var(--colors-lightgrey-110);
+    --calendar-divider-border-color: var(--colors-lightgrey-30);
+    --button-border-secondary: var(--colors-lavender-70);
+    --button-border-secondary-hover: var(--colors-lavender-120);
+    --button-border-secondary-active: var(--colors-lavender-120);
+    --button-border-secondary-focus: var(--colors-lavender-100);
+
+    /* Text Colors */
+    --button-text-primary: var(--colors-white);
+    --button-text-secondary: var(--colors-lavender-90);
+    --button-text-secondary-hover: var(--colors-lavender-120);
+    --button-text-secondary-active: var(--colors-lavender-120);
+    --button-text-secondary-focus: var(--colors-lavender-100);
+
+    /* Icon Colors */
+    --icon-color-default: var(--colors-darkgrey-30);
+    --icon-color-success: #50a369;
+    --icon-color-disabled: var(--colors-lightgrey-80);
+    --action-button-icon-fill: var(--icon-color-default);
+    --action-button-icon-fill-hover: var(--icon-color-default);
+    --action-button-icon-fill-active: var(--icon-color-default);
+
+    --colors-primarygrey: #4e4a55;
+    --colors-secondarygrey: #5f5b66;
+
+    --colors-icons: #5f5b66;
+
+    --colors-warm-hover-02: #f0e6d5;
+    --colors-warm-pressed-02: #ebdec7;
+
+    --colors-border-focus: var(--colors-teal-90);
+    --colors-quickactions-topsites-border: #e5e2e2;
+    --colors-quickactions-topsites-background: white;
+    --focus-outline-color: var(--colors-border-focus);
+    --toolbarbutton-hover-background: var(--colors-warm-hover-02);
+    --toolbarbutton-active-background: var(--colors-warm-pressed-02);
+    --pinebuild-toolbarbutton-border: none;
+    --pinebuild-toolbarbutton-bgcolor: unset;
+    --pinebuild-toolbarbutton-hover-fill: currentColor;
+    --pinebuild-panel-item-hover-color: inherit;
+
+    --companion-sidebar-button-flow-reset-fill-color: var(--colors-white);
+    --companion-sidebar-button-selected-fill-color: var(--colors-lavender-70);
+    --companion-sidebar-button-selected-flow-reset-bg-color: var(--colors-lavender-60);
+    --companion-sidebar-button-border-radius: var(--toolbarbutton-border-radius);
+
+    --quickactions-topsites-outset-shadow: -1px 1px 4px 0px rgba(69, 36, 135, 0.14);
+
+    --urlbar-default-border: 1px solid var(--colors-warm-pressed-02);
+    --urlbar-hover-border: unset;
+    --urlbar-selected-border: 1px solid var(--colors-lavender-70);
+    --urlbar-focus-border: 2px solid var(--colors-border-focus);
+    --urlbar-breakout-background: white;
+    --urlbar-default-background: rgba(255,255,255,0.74);
+
+    --avm-button-border-color: transparent;
+    --avm-button-fill-color: var(--colors-icons);
+    --avm-button-bgcolor: transparent;
+    --avm-button-hover-bgcolor: var(--colors-warm-hover-02);
+    --avm-button-hover-fill: var(--avm-button-fill-color);
+    --avm-button-active-bgcolor: var(--colors-warm-pressed-02);
+    --avm-button-active-fill: var(--avm-button-fill-color);
+    --page-action-menu-button-border-color: var(--colors-lightgrey-30);
+    --page-action-menu-button-fill-color: var(--colors-icons);
+    --page-action-menu-button-bgcolor: var(--colors-lightgrey-20);
+    --page-action-menu-button-color: var(--colors-darkgrey-10);
+    --page-action-menu-textfield-focused-border-color: var(--colors-lavender-90);
+    --page-action-menu-textfield-focused-bgcolor: var(--colors-lavender-10);
+    --page-action-menu-url-textfield-bgcolor: var(--colors-lavender-10);
+    --page-action-menu-url-textfield-color: var(--colors-lavender-90);
+
+    --pinebuild-global-background: var(--colors-cafe-10);
+    --pinebuild-highlight-color: var(--colors-lavender-50);
+    --pinebuild-highlight-text-color: #562ea6;
+    --pinebuild-starting-background-color: #8d77b4;
+    --pinebuild-toast-box-shadow: -1px 2px 20px 0px #846A4133;
+    --pinebuild-toast-drop-shadow: drop-shadow(-1px 2px 20px rgba(132, 106, 65, 0.2));
+    --pinebuild-onboarding-box-shadow: -1px 2px 12px 0px rgba(132, 106, 65, 0.2);
+    --pinebuild-onboarding-card-background-color: #cebef6;
+
+    --avm-workspace-bgcolor: var(--colors-cafe-20);
+    --avm-workspace-contains-pins-bgcolor: var(--colors-cafe-40);
+    --avm-workspace-box-shadow-color: var(--colors-cafe-40);
+    --avm-workspace-border-color: #F3EEE2;
+    --avm-workspace-contains-pins-border-color: var(--colors-cafe-60);
+    --avm-workspace-selected-river-bgcolor: var(--colors-white);
+    --avm-workspace-indicator-button-color: var(--colors-white);
+
+    --avm-workspace-default-indicator-button-bgcolor: var(--colors-lavender-80);
+    --avm-workspace-default-indicator-button-unselected-bgcolor: var(--colors-lavender-80);
+    --avm-workspace-default-indicator-button-unselected-border-color: var(--colors-lavender-90);
+    --avm-workspace-default-indicator-button-unselected-color: var(--colors-lavender-90);
+    --avm-workspace-default-selected-bgcolor: var(--colors-lavender-20);
+    --avm-workspace-default-selected-border-color: var(--colors-lavender-30);
+    --avm-workspace-default-selected-box-shadow-color: var(--colors-lavender-30);
+    --avm-workspace-1-indicator-button-bgcolor: #3F6BC0;
+    --avm-workspace-1-indicator-button-unselected-bgcolor: #cbd9f7;
+    --avm-workspace-1-indicator-button-unselected-border-color: #2b57ad;
+    --avm-workspace-1-indicator-button-unselected-color: #2b57ad;
+    --avm-workspace-1-selected-bgcolor: #E1E9FA;
+    --avm-workspace-1-selected-border-color: #CBD9F7;
+    --avm-workspace-1-selected-box-shadow-color: rgba(217, 225, 250, 0.5);
+    --avm-workspace-2-indicator-button-bgcolor: var(--colors-teal-90);
+    --avm-workspace-2-indicator-button-unselected-bgcolor: #cae8eb;
+    --avm-workspace-2-indicator-button-unselected-border-color: #196c70;
+    --avm-workspace-2-indicator-button-unselected-color: #196c70;
+    --avm-workspace-2-selected-bgcolor: #E1F3F5;
+    --avm-workspace-2-selected-border-color: #CAE9EB;
+    --avm-workspace-2-selected-box-shadow-color: rgba(202, 233, 235, 0.5);
+
+    --avm-pinned-views-separator-color: rgba(0,0,0,0.2);
+    --avm-river-outline-color: transparent;
+    --avm-view-group-title-text-color: var(--colors-darkgrey-30);
+    --avm-view-group-domain-text-color: var(--colors-darkgrey-30);
+    --avm-view-group-element-bgcolor: transparent;
+    --avm-view-group-element-hover-focus-bgcolor: transparent;
+    --avm-view-group-element-hover-focus-text-color: unset;
+    --avm-view-group-element-hover-outline: none;
+    --avm-view-group-element-focus-outline: 1px solid var(--colors-border-focus);
+    --avm-pinned-view-group-element-bgcolor: var(--colors-white);
+    --avm-pinned-view-group-element-hover-focus-bgcolor: var(--colors-white);
+    --avm-view-group-element-icon-border-color: var(--colors-cafe-50);
+    --avm-view-group-element-icon-bgcolor: var(--colors-white);
+    --avm-view-group-element-icon-hover-focus-bgcolor: var(--colors-white);
+    --avm-view-group-element-active-icon-shadow-color: rgba(166,145,121,0.32);
+    --avm-view-group-element-active-icon-bgcolor: var(--colors-white);
+    --avm-view-group-element-breadcrumb-stroke-color: var(--colors-lightgrey-80);
+    --avm-view-group-element-breadcrumb-fill-color: var(--colors-lightgrey-80);
+    --avm-view-group-element-breadcrumb-hover-stroke-color: var(--colors-lavender-90);
+    --avm-view-group-element-breadcrumb-hover-fill-color: var(--colors-lavender-90);
+    --avm-view-group-element-breadcrumb-active-stroke-color: var(--colors-lavender-90);
+    --avm-view-group-element-breadcrumb-active-fill-color: var(--colors-lavender-90);
+
+    --pine-onboarding-application-name-gradient: linear-gradient(88.97deg, #AD96DC -8.12%, #8076AD 14.67%, #22A7B2 48.67%);
+    --pine-onboarding-header-text-color: #5b5b66;
+    --pine-onboarding-dates-text-color: #15141a;
+    --pine-onboarding-footer-border-color: #e0e0e6;
+    --pine-onboarding-input-border-color: #8f8f9d;
+    --pine-onboarding-breadcrumb-color: var(--colors-white);
+    --pine-onboarding-breadcrumb-active-color: var(--colors-lavender-120);
+    --pine-onboarding-breadcrumb-inactive-opacity: 30%;
+    --pine-onboarding-nav-button-background-color: var(--colors-cafe-10);
+
+    --toolbar-field-focus-background-color: var(--colors-lightgrey-20);
+
+    /* flow-reset.css */
+    --flowreset-button-border-color: #CFCFD8;
+    --flowreset-button-boxshadow-color: rgba(58, 57, 68, 0.2);
+    --flowreset-button-background-color: #9982C9;
+    --flowreset-button-text-color: #FFFFFF;
+    --flowreset-textshadow-color: rgba(0,0,0, 0.6);
+
+    --favicon-circle-border-color: var(--colors-lavender-10);
+    --favicon-circle-bgcolor: var(--colors-white);
+
+    --history-viewer-separator-color: var(--colors-cafe-70);
+    --history-viewer-bottom-separator-color: var(--colors-lightgrey-80);
+    --history-result-button-border-color: transparent;
+    --history-result-button-bgcolor: transparent;
+    --history-result-button-hover-focus-bgcolor: var(--colors-cafe-10);
+    --history-result-button-hover-focus-border-color: var(--colors-cafe-100);
+    --history-result-button-active-bgcolor: var(--colors-cafe-10);
+    --history-result-button-active-border-color: var(--colors-cafe-100);
+    --history-result-secondary-text-color: var(--colors-darkgrey-10);
+
+    --urlbar-companionlink-hover-bgcolor: var(--colors-lavender-20);
+    --urlbar-companionlink-hover-border: .5px solid var(--colors-lavender-70);
+    --urlbar-companionlink-selected-bgcolor: var(--colors-lavender-20);
+    --urlbar-companionlink-selected-border: .5px solid var(--colors-teal-90);
+    --urlbar-companionlink-selected-outline: 1.5px solid var(--colors-teal-90);
+    --urlbar-companionlink-active-bgcolor: var(--colors-lavender-40);
+    --urlbar-companionlink-active-border: .5px solid var(--colors-lavender-70);
+  }
+}
+
+@media (prefers-contrast) {
+  :root {
+    /* Border Colors */
+    --notification-icon-border-color: WindowText;
+    --notification-card-border-color: WindowText;
+
+    /* Icon Colors */
+    --icon-color-default: ButtonText;
+    --icon-color-success: WindowText;
+    --action-button-icon-fill: ButtonText;
+    --action-button-icon-fill-hover: ButtonFace;
+    --action-button-icon-fill-active: SelectedItemText;
+
+    --flowreset-button-border-color: transparent;
+    --flowreset-button-boxshadow-color: transparent;
+    --flowreset-button-background-color: ButtonFace;
+    --flowreset-button-text-color: ButtonText;
+    --flowreset-textshadow-color: unset;
+
+    --colors-border-focus: SelectedItem;
+    --focus-outline-color: SelectedItem;
+
+    --action-button-background: ButtonFace;
+    --action-button-background-hover: ButtonText;
+    --action-button-background-active: SelectedItem;
+    --action-button-background-disabled: transparent;
+    --action-button-border-color: ButtonText;
+    --action-button-border-color-hover: ButtonFace;
+
+    --avm-view-group-title-text-color: ButtonText;
+    --avm-view-group-domain-text-color: ButtonText;
+
+    --button-background-secondary: ButtonFace;
+    --button-background-secondary-hover: ButtonFace;
+    --button-background-secondary-active: ButtonFace;
+    --button-background-secondary-focus: ButtonFace;
+    --button-border-secondary: ButtonShadow;
+    --button-border-secondary-hover: ButtonShadow;
+    --button-border-secondary-active: ButtonShadow;
+    --button-border-secondary-focus: ButtonShadow;
+    --button-text-secondary: ButtonText;
+    --button-text-secondary-hover: ButtonText;
+    --button-text-secondary-active: ButtonText;
+    --button-text-secondary-focus: ButtonText;
+  }
+}

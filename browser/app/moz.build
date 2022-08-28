@@ -72,10 +72,15 @@ if CONFIG["CC_TYPE"] == "clang-cl":
     # a console application.
     WIN32_EXE_LDFLAGS += ["-ENTRY:wmainCRTStartup"]
 
+if CONFIG["PINEBUILD"] and CONFIG["MOZ_APP_NAME"] != "firefox":
+    DIRS += ["firefox-stub"]
+
 if CONFIG["OS_ARCH"] == "WINNT":
+    if not CONFIG["PINEBUILD"]:
+        DIRS += ["pbproxy"]
+
     RCINCLUDE = "splash.rc"
     DIRS += [
-        "pbproxy",
         "winlauncher",
     ]
     USE_LIBS += [

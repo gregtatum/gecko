@@ -12,6 +12,12 @@ const { LoginHelper } = ChromeUtils.import(
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+const { LayoutUtils } = ChromeUtils.import(
+  "resource://gre/modules/LayoutUtils.jsm"
+);
 
 const lazy = {};
 
@@ -58,7 +64,7 @@ class AboutLoginsChild extends JSWindowActorChild {
         break;
       }
       case "AboutLoginsCopyLoginDetail": {
-        this.#aboutLoginsCopyLoginDetail(event.detail);
+        this.#aboutLoginsCopyLoginDetail(event.detail, event.target);
         break;
       }
       case "AboutLoginsCreateLogin": {
@@ -113,11 +119,42 @@ class AboutLoginsChild extends JSWindowActorChild {
         this.#aboutLoginsUpdateLogin(event.detail);
         break;
       }
+      case "AboutLoginsBrowsePanel": {
+        this.sendAsyncMessage("AboutLogins:BrowsePanel");
+        break;
+      }
+      case "AboutLoginsOpenOriginLink": {
+        this.onAboutLoginsOpenOriginLink(event.detail.url);
+        break;
+      }
+      case "AboutLoginsRemoveUpdateState":
+      case "AboutLoginsLoginEditLogin":
+      case "AboutLoginsClearSelection":
+      case "AboutLoginsShowBlankLogin": {
+        this.sendToContent("HeaderChange", event.detail.newHeaderL10nId);
+        break;
+      }
+      case "contextmenu": {
+        if (this.browsingContext.embedderElement) {
+          event.preventDefault();
+        }
+        break;
+      }
     }
   }
 
   #aboutLoginsInit() {
     this.sendAsyncMessage("AboutLogins:Subscribe");
+
+    if (this.browsingContext.embedderElement) {
+      let documentElement = this.document.documentElement;
+      documentElement.classList.add("in-companion");
+      documentElement.querySelector("login-list").classList.add("in-companion");
+      documentElement.querySelector("login-item").classList.add("in-companion");
+      documentElement
+        .querySelector("confirmation-dialog")
+        .classList.add("in-companion");
+    }
 
     let win = this.browsingContext.window;
     let waivedContent = Cu.waiveXrays(win);
@@ -168,7 +205,16 @@ class AboutLoginsChild extends JSWindowActorChild {
     this.sendAsyncMessage("AboutLogins:ImportReportInit");
   }
 
-  #aboutLoginsCopyLoginDetail(detail) {
+  #aboutLoginsCopyLoginDetail(detail, target) {
+    if (AppConstants.PINEBUILD) {
+      let rect = LayoutUtils.getElementBoundingScreenRect(
+        target.closest(".login-list-item")
+      );
+      this.sendAsyncMessage("AboutLogins:CopyLoginDetail", {
+        rect,
+      });
+    }
+
     lazy.ClipboardHelper.copyString(detail, lazy.ClipboardHelper.Sensitive);
   }
 
@@ -262,6 +308,12 @@ class AboutLoginsChild extends JSWindowActorChild {
     });
   }
 
+  onAboutLoginsOpenOriginLink(url) {
+    this.sendAsyncMessage("AboutLogins:OpenOriginLink", {
+      url,
+    });
+  }
+
   receiveMessage(message) {
     switch (message.name) {
       case "AboutLogins:ImportReportData":
@@ -304,6 +356,9 @@ class AboutLoginsChild extends JSWindowActorChild {
     utils.supportBaseURL = Services.urlFormatter.formatURLPref(
       "app.support.baseURL"
     );
+    let waivedContent = Cu.waiveXrays(this.browsingContext.window);
+    waivedContent.AboutLoginsUtils.platform = AppConstants.platform;
+    waivedContent.AboutLoginsUtils.pineBuild = AppConstants.PINEBUILD;
     this.sendToContent("Setup", data);
   }
 

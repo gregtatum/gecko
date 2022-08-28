@@ -4,6 +4,10 @@
 
 /* import-globals-from /toolkit/content/preferencesBindings.js */
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 Preferences.addAll([
   { id: "services.sync.engine.addons", type: "bool" },
   { id: "services.sync.engine.bookmarks", type: "bool" },
@@ -44,6 +48,7 @@ let gSyncChooseWhatToSync = {
       ["services.sync.engine.addresses", ".sync-engine-addresses"],
       ["services.sync.engine.creditcards", ".sync-engine-creditcards"],
     ];
+
     for (let [enabledPref, className] of enginePrefs) {
       let availablePref = enabledPref + ".available";
       // If the engine is enabled we force it to be available, otherwise we see
@@ -55,6 +60,12 @@ let gSyncChooseWhatToSync = {
         let elt = document.querySelector(className);
         elt.hidden = true;
       }
+    }
+    if (AppConstants.PINEBUILD) {
+      document.querySelector(".sync-engine-addons").hidden = true;
+      document.querySelector(".sync-engine-prefs").hidden = true;
+      document.querySelector(".sync-engine-tabs").hidden = true;
+      document.querySelector(".sync-engine-bookmarks").hidden = true;
     }
   },
 };

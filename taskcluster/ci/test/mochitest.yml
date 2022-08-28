@@ -332,6 +332,28 @@ mochitest-chrome:
             linux.*64-tsan-qr/opt: xlarge  # runs out of memory otherwise using 8GB
             default: default
 
+mochitest-browser-chrome-pinebuild:
+    description: "Mochitest browser chrome pinebuild run"
+    treeherder-symbol: M-pi(bc)
+    loopback-video: true
+    suite:
+        name: mochitest-browser-chrome-pinebuild
+    schedules-component: mochitest-browser-chrome
+    variants: []
+    run-on-projects:
+        by-test-platform:
+            windows.*-32(?:-shippable)(?:-pinebuild)(?:-qr)?/opt: ['pine', 'pine-stable']
+            windows10-64(?:-shippable)(?:-pinebuild)(?:-qr)?/opt: ['pine', 'pine-stable']
+            linux1804-64-(?:shippable)(?:-pinebuild)(?:-qr)?/opt: ['pine', 'pine-stable']
+            macosx.*64(?:-shippable)(?:-pinebuild)/opt: ['pine', 'pine-stable']
+            default: []
+    test-manifest-loader: null  # don't load tests in the taskgraph
+    max-run-time: 3600
+    chunks: 1
+    mozharness:
+        mochitest-flavor: chrome
+    allow-software-gl-layers: false
+
 mochitest-devtools-chrome:
     description: "Mochitest devtools-chrome run"
     suite:

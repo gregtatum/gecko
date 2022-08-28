@@ -49,6 +49,8 @@ appmenuitem-exit2 =
             [linux] Quit
            *[other] Exit
         }
+appmenuitem-close =
+    .label = Close
 appmenu-menu-button-closed2 =
     .tooltiptext = Open application menu
     .label = { -brand-short-name }
@@ -116,6 +118,10 @@ appmenu-fxa-setup-sync =
 
 appmenuitem-save-page =
     .label = Save page as…
+appmenuitem-export-page =
+    .label = Export
+appmenuitem-start-new-workspace =
+    .label = Start a new workspace
 
 ## What's New panel in App menu.
 

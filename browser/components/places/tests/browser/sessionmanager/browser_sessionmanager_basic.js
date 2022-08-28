@@ -1,0 +1,147 @@
+/* Any copyright is dedicated to the Public Domain.
+   http://creativecommons.org/publicdomain/zero/1.0/ */
+
+"use strict";
+
+/**
+ * Basic session registration, set aside and restore tests.
+ *
+ * The tests in this file follow-on from each other, and are intended to give
+ * a quick check that the overall system is working.
+ *
+ * Detailed functionality is checked in the other browser_sessionmanager_* tests.
+ */
+
+const TEST_URL = "https://example.com/";
+const TEST_URL2 = "https://example.com/browser/";
+
+let win;
+let dateCheckpoint;
+let sessionGuid;
+
+add_setup(async function() {
+  // Run tests in a new window to avoid affecting the main test window.
+  win = await BrowserTestUtils.openNewBrowserWindow();
+
+  registerCleanupFunction(async () => {
+    await promiseWindowClosedAndSessionSaved(win);
+  });
+});
+
+let lastSessionStartTime = Date.now();
+function assertSessionStartTime(sessionWindow, hasSession) {
+  let lastValue = lastSessionStartTime;
+  lastSessionStartTime = SessionManager.getSessionStartTime(sessionWindow);
+  // We make so that the time should change at every test.
+  Assert.notEqual(lastValue, lastSessionStartTime);
+  if (!hasSession) {
+    Assert.deepEqual(lastSessionStartTime, undefined);
+  } else {
+    Assert.greater(lastSessionStartTime, 0);
+  }
+}
+
+add_task(async function test_register_session() {
+  assertSessionStartTime(win, false);
+
+  dateCheckpoint = Date.now();
+  Assert.ok(
+    !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
+    "Should not have an active session"
+  );
+
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL);
+  await BrowserTestUtils.browserLoaded(
+    win.gBrowser.selectedBrowser,
+    false,
+    TEST_URL
+  );
+
+  sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.ok(sessionGuid, "Should have an active session");
+
+  await assertSessionData({
+    guid: sessionGuid,
+    lastSavedAt: dateCheckpoint,
+    data: {},
+  });
+
+  await assertSession((await SessionManager.query({ guid: sessionGuid }))[0], {
+    sessionGuid,
+    lastSavedAt: dateCheckpoint,
+    data: {},
+  });
+  assertSessionStartTime(win, true);
+});
+
+add_task(async function test_set_aside_session() {
+  dateCheckpoint = Date.now();
+  let changeComplete = SessionManager.once("sessions-updated");
+  win.document.getElementById("session-setaside-button").click();
+  await changeComplete;
+
+  Assert.ok(
+    !SessionStore.getCustomWindowValue(win, "SessionManagerGuid"),
+    "Should no longer have an active session"
+  );
+
+  await assertSession((await SessionManager.query({ guid: sessionGuid }))[0], {
+    sessionGuid,
+    lastSavedAt: dateCheckpoint,
+    data: {},
+  });
+
+  Assert.equal(
+    win.gStageManager.views.length,
+    0,
+    "There should be no views in the global history."
+  );
+  assertSessionStartTime(win, false);
+});
+
+let previousSessionGuid;
+
+add_task(async function test_start_second_session() {
+  previousSessionGuid = sessionGuid;
+
+  BrowserTestUtils.loadURI(win.gBrowser.selectedBrowser, TEST_URL2);
+  await BrowserTestUtils.browserLoaded(
+    win.gBrowser.selectedBrowser,
+    false,
+    TEST_URL2
+  );
+
+  sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.ok(sessionGuid, "Should have an active session");
+  Assert.notEqual(
+    sessionGuid,
+    previousSessionGuid,
+    "Should have a different guid"
+  );
+  assertSessionStartTime(win, true);
+});
+
+add_task(async function test_restore_first_session() {
+  await replaceSession(win, previousSessionGuid, 1);
+
+  sessionGuid = SessionStore.getCustomWindowValue(win, "SessionManagerGuid");
+  Assert.equal(
+    sessionGuid,
+    previousSessionGuid,
+    "Should have the expected guid"
+  );
+
+  Assert.equal(
+    win.gBrowser.selectedTab.linkedBrowser.currentURI.spec,
+    TEST_URL,
+    "Should have loaded the expected URL"
+  );
+  assertSessionStartTime(win, true);
+});
+
+add_task(async function test_other_window() {
+  let win2 = await BrowserTestUtils.openNewBrowserWindow();
+  assertSessionStartTime(win2, false);
+  await promiseWindowClosedAndSessionSaved(win2);
+  assertSessionStartTime(win, true);
+});

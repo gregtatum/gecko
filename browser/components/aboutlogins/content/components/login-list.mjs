@@ -4,7 +4,10 @@
 
 import LoginListItemFactory from "./login-list-item.mjs";
 import LoginListSectionFactory from "./login-list-section.mjs";
-import { recordTelemetryEvent } from "../aboutLoginsUtils.mjs";
+import {
+  recordTelemetryEvent,
+  promptForPrimaryPassword,
+} from "../aboutLoginsUtils.mjs";
 
 const collator = new Intl.Collator();
 const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "long" });
@@ -136,10 +139,15 @@ export default class LoginList extends HTMLElement {
     window.addEventListener("AboutLoginsInitialLoginSelected", this);
     window.addEventListener("AboutLoginsLoginSelected", this);
     window.addEventListener("AboutLoginsShowBlankLogin", this);
+    window.addEventListener("AboutLoginsRemoveUpdateState", this);
+    window.addEventListener("AboutLoginsEditToggleEditing", this);
     this._list.addEventListener("click", this);
     this.addEventListener("keydown", this);
     this.addEventListener("keyup", this);
     this._createLoginButton.addEventListener("click", this);
+    this.addEventListener("blur", this);
+    window.addEventListener("resize", this);
+    this._list.addEventListener("scroll", this);
   }
 
   get #activeDescendant() {
@@ -281,25 +289,76 @@ export default class LoginList extends HTMLElement {
     return section;
   }
 
-  handleEvent(event) {
+  async handleEvent(event) {
     switch (event.type) {
       case "click": {
         if (event.originalTarget == this._createLoginButton) {
           window.dispatchEvent(
             new CustomEvent("AboutLoginsShowBlankLogin", {
+              bubbles: true,
               cancelable: true,
+              detail: { newHeaderL10nId: "about-logins-header-add-password" },
             })
           );
+
           recordTelemetryEvent({ object: "new_login", method: "new" });
           return;
         }
 
-        let listItem = event.originalTarget.closest(".login-list-item");
+        let listItem =
+          event.originalTarget.closest(".login-list-item") ||
+          event.originalTarget.getRootNode().host.closest(".login-list-item");
         if (!listItem || !listItem.dataset.guid) {
           return;
         }
 
+        if (event.originalTarget.classList.contains("more-dropdown")) {
+          let menuPopup = listItem.querySelector("panel-list");
+          menuPopup.toggle(event);
+          return;
+        }
+
         let { login } = this._logins[listItem.dataset.guid];
+
+        // Handle clicks on the different popup menu items.
+        const action = event.target.dataset.action;
+        switch (action) {
+          case "copy-password":
+          case "copy-username": {
+            const isPassword = action === "copy-password";
+            if (isPassword) {
+              let primaryPasswordAuth = await promptForPrimaryPassword(
+                "about-logins-copy-password-os-auth-dialog-message"
+              );
+              if (!primaryPasswordAuth) {
+                return;
+              }
+            }
+            listItem.dispatchEvent(
+              new CustomEvent("AboutLoginsCopyLoginDetail", {
+                bubbles: true,
+                detail: isPassword ? login.password : login.username,
+              })
+            );
+            break;
+          }
+          case "edit-password": {
+            event.stopPropagation();
+            window.dispatchEvent(
+              new CustomEvent("AboutLoginsLoginEditLogin", {
+                detail: {
+                  login,
+                  newHeaderL10nId: "about-logins-header-edit-password",
+                },
+                cancelable: true,
+                bubbles: true,
+              })
+            );
+            break;
+          }
+          default:
+        }
+
         this.dispatchEvent(
           new CustomEvent("AboutLoginsLoginSelected", {
             bubbles: true,
@@ -336,6 +395,12 @@ export default class LoginList extends HTMLElement {
         break;
       }
       case "AboutLoginsClearSelection": {
+        if (this.classList.contains("in-companion")) {
+          this.classList.remove("create-login-selected");
+          this._createLoginButton.disabled = false;
+          return;
+        }
+
         if (!this._loginGuidsSortedOrder.length) {
           this._createLoginButton.disabled = false;
           this.classList.remove("create-login-selected");
@@ -371,6 +436,17 @@ export default class LoginList extends HTMLElement {
         );
         break;
       }
+
+      case "AboutLoginsEditToggleEditing": {
+        let message = event.detail.message;
+        if (message === "success") {
+          this.classList.add("editing");
+        } else {
+          this.classList.remove("editing");
+        }
+        break;
+      }
+
       case "AboutLoginsFilterLogins": {
         this._filter = event.detail.toLocaleLowerCase();
         this.render();
@@ -411,8 +487,19 @@ export default class LoginList extends HTMLElement {
       case "AboutLoginsShowBlankLogin": {
         if (!event.defaultPrevented) {
           this._selectedGuid = null;
-          this._setListItemAsSelected(this._blankLoginListItem);
+          if (this.classList.contains("in-companion")) {
+            this.classList.toggle(
+              "create-login-selected",
+              !this._blankLoginListItem.dataset.guid
+            );
+          } else {
+            this._setListItemAsSelected(this._blankLoginListItem);
+          }
         }
+        break;
+      }
+      case "AboutLoginsRemoveUpdateState": {
+        this.classList.remove("editing");
         break;
       }
       case "keyup":

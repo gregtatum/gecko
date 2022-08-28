@@ -1,0 +1,313 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import url("chrome://browser/content/companion/default-colors.css");
+@import url("chrome://browser/content/companion/lavender.css");
+
+:host {
+  border-radius: 100px;
+}
+
+:host,
+.view-el {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+}
+
+.view-icon-overlay {
+  background: transparent;
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--avm-view-group-element-icon-border-color);
+}
+
+.view-el > .view-loading-spinner-container {
+  position: absolute;
+  opacity: 0;
+  overflow: hidden;
+  width: 32px;
+  height: 32px;
+}
+
+:host(:is([top], [active])) > .view-el[busy] > .view-loading-spinner-container {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :host(:is([top], [active])) > .view-el:not([pause-animation]) > .view-loading-spinner-container {
+    animation: loadingSpinner 0.7s linear infinite;
+  }
+
+  :host(:is([top], [active])) > .view-el:not([busy]) > .view-loading-spinner-container {
+    transition: opacity 1s var(--animation-easing-function);
+  }
+
+  :host(:is([top], [active])) > .view-el > .view-loading-spinner-container > .view-loading-spinner {
+    transform: translateX(-462px);
+    animation-iteration-count: 1;
+    animation-timing-function: steps(14);
+    animation-fill-mode: both;
+    animation-duration: .25s;
+  }
+
+  :host(:is([top], [active])) > .view-el[busy] > .view-loading-spinner-container > .view-loading-spinner {
+    animation-name: startSpinner;
+  }
+}
+
+@keyframes loadingSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes startSpinner {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-462px);
+  }
+}
+
+:host([active]) .view-icon-container {
+  box-shadow: 0px 2px 6px var(--avm-view-group-element-active-icon-shadow-color);
+}
+
+.view-icon-container {
+  display: flex;
+  fill: currentColor;
+  -moz-context-properties: fill;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  box-sizing: border-box;
+  background-color: var(--avm-view-group-element-icon-bgcolor);
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-icon-overlay,
+.view-icon-container {
+  border-radius: 100px;
+}
+
+:host(:not([active])) .view-label-container {
+  display: none;
+}
+
+:host([active]) .view-label-container {
+  white-space: nowrap;
+  width: 200px;
+}
+
+/**
+ * We must supply a min-width here in order for the text inside
+ * the domain / title containers to overflow properly.
+ * See https://css-tricks.com/flexbox-truncated-text/.
+ */
+.view-label-container {
+  margin-inline: 5px;
+  min-width: 0;
+}
+
+.view-domain {
+  color: var(--avm-view-group-domain-text-color);
+  font-size: 11px;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.view-domain:focus-visible {
+  outline: none;
+}
+
+.view-title {
+  color: var(--avm-view-group-title-text-color);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (prefers-contrast) {
+  .view-title,
+  .view-domain {
+    color: inherit;
+  }
+}
+
+.view-domain-container {
+  display: flex;
+}
+
+#view-security-icon {
+  width: 16px;
+  background-repeat: no-repeat;
+  background-size: 10px 10px;
+  background-position: center;
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+/* View security icons */
+/** TODO: Some icons are borrowed from Firefox and may need replacing when UX provides them **/
+
+#view-security-icon.aboutUI {
+  background-image: url(chrome://branding/content/icon16.png);
+}
+
+#view-security-icon.localResource {
+  background-image: url(chrome://global/skin/icons/page-portrait.svg);
+}
+
+#view-security-icon.verifiedDomain {
+  background-image: url(chrome://global/skin/icons/security.svg);
+}
+
+#view-security-icon.certErrorPage,
+#view-security-icon.weakCipher,
+#view-security-icon.mixedDisplayContent,
+#view-security-icon.mixedDisplayContentLoadedActiveBlocked {
+  background-image: url(chrome://global/skin/icons/security-warning.svg);
+}
+
+#view-security-icon.httpsOnlyErrorPage,
+#view-security-icon.notSecure,
+#view-security-icon.mixedActiveContent {
+  background-image: url(chrome://global/skin/icons/security-broken.svg);
+}
+
+#view-security-icon.unknownIdentity {
+  background-image: url(chrome://global/skin/icons/defaultFavicon.svg);
+}
+
+/** END View security icons **/
+
+.view-domain,
+.view-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-domain {
+  display: flex;
+}
+
+/**
+ * We want the history items to still be keyboard focusable even when
+ * when they're not displayed. Hidden things aren't supposed to be
+ * focusable, so we work around this by making them mostly transparent
+ * and out-of-line with the rest of the layout. When they are keyboard
+ * focused, we then snap them to full opacity and put them back into
+ * the layout.
+ */
+.view-history {
+  position: absolute;
+  opacity: 0.0001;
+}
+
+:host([keying]) .view-history:focus-within {
+  display: flex;
+  position: initial;
+  opacity: 1;
+}
+
+:host([keying]) .view-history:focus-within + .view-domain-container {
+  display: none;
+}
+
+.view-domain,
+.view-history {
+  align-items: center;
+  min-height: 16px;
+}
+
+.view-history > .history {
+  display: inline-block;
+  border: none;
+  padding: 0;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-repeat: no-repeat;
+  -moz-context-properties: stroke, fill;
+  stroke: var(--avm-view-group-element-breadcrumb-stroke-color);
+  fill: var(--avm-view-group-element-breadcrumb-fill-color);
+  cursor: pointer;
+  height: 12px;
+}
+
+.view-history > .history[size="large"] {
+  background-image: url("chrome://browser/content/companion/breadcrumb.svg#large");
+  width: 16px;
+}
+
+.view-history > .history[size="medium"] {
+  background-image: url("chrome://browser/content/companion/breadcrumb.svg#medium");
+  width: 8px;
+}
+
+.view-history > .history[size="small"] {
+  background-image: url("chrome://browser/content/companion/breadcrumb.svg#small");
+  width: 4px;
+}
+
+.view-history > .history:focus-visible {
+  outline: 2px solid var(--focus-outline-color);
+  outline-offset: 1px;
+}
+
+.view-history > .history:not(:first-of-type) {
+  margin-inline-start: 6px;
+}
+
+.view-history > .history:hover {
+  stroke: var(--avm-view-group-element-breadcrumb-hover-stroke-color);
+  fill: var(--avm-view-group-element-breadcrumb-hover-fill-color);
+}
+
+.view-history > .active:hover,
+.view-history > .active {
+  stroke: var(--avm-view-group-element-breadcrumb-active-stroke-color);
+  fill: var(--avm-view-group-element-breadcrumb-active-fill-color);
+}
+
+.page-action-button[hidden] {
+  display: none;
+}
+
+.page-action-button {
+  appearance: none;
+  background: url(chrome://global/skin/icons/arrow-down.svg) center center no-repeat;
+  background-color: var(--avm-button-bgcolor);
+  -moz-context-properties: fill;
+  fill: var(--avm-button-fill-color);
+  border-radius: 50%;
+  border: 1px solid var(--avm-button-border-color);
+  box-sizing: border-box;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0px;
+  margin-inline: 4px;
+}
+
+.page-action-button:focus-visible {
+  outline: 2px solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+:host([open="true"]) .page-action-button,
+.page-action-button:hover {
+  background-color: var(--avm-button-hover-bgcolor);
+  fill: var(--avm-button-hover-fill);
+}
+
+.page-action-button:active {
+  background-color: var(--avm-button-active-bgcolor);
+  fill: var(--avm-button-active-fill);
+}

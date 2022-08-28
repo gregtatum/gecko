@@ -95,6 +95,9 @@ export class UrlbarInput {
       `)
     );
     this.panel = this.textbox.querySelector(".urlbarView");
+    if (AppConstants.PINEBUILD) {
+      this.panel.classList.add("urlbarView-pinebuild");
+    }
 
     this.searchButton = lazy.UrlbarPrefs.get("experimental.searchButton");
     if (this.searchButton) {
@@ -383,7 +386,14 @@ export class UrlbarInput {
     const previousSelectionStart = this.selectionStart;
     const previousSelectionEnd = this.selectionEnd;
 
-    this.value = value;
+    if (AppConstants.PINEBUILD && this.window.toolbar.visible) {
+      // Only allow popups to display newly-loaded URLs in the urlbar. MR2-2404
+      this.value = this.window.gBrowser.userTypedValue
+        ? this.window.gBrowser.userTypedValue
+        : "";
+    } else {
+      this.value = value;
+    }
     this.valueIsTyped = !valid;
     this.removeAttribute("usertyping");
 
@@ -1858,7 +1868,7 @@ export class UrlbarInput {
 
     this.setAttribute("pageproxystate", state);
     this._inputContainer.setAttribute("pageproxystate", state);
-    this._identityBox.setAttribute("pageproxystate", state);
+    this._identityBox?.setAttribute("pageproxystate", state);
 
     if (state == "valid") {
       this._lastValidURLStr = this.value;
@@ -2017,10 +2027,14 @@ export class UrlbarInput {
           "--urlbar-container-height",
           px(getBoundsWithoutFlushing(this.textbox.parentNode).height)
         );
-        this.textbox.style.setProperty(
-          "--urlbar-height",
-          px(getBoundsWithoutFlushing(this.textbox).height)
-        );
+
+        if (!AppConstants.PINEBUILD) {
+          this.textbox.style.setProperty(
+            "--urlbar-height",
+            px(getBoundsWithoutFlushing(this.textbox).height)
+          );
+        }
+
         this.textbox.style.setProperty(
           "--urlbar-toolbar-height",
           px(getBoundsWithoutFlushing(this._toolbar).height)
@@ -2591,6 +2605,20 @@ export class UrlbarInput {
       params.allowPopups = url.startsWith("javascript:");
     } else {
       params.initiatingDoc = this.window.document;
+    }
+
+    // If we're in pinebuild, we should ensure that search tabs are being opened
+    // in the appropriate workspace.
+    if (AppConstants.PINEBUILD) {
+      let urlbar = this.document.getElementById("urlbar");
+      let id = urlbar.getAttribute("workspace-id");
+      // Do not set the userContextId if it is 0. This causes browser.js _loadURI
+      // function to throw an error due to a mismatch between this value and the
+      // "usercontextid" attribute on the loading browser object. `browser` objects
+      // are not assigned a "usercontextid" property if userContextId is 0.
+      if (parseInt(id, 10)) {
+        params.userContextId = id;
+      }
     }
 
     if (

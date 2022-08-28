@@ -53,6 +53,11 @@ button {
   min-width: 100px;
 }
 
+:host(.in-companion) button {
+  min-width: calc(45% - 8px);
+  margin-inline: 0;
+}
+
 form {
   flex-grow: 1;
 }
@@ -66,6 +71,11 @@ form {
 :host(:not([data-is-new-login])) .new-login-title,
 :host(:not([data-editing])) .form-actions-row {
   display: none;
+}
+
+:host(.in-companion) .cancel-button {
+  margin-inline-end: 8px;
+  display: inline-block !important;
 }
 
 input[type="password"],
@@ -222,6 +232,11 @@ input[type = "url"]:focus:-moz-ui-invalid:not(:placeholder-shown) ~ .tooltip-con
   justify-content: start;
 }
 
+:host(.in-companion) .detail-grid {
+  justify-content: stretch;
+}
+
+
 :host([data-editing]) .detail-grid {
   grid-template-columns: auto;
 }
@@ -266,6 +281,10 @@ input[type = "url"]:focus:-moz-ui-invalid:not(:placeholder-shown) ~ .tooltip-con
 
 :host([data-editing]) .detail-cell input:read-write:not([type="checkbox"]) {
   width: 280px;
+}
+
+:host(.in-companion[data-editing]) .detail-cell input:read-write:not([type="checkbox"]) {
+  width: calc(100% - 20px);
 }
 
 .copy-button {
@@ -331,6 +350,14 @@ input[name="password"] {
   color: inherit !important;
   opacity: var(--reveal-checkbox-opacity);
   flex-shrink: 0;
+}
+
+:host(:not((.in-companion))) .reveal-password-checkbox {
+  margin-inline: 10px 0 !important;
+}
+
+:host(.in-companion) .reveal-password-checkbox {
+  margin-inline: -32px 0 !important;
 }
 
 .reveal-password-checkbox:hover {
@@ -450,4 +477,65 @@ input[name="password"] {
   color: currentColor;
   text-decoration: underline;
   font-weight: 600;
+}
+
+:host(.in-companion, [data-is-new-login]) {
+  display: block;
+}
+
+:host(.in-companion:not([data-editing])) {
+  display: none;
+}
+
+:host(.in-companion) .tooltip-container {
+  display: none !important;
+}
+
+:host(.in-companion) .meta-info {
+  display: none;
+}
+
+:host(.in-companion) .header {
+  display: none
+}
+
+:host(.in-companion) .container {
+  padding: 16px 24px;
+  min-width: unset;
+}
+
+:host(.in-companion) .detail-grid,
+:host(.in-companion) .detail-row,
+:host(.in-companion) .form-actions-row {
+    margin-bottom: 20px;
+}
+
+:host(.in-companion) .form-actions-row {
+  text-align: center;
+}
+
+:host(.in-companion) .detail-grid {
+  row-gap: 20px;
+}
+
+:host(.in-companion) .remove-login-button-container {
+  border-top: 1px solid var(--in-content-border-color);
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+:host([data-is-new-login]) .remove-login-button-container,
+:host(:not(.in-companion)) .remove-login-button-container {
+  display: none;
+}
+
+:host(.in-companion) .remove-login-button {
+  margin: 16px;
+  margin-block: 23.5px 28px;
+  font-size: 11px;
+  width: 13em;
+  margin-inline: auto;
 }

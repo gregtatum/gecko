@@ -96,6 +96,10 @@ void nsDeckFrame::IndexChanged() {
   if (currentBox)  // only hide if it exists
     HideBox(currentBox);
 
+  if (mContent->AsElement()->HasAttr(kNameSpaceID_None, nsGkAtoms::multideck)) {
+    mPrevIndex = mIndex;
+  }
+
   mSelectedBoxCache = nullptr;
 
   mIndex = index;
@@ -142,6 +146,10 @@ nsIFrame* nsDeckFrame::GetSelectedBox() {
   return mSelectedBoxCache;
 }
 
+nsIFrame* nsDeckFrame::GetPreviouslySelectedBox() {
+  return (mPrevIndex >= 0) ? mFrames.FrameAt(mPrevIndex) : nullptr;
+}
+
 void nsDeckFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
                                    const nsDisplayListSet& aLists) {
   // if a tab is hidden all its children are too.
@@ -153,6 +161,7 @@ void nsDeckFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
 
 void nsDeckFrame::RemoveFrame(ChildListID aListID, nsIFrame* aOldFrame) {
   nsIFrame* currentFrame = GetSelectedBox();
+
   if (aOldFrame == currentFrame) {
     mSelectedBoxCache = nullptr;
   }
@@ -167,6 +176,9 @@ void nsDeckFrame::RemoveFrame(ChildListID aListID, nsIFrame* aOldFrame) {
     int32_t removedIndex = mFrames.IndexOf(aOldFrame);
     MOZ_ASSERT(removedIndex >= 0,
                "A deck child was removed that was not in mFrames.");
+    if (removedIndex < mPrevIndex) {
+      mPrevIndex--;
+    }
     if (removedIndex < mIndex) {
       // This shouldn't invalidate our cache, but be really paranoid, it's not
       // that important to keep our cache here.
@@ -188,9 +200,17 @@ void nsDeckFrame::BuildDisplayListForChildren(nsDisplayListBuilder* aBuilder,
   nsIFrame* box = GetSelectedBox();
   if (!box) return;
 
+  nsDisplayListSet set(aLists, aLists.BlockBorderBackgrounds());
+
+  if (mContent->AsElement()->HasAttr(kNameSpaceID_None, nsGkAtoms::multideck)) {
+    nsIFrame* prevBox = GetPreviouslySelectedBox();
+    if (prevBox && prevBox != box) {
+      BuildDisplayListForChild(aBuilder, prevBox, set);
+    }
+  }
+
   // Putting the child in the background list. This is a little weird but
   // it matches what we were doing before.
-  nsDisplayListSet set(aLists, aLists.BlockBorderBackgrounds());
   BuildDisplayListForChild(aBuilder, box, set);
 }
 

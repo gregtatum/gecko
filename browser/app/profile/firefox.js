@@ -290,6 +290,7 @@ pref("browser.shell.setDefaultPDFHandler.onlyReplaceBrowsers", true);
 // The behavior of option 3 is detailed at: http://wiki.mozilla.org/Session_Restore
 pref("browser.startup.page",                1);
 pref("browser.startup.homepage",            "about:home");
+pref("browser.startup.preXulSkeletonUI", true, locked);
 #ifdef NIGHTLY_BUILD
 pref("browser.startup.homepage.abouthome_cache.enabled", true);
 #else
@@ -1848,8 +1849,8 @@ pref("browser.contentblocking.database.enabled", true);
 
 pref("dom.storage_access.enabled", true);
 
-// Enable URL query stripping in Nightly.
-#ifdef NIGHTLY_BUILD
+// Enable URL query stripping in regular browsing in Nightly or pinebuild.
+#if defined(NIGHTLY_BUILD) || defined(PINEBUILD)
 pref("privacy.query_stripping.enabled", true);
 #endif
 
@@ -2000,9 +2001,6 @@ pref("privacy.usercontext.about_newtab_segregation.enabled", true);
 #ifdef NIGHTLY_BUILD
   pref("privacy.userContext.enabled", true);
   pref("privacy.userContext.ui.enabled", true);
-#else
-  pref("privacy.userContext.enabled", false);
-  pref("privacy.userContext.ui.enabled", false);
 #endif
 pref("privacy.userContext.extension", "");
 // allows user to open container menu on a left click instead of a new
@@ -2721,3 +2719,122 @@ pref("browser.places.snapshots.expiration.userManaged.days", 420);
 pref("browser.firefox-view.feature-tour", "{\"message\":\"FIREFOX_VIEW_FEATURE_TOUR\",\"screen\":\"\",\"complete\":true}");
 // Number of times the user visited about:firefoxview
 pref("browser.firefox-view.view-count", 0);
+
+#ifdef PINEBUILD
+  pref("browser.contentblocking.category", "strict");
+  pref("privacy.trackingprotection.enabled", true);
+  pref("privacy.trackingprotection.socialtracking.enabled", true, locked);
+  pref("browser.places.interactions.enabled", true, locked);
+  // Enable Places storage for previews images. This is not locked, to allow it
+  // to be able to be disabled for tests.
+  pref("places.previews.enabled", true);
+  // This is not locked, to allow it to be able to be disabled for tests.
+  pref("browser.pagedata.enabled", true);
+  pref("startup.homepage_welcome_url", "", locked);
+  pref("startup.homepage_onboarding_url", "about:onboarding", locked);
+  pref("startup.homepage_override_url", "", locked);
+  pref("browser.startup.page", 1, locked);
+  pref("browser.startup.homepage", "about:flow-reset", locked);
+  pref("browser.startup.preXulSkeletonUI", false);
+  pref("pref.browser.homepage.disable_button.current_page", true, locked);
+  pref("pref.browser.homepage.disable_button.bookmark_page", true, locked);
+  pref("pref.browser.homepage.disable_button.restore_default", true, locked);
+  pref("browser.newtabpage.enabled", false, locked);
+  pref("browser.urlbar.suggest.engines", false);
+  pref("browser.urlbar.suggest.openpage", false, locked);
+  pref("browser.sessionstore.warnOnQuit", false, locked);
+  pref("browser.sessionstore.resume_session_once", false, locked);
+  pref("browser.sessionstore.resuming_after_os_restart", false, locked);
+  // Always resume session from crashes
+  pref("browser.sessionstore.max_resumed_crashes", -1, locked);
+  pref("dom.security.https_first", true, locked);
+  pref("services.sync.prefs.sync.extensions.activeThemeID", false, locked);
+  pref("browser.tabs.unloadOnLowMemory", true, locked);
+  pref("browser.urlbar.openintab", true, locked);
+  pref("browser.tabs.warnOnClose", false, locked);
+  pref("browser.tabs.warnOnCloseOtherTabs", false, locked);
+  pref("privacy.userContext.enabled", false, locked);
+  pref("privacy.userContext.ui.enabled", false, locked);
+  pref("fission.autostart", true, locked);
+  pref("browser.aboutwelcome.enabled", false);
+  pref("browser.pinebuild.targetTopLevelLinkClicksToBlank", true);
+  pref("browser.urlbar.suggest.quickactions", false);
+  pref("browser.urlbar.shortcuts.quickactions", false);
+  #ifdef MOZILLA_OFFICIAL
+    pref("browser.startup.launchOnOSLogin", true);
+  #else
+    // On unofficial (local) builds, having this enabled is painfully annoying,
+    // as it will launch your local build on login, which can cause all kinds of
+    // headaches if you don't realize it's happening.
+    pref("browser.startup.launchOnOSLogin", false);
+  #endif
+  pref("browser.warnOnQuit", false);
+  // Disable product promos delivered via messaging system
+  pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
+  pref("browser.places.perwindowsessions.enabled", true);
+  pref("browser.companion.passwords.enabled", true);
+  pref("browser.places.session_file_expire_time_days", 30);
+  // Disable restoring from a crash, so that we don't have stale pages shown
+  // on the flow-reset screen after a restart. MR2-1858
+  pref("browser.sessionstore.resume_from_crash", false);
+
+  // Pinebuild specific configurations
+  pref("browser.pinebuild.enabled", true, locked);
+  pref("browser.pinebuild.onboarding.complete", true);
+  pref("browser.pinebuild.onboarding.progress", 0);
+  pref("browser.pinebuild.webUsage.enabled", true);
+  pref("browser.companion.stagemanagerdebugging", false);
+  pref("browser.companion.stagemanagerdebugging.logLevel", "Warn");
+  pref("browser.river.activationTimeout", 30000);
+  pref("browser.river.maxGroups", 5);
+  pref("browser.pinebuild.workspaces.enabled", false);
+  pref("browser.pinebuild.workshop.enabled", false);
+  pref("browser.pinebuild.workshop-logs.enabled", false);
+  pref("browser.pinebuild.pocket.url", "https://getpocket.cdn.mozilla.net/v3/firefox/global-recs");
+  pref("browser.pinebuild.calendar.minBreakTime", 5);
+  pref("browser.pinebuild.calendar.maxBreakTime", 15);
+  pref("browser.pinebuild.calendar.browseEnabled", true);
+  pref("browser.pinebuild.companion-service-onboarding.enabled", true);
+  pref("browser.pinebuild.companion.onboarding.lastSeenVersion", 1);
+  // Don't show the onboarding modal in unofficial (local) builds.
+  #ifdef MOZILLA_OFFICIAL
+    pref("browser.pinebuild.companion.onboarding.enabled", true);
+  #else
+    pref("browser.pinebuild.companion.onboarding.enabled", false);
+  #endif
+
+  // 0 = Never, 1 = Always, 2 = If no browser window is active
+  pref("browser.pinebuild.companion.notifications.level", 2);
+  pref("browser.pinebuild.companion.notifications.minutesBeforeEvent", 10);
+  pref("browser.pinebuild.companion.notifications.hideDismissed", false);
+  // Preferences below here were at one point off by default and now have
+  // been enabled (and should likely be removed eventually).
+  pref("browser.pinebuild.animateViewTransitions", true);
+  pref("browser.pinebuild.megaback.enabled", true);
+  pref("browser.pinebuild.megaback.logLevel", "Warn");
+  pref("browser.history.collectWireframes", true);
+  pref("browser.pinebuild.downloads.enabled", true);
+
+  // Preferences below here are still being experimented with are in the
+  // unlocked state to allow for manual testing.
+  pref("browser.companion.snapshots", false);
+  pref("browser.companion.onnx", false);
+  pref("browser.companion.pyodide", false);
+  pref("browser.pinebuild.interstitial-view-overwriting.enabled", true);
+  pref("browser.pinebuild.interstitial-view-overwriting.threshold_ms", 5000);
+  pref("browser.pinebuild.ignoreBeforeUnloadOnExit", true);
+  pref("browser.pinebuild.megaback.click-count-timeout-ms", 3000);
+  pref("browser.pinebuild.megaback.click-count-threshold", 5);
+  pref("browser.pinebuild.snapshots.relevancy.enabled", true);
+  pref("browser.pinebuild.login-view-overwriting.enabled", true);
+  pref("browser.pinebuild.speculatively-create-views", true);
+  pref("browser.companion.snapshot-groups.enabled", false);
+  pref("identity.fxaccounts.commands.enabled", false);
+  pref("extensions.pocket.enabled", false);
+  pref("browser.urlbar.opencompanionsearch.enabled", true);
+  pref("browser.pinebuild.pinning-apps.enabled", false);
+  pref("browser.pinebuild.sounds", true);
+  pref("browser.pinebuild.privacyPolicyURL", "https://www.mozilla.org/en-US/privacy/firefox/");
+  pref("browser.shell.checkDefaultBrowser", false);
+#endif
+

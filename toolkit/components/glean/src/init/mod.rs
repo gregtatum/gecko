@@ -151,8 +151,8 @@ fn build_configuration(
         String::from(SERVER)
     };
 
-    // In the event that this isn't "firefox.desktop", we don't use core's MPS.
-    let mut use_core_mps = false;
+    // In the event that this isn't "firefox.desktop" or "pine", we don't use core's MPS.
+    let mut use_core_mps = app_id_override == "pine";
     let application_id = if app_id_override.is_empty() {
         use_core_mps = true;
         "firefox.desktop".to_string()

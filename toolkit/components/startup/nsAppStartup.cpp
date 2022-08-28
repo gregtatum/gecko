@@ -41,6 +41,11 @@
 #include "js/PropertyAndElement.h"  // JS_DefineProperty
 #include "prenv.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "xpcpublic.h"
+
+#if defined(XP_MACOSX)
+#  include "mozilla/MacApplicationDelegate.h"
+#endif
 
 #if defined(XP_WIN)
 // Prevent collisions with nsAppStartup::GetStartupInfo()
@@ -61,6 +66,8 @@ static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 #define kPrefMaxResumedCrashes "toolkit.startup.max_resumed_crashes"
 #define kPrefRecentCrashes "toolkit.startup.recent_crashes"
 #define kPrefAlwaysUseSafeMode "toolkit.startup.always_use_safe_mode"
+#define kPinebuildSuppressWindowChecks \
+  "browser.pinebuild.ignoreBeforeUnloadOnExit"
 
 #define kNanosecondsPerSecond 1000000000.0
 
@@ -160,7 +167,12 @@ nsAppStartup::nsAppStartup()
       mAttemptingQuit(false),
       mInterrupted(false),
       mIsSafeModeNecessary(false),
-      mStartupCrashTrackingEnded(false) {
+      mStartupCrashTrackingEnded(false)
+#if defined(XP_MACOSX) && defined(PINEBUILD)
+      ,
+      mHaveBackgroundMenubarIcon(false)
+#endif
+{
   char* mozAppSilentStart = PR_GetEnv("MOZ_APP_SILENT_START");
 
   /* When calling PR_SetEnv() with an empty value the existing variable may
@@ -283,11 +295,17 @@ nsAppStartup::Run(void) {
 
   if (!mShuttingDown && mConsiderQuitStopper != 0) {
 #ifdef XP_MACOSX
-    EnterLastWindowClosingSurvivalArea();
-#elif defined(XP_WIN)
-    if (mAllowWindowless) {
-      EnterLastWindowClosingSurvivalArea();
+#  ifdef PINEBUILD
+    if (!xpc::IsInAutomation() &&
+        Preferences::GetBool("browser.startup.launchOnOSLogin", false)) {
+      // We need to track what the value of this pref was on startup, as it
+      // will determine what we want to do during shutdown, since this pref
+      // controls the menubar icon which gives the user the option to
+      // actually exit the application.
+      mHaveBackgroundMenubarIcon = true;
     }
+#  endif
+    EnterLastWindowClosingSurvivalArea();
 #endif
 
     mRunning = true;
@@ -366,11 +384,13 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
   }
 
   nsCOMPtr<nsIObserverService> obsService;
+  bool suppressWindowChecks = false;
+  Preferences::GetBool(kPinebuildSuppressWindowChecks, &suppressWindowChecks);
   if (ferocity == eAttemptQuit || ferocity == eForceQuit) {
     nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
     nsCOMPtr<nsIWindowMediator> mediator(
         do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
-    if (mediator) {
+    if (mediator && !suppressWindowChecks) {
       mediator->GetEnumerator(nullptr, getter_AddRefs(windowEnumerator));
       if (windowEnumerator) {
         bool more;
@@ -420,15 +440,19 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
 
     obsService = mozilla::services::GetObserverService();
 
-    if (!mAttemptingQuit) {
+    bool backgroundApplication = false;
+#if defined(XP_MACOSX) && defined(PINEBUILD)
+    if (ferocity == eAttemptQuit && !mAttemptingQuit &&
+        !mozilla::AppShutdown::IsRestarting() && mHaveBackgroundMenubarIcon) {
+      SetActivationPolicyToAccessory();
+      backgroundApplication = true;
+    }
+#endif
+
+    if (!backgroundApplication && !mAttemptingQuit) {
       mAttemptingQuit = true;
 #ifdef XP_MACOSX
-      // now even the Mac wants to quit when the last window is closed
       ExitLastWindowClosingSurvivalArea();
-#elif defined(XP_WIN)
-      if (mAllowWindowless) {
-        ExitLastWindowClosingSurvivalArea();
-      }
 #endif
       if (obsService)
         obsService->NotifyObservers(nullptr, "quit-application-granted",
@@ -441,7 +465,7 @@ nsAppStartup::Quit(uint32_t aMode, int aExitCode, bool* aUserAllowedQuit) {
        opens a new window. Ugh. I know. */
     CloseAllWindows();
 
-    if (mediator) {
+    if (!backgroundApplication && mediator) {
       if (ferocity == eAttemptQuit) {
         ferocity = eForceQuit;  // assume success
 
@@ -573,9 +597,7 @@ void nsAppStartup::CloseAllWindows() {
 
     nsCOMPtr<nsPIDOMWindowOuter> window = do_QueryInterface(isupports);
     NS_ASSERTION(window, "not an nsPIDOMWindow");
-    if (window) {
-      window->ForceClose();
-    }
+    window->ForceClose();
   }
 }
 
@@ -649,6 +671,16 @@ nsAppStartup::GetWasRestarted(bool* aResult) {
 NS_IMETHODIMP
 nsAppStartup::GetWasSilentlyStarted(bool* aResult) {
   *aResult = mWasSilentlyStarted;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppStartup::GetAllowWindowless(bool* aResult) {
+#ifdef XP_WIN
+  *aResult = mAllowWindowless;
+#else
+  *aResult = false;
+#endif
   return NS_OK;
 }
 

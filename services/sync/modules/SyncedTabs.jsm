@@ -103,6 +103,9 @@ let SyncedTabsInternal = {
     );
 
     let engine = Weave.Service.engineManager.get("tabs");
+    if (!engine) {
+      return result;
+    }
 
     let ntabs = 0;
 

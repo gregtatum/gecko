@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "*": ["vendor/*", "*"],
+      "gelam/*": ["*"],
+      "logic": ["shared/logic"],
+      "equal": ["vendor/equal"]    }
+  },
+  "exclude": ["node_modules"]
+}

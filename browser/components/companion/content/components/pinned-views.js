@@ -1,0 +1,138 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+import { MozLitElement } from "chrome://browser/content/companion/widget-utils.js";
+import { html } from "chrome://browser/content/companion/lit.all.js";
+import ActiveViewManager from "chrome://browser/content/companion/components/active-view-manager.js";
+
+class PinnedViews extends MozLitElement {
+  #dragOverElement;
+
+  static get properties() {
+    return {
+      viewGroups: { type: Array, state: true, attribute: false },
+      activeView: { type: Object },
+      dragging: { type: Boolean },
+    };
+  }
+
+  constructor() {
+    super();
+    this.viewGroups = [];
+    this.activeView = null;
+    this.dragging = false;
+    this.#dragOverElement = null;
+  }
+
+  isEmpty() {
+    return !this.viewGroups.length;
+  }
+
+  hasView(view) {
+    return this.viewGroups.some(group => group.includes(view));
+  }
+
+  #onDragOver(event) {
+    event.preventDefault();
+    this.#dragOverElement = event.target;
+    this.#dragOverElement.setAttribute("draggingover", "true");
+  }
+
+  #onDragLeave(event) {
+    if (event.target == this.#dragOverElement) {
+      this.#cancelDragActive();
+    }
+  }
+
+  #onDrop(event) {
+    event.preventDefault();
+
+    let dt = event.dataTransfer;
+    let droppedViewGroupEl = dt.mozGetDataAt(
+      ActiveViewManager.VIEWGROUP_DROP_TYPE,
+      0
+    );
+
+    // It's possible to drag a ViewGroup that is not active, so in that
+    // case, we'll just assume we're dragging the last View in the group.
+    let view = droppedViewGroupEl.active
+      ? droppedViewGroupEl.activeView
+      : droppedViewGroupEl.viewGroup.lastView;
+    let dragOverElement = this.#dragOverElement;
+
+    this.#cancelDragActive();
+
+    let index = 0;
+    if (dragOverElement.tagName == "view-group") {
+      // Since the dragging attribute is applied in an rAF, it's technically
+      // possible for the user to drop the ViewGroupElement onto itself. In that
+      // case, we just return since there's nothing to do.
+      if (dragOverElement == droppedViewGroupEl) {
+        return;
+      }
+
+      let dragOverViewGroupEl = dragOverElement;
+      let dragIndex = this.viewGroups.indexOf(dragOverViewGroupEl.viewGroup);
+
+      if (dragIndex != -1) {
+        index = dragIndex + 1;
+      }
+    }
+
+    if (view) {
+      let e = new CustomEvent("UserAction:PinView", {
+        bubbles: true,
+        composed: true,
+        detail: { view, index },
+      });
+      this.dispatchEvent(e);
+    }
+  }
+
+  #cancelDragActive() {
+    this.#dragOverElement.removeAttribute("draggingover");
+    this.#dragOverElement = null;
+  }
+
+  render() {
+    return html`
+      <link
+        rel="stylesheet"
+        href="chrome://browser/content/companion/components/pinned-views.css"
+        type="text/css"
+      />
+      <div
+        id="pinned-views"
+        role="tablist"
+        ?hidden=${!this.viewGroups.length && !this.dragging}
+        ?hasviews=${this.viewGroups.length}
+        ?dragging=${this.dragging}
+        @dragover=${this.#onDragOver}
+        @dragleave=${this.#onDragLeave}
+        @drop=${this.#onDrop}
+      >
+        <img id="pin-icon" src="chrome://browser/content/companion/pin.svg" aria-hidden="true" alt=""></img>
+        ${this.viewGroups.map(viewGroup => {
+          let isActive = viewGroup.includes(this.activeView);
+          return html`
+            <view-group
+              tabindex="0"
+              exportparts="domain, history, page-action-button"
+              role="tab"
+              ?active=${isActive}
+              aria-label=${isActive
+                ? this.activeView.title
+                : viewGroup.lastView.title}
+              aria-selected=${isActive}
+              .viewGroup=${viewGroup}
+              .activeView=${this.activeView}
+              ?app=${viewGroup.isApp}
+            ></view-group>
+          `;
+        })}
+      </div>
+    `;
+  }
+}
+customElements.define("pinned-views", PinnedViews);

@@ -10,6 +10,7 @@
   --urlbar-container-padding: 1px;
   --urlbar-margin-inline: 5px;
   --urlbar-search-button-width: calc(16px + 2 * var(--urlbar-icon-padding));
+  --urlbarbutton-border-radius: var(--toolbarbutton-border-radius);
 }
 
 @media not (prefers-contrast) {
@@ -63,12 +64,12 @@
   background-color: var(--toolbar-field-background-color);
   background-clip: border-box;
   border: 1px solid var(--toolbar-field-border-color);
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
 }
 
 #urlbar-input-container,
 #searchbar {
-  border-radius: var(--toolbarbutton-border-radius);
+  border-radius: var(--urlbarbutton-border-radius);
   overflow: clip;
 }
 

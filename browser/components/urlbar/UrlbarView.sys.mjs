@@ -6,6 +6,10 @@
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -93,6 +97,16 @@ export class UrlbarView {
       if (viewTemplate.stylesheet) {
         addDynamicStylesheet(this.window, viewTemplate.stylesheet);
       }
+    }
+
+    if (AppConstants.PINEBUILD) {
+      // urlbar-page-overlay is displayed over the whole browser window when the
+      // urlbar is open.
+      this.window.document
+        .getElementById("urlbar-page-overlay")
+        .addEventListener("click", () => {
+          this.close();
+        });
     }
   }
 
@@ -627,7 +641,7 @@ export class UrlbarView {
     let openPanelInstance = (this._openPanelInstance = {});
     this.oneOffSearchButtons.willHide().then(willHide => {
       if (!willHide && openPanelInstance == this._openPanelInstance) {
-        this.oneOffSearchButtons.enable(true);
+        this.oneOffSearchButtons.enable(!AppConstants.PINEBUILD);
         this._openPanel();
       }
     });
@@ -652,13 +666,15 @@ export class UrlbarView {
       });
 
       // Show the one-off search buttons unless any of the following are true:
+      //  * This is a PINEBUILD instance
       //  * The first result is a search tip
       //  * The search string is empty
       //  * The search string starts with an `@` or a search restriction
       //    character
       this.oneOffSearchButtons.enable(
-        (firstResult.providerName != "UrlbarProviderSearchTips" ||
-          queryContext.trimmedSearchString) &&
+        !AppConstants.PINEBUILD &&
+          (firstResult.providerName != "UrlbarProviderSearchTips" ||
+            queryContext.trimmedSearchString) &&
           queryContext.trimmedSearchString[0] != "@" &&
           (queryContext.trimmedSearchString[0] !=
             lazy.UrlbarTokenizer.RESTRICT.SEARCH ||
@@ -959,6 +975,11 @@ export class UrlbarView {
       // result if the suggestedIndex values are different.
       return false;
     }
+
+    if (result.payload.dynamicType != row.result.payload.dynamicType) {
+      return false;
+    }
+
     let resultIsSearchSuggestion = this._resultIsSearchSuggestion(result);
     // If the row is same type, just update it.
     if (
@@ -1883,7 +1904,7 @@ export class UrlbarView {
     // Labels aren't shown for top sites, i.e., when the search string is empty.
     if (
       lazy.UrlbarPrefs.get("groupLabels.enabled") &&
-      this._queryContext?.searchString &&
+      (this._queryContext?.searchString || AppConstants.PINEBUILD) &&
       !row.result.heuristic
     ) {
       if (row.result.isBestMatch) {
@@ -1896,6 +1917,9 @@ export class UrlbarView {
         case lazy.UrlbarUtils.RESULT_TYPE.URL:
           return { id: "urlbar-group-firefox-suggest" };
         case lazy.UrlbarUtils.RESULT_TYPE.SEARCH:
+          if (row.result.providerName == "RecentSearches") {
+            return { id: "urlbar-group-recent-searches" };
+          }
           // Show "{ $engine } suggestions" if it's not the first label.
           if (currentLabel && row.result.payload.suggestion) {
             let engineName =
@@ -1909,6 +1933,8 @@ export class UrlbarView {
         case lazy.UrlbarUtils.RESULT_TYPE.DYNAMIC:
           if (row.result.providerName == "quickactions") {
             return { id: "urlbar-group-quickactions" };
+          } else if (row.result.providerName == "pinebuildquickactions") {
+            return { id: "urlbar-group-pinebuildquickactions" };
           }
           break;
       }

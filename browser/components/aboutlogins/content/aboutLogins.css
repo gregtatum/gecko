@@ -47,8 +47,17 @@ menu-button {
   margin-inline-start: 18px;
 }
 
+:root.in-companion.login-selected header menu-button,
+:root.in-companion section header {
+  display: none;
+}
+
 login-list {
   grid-row: 1/4;
+}
+
+:root.in-companion login-list {
+  height: 100%;
 }
 
 :root:not(.initialized) login-intro,
@@ -67,6 +76,14 @@ login-item[data-editing="true"] + login-intro,
   justify-content: center;
   width: var(--sidebar-width);
   font-weight: 600;
+}
+
+:root.in-companion login-intro {
+  display: none;
+}
+
+:root(.in-companion, .no-logins) login-list {
+  display: block;
 }
 
 :root:not(.primary-password-auth-required) #primary-password-required-overlay {
@@ -96,4 +113,53 @@ body > section {
 
 login-intro {
   overflow-y: scroll;
+}
+
+:root:not(.in-companion) .panel-header {
+  display: none;
+}
+
+:root.in-companion .panel-header {
+  display: grid;
+  grid-template-columns: 1fr 0.20fr;
+  padding-block-start: 12px;
+  align-items: center;
+}
+
+:root.in-companion section-panel::part(header) {
+  padding-inline-end: 0;
+}
+
+:root.in-companion .section-panel-header .section-panel-heading {
+  align-self: center;
+  justify-self: center;
+}
+
+:root.in-companion .section-panel-header .section-panel-heading > h1 {
+  margin: 0;
+}
+
+:root.in-companion .panel-header > .subviewbutton-back + h1 {
+  margin-inline-end: 40px;
+  margin-block: 23px 22px;
+}
+
+:root.in-companion .panel-header > h1 {
+  display: inline;
+  flex: auto;
+  font-size: inherit;
+  font-weight: 600;
+  margin: 4px 0;
+  text-align: center;
+  line-height: 1.2;
+  color: var(--in-content-text-color);
+}
+
+:root.in-companion .panel-header > h1 > span {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+:root.in-companion .panel-header > :not(:last-child) {
+  display: none;
 }

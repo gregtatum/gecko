@@ -6,10 +6,13 @@
   position: fixed;
   z-index: 1;
   inset: 0;
+  display: flex;
+}
+
+:host(:not(.in-companion)) .overlay {
   /* TODO: this color is used in the about:preferences overlay, but
            why isn't it declared as a variable? */
   background-color: rgba(0,0,0,0.5);
-  display: flex;
 }
 
 .container {
@@ -28,6 +31,21 @@
   outline: 1px solid transparent;
 }
 
+:host(:not(.in-companion)) .container {
+  min-height: 200px;
+  background: var(--in-content-page-background);
+}
+
+:host(.in-companion) .container {
+  min-height: 300px;
+  background: var(--in-content-box-background);
+  margin-top: 80px;
+  margin-inline: 16px;
+  width: 100%;
+  border: 0.5px solid var(--in-content-box-border-color);
+  border-radius: 4px;
+}
+
 .title {
   font-size: 1.5em;
   font-weight: normal;
@@ -35,9 +53,19 @@
   margin: 0;
 }
 
+:host(.in-companion) .title {
+  font-size: 0.95em;
+  font-weight: 700;
+}
+
 .message {
   color: var(--in-content-deemphasized-text);
   margin-bottom: 0;
+}
+
+:host(.in-companion) .message {
+  margin-block-start: 8px;
+  font-size: 0.8em;
 }
 
 .dismiss-button {
@@ -51,6 +79,10 @@
   line-height: 0;
 }
 
+:host(.in-companion) .dismiss-button {
+visibility: hidden;
+}
+
 .dismiss-icon {
   -moz-context-properties: fill;
   fill: currentColor;
@@ -62,6 +94,18 @@
   width: 40px;
   height: 40px;
   margin: 16px;
+}
+
+:host(.in-companion) .warning-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 22px;
+}
+
+:host(.in-companion) .content {
+  margin-block: 65px;
+  padding-bottom: ;
+  padding-block: 0;
 }
 
 .content,
@@ -81,6 +125,19 @@
   }
 }
 
-.buttons > button {
+:host(.in-companion) .buttons {
+  padding: 0;
+  margin-inline: 10px;
+}
+
+:host(:not(.in-companion)) .buttons > button {
   min-width: 140px;
+}
+
+:host(.in-companion) .confirm-button {
+  width: 50%;
+}
+
+:host(.in-companion) .cancel-button {
+  width: 50%;
 }

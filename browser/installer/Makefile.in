@@ -26,6 +26,12 @@ endif
 
 DEFINES += -DMOZ_APP_NAME=$(MOZ_APP_NAME) -DPREF_DIR=$(PREF_DIR)
 
+ifdef PINEBUILD
+ifneq ($(MOZ_APP_NAME),firefox)
+DEFINES += -DAPP_STUB=firefox
+endif
+endif
+
 ifdef MOZ_DEBUG
 DEFINES += -DMOZ_DEBUG=1
 endif

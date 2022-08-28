@@ -151,6 +151,8 @@ CO01:
         # browser/locales/en-US/browser/browser.ftl
         - identity-custom-root
         - identity-description-custom-root
+        # browser/locales/en-US/browser/browserPinebuild.ftl
+        - onboarding-fxa-label
         # browser/locales/en-US/browser/migration.ftl
         - import-from-firefox
         # browser/locales/en-US/browser/newtab/onboarding.ftl
@@ -159,6 +161,8 @@ CO01:
         # browser/locales/en-US/browser/policies/policies-descriptions.ftl
         - policy-DisableFirefoxScreenshots
         # browser/locales/en-US/browser/preferences/preferences.ftl
+        - preferences-mozproduct-foundation-name
+        - preferences-services-google-mozilla-account
         - sync-engine-addons
         - sync-mobile-promo
         # browser/locales/en-US/browser/protectionsPanel.ftl

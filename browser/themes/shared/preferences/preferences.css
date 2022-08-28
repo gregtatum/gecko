@@ -48,6 +48,7 @@
 
 .main-content {
   padding-top: 0;
+  -moz-box-align: start;
 }
 
 .pane-container {
@@ -1450,6 +1451,14 @@ richlistitem .text-link:hover {
 
 .web-appearance-choice input {
   margin-top: 0.4em;
+}
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+  *[pine-supported="false"] {
+    visibility: hidden !important;
+    display: none !important;
+  }
 }
 
 /* Platform-specific tweaks & overrides */

@@ -13,6 +13,9 @@
     <link rel="localization" href="browser/branding/sync-brand.ftl">
     <link rel="localization" href="browser/branding/brandings.ftl">
     <link rel="localization" href="browser/aboutLogins.ftl">
+    <link rel="localization" href="browser/companion.ftl"/>
+    <script src="chrome://global/content/elements/panel-list.js"></script>
+    <script type="module" src="chrome://browser/content/companion/section-panel.js"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/confirmation-dialog.mjs"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/remove-logins-dialog.mjs"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/import-summary-dialog.mjs"></script>
@@ -27,17 +30,20 @@
     <script type="module" src="chrome://browser/content/aboutlogins/components/login-list-section.mjs"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/components/menu-button.mjs"></script>
     <script type="module" src="chrome://browser/content/aboutlogins/aboutLogins.mjs"></script>
+
     <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
     <link rel="stylesheet" href="chrome://browser/content/aboutlogins/aboutLogins.css">
     <link rel="stylesheet" href="chrome://browser/content/aboutlogins/common.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/companion.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/fonts.css">
     <link rel="icon" href="chrome://branding/content/icon32.png">
   </head>
   <body>
-    <header>
+    <section-panel class="panel-header" heading-l10n-id="about-logins-header-login-list">
       <login-filter></login-filter>
       <fxaccounts-button hidden></fxaccounts-button>
       <menu-button></menu-button>
-    </header>
+    </section-panel>
     <login-list></login-list>
     <login-item></login-item>
     <login-intro></login-intro>
@@ -218,7 +224,15 @@
           <span class="title" dir="auto"></span>
           <span class="username" dir="ltr"></span>
         </div>
-        <img class="alert-icon" title="" src=""/>
+        <img class="alert-icon" title="" src="" />
+        <div class="more-dropdown-container">
+          <button class="more-dropdown"></button>
+          <panel-list data-action="list" data-l10n-id="menu">
+            <panel-item class="copyPassword" data-l10n-id="pro-client-copy-password" data-action="copy-password"></panel-item>
+            <panel-item class="copyUsername" data-l10n-id="pro-client-copy-username" data-action="copy-username"></panel-item>
+            <panel-item class="edit" data-l10n-id="login-item-edit-button" data-action="edit-password"></panel-item>
+          </panel-list>
+        </div>
       </li>
     </template>
 
@@ -362,6 +376,9 @@
             <p class="time-used meta-info" data-l10n-id="login-item-time-used" data-l10n-args='{"timeUsed": 0}'></p>
           </form>
         </div>
+      </div>
+      <div class="remove-login-button-container">
+        <button class="remove-login-button" data-l10n-id="about-logins-remove-password"></button>
       </div>
     </template>
 

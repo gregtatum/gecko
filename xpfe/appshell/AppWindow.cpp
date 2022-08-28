@@ -929,10 +929,13 @@ NS_IMETHODIMP AppWindow::GetNativeHandle(nsAString& aNativeHandle) {
 NS_IMETHODIMP AppWindow::GetVisibility(bool* aVisibility) {
   NS_ENSURE_ARG_POINTER(aVisibility);
 
-  // Always claim to be visible for now. See bug
-  // https://bugzilla.mozilla.org/show_bug.cgi?id=306245.
-
-  *aVisibility = true;
+  if (mWindow) {
+    *aVisibility = mWindow->IsVisible();
+  } else {
+    // If we don't have a window yet, just claim to be visible for now. See bug
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=306245.
+    *aVisibility = true;
+  }
 
   return NS_OK;
 }
@@ -1766,7 +1769,7 @@ nsresult AppWindow::MaybeSaveEarlyWindowPersistentValues(
   }
 
   if (!windowElementId.EqualsLiteral("main-window") ||
-      !uri.EqualsLiteral("chrome://browser/content/browser.xhtml")) {
+      !uri.EqualsLiteral(BROWSER_CHROME_URL_QUOTED)) {
     return NS_OK;
   }
 

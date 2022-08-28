@@ -72,6 +72,10 @@ def filter_out_devedition(task, parameters):
     return not task.attributes.get("shipping_product") == "devedition"
 
 
+def filter_out_pinebuild(task, parameters):
+    return not task.attributes.get("shipping_product") == "pinebuild"
+
+
 def filter_out_cron(task, parameters):
     """
     Filter out tasks that run via cron.
@@ -401,6 +405,7 @@ def target_tasks_try_auto(full_task_graph, parameters, graph_config):
         if standard_filter(t, parameters)
         and filter_out_shipping_phase(t, parameters)
         and filter_out_devedition(t, parameters)
+        and filter_out_pinebuild(t, parameters)
         and filter_by_uncommon_try_tasks(t.label)
         and filter_by_regex(t.label, include_regexes, mode="include")
         and filter_by_regex(t.label, exclude_regexes, mode="exclude")
@@ -419,6 +424,7 @@ def target_tasks_default(full_task_graph, parameters, graph_config):
         if standard_filter(t, parameters)
         and filter_out_shipping_phase(t, parameters)
         and filter_out_devedition(t, parameters)
+        and filter_out_pinebuild(t, parameters)
     ]
 
 
@@ -691,20 +697,49 @@ def target_tasks_pine(full_task_graph, parameters, graph_config):
     """Bug 1339179 - no mobile automation needed on pine"""
 
     def filter(task):
-        platform = task.attributes.get("build_platform")
-        # disable mobile jobs
-        if str(platform).startswith("android"):
+        platform = task.attributes.get("build_platform", "")
+        if platform not in [
+            "win64-pinebuild",
+            "linux64-pinebuild",
+            "macosx64-pinebuild",
+        ]:
             return False
-        # disable asan
-        if platform == "linux64-asan":
-            return False
-        # disable non-pine and tasks with a shipping phase
-        if standard_filter(task, parameters) or filter_out_shipping_phase(
-            task, parameters
-        ):
-            return True
 
-    return [l for l, t in full_task_graph.tasks.items() if filter(t)]
+        # Disable linux opt builds until bug 1787118 is resolved.
+        build_type = task.attributes.get("build_type", "")
+        if platform == "linux64-pinebuild" and build_type == "opt":
+            return False
+
+        if task.attributes.get("kind") not in [
+            "test",
+            "source-test",
+            "build",
+            "build-signing",
+            "repackage",
+            "system-symbols-upload",
+            "upload-symbols",
+        ]:
+            return False
+
+        if "unittest_suite" in task.attributes:
+            if task.attributes.get("unittest_variant", "") not in ("", "fission"):
+                return False
+
+            if "pinebuild" not in task.attributes.get("test_platform", ""):
+                return False
+
+        return True
+
+    return [
+        l
+        for l, t in full_task_graph.tasks.items()
+        if filter_out_cron(t, parameters)
+        and filter_for_hg_branch(t, parameters)
+        and filter_tests_without_manifests(t, parameters)
+        and filter_out_shipping_phase(t, parameters)
+        and filter_out_devedition(t, parameters)
+        and filter(t)
+    ]
 
 
 @_target_task("kaios_tasks")
@@ -845,7 +880,7 @@ def make_desktop_nightly_filter(platforms):
                 task.attributes.get("shippable", False),
                 # Tests and nightly only builds don't have `shipping_product` set
                 task.attributes.get("shipping_product")
-                in {None, "firefox", "thunderbird"},
+                in {None, "firefox", "thunderbird", "pinebuild"},
                 task.kind not in {"l10n"},  # no on-change l10n
             ]
         )
@@ -921,6 +956,41 @@ def target_tasks_daily_releases(full_task_graph, parameters, graph_config):
     return [l for l, t in full_task_graph.tasks.items() if filter(t)]
 
 
+@_target_task("nightly_pinebuild")
+def target_tasks_nightly_pinebuild(full_task_graph, parameters, graph_config):
+    index_path = (
+        f"{graph_config['trust-domain']}.v2.{parameters['project']}.revision."
+        f"{parameters['head_rev']}.taskgraph.decision-nightly-pinebuild"
+    )
+    if os.environ.get("MOZ_AUTOMATION") and retry(
+        index_exists,
+        args=(index_path,),
+        kwargs={
+            "reason": "to avoid triggering multiple nightlies off the same revision",
+        },
+    ):
+        return []
+
+    indep_filter = make_desktop_nightly_filter({None})
+    platform_filter = make_desktop_nightly_filter(
+        {
+            "macosx64-pinebuild",
+            "win64-pinebuild",
+            # "linux64-pinebuild",
+            "win64-aarch64-pinebuild",
+        }
+    )
+
+    def filter(task):
+        if task.attributes.get("shipping_product") == "pinebuild" and indep_filter(
+            task, parameters
+        ):
+            return True
+        return platform_filter(task, parameters)
+
+    return [l for l, t in full_task_graph.tasks.items() if filter(t)]
+
+
 @_target_task("nightly_desktop")
 def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     """Select the set of tasks required for a nightly build of linux, mac,
@@ -943,20 +1013,34 @@ def target_tasks_nightly_desktop(full_task_graph, parameters, graph_config):
     release_tasks = [
         l for l, t in full_task_graph.tasks.items() if release_filter(t, parameters)
     ]
-    # Avoid duplicate tasks.
-    return list(
-        set(target_tasks_nightly_win32(full_task_graph, parameters, graph_config))
-        | set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
-        | set(
-            target_tasks_nightly_win64_aarch64(
-                full_task_graph, parameters, graph_config
-            )
-        )
+    all_pine_release_tasks = list(
+        # No win32 nightlies on pine
+        # set(target_tasks_nightly_win32(full_task_graph, parameters, graph_config))
+        # | set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
+        set(target_tasks_nightly_win64(full_task_graph, parameters, graph_config))
+        # No win64-aarch64 nightlies on pine
+        # | set(
+        #     target_tasks_nightly_win64_aarch64(
+        #         full_task_graph, parameters, graph_config
+        #     )
+        # )
         | set(target_tasks_nightly_macosx(full_task_graph, parameters, graph_config))
-        | set(target_tasks_nightly_linux(full_task_graph, parameters, graph_config))
-        | set(target_tasks_nightly_asan(full_task_graph, parameters, graph_config))
+        # No linux nightlies on pine
+        # | set(target_tasks_nightly_linux(full_task_graph, parameters, graph_config))
+        # No asan nightlies on pine
+        # | set(target_tasks_nightly_asan(full_task_graph, parameters, graph_config))
         | set(release_tasks)
     )
+
+    def filter(label, task):
+        if label not in all_pine_release_tasks:
+            return False
+        # We want all release tasks, except for the tests
+        if task.attributes.get("kind", "") in ["test"]:
+            return False
+        return True
+
+    return [l for l, t in full_task_graph.tasks.items() if filter(l, t)]
 
 
 # Run Searchfox analysis once daily.
@@ -1078,14 +1162,15 @@ def target_tasks_staging_release(full_task_graph, parameters, graph_config):
     """
 
     def filter(task):
+        platform = task.attributes.get("build_platform", "")
         if not task.attributes.get("shipping_product"):
             return False
         if parameters["release_type"].startswith(
             "esr"
         ) and "android" in task.attributes.get("build_platform", ""):
             return False
-        if parameters["release_type"] != "beta" and "devedition" in task.attributes.get(
-            "build_platform", ""
+        if parameters["release_type"] != "beta" and (
+            "devedition" in platform or "pinebuild" in platform
         ):
             return False
         if task.attributes.get("shipping_phase") == "build":

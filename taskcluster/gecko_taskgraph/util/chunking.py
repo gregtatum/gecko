@@ -58,6 +58,8 @@ def guess_mozinfo_from_task(task):
         "headless": "-headless" in task["test-name"],
         "condprof": "conditioned_profile" in setting["runtime"].keys(),
         "tsan": setting["build"].get("tsan", False),
+        # XXX pine only
+        "pinebuild": True,
         "xorigin": any("xorigin" in key for key in setting["runtime"].keys()),
         "socketprocess_networking": "socketprocess_networking"
         in setting["runtime"].keys(),

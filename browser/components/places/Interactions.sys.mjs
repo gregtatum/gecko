@@ -414,6 +414,12 @@ class _Interactions {
 
         lazy.logConsole.debug("Add to store: ", interaction);
         store.add(interaction);
+
+        Services.obs.notifyObservers(
+          null,
+          "interaction-added",
+          JSON.stringify(interaction)
+        );
       });
   }
 

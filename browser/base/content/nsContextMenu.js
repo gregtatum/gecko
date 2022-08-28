@@ -701,13 +701,15 @@ class nsContextMenu {
   }
 
   initViewItems() {
-    // View source is always OK, unless in directory listing.
-    this.showItem(
-      "context-viewpartialsource-selection",
-      !this.inAboutDevtoolsToolbox &&
-        this.isContentSelected &&
-        this.selectionInfo.isDocumentLevelSelection
-    );
+    if (!AppConstants.PINEBUILD) {
+      // View source is always OK, unless in directory listing.
+      this.showItem(
+        "context-viewpartialsource-selection",
+        !this.inAboutDevtoolsToolbox &&
+          this.isContentSelected &&
+          this.selectionInfo.isDocumentLevelSelection
+      );
+    }
 
     this.showItem(
       "context-print-selection",
@@ -742,10 +744,12 @@ class nsContextMenu {
         // through normal use, and we've passed an ESR cycle (91).
         nsContextMenu.DevToolsShim.isDevToolsUser());
 
-    this.showItem("context-viewsource", shouldShow);
-    this.showItem("context-inspect", showInspect);
+    if (!AppConstants.PINEBUILD) {
+      this.showItem("context-viewsource", shouldShow);
+      this.showItem("context-inspect", showInspect);
 
-    this.showItem("context-inspect-a11y", showInspectA11Y);
+      this.showItem("context-inspect-a11y", showInspectA11Y);
+    }
 
     // View video depends on not having a standalone video.
     this.showItem(
@@ -758,28 +762,33 @@ class nsContextMenu {
   initMiscItems() {
     // Use "Bookmark Link…" if on a link.
     let bookmarkPage = document.getElementById("context-bookmarkpage");
-    this.showItem(
-      bookmarkPage,
-      !(
-        this.isContentSelected ||
-        this.onTextInput ||
-        this.onLink ||
-        this.onImage ||
-        this.onVideo ||
-        this.onAudio ||
-        this.onCanvas ||
-        this.inWebExtBrowser
-      )
-    );
+    if (bookmarkPage) {
+      this.showItem(
+        bookmarkPage,
+        !(
+          this.isContentSelected ||
+          this.onTextInput ||
+          this.onLink ||
+          this.onImage ||
+          this.onVideo ||
+          this.onAudio ||
+          this.onCanvas ||
+          this.inWebExtBrowser
+        )
+      );
+    }
 
-    this.showItem(
-      "context-bookmarklink",
-      (this.onLink &&
-        !this.onMailtoLink &&
-        !this.onTelLink &&
-        !this.onMozExtLink) ||
-        this.onPlainTextLink
-    );
+    let bookmarkLink = document.getElementById("context-bookmarklink");
+    if (bookmarkLink) {
+      this.showItem(
+        bookmarkLink,
+        (this.onLink &&
+          !this.onMailtoLink &&
+          !this.onTelLink &&
+          !this.onMozExtLink) ||
+          this.onPlainTextLink
+      );
+    }
     this.showItem("context-keywordfield", this.shouldShowAddKeyword());
     this.showItem("frame", this.inFrame);
 
@@ -813,8 +822,9 @@ class nsContextMenu {
     this.showItem("context-showonlythisframe", !this.inSrcdocFrame);
     this.showItem("context-openframeintab", !this.inSrcdocFrame);
     this.showItem("context-openframe", !this.inSrcdocFrame);
-    this.showItem("context-bookmarkframe", !this.inSrcdocFrame);
-
+    if (!AppConstants.PINEBUILD) {
+      this.showItem("context-bookmarkframe", !this.inSrcdocFrame);
+    }
     // Hide menu entries for images, show otherwise
     if (this.inFrame) {
       this.viewFrameSourceElement.hidden = !BrowserUtils.mimeTypeIsTextBased(

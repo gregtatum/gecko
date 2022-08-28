@@ -1737,6 +1737,21 @@ nsresult Database::InitTempEntities() {
   rv = mMainConn->ExecuteSimpleSQL(CREATE_PLACES_METADATA_AFTERDELETE_TRIGGER);
   NS_ENSURE_SUCCESS(rv, rv);
 
+#ifdef PINEBUILD
+  rv = mMainConn->ExecuteSimpleSQL(
+      CREATE_PLACES_METADATA_SNAPSHOTS_AFTERINSERT_TRIGGER);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = mMainConn->ExecuteSimpleSQL(
+      CREATE_PLACES_METADATA_SNAPSHOTS_AFTERDELETE_TRIGGER);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = mMainConn->ExecuteSimpleSQL(
+      CREATE_PLACES_SESSION_TO_PLACE_AFTERINSERT_TRIGGER);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = mMainConn->ExecuteSimpleSQL(
+      CREATE_PLACES_SESSION_TO_PLACE_AFTERDELETE_TRIGGER);
+  NS_ENSURE_SUCCESS(rv, rv);
+#endif
   return NS_OK;
 }
 

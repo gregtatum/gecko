@@ -372,7 +372,7 @@ add_task(async function test_save_reload_unknownProperties() {
 
   Assert.equal(
     Object.keys(itemsForLoad[2].target._unknownProperties).length,
-    2
+    AppConstants.PINEBUILD ? 4 : 2
   );
   Assert.equal(
     itemsForLoad[2].target._unknownProperties.target1,

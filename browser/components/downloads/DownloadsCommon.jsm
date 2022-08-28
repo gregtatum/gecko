@@ -33,6 +33,9 @@ var EXPORTED_SYMBOLS = ["DownloadsCommon"];
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const lazy = {};
 
@@ -886,12 +889,16 @@ DownloadsDataCtor.prototype = {
     // for which the end time is stored differently, as a Places annotation.
     download.endTime = Date.now();
 
+    if (AppConstants.PINEBUILD) {
+      download.uuid = Services.uuid.generateUUID().toString();
+    }
+
     this._oldDownloadStates.set(
       download,
       DownloadsCommon.stateOfDownload(download)
     );
     if (download.error?.becauseBlockedByReputationCheck) {
-      this._notifyDownloadEvent("error");
+      this._notifyDownloadEvent("error", download);
     }
   },
 
@@ -918,13 +925,13 @@ DownloadsDataCtor.prototype = {
         download.succeeded ||
         (download.error && download.error.becauseBlocked)
       ) {
-        this._notifyDownloadEvent("finish");
+        this._notifyDownloadEvent("finish", download);
       }
     }
 
     if (!download.newDownloadNotified) {
       download.newDownloadNotified = true;
-      this._notifyDownloadEvent("start", {
+      this._notifyDownloadEvent("start", download, {
         openDownloadsListOnStart: download.openDownloadsListOnStart,
       });
     }
@@ -983,12 +990,18 @@ DownloadsDataCtor.prototype = {
    * @param {string} aType
    *        Set to "start" for new downloads, "finish" for completed downloads,
    *        "error" for downloads that failed and need attention
+   * @param download
+   *        The download object the event refers to.
    * @param {boolean} [openDownloadsListOnStart]
    *        (Only relevant when aType = "start")
    *        true (default) - open the downloads panel.
    *        false - only show an indicator notification.
    */
-  _notifyDownloadEvent(aType, { openDownloadsListOnStart = true } = {}) {
+  _notifyDownloadEvent(
+    aType,
+    download,
+    { openDownloadsListOnStart = true } = {}
+  ) {
     DownloadsCommon.log(
       "Attempting to notify that a new download has started or finished."
     );
@@ -998,6 +1011,37 @@ DownloadsDataCtor.prototype = {
       private: this._isPrivate,
     });
     if (!browserWin) {
+      return;
+    }
+
+    if (AppConstants.PINEBUILD) {
+      const XUL_NS =
+        "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+      let notification = browserWin.document.createElementNS(
+        XUL_NS,
+        "xul:browser"
+      );
+      notification.classList.add("download-notification");
+      notification.setAttribute("remoteType", "privilegedabout");
+      notification.setAttribute("disablehistory", "true");
+      notification.setAttribute("remote", "true");
+      notification.setAttribute("type", "content");
+      notification.setAttribute("message", "true");
+      notification.setAttribute("src", `about:downloads?uuid=${download.uuid}`);
+
+      browserWin.PineBuildUIUtils.showToastNotification({
+        domElement: notification,
+        id: `download:${download.source.url}`,
+        onSelect: () => {
+          let browser = browserWin.document.getElementById("companion-browser");
+          let actor = browser?.browsingContext?.currentWindowGlobal?.getActor(
+            "Companion"
+          );
+          if (actor) {
+            actor.viewTab("downloads");
+          }
+        },
+      });
       return;
     }
 

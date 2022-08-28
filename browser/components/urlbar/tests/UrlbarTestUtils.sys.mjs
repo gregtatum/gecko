@@ -223,6 +223,7 @@ export var UrlbarTestUtils = {
     details.title = result.title;
     details.tags = "tags" in result.payload ? result.payload.tags : [];
     details.isSponsored = result.payload.isSponsored;
+    details.payload = result.payload;
     let actions = element.getElementsByClassName("urlbarView-action");
     let urls = element.getElementsByClassName("urlbarView-url");
     let typeIcon = element.querySelector(".urlbarView-type-icon");
@@ -255,6 +256,8 @@ export var UrlbarTestUtils = {
       };
     } else if (details.type == UrlbarUtils.RESULT_TYPE.KEYWORD) {
       details.keyword = result.payload.keyword;
+    } else if (details.type == UrlbarUtils.RESULT_TYPE.DYNAMIC) {
+      details.dynamicType = result.payload.dynamicType;
     }
     return details;
   },

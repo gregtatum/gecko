@@ -42,15 +42,15 @@
   --in-content-button-border-color-active: var(--in-content-button-border-color-hover);
   --in-content-primary-button-text-color: rgb(251,251,254);
   --in-content-primary-button-text-color-hover: var(--in-content-primary-button-text-color);
-  --in-content-primary-button-background: #0061e0;
-  --in-content-primary-button-background-hover: #0250bb;
-  --in-content-primary-button-background-active: #053e94;
+  --in-content-primary-button-background: var(--button-background-primary);
+    --in-content-primary-button-background-hover: var(--button-background-primary-hover);
+    --in-content-primary-button-background-active: var(--button-background-primary-active);
   --in-content-primary-button-border-color: transparent;
   --in-content-primary-button-border-hover: transparent;
   --in-content-danger-button-background: #e22850;
   --in-content-danger-button-background-hover: #c50042;
   --in-content-danger-button-background-active: #810220;
-  --in-content-focus-outline-color: var(--in-content-primary-button-background);
+  --in-content-focus-outline-color: var(--colors-border-focus);
   --in-content-focus-outline-width: 2px;
   --in-content-focus-outline-offset: 2px;
   --in-content-focus-outline-inset: calc(-1 * var(--in-content-focus-outline-width));
@@ -257,6 +257,14 @@
   }
 }
 
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+* {
+  font-family: "Inter", system-ui;
+}
+}
+/** endif **/
+
 :root {
   font: message-box;
   appearance: none;
@@ -348,7 +356,8 @@ html|button {
 button,
 html|select,
 html|input[type="color"],
-xul|menulist {
+xul|menulist,
+a.button-link {
   appearance: none;
   min-height: 32px;
   color: var(--in-content-button-text-color);
@@ -361,6 +370,7 @@ xul|menulist {
   margin: 4px 8px;
   /* Ensure font-size isn't overridden by widget styling (e.g. in forms.css) */
   font-size: 1em;
+  text-align: center;
 }
 
 button {
@@ -380,7 +390,8 @@ xul|button > .button-box > .button-text {
 }
 
 xul|button,
-html|button {
+html|button,
+a.button-link {
   /* Use the same margin of other elements for the alignment */
   margin-inline: 4px;
 }
@@ -427,7 +438,9 @@ html|button:enabled:hover,
 html|select:not([size], [multiple]):enabled:hover,
 html|input[type="color"]:hover,
 xul|button:not([disabled="true"]):hover,
-xul|menulist:not([disabled="true"]):hover {
+xul|menulist:not([disabled="true"]):hover,
+a.button-link:hover,
+a.button-link:hover:active {
   background-color: var(--in-content-button-background-hover);
   color: var(--in-content-button-text-color-hover);
   border-color: var(--in-content-button-border-color-hover);
@@ -439,7 +452,8 @@ html|input[type="color"]:enabled:hover:active,
 xul|button:not([disabled="true"]):hover:active,
 xul|button[open],
 xul|button[open]:hover,
-xul|menulist[open="true"]:not([disabled="true"]) {
+xul|menulist[open="true"]:not([disabled="true"]),
+a.button-link:hover:active {
   background-color: var(--in-content-button-background-active);
   color: var(--in-content-button-text-color-active);
   border-color: var(--in-content-button-border-color-active);
@@ -456,7 +470,9 @@ xul|menulist[disabled="true"] {
 html|button[autofocus],
 html|button[type="submit"],
 xul|button[default],
-button.primary {
+button.primary,
+a.button-link.primary,
+a.button-link.primary:active {
   background-color: var(--in-content-primary-button-background);
   color: var(--in-content-primary-button-text-color);
   border-color: var(--in-content-primary-button-border-color);
@@ -466,7 +482,8 @@ html|button[autofocus]:enabled:hover,
 html|button[type="submit"]:enabled:hover,
 html|button.primary:enabled:hover,
 xul|button[default]:not([disabled="true"]):hover,
-xul|button.primary:not([disabled="true"]):hover {
+xul|button.primary:not([disabled="true"]):hover,
+a.button-link.primary:hover {
   background-color: var(--in-content-primary-button-background-hover);
   color: var(--in-content-primary-button-text-color-hover);
   border-color: var(--in-content-primary-button-border-hover);
@@ -476,7 +493,8 @@ html|button[autofocus]:enabled:hover:active,
 html|button[type="submit"]:enabled:hover:active,
 html|button.primary:enabled:hover:active,
 xul|button[default]:not([disabled="true"]):hover:active,
-xul|button.primary:not([disabled="true"]):hover:active {
+xul|button.primary:not([disabled="true"]):hover:active,
+a.button-link.primary:hover:active {
   background-color: var(--in-content-primary-button-background-active);
 }
 
@@ -1392,4 +1410,12 @@ xul|*.addons-icon {
 :host(dialog[subdialog]) .dialog-button-box > button {
   margin: 0 4px;
   min-width: auto;
+}
+
+a.button-link {
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: default;
+  min-height: auto;
+  font-weight: 600;
 }

@@ -140,9 +140,875 @@
           <li data-l10n-id="about-telemetry-firefox-data-doc"><a id="dataDocLink" data-l10n-name="data-doc-link" href="https://docs.telemetry.mozilla.org/"></a></li>
           <li data-l10n-id="about-telemetry-telemetry-client-doc"><a id="clientDocLink" data-l10n-name="client-doc-link" href="https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/telemetry/index.html"></a></li>
           <li data-l10n-id="about-telemetry-telemetry-dashboard"><a id="dashboardLink" data-l10n-name="dashboard-link" href="https://telemetry.mozilla.org/"></a></li>
-          <li data-l10n-id="about-telemetry-telemetry-probe-dictionary"><a id="probeDictionaryLink" data-l10n-name="probe-dictionary-link" href="https://probes.telemetry.mozilla.org/"></a></li>
-        </ul>
-      </section>
+          <li data-l10n-id="about-telemetry-telemetry-probe-dictionary"><a id="probeDictionaryLink"
+          data-l10n-name="probe-dictionary-link" href="https://probes.telemetry.mozilla.org/"></a></li>
+       </ul>
+      <p>Flowstate telemetry</p>
+      <ul>
+        <li>MR2-514 - Add a probe/probes to measure time until companion content settled
+          <ul> Request for data collection review form
+            <p>
+              All questions are mandatory. You must receive review from a data steward peer on your responses to these
+              questions before shipping new data collection.
+
+              What questions will you answer with this data?
+
+            <blockquote>
+              How long does it take to show the first snapshots in the companion?
+
+              How long does it take to show the first events in the companion?
+            </blockquote>
+            Why does Mozilla need to answer these questions? Are there benefits for users? Do we need this information
+            to address product or business requirements? Some example responses:
+
+            <blockquote>
+              Establish baselines and measure changes in the performance of companion during startup.
+            </blockquote>
+
+            What alternative methods did you consider to answer these questions? Why were they not sufficient?
+
+            <blockquote>
+              There’s no other way to measure these times.
+            </blockquote>
+
+            Can current instrumentation answer these questions?
+
+            <blockquote>
+              No.
+            </blockquote>
+            List all proposed measurements and indicate the category of data collection for each measurement, using
+            the
+            Firefox data collection categories found on the Mozilla wiki.
+
+            Note that the data steward reviewing your request will characterize your data collection based on the
+            highest (and most sensitive) category.
+            <table>
+              <tr>
+                <th>Measurement Description</th>
+                <th>Data Collection Category</th>
+                <th>Tracking Bug #</th>
+              </tr>
+              <tr>
+                <td>Time to show snapshots</td>
+                <td>technical</td>
+                <td>MR2-514</td>
+              </tr>
+              <tr>
+                <td>Number of snapshots</td>
+                <td>technical / I guess conceivably interaction?</td>
+                <td>MR2-514</td>
+              </tr>
+              <tr>
+                <td>Time to show calendar events</td>
+                <td>technical</td>
+                <td>MR2-514</td>
+              </tr>
+              <tr>
+                <td>Number of calendar events</td>
+                <td>interaction</td>
+                <td>MR2-514</td>
+              </tr>
+            </table>
+
+            Please provide a link to the documentation for this data collection which describes the ultimate data set
+            in
+            a public, complete, and accurate way.
+            <blockquote>
+              <a
+                href="https://docs.google.com/document/d/1GcgE8Cc1u3lkACqY5GPohsanfNyJqBsXyK8m8_HuM3A/edit#">https://docs.google.com/document/d/1GcgE8Cc1u3lkACqY5GPohsanfNyJqBsXyK8m8_HuM3A/edit#</a>
+            </blockquote>
+            How long will this data be collected? Choose one of the following:
+            <blockquote>
+              I want to permanently monitor this data. (Doug Thayer)
+            </blockquote>
+
+            What populations will you measure?
+            <blockquote>
+              All Pro Client users in all supported countries and locales.
+            </blockquote>
+            If this data collection is default on, what is the opt-out mechanism for users?
+            <blockquote>
+              I’m assuming we’re going to add a setting to turn off telemetry? Currently users have to do so via
+              about:config.
+            </blockquote>
+            Please provide a general description of how you will analyze this data.
+            <blockquote>
+              STMO
+            </blockquote>
+            Where do you intend to share the results of your analysis?
+            <blockquote>
+              Likely in this Jira issue.
+            </blockquote>
+            Is there a third-party tool (i.e. not Telemetry) that you are proposing to use for this data collection?
+            If
+            so:
+            <blockquote>
+              No
+            </blockquote>
+            </p>
+          </ul>
+          <ul> Data Review Response
+            <p>
+              1. Is there or will there be documentation that describes the schema for the ultimate data set in a
+              public,
+              complete, and accurate way? Click the documentation link provided in Q6 and ensure it is publicly
+              accessible
+              and does or will contain documentation for the data collection. (see here, here, and here for examples).
+              Refer to the appendix for "documentation" if more detail about documentation standards is needed.
+            <blockquote>
+              Yes. We are keeping the documentation in the Scalars.yaml file and metrics.yaml file inside Pro Client
+              (pine
+              branch).
+            </blockquote>
+            2. Is there a control mechanism that allows the user to turn the data collection on and off? (Note, for
+            data
+            collection not needed for security purposes, Mozilla provides such a control mechanism) Provide details as
+            to the control mechanism available.
+            <blockquote>
+              Yes, if Telemetry/Glean is disabled then the data will not be collected.
+            </blockquote>
+            3. If the request is for permanent data collection, is there someone who will monitor the data over time?
+            <blockquote>
+              Yes, dthayer will monitor the data.
+            </blockquote>
+            4. Using the category system of data types on the Mozilla wiki, what collection type of data do the
+            requested measurements fall under?
+            <blockquote>
+              Time to show snapshots - Category 1
+
+              Number of snapshots - Category 2
+
+              Time to show calendar events - Category 1
+
+              Number of calendar events - Category 2
+            </blockquote>
+            5. Is the data collection request for default-on or default-off?
+            <blockquote>
+              Default-on
+            </blockquote>
+            6. Does the instrumentation include the addition of any new identifiers (whether anonymous or otherwise;
+            e.g., username, random IDs, etc. See the appendix for more details)?
+            <blockquote>
+              No.
+            </blockquote>
+            7. Is the data collection covered by the existing Firefox privacy notice?
+            <blockquote>
+              Yes.
+            </blockquote>
+            8. Does the data collection use a third-party collection tool?
+            <blockquote>
+              No.
+            </blockquote>
+            </p>
+          </ul>
+        </li>
+        <li>MR2-2885 - Onboarding metrics
+          <ul>Request for data collection review form
+            <p>
+              All questions are mandatory. You must receive review from a data steward peer on your responses to these
+              questions before shipping new data collection.
+              1. What questions will you answer with this data?
+            <blockquote>
+              This data instruments the onboarding funnel for Flowstate. We want to understand where users drop off in
+              the
+              onboarding flow, as well as how long it takes them to complete each step.
+            </blockquote>
+
+            2. Why does Mozilla need to answer these questions? Are there benefits for users? Do we need this
+            information to address product or business requirements? Some example responses:
+
+            <blockquote>
+              Product will use this information to understand the onboarding user experience, and to inform decisions on
+              how best to improve the onboarding experience. The events are structured so that we can experiment with
+              different arrangements of screens in the future.
+            </blockquote>
+
+            3. What alternative methods did you consider to answer these questions? Why were they not sufficient?
+            <blockquote>
+              Instrumentation is necessary for us to understand user completion and dropoff at each step in the
+              onboarding
+              funnel.
+            </blockquote>
+            4. Can current instrumentation answer these questions?
+            <blockquote>
+              No, because this onboarding flow is new.
+            </blockquote>
+
+            5. List all proposed measurements and indicate the category of data collection for each measurement, using
+            the Firefox data collection categories found on the Mozilla wiki.
+
+            Note that the data steward reviewing your request will characterize your data collection based on the
+            highest (and most sensitive) category.
+            <blockquote>
+              Currently, onboarding is a sequence of steps which must be completed in order.
+
+              At each step in the flow, we will record an event when the card is shown, and another when it is completed
+              (i.e., when the user has clicked a button to advance to the next step.)
+
+              We'll record these as events with the category onboarding, and with the method either shown or completed.
+              We
+              will also record the name of each card in the object field; the initial sequence will be welcome,
+              connect_account, account_connected, data_preferences, ready_to_go. Because the order of cards may vary, we
+              will encode the sequence using two key-value pairs in the extra field: order, to record the numbering of a
+              given card in the sequence of cards, starting at 0 for the first card; and is_last, a boolean value, to
+              record whether a given card was the last one in the onboarding flow. From these events, we will be able to
+              infer the overall onboarding start and finish steps and times.
+
+              For ease of data review, each combination of category, method, and object will be listed in the table
+              below,
+              using the extra fields to indicate ordering for the initial version.
+
+              Note that these values will also be mirrored to Glean.
+            </blockquote>
+
+            (With apologies, apparently Jira isn’t “smart” enough to handle html tables)
+
+            <table>
+              <tr>
+                <td>Measurement Description</td>
+                <td>Data Collection Category</td>
+                <td>Tracking Bug #</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "shown", object "welcome", extra: order: 0, is_last: false.
+                </td>
+                <td>Category 2: Interaction Data</td>
+                <td>
+                  (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "completed", object "welcome", extra: order: 0, is_last: false.
+                </td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "shown", object "connect_account", extra: order: 1, is_last:
+                  false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "completed", object "connect_account", extra: order: 1,
+                  is_last: false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "shown", object "account_connected", extra: order: 2, is_last:
+                  false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "completed", object "account_connected", extra: order: 2,
+                  is_last: false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "shown", object "data_preferences", extra: order: 3, is_last:
+                  false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "completed", object "data_preferences", extra: order: 3,
+                  is_last: false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "shown", object "ready_to_go", extra: order: 4, is_last: true.
+                </td>
+                <td>Category 2: Interaction Data</td>
+                <td> (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "completed", object "ready_to_go", extra: order: 4, is_last:
+                  true.</td>
+                <td>Category 2: Interaction Data</td>
+                <td>
+
+                  (bugzilla bug TBD)</td>
+              </tr>
+            </table>
+
+            6. Please provide a link to the documentation for this data collection which describes the ultimate data set
+            in a public, complete, and accurate way.
+            <blockquote>
+              This information will initially be visible to Flowstate users in the about:telemetry page of Flowstate.
+            </blockquote>
+
+            7. How long will this data be collected? Choose one of the following:
+            <blockquote>
+              I want to permanently monitor this data (jhirsch@mozilla.com)
+            </blockquote>
+
+            8. What populations will you measure?
+
+            <blockquote>
+              All Flowstate channels, all countries, all locales. (Some of this info is still TBD, but we will want this
+              onboarding data for all of them, whatever they turn out to be.)
+            </blockquote>
+
+            9. If this data collection is default on, what is the opt-out mechanism for users?
+
+            <blockquote>This collection is default on. Users can opt out using the built-in Telemetry preferences
+              system.</blockquote>
+
+            10. Please provide a general description of how you will analyze this data.
+            <blockquote>
+              We will look at the completion rates and dropoff rates at each step in onboarding, and for the onboarding
+              flow as a whole.
+            </blockquote>
+
+            11. Where do you intend to share the results of your analysis?
+            <blockquote>
+              Initially, the results will be shared on the team via sql.telemetry.mozilla.org dashboards or possibly a
+              glean dashboard.
+            </blockquote>
+
+            12. Is there a third-party tool (i.e. not Glean or Telemetry) that you are proposing to use for this data
+            collection?
+            <blockquote>
+              No.
+            </blockquote>
+            </p>
+          </ul>
+          <ul>Data collection review response
+            <p>
+              Is there or will there be documentation that describes the schema for the ultimate data set available
+              publicly, complete and accurate?
+            <blockquote>
+              Yes, in Flowstate’s about:telemetry
+            </blockquote>
+            Is there a control mechanism that allows the user to turn the data collection on and off?
+
+            <blockquote>
+              Yes. This collection can be controlled through Flowstate’s Preferences.
+            </blockquote>
+
+
+            If the request is for permanent data collection, is there someone who will monitor the data over time?
+
+            <blockquote>
+              Yes, Jared Hirsch is responsible.
+            </blockquote>
+            Using the category system of data types on the Mozilla wiki, what collection type of data do the requested
+            measurements fall under?
+
+            <blockquote>
+              Category 2, Interaction.
+            </blockquote>
+            Is the data collection request for default-on or default-off?
+
+            <blockquote>
+              Default on for all channels.
+            </blockquote>
+            Does the instrumentation include the addition of any new identifiers?
+
+
+            <blockquote>
+              No.
+            </blockquote>
+            Is the data collection covered by the existing Firefox privacy notice?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+            Does the data collection use a third-party collection tool?
+
+            <blockquote>
+              No.
+            </blockquote>
+
+            </p>
+          </ul>
+          <ul>Request for data collection review form
+            <p>
+              All questions are mandatory. You must receive review from a data steward peer on your responses to these
+              questions before shipping new data collection.
+
+              1) What questions will you answer with this data?
+            <blockquote>
+              This will tell us whether the user reaches a new privacy policy step within the onboarding flow, and
+              whether the user completes that step.
+            </blockquote>
+
+            2) Why does Mozilla need to answer these questions? Are there benefits for users? Do we need this
+            information to address product or business requirements? Some example responses:
+            <blockquote>
+              See previous data review.
+            </blockquote>
+
+            3) What alternative methods did you consider to answer these questions? Why were they not sufficient?
+            <blockquote>
+              See previous data review.
+            </blockquote>
+
+            4) Can current instrumentation answer these questions?
+            <blockquote>
+              No.
+            </blockquote>
+
+            5) List all proposed measurements and indicate the category of data collection for each measurement, using
+            the <a href="https://wiki.mozilla.org/Data_Collection">Firefox data collection categories</a> found on the
+            Mozilla
+            wiki.
+
+            **Note that the data steward reviewing your request will characterize your data collection based on the
+            highest (and most sensitive) category.**
+
+            <table>
+              <tr>
+                <td>Measurement Description</td>
+                <td>Data Collection Category</td>
+                <td>Tracking Bug #</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "shown", object "privacy_policy", extra: order: 3, is_last:
+                  false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td>MR2-2885 (bugzilla bug TBD)</td>
+              </tr>
+              <tr>
+                <td>Event: category "onboarding", method "done", object "privacy_policy", extra: order: 3, is_last:
+                  false.</td>
+                <td>Category 2: Interaction Data</td>
+                <td>MR2-2885 (bugzilla bug TBD)</td>
+              </tr>
+            </table>
+
+            6) Please provide a link to the documentation for this data collection which describes the ultimate data set
+            in a public, complete, and accurate way.
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+
+            7) How long will this data be collected? Choose one of the following:
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+
+            8) What populations will you measure?
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+
+            9) If this data collection is default on, what is the opt-out mechanism for users?
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+
+            10) Please provide a general description of how you will analyze this data.
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+
+            11) Where do you intend to share the results of your analysis?
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+
+            12) Is there a third-party tool (i.e. not Glean or Telemetry) that you are proposing to use for this data
+            collection? If so:
+            <blockquote>
+              See previous data review request.
+            </blockquote>
+            </p>
+          </ul>
+          <ul>data-review-+ for the additional privacy policy screen.
+            <p>
+              # Data Review Form (to be filled by Data Stewards)
+
+              Instructions: Data Stewards will review a request for data collection and endorse responses to each
+              question. <strong>If the request does not provide answers to questions, reviewers give an r- and point to
+                the
+                questions that can’t be answered.</strong>
+            </p>
+            <p>
+              1) Is there or will there be **documentation** that describes the schema for the ultimate data set in a
+              public, complete, and accurate way? Click the documentation link provided in Q6 and ensure it is publicly
+              accessible and does or will contain documentation for the data collection. (see
+              <a
+                href="https://github.com/mozilla/activity-stream/blob/master/docs/v2-system-addon/data_dictionary.md">https://github.com/mozilla/activity-stream/blob/master/docs/v2-system-addon/data_dictionary.md</a>,
+              <a
+                href="https://github.com/mozilla-mobile/focus/wiki/Install-and-event-tracking-with-the-Adjust-SDK">https://github.com/mozilla-mobile/focus/wiki/Install-and-event-tracking-with-the-Adjust-SDK</a>,
+              and
+              <a
+                href="https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/telemetry/index.html">https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/telemetry/index.html</a>
+              for
+              examples). Refer to the appendix for "documentation" if more detail about documentation standards is
+              needed.
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            2) Is there a control mechanism that allows the user to turn the data collection on and off? (Note, for
+            data collection not needed for security purposes, Mozilla provides such a control mechanism) Provide
+            details as to the control mechanism available.
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            3) If the request is for permanent data collection, is there someone who will monitor the data over time?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            4) Using <a href="https://wiki.mozilla.org/Data_Collection">the category system of data types on the Mozilla
+              wiki </a>, what collection type of data do the requested measurements fall under?
+
+            <blockquote>
+              Category 2, interaction data.
+            </blockquote>
+
+            5) Is the data collection request for default-on or default-off?
+
+            <blockquote>
+              Default-on.
+            </blockquote>
+
+            6) Does the instrumentation include the addition of **any *new* identifiers** (whether anonymous or
+            otherwise; e.g., username, random IDs, etc. See the appendix for more details)?
+
+            <blockquote>
+              No.
+            </blockquote>
+
+            7) Is the data collection covered by the existing Firefox privacy notice?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            8) Does the data collection use a third-party collection tool?
+
+            <blockquote>
+              No.
+            </blockquote>
+            </p>
+          </ul>
+        </li>
+        <li>MR2-2901 - Service integration connection completed
+          <ul>Data Review Request
+            <p>
+              What questions will you answer with this data?
+
+            <blockquote>
+              How often users are connecting and disconnecting from calendaring services.
+            </blockquote>
+
+            Why does Mozilla need to answer these questions? Are there benefits for users?
+            Do we need this information to address product or business requirements?
+
+            <blockquote>
+              This will help determine usage of the calendaring feature and potentially help spot any instances where
+              users seem to be disconnecting/connecting more than expected potentially to solve some issue.
+            </blockquote>
+
+            What alternative methods did you consider to answer these questions?
+            Why were they not sufficient?
+
+            <blockquote>
+              Alternative methods would all involve tracking that a user logged in, so no change.
+            </blockquote>
+
+            Can current instrumentation answer these questions?
+
+            <blockquote>
+              No
+            </blockquote>
+
+            List all proposed measurements and indicate the category of data collection for each
+            measurement, using the Firefox data collection categories found on the Mozilla wiki.
+
+            <table>
+              <tr>
+                <th>Measurement Name</th>
+                <th>Measurement Description</th>
+                <th>Data Collection Category</th>
+                <th>Tracking Bug</th>
+              </tr>
+              <tr>
+                <td>pinebuild.calendar_service_connected</td>
+                <td>The count of successfully connected calendar services. Label is the type of service, expected to be
+                  "google" or "microsoft".|</td>
+                <td>interaction</td>
+                <td>MR2-2901</td>
+              </tr>
+              <tr>
+                <td>pinebuild.calendar_service_disconnected</td>
+                <td>The count of successfully disconnected calendar services. Label is the type of service, expected to
+                  be "google" or "microsoft".|</td>
+                <td>interaction</td>
+                <td>MR2-2901</td>
+              </tr>
+            </table>
+            Please provide a link to the documentation for this data collection which
+            describes the ultimate data set in a public, complete, and accurate way.
+
+
+            <blockquote>
+              This collection is Glean so is documented in the Glean Dictionary.
+            </blockquote>
+
+            How long will this data be collected?
+
+            <blockquote>
+              This collection will be collected permanently. mstriemer@mozilla.com will be responsible for the permanent
+              collections.
+            </blockquote>
+
+            What populations will you measure?
+
+            <blockquote>
+              All channels, countries, and locales. No filters.
+            </blockquote>
+
+            If this data collection is default on, what is the opt-out mechanism for users?
+
+            <blockquote>
+              These collections are Glean. The opt-out can be found in the product's preferences.
+            </blockquote>
+
+            Please provide a general description of how you will analyze this data.
+
+            <blockquote>
+              Compare number of logins to logouts, avg logins per user
+            </blockquote>
+
+            Where do you intend to share the results of your analysis?
+
+            <blockquote>
+              Initially, the results will be shared on the team via sql.telemetry.mozilla.org dashboards or possibly a
+              glean dashboard.
+            </blockquote>
+
+            Is there a third-party tool (i.e. not Glean or Telemetry) that you
+            are proposing to use for this data collection?
+
+            <blockquote>
+              No.
+            </blockquote>
+            </p>
+          </ul>
+          <ul>
+            <p>
+              data-review+
+
+              1. Is there or will there be **documentation** that describes the schema for the ultimate data set in a
+              public, complete, and accurate way?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            2. Is there a control mechanism that allows the user to turn the data collection on and off? (Note, for
+            data collection not needed for security purposes, Mozilla provides such a control mechanism) Provide
+            details as to the control mechanism available.
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            3. If the request is for permanent data collection, is there someone who will monitor the data over time?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            4. Using <a href="https://wiki.mozilla.org/Data_Collection">the category system of data types on the Mozilla
+              wiki </a>, what collection type of data do the requested measurements fall under?
+
+            <blockquote>
+              Category 2, interaction data.
+            </blockquote>
+
+            5. Is the data collection request for default-on or default-off?
+
+            <blockquote>
+              Default-on.
+            </blockquote>
+
+            6. Does the instrumentation include the addition of **any *new* identifiers** (whether anonymous or
+            otherwise; e.g., username, random IDs, etc. See the appendix for more details)?
+
+            <blockquote>
+              No.
+            </blockquote>
+
+            7. Is the data collection covered by the existing Firefox privacy notice?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+
+            8. Does the data collection use a third-party collection tool?
+
+            <blockquote>
+              No.
+            </blockquote>
+            </p>
+          </ul>
+        </li>
+        <li>MR2-2902 - Count clicks of "set aside" toolbar button
+          <ul>Request for data collection review form
+            <p>
+              1. What questions will you answer with this data?
+
+            <blockquote>
+              We want to know if users are discovering the "set aside session" button, and whether their usage of that
+              feature increases over time.
+            </blockquote>
+
+            2. Why does Mozilla need to answer these questions? Are there benefits for users? Do we need this
+            information to address product or business requirements?
+
+            <blockquote>
+              Session set aside is a new feature in Flowstate. Product wants to know if the feature is being adopted; if
+              not, we will use the baseline numbers to decide if changes to the feature, or to feature messaging /
+              onboarding, might later improve its usage.
+            </blockquote>
+
+            3. What alternative methods did you consider to answer these questions? Why were they not sufficient?
+
+            <blockquote>
+              For this new feature, instrumenting its toolbar button is the simplest and most direct approach to
+              quantitatively measure its usage.
+            </blockquote>
+
+            4. Can current instrumentation answer these questions?
+
+            <blockquote>
+              No, this UI is new.
+            </blockquote>
+
+            5. List all proposed measurements and indicate the category of data collection for each measurement, using
+            the Firefox data collection categories found on the Mozilla wiki.
+
+            Note that the data steward reviewing your request will characterize your data collection based on the
+            highest (and most sensitive) category.
+
+            <table>
+              <tr>
+                <td>Measurement Description</td>
+                <td>Data Collection Category</td>
+                <td>Tracking Bug #</td>
+              </tr>
+              <tr>
+                <td>"Set aside session" button click count</td>
+                <td>Interaction data (category 2)</td>
+                <td>https://mozilla-hub.atlassian.net/browse/MR2-2902</td>
+              </tr>
+            </table>
+
+            6. Please provide a link to the documentation for this data collection which describes the ultimate data set
+            in a public, complete, and accurate way.
+
+            <blockquote>
+              This information will initially be visible to Flowstate users in the about:telemetry page of Flowstate.
+            </blockquote>
+
+            7. How long will this data be collected? Choose one of the following:
+
+            <blockquote>
+              I want to permanently monitor this data (jhirsch@mozilla.com)
+            </blockquote>
+
+            8. What populations will you measure?
+
+            <blockquote>
+              All Flowstate channels, all countries, all locales. (Some of this info is still TBD, but we will want this
+              onboarding data for all of them, whatever they turn out to be.)
+            </blockquote>
+
+            9. If this data collection is default on, what is the opt-out mechanism for users?
+
+            <blockquote>
+              This collection is default on. Users can opt out using the built-in Telemetry preferences system.
+            </blockquote>
+
+            10. Please provide a general description of how you will analyze this data.
+
+            <blockquote>
+              We will analyze this data to determine whether the feature is used, and whether its use changes over time
+              for Flowstate users.
+            </blockquote>
+
+            11. Where do you intend to share the results of your analysis?
+
+            <blockquote>
+              Initially, the results will be shared on the team via sql.telemetry.mozilla.org dashboards or possibly a
+              glean dashboard.
+            </blockquote>
+
+            12. Is there a third-party tool (i.e. not Glean or Telemetry) that you are proposing to use for this data
+            collection?
+
+            <blockquote>
+              No.
+            </blockquote>
+            </p>
+          </ul>
+          <ul>
+            <p>
+              DATA COLLECTION REVIEW RESPONSE:
+              Is there or will there be documentation that describes the schema for the ultimate data set available
+              publicly, complete and accurate?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+            Is there a control mechanism that allows the user to turn the data collection on and off?
+
+            <blockquote>
+              Yes. This collection can be controlled through Flowstate's Preferences.
+            </blockquote>
+            If the request is for permanent data collection, is there someone who will monitor the data over time?
+
+            <blockquote>
+              Yes, :jhirsch is responsible.
+            </blockquote>
+
+            Using the category system of data types on the Mozilla wiki, what collection type of data do the requested
+            measurements fall under?
+
+            <blockquote>
+              Category 2, Interaction.
+            </blockquote>
+            Is the data collection request for default-on or default-off?
+
+            <blockquote>
+              Default on for all channels.
+            </blockquote>
+
+            Does the instrumentation include the addition of any new identifiers?
+
+            <blockquote>
+              No.
+            </blockquote>
+            Is the data collection covered by the existing Firefox privacy notice?
+
+            <blockquote>
+              Yes.
+            </blockquote>
+            Does the data collection use a third-party collection tool?
+
+            <blockquote>
+              No.
+            </blockquote>
+
+            Result: datareview+
+            </p>
+          </ul>
+        </li>
+      </ul>
+    </section>
 
       <section id="raw-payload-section">
         <button id="payload-json-viewer" data-l10n-id="about-telemetry-show-in-Firefox-json-viewer"></button>

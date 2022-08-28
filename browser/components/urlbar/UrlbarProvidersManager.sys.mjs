@@ -11,6 +11,10 @@
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -74,6 +78,22 @@ var localProviderModules = {
   UrlbarProviderUnitConversion:
     "resource:///modules/UrlbarProviderUnitConversion.sys.mjs",
 };
+
+if (AppConstants.PINEBUILD) {
+  localProviderModules.UrlbarProviderPinebuildQuickActionsEmpty =
+    "resource:///modules/UrlbarProviderPinebuildQuickActions.sys.mjs";
+  localProviderModules.UrlbarProviderPinebuildQuickActionsFilter =
+    "resource:///modules/UrlbarProviderPinebuildQuickActions.sys.mjs";
+  localProviderModules.UrlbarProviderTopSitesButtons =
+    "resource:///modules/UrlbarProviderTopSitesButtons.sys.mjs";
+  localProviderModules.UrlbarProviderRecentSearches =
+    "resource:///modules/UrlbarProviderRecentSearches.sys.mjs";
+  localProviderModules.UrlbarProviderContextualSearch =
+    "resource:///modules/UrlbarProviderContextualSearch.sys.mjs";
+  localProviderModules.UrlbarProviderOpenCompanionSearch =
+    "resource:///modules/UrlbarProviderOpenCompanionSearch.sys.mjs";
+  delete localProviderModules.UrlbarProviderTopSites;
+}
 
 // List of available local muxers, each is implemented in its own jsm module.
 var localMuxerModules = {

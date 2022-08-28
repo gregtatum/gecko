@@ -60,6 +60,7 @@ treeherder:
         'M-1proc': 'Mochitests without e10s or fission'
         'M-a11y-checks': 'Mochitests with accessibility checks enabled'
         'M-a11y-checks-nofis': 'Mochitests with accessibility checks enabled and without fission enabled'
+        'M-pi': 'Mochitests with pinebuild UI'
         'M-xorig': 'Mochitests with cross-origin and fission enabled'
         'M-gli': 'Mochitests with WebGL over IPC'
         'M-gli-nofis': 'Mochitests with WebGL over IPC without fission enabled'
@@ -207,6 +208,7 @@ index:
         - 'mobile'
         - 'static-analysis'
         - 'devedition'
+        - 'pinebuild'
         - 'source'
         - 'system-symbols'
         - 'geckodriver'
@@ -242,6 +244,7 @@ release-promotion:
         - 'devedition'
         - 'fennec'
         - 'firefox'
+        - 'pinebuild'
     flavors:
         promote_devedition:
             product: devedition
@@ -274,12 +277,20 @@ release-promotion:
             is-rc: true
             target-tasks-method: promote_desktop
             partial-updates: true
+        promote_pinebuild:
+            product: pinebuild
+            target-tasks-method: promote_desktop
+            partial-updates: true
         push_devedition:
             product: devedition
             target-tasks-method: push_desktop
             partial-updates: true
         push_firefox:
             product: firefox
+            target-tasks-method: push_desktop
+            partial-updates: true
+        push_pinebuild:
+            product: pinebuild
             target-tasks-method: push_desktop
             partial-updates: true
         ship_devedition:
@@ -289,6 +300,11 @@ release-promotion:
             partial-updates: true
         ship_firefox:
             product: firefox
+            target-tasks-method: ship_desktop
+            version-bump: true
+            partial-updates: true
+        ship_pinebuild:
+            product: pinebuild
             target-tasks-method: ship_desktop
             version-bump: true
             partial-updates: true
@@ -467,6 +483,8 @@ task-priority:
         'mozilla-esr.*': 'very-high'
         'mozilla-beta': 'high'
         'mozilla-central': 'medium'
+        'pine-stable': 'medium'
+        'pine': 'medium'
         'autoland': 'low'
         'mozilla-inbound': 'low'
         'default': 'very-low'
@@ -665,7 +683,7 @@ workers:
 mac-notarization:
     mac-behavior:
         by-project:
-            mozilla-(central|beta|release|esr.*):
+            pine(|-stable):
                 by-shippable:
                     "true": mac_notarize
                     default: mac_sign_and_pkg

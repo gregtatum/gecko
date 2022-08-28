@@ -1,0 +1,677 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+import { CalendarEvent } from "./widgets/calendar-event.js";
+import { MozLitElement } from "./widget-utils.js";
+import { css, html, repeat } from "./lit.all.js";
+import {
+  setExtendedTimeout,
+  Workshop,
+  workshopAPI,
+  workshopEnabled,
+} from "./workshopAPI.js";
+import { noteTelemetryTimestamp } from "./telemetry-helpers.js";
+
+const { DismissedEventStore } = ChromeUtils.import(
+  "resource:///modules/OnlineServicesHelper.jsm"
+);
+export const timeFormat = new Intl.DateTimeFormat([], {
+  timeStyle: "short",
+});
+
+const GOOGLE_DOCS_ICON =
+  "https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico";
+const GOOGLE_SHEETS_ICON =
+  "https://ssl.gstatic.com/docs/spreadsheets/favicon3.ico";
+const GOOGLE_SLIDES_ICON =
+  "https://ssl.gstatic.com/docs/presentations/images/favicon5.ico";
+const GOOGLE_DRIVE_ICON =
+  "https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png";
+const MICROSOFT_DOCS_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/docx.svg";
+const MICROSOFT_SHEETS_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/xlsx.svg";
+const MICROSOFT_SLIDES_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/pptx.svg";
+// Microsoft has icons for lots of file types in OneDrive.
+// This was the best generic icon I could come up with.
+const MICROSOFT_DRIVE_ICON =
+  "https://res-1.cdn.office.net/files/fabric-cdn-prod_20220127.003/assets/item-types/32/genericfile.svg";
+
+// Update display every minute
+const CALENDAR_UPDATE_TIME = 60 * 1000; // 1 minute
+
+window.gCalendarEventListener = {
+  // TODO(MR2-2224): _calendarEvents isn't needed for Workshop.
+  lastCalendarEvents: [],
+
+  init() {
+    this.dispatchRefreshEventsEvent = this.dispatchRefreshEventsEvent.bind(
+      this
+    );
+
+    window.addEventListener("Companion:RegisterCalendarEvents", this);
+    window.addEventListener("Companion:SignIn", this);
+
+    setInterval(this.dispatchRefreshEventsEvent, CALENDAR_UPDATE_TIME);
+  },
+
+  dispatchRefreshEventsEvent() {
+    // Just fire an event to tell the list to check the cached events again.
+    document.dispatchEvent(
+      new CustomEvent("refresh-events", {
+        // TODO(MR2-2224): We shouldn't need the config for Workshop.
+        detail: { events: this.lastCalendarEvents },
+      })
+    );
+  },
+
+  handleEvent({ type, detail }) {
+    switch (type) {
+      case "Companion:RegisterCalendarEvents": {
+        this.lastCalendarEvents = detail.events.sort(
+          (a, b) => new Date(a.startDate) - new Date(b.startDate)
+        );
+        if (!workshopEnabled) {
+          this.dispatchRefreshEventsEvent();
+        }
+        break;
+      }
+      case "Companion:SignIn": {
+        this.dispatchRefreshEventsEvent();
+        break;
+      }
+    }
+  },
+};
+window.gCalendarEventListener.init();
+
+function debugEnabled() {
+  return window.CompanionUtils.getBoolPref("browser.companion.debugUI", false);
+}
+
+/**
+ * Event Management Lifecycle (Workshop)
+ *
+ * The list of events is manged by the `listView` property, which will have its
+ * spec set based on if this element's `listType` is "now" or "browse".
+ *
+ * When we get updates to the list of events, the `onListViewUpdated` method
+ * will be called. The `serial` on `listView` is checked and the events will
+ * get updated.
+ *
+ * Creation:
+ *   - connectedCallback() -> The `listView` is created.
+ * Updates:
+ *   - onListViewUpdated() -> The `listView` has "seeked" (updated)
+ * Refresh:
+ *   - "refresh-events" triggers every minute, this will tell workshop to check
+ *     the server for updated event data.
+ *   - Companion:RegisterCalendarEvents will also trigger a "refresh-events" to
+ *     update the listView from the server.
+ *
+ *
+ */
+export class CalendarEventList extends MozLitElement {
+  static get properties() {
+    return {
+      events: { type: Array },
+      listType: { type: String },
+      connected: { type: Boolean },
+    };
+  }
+
+  static get queries() {
+    return {
+      calendarEvents: { all: "calendar-event" },
+    };
+  }
+
+  static get styles() {
+    return css`
+      .card {
+        box-shadow: 0 2px 6px 0 rgba(58, 57, 68, 0.2);
+        padding: 0;
+        margin: 0;
+        border: none;
+        border-radius: 12px;
+        margin: 16px;
+      }
+
+      @media (prefers-contrast) {
+        .card {
+          border: 1px solid transparent;
+        }
+      }
+
+      #calendar-panel:empty {
+        display: none;
+      }
+
+      .calendar-empty-message {
+        text-align: center;
+      }
+
+      .calendar-event {
+        margin: 0 8px;
+        border-block-start: 1px solid var(--in-content-border-color);
+      }
+
+      .calendar-event:first-of-type,
+      .calendar-break-time + .calendar-event {
+        border: none;
+      }
+
+      .calendar-break-time {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 8px;
+        color: var(--pine-text-color-deemphasized);
+      }
+
+      .calendar-break-time-divider {
+        border-block-start: 1px solid var(--in-content-border-color);
+        width: 100%;
+      }
+
+      .calendar-break-time-label {
+        position: absolute;
+        background-color: var(--in-content-page-background);
+        padding: 0 8px;
+        display: flex;
+        align-items: center;
+      }
+
+      .calendar-break-time-icon {
+        margin-inline-end: 4px;
+        height: 13px;
+        width: 12px;
+        background-image: url("chrome://browser/content/companion/breakTime.svg");
+        background-repeat: no-repeat;
+        background-position: center;
+        fill: currentColor;
+        -moz-context-properties: fill;
+      }
+    `;
+  }
+
+  constructor() {
+    super();
+    this.events = window.gCalendarEventListener.lastCalendarEvents;
+    this.dismissedEventStore = new DismissedEventStore();
+    this.listView = null;
+    this.listType = "";
+    this.isFakeTime = false;
+    this.connected =
+      !!window?.CompanionUtils?.connectedServices?.length || false;
+    window.addEventListener(
+      "Companion:Setup",
+      () => {
+        this.dismissedEventStore.load(window.CompanionUtils.dismissedEvents);
+      },
+      { once: true }
+    );
+  }
+
+  maybeStopListening() {
+    this.listView.removeListener("seeked", this, this.onEventsUpdated);
+  }
+
+  maybeListen() {
+    this.listView.seekToTop(10, 990);
+    this.listView.on("seeked", this, this.onEventsUpdated);
+  }
+
+  connectedCallback() {
+    document.addEventListener("refresh-events", this);
+    document.addEventListener("hide-event", this);
+    window.addEventListener("Companion:DismissedEvent", this);
+    window.addEventListener("Companion:SignOut", this);
+
+    if (workshopEnabled) {
+      this.createCalendarListView();
+      window.addEventListener("unload", () => {
+        this.cleanup();
+      });
+      workshopAPI.accounts.on("add", this, this.createCalendarListView);
+      workshopAPI.accounts.on("remove", this, this.createCalendarListView);
+      workshopAPI.on("time-warp", this, this.onTimeWarp);
+    }
+
+    super.connectedCallback();
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener("refresh-events", this);
+    document.removeEventListener("hide-event", this);
+    window.removeEventListener("Companion:DismissedEvent", this);
+
+    if (workshopEnabled) {
+      this.cleanup();
+      workshopAPI.accounts.removeListener(
+        "add",
+        this,
+        this.createCalendarListView
+      );
+      workshopAPI.accounts.removeListener(
+        "remove",
+        this,
+        this.createCalendarListView
+      );
+      workshopAPI.removeListener("time-warp", this, this.onTimeWarp);
+    }
+
+    super.disconnectedCallback();
+  }
+
+  async onTimeWarp() {
+    this.isFakeTime = true;
+    await Workshop.refreshServices();
+    this.refreshView();
+  }
+
+  onEventsUpdated(e, updateSource = "seeked") {
+    // Under certain circumstances we get falsy events from Workshop
+    let allEvents = workshopEnabled
+      ? this.listView.items.filter(event => event)
+      : this.events.filter(event => !event.isBreakTime);
+    let plainEvents = this.getRelevantEvents(allEvents);
+    this.events = this.getEventsAndBreaks(plainEvents);
+
+    if (
+      (workshopEnabled && this.serial !== this.listView?.serial) ||
+      updateSource === "event-hidden"
+    ) {
+      this.serial = this.listView?.serial;
+      this.dispatchOnUpdateComplete(
+        new CustomEvent("calendar-events-updated", {
+          detail: { eventCount: plainEvents.length },
+        })
+      );
+    }
+    noteTelemetryTimestamp("Companion:CalendarPainted", {
+      numberOfEvents: this.events.length,
+    });
+  }
+
+  unloadListView() {
+    this.listView.release();
+    this.listView = null;
+  }
+
+  listenToListView() {
+    if (this.listView) {
+      this.maybeStopListening();
+      this.maybeListen();
+    }
+  }
+
+  getRelevantEvents(events) {
+    // De-duplicate events based on the original ID provided by the service
+    // TODO: Apply a concept of precedence so that the user's personal calendar
+    // version of the event supersedes any group calendar event. This should
+    // ideally be handled by a follow-up to MR2-1903 by handling this in the
+    // VirtualConversationTOC.
+    let uniqueEvents = [
+      ...new Map(
+        events.map(event => [event.originalId || event.id, event])
+      ).values(),
+    ];
+
+    if (!debugEnabled() && !this.isBrowse) {
+      // TODO: remove this method: this stuff is done in workshop.
+      // Return all meetings that start in the next hour or are currently in
+      // progress.
+      let now = workshopAPI.now();
+      let oneHourFromNow = workshopAPI.now();
+      oneHourFromNow.setHours(oneHourFromNow.getHours() + 1);
+      uniqueEvents = uniqueEvents.filter(event => {
+        let startDate = new Date(event.startDate);
+        let endDate = new Date(event.endDate);
+
+        return (
+          startDate <= oneHourFromNow &&
+          endDate >= now &&
+          !event.isAllDay &&
+          !this.dismissedEventStore.isDismissed(
+            event.serviceType,
+            event.originalId
+          )
+        );
+      });
+    }
+    return uniqueEvents.sort(
+      (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    );
+  }
+
+  handleEvent(e) {
+    if (e.type == "refresh-events") {
+      if (workshopEnabled) {
+        this.refreshView();
+      } else {
+        this.connected = !!window.CompanionUtils?.connectedServices?.length;
+        this.events = e.detail.events;
+        this.onEventsUpdated({}, "refresh-events");
+        noteTelemetryTimestamp("Companion:CalendarPainted", {
+          numberOfEvents: this.events.length,
+        });
+      }
+    } else if (e.type === "hide-event") {
+      window.CompanionUtils.sendAsyncMessage("Companion:DismissEvent", {
+        eventId: e.detail.eventId,
+        serviceType: e.detail.serviceType,
+      });
+    } else if (e.type == "Companion:DismissedEvent") {
+      this.dismissedEventStore.dismissEvent(
+        e.detail.serviceType,
+        e.detail.eventId
+      );
+      this.onEventsUpdated({}, "event-hidden");
+    } else if (e.type === "Companion:SignOut") {
+      this.dismissedEventStore.clearService(e.detail.service);
+    }
+  }
+
+  getEventsAndBreaks(events) {
+    let minBreakTime = Services.prefs.getIntPref(
+      "browser.pinebuild.calendar.minBreakTime",
+      0
+    );
+    let maxBreakTime = Services.prefs.getIntPref(
+      "browser.pinebuild.calendar.maxBreakTime",
+      0
+    );
+
+    if (!maxBreakTime || minBreakTime > maxBreakTime || events.length < 2) {
+      return events;
+    }
+
+    let [firstEvent, ...otherEvents] = events;
+    let eventsAndBreaks = [firstEvent];
+    let latestEndDate = new Date(firstEvent.endDate);
+    for (let event of otherEvents) {
+      let timeBetween = Math.round(
+        (new Date(event.startDate) - latestEndDate) / 60 / 1000
+      );
+      if (minBreakTime <= timeBetween && timeBetween <= maxBreakTime) {
+        eventsAndBreaks.push({
+          isBreakTime: true,
+          length: timeBetween,
+        });
+      }
+      let endDate = new Date(event.endDate);
+      if (endDate > latestEndDate) {
+        latestEndDate = endDate;
+      }
+      eventsAndBreaks.push(event);
+    }
+    return eventsAndBreaks;
+  }
+
+  refreshView() {
+    this.listView?.refresh();
+  }
+
+  async createCalendarListView() {
+    this.cleanup();
+
+    let accounts = await Workshop.getConnectedAccounts();
+    if (accounts.length) {
+      if (this.isBrowse) {
+        this.listView = Workshop.createBrowseListView();
+      } else {
+        this.listView = Workshop.createCalendarListView();
+      }
+      this.listenToListView();
+      this.connected = true;
+    } else {
+      // TODO(MR2-2330): Remove the accounts listeners and just rely on seeked.
+      // If there arent't any connected accounts, just clear the events list.
+      this.events = [];
+      this.connected = false;
+    }
+  }
+
+  calendarEventItemsTemplate() {
+    if (!this.events.length) {
+      return null;
+    }
+
+    return repeat(
+      this.events,
+      event => event.id,
+      event =>
+        event.isBreakTime
+          ? html`
+              <div class="calendar-break-time">
+                <hr class="calendar-break-time-divider"></hr>
+                <div class="calendar-break-time-label">
+                  <span class="calendar-break-time-icon"></span>
+                  <span
+                    class="calendar-break-time-text text-body-s"
+                    data-l10n-id="companion-event-break"
+                    data-l10n-args=${JSON.stringify({
+                      duration: event.length,
+                    })}
+                  ></span>
+                </div>
+              </div>
+            `
+          : html`
+              <div class="calendar-event">
+                <calendar-event
+                  .isFakeTime=${this.isFakeTime}
+                  .event=${event}
+                  .serial=${event.serial}
+                  .listType=${this.listType}
+                  @toggle-details=${this.toggleExpandedEvent}
+                ></calendar-event>
+              </div>
+            `
+    );
+  }
+
+  toggleExpandedEvent(e) {
+    for (let child of this.calendarEvents) {
+      if (!child.detailsCollapsed && child.event.id != e.detail.eventId) {
+        child.detailsCollapsed = child.linksCollapsed = true;
+      }
+    }
+  }
+
+  get emptyCalendarMessage() {
+    if (this.isBrowse && !this.connected) {
+      return "companion-calendar-not-connected";
+    } else if (this.isBrowse && this.connected && !this.events.length) {
+      return "companion-calendar-no-items";
+    }
+    return "";
+  }
+
+  get isBrowse() {
+    return this.listType === "browse";
+  }
+
+  emptyCalendarTemplate() {
+    if (!this.emptyCalendarMessage) {
+      return null;
+    }
+    return html`
+      <div class="calendar-empty">
+        <p
+          class="calendar-empty-message text-body-m"
+          data-l10n-id=${this.emptyCalendarMessage}
+        ></p>
+      </div>
+    `;
+  }
+
+  render() {
+    let eventItems = this.calendarEventItemsTemplate();
+    return html`
+      <link
+        rel="stylesheet"
+        href="chrome://global/skin/in-content/common.css"
+      />
+      <link
+        rel="stylesheet"
+        href="chrome://browser/content/companion/fonts.css"
+      />
+      <div class="calendar">
+        ${this.emptyCalendarTemplate()}
+        <div
+          id="calendar-panel"
+          class="card card-no-hover"
+          ?hidden=${!eventItems}
+        >
+          ${eventItems}
+        </div>
+      </div>
+    `;
+  }
+
+  cleanup() {
+    if (this.listView) {
+      this.maybeStopListening();
+      this.unloadListView();
+    }
+  }
+}
+customElements.define("calendar-event-list", CalendarEventList);
+
+class CalendarEventWrapper extends CalendarEvent {
+  setExtendedTimeout = setExtendedTimeout;
+  _cachedDocumentTitles = new Map();
+  dateCreator = workshopAPI;
+
+  openCalendar(e) {
+    e.preventDefault();
+    let url = this.event.url;
+    if (workshopEnabled && url.includes("google")) {
+      const account = Workshop.getAccountByType("google");
+      if (account) {
+        let formattedURL = new URL(url);
+        formattedURL.searchParams.set("authuser", account.name);
+        url = formattedURL.href;
+      }
+    }
+    window.openUrl(url);
+  }
+
+  openEmail(e) {
+    let emailTargets = this._getEmailTargets();
+    if (!emailTargets.length) {
+      return;
+    }
+    let emailTo = emailTargets.map(a => a.email).join(",");
+    let subject =
+      this.status !== "finished"
+        ? `?subject=Running late to meeting ${this.event.summary}`
+        : "";
+    window.openUrl(`mailto:${emailTo}${subject}`);
+  }
+
+  hideEvent() {
+    document.dispatchEvent(
+      new CustomEvent("hide-event", {
+        detail: {
+          eventId: this.event.originalId,
+          serviceType: this.event.serviceType,
+        },
+      })
+    );
+  }
+
+  async copyInvite() {
+    await window.navigator.clipboard.writeText(this.event.conference.url);
+    document.dispatchEvent(new CustomEvent("event-invite-copied", {}));
+  }
+
+  getCachedDocumentTitle(url, text) {
+    return this._cachedDocumentTitles.get(url) || text;
+  }
+
+  getLinkProperties(link) {
+    let url = link.url;
+    let text, title, intermediateText;
+    if (workshopEnabled) {
+      title = link.docInfo?.title;
+      text = title || link.title || link.text || link.url;
+      intermediateText = text;
+      if (title) {
+        title = Promise.resolve(title);
+      } else {
+        title = window.CompanionUtils.sendQuery("Companion:GetEventLinkTitle", {
+          url,
+        });
+      }
+    } else {
+      title = this.getDocumentTitle(link.url);
+      text = link.title || link.text || link.url;
+      intermediateText = this.getCachedDocumentTitle(url, text);
+    }
+    return { url, text, title, intermediateText };
+  }
+
+  getDocumentIcon(link) {
+    const url = new URL(link.url);
+    const { href } = url;
+
+    let type;
+    if (workshopEnabled) {
+      type = link.docInfo?.type;
+    } else if (url.hostname.endsWith(".google.com")) {
+      type = href.split("/")[3];
+    }
+    switch (type) {
+      case "ms-document":
+        return MICROSOFT_DOCS_ICON;
+      case "ms-spreadsheet":
+        return MICROSOFT_SHEETS_ICON;
+      case "ms-presentation":
+        return MICROSOFT_SLIDES_ICON;
+      case "ms-drive":
+        return MICROSOFT_DRIVE_ICON;
+      case "document":
+        return GOOGLE_DOCS_ICON;
+      case "spreadsheets":
+        return GOOGLE_SHEETS_ICON;
+      case "presentation":
+        return GOOGLE_SLIDES_ICON;
+      case "drive":
+      case "file":
+        return GOOGLE_DRIVE_ICON;
+    }
+
+    return `page-icon:${url}`;
+  }
+
+  async getDocumentTitle(url) {
+    if (this._cachedDocumentTitles.has(url)) {
+      return this._cachedDocumentTitles.get(url);
+    }
+    let title = await window.CompanionUtils.sendQuery(
+      "Companion:GetDocumentTitle",
+      {
+        url,
+      }
+    );
+    if (title) {
+      this._cachedDocumentTitles.set(url, title);
+      return title;
+    }
+    // Originally we threw here so that the rejected promise would show up
+    // for the "until" to work properly, but that caused an error on the
+    // console. Workaround is to return something that looks like a promise
+    // that still seems rejected, but doesn't display an error.
+    return {
+      then: () => undefined,
+      catch: errorCallback => errorCallback(),
+    };
+  }
+}
+customElements.define("calendar-event", CalendarEventWrapper);

@@ -243,6 +243,13 @@ function FindProxyForURL(url, host) {
             browser_config["repository"] = "develop"
             browser_config["sourcestamp"] = "develop"
 
+    # determine if this is a pine build, and set the project if needed
+    if (
+        "flowstate" in version_info.get("application_display_name", "").lower()
+        and "pine" not in config["project"]
+    ):
+        config["project"] = "pine"
+
     # get test date in seconds since epoch
     if testdate:
         date = int(time.mktime(time.strptime(testdate, "%a, %d %b %Y %H:%M:%S GMT")))

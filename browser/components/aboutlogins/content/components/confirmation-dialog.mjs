@@ -100,6 +100,15 @@ export default class ConfirmationDialog extends HTMLElement {
   onConfirm() {
     this._resolve();
     this.hide();
+
+    if (this.classList.contains("in-companion")) {
+      window.dispatchEvent(
+        new CustomEvent("AboutLoginsRemoveUpdateState", {
+          bubbles: true,
+          detail: { newHeaderL10nId: "about-logins-header-login-list" },
+        })
+      );
+    }
   }
 }
 customElements.define("confirmation-dialog", ConfirmationDialog);

@@ -534,6 +534,32 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
   fill: currentColor;
 }
 
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+:root:[fxastatus="signedin"] #PanelUI-menu-button {
+  list-style-image: var(--avatar-image-url);
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
+#PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
+  width: 16px;
+  height: 16px;
+  margin: 8px;
+}
+
+:root:[fxastatus="signedin"] #PanelUI-menu-button.toolbarbutton-1 > .toolbarbutton-badge-stack > .toolbarbutton-icon {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+}
+
+#PanelUI-menu-button > .toolbarbutton-badge-stack {
+  padding: 0;
+}
+}
+/** endif **/
+
 /* Handle different UI states. */
 
 :root:not([fxastatus="signedin"]) #PanelUI-fxa-menu-syncnow-button {
@@ -678,6 +704,14 @@ toolbarbutton[constrain-size="true"][cui-areatype="menu-panel"] > .toolbarbutton
 :root[fxastatus="signedin"] #fxa-avatar-image {
   border-radius: 50%;
 }
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+#PanelUI-menu-button {
+  border-radius: 50%;
+}
+}
+/** endif **/
 
 .PanelUI-fxa-service-description-label,
 .PanelUI-remotetabs-instruction-label {
@@ -1355,6 +1389,19 @@ panelview .toolbarbutton-1 {
   margin: var(--panel-separator-margin);
   padding: 0;
 }
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+#page-action-panel-mainview toolbarseparator {
+  appearance: none;
+  min-height: 0;
+  border-top: 1px solid var(--panel-separator-color);
+  border-bottom: none;
+  margin: var(--panel-separator-margin);
+  padding: 0;
+}
+}
+/** endif **/
 
 /* Styled differently to allow for user interaction with menu separator */
 #PlacesToolbar menupopup[placespopup="true"] menuseparator {

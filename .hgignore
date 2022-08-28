@@ -165,6 +165,11 @@ _OPT\.OBJ/
 ^tools/browsertime/node_modules/
 ^tools/lint/eslint/eslint-plugin-mozilla/node_modules/
 ^browser/components/newtab/node_modules/
+^browser/components/companion/services/workshop/node_modules/
+^browser/components/companion/storybook/node_modules/
+^browser/components/companion/vendor/lit/node_modules/
+^browser/components/companion/vendor/lit/package-lock.json
+^browser/components/companion/vendor/lit/lit.all.js
 ^tools/esmify/node_modules/
 
 # Ignore talos virtualenv and tp5n files.

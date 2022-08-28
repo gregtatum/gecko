@@ -40,10 +40,12 @@
                   tooltip="dynamic-shortcut-tooltip"
                   data-l10n-id="main-context-menu-stop"
                   command="Browser:Stop"/>
+#ifndef PINEBUILD
         <menuitem id="context-bookmarkpage"
                   class="menuitem-iconic"
                   data-l10n-id="main-context-menu-bookmark-page"
                   oncommand="gContextMenu.bookmarkThisPage();"/>
+#endif
       </menugroup>
 #endif
       <menuseparator id="context-sep-navigation"/>
@@ -69,6 +71,7 @@
       <menuitem id="context-openlinkincurrent"
                 data-l10n-id="main-context-menu-open-link"
                 oncommand="gContextMenu.openLinkInCurrent();"/>
+#ifndef PINEBUILD
 # label and data-usercontextid are dynamically set.
       <menuitem id="context-openlinkincontainertab"
                 data-l10n-id="main-context-menu-open-link-in-container-tab"
@@ -85,17 +88,22 @@
         <menupopup oncommand="gContextMenu.openLinkInTab(event);"
                    onpopupshowing="return gContextMenu.createContainerMenu(event);" />
       </menu>
+#endif
 
       <menuitem id="context-openlink"
                 data-l10n-id="main-context-menu-open-link-new-window"
                 oncommand="gContextMenu.openLink();"/>
+#ifndef PINEBUILD
       <menuitem id="context-openlinkprivate"
                 data-l10n-id="main-context-menu-open-link-new-private-window"
                 oncommand="gContextMenu.openLinkInPrivateWindow();"/>
+#endif
       <menuseparator id="context-sep-open"/>
+#ifndef PINEBUILD
       <menuitem id="context-bookmarklink"
                 data-l10n-id="main-context-menu-bookmark-link-2"
                 oncommand="gContextMenu.bookmarkLink();"/>
+#endif
       <menuitem id="context-savelink"
                 data-l10n-id="main-context-menu-save-link"
                 oncommand="gContextMenu.saveLink();"/>
@@ -180,9 +188,11 @@
                 data-l10n-id="main-context-menu-media-show-controls"
                 oncommand="gContextMenu.mediaCommand('showcontrols');"/>
       <menuseparator id="context-media-sep-video-commands"/>
+#ifndef PINEBUILD
       <menuitem id="context-viewvideo"
                 data-l10n-id="main-context-menu-video-view-new-tab"
                 oncommand="gContextMenu.viewMedia(event);"/>
+#endif
       <menuitem id="context-video-pictureinpicture"
                 data-l10n-id="main-context-menu-media-watch-pip"
                 type="checkbox"
@@ -191,9 +201,11 @@
       <menuitem id="context-reloadimage"
                 data-l10n-id="main-context-menu-image-reload"
                 oncommand="gContextMenu.reloadImage();"/>
+#ifndef PINEBUILD
       <menuitem id="context-viewimage"
                 data-l10n-id="main-context-menu-image-view-new-tab"
                 oncommand="gContextMenu.viewMedia(event);"/>
+#endif
       <menuitem id="context-saveimage"
                 data-l10n-id="main-context-menu-image-save-as"
                 oncommand="gContextMenu.saveMedia();"/>
@@ -250,7 +262,7 @@
                 data-l10n-id="main-context-menu-plugin-hide"
                 oncommand="gContextMenu.hidePlugin();"/>
       <menuseparator id="context-sep-ctp"/>
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) && !defined(PINEBUILD)
       <menuitem id="context-bookmarkpage"
                 data-l10n-id="main-context-menu-bookmark-page-mac"
                 oncommand="gContextMenu.bookmarkThisPage();"/>
@@ -356,9 +368,11 @@
           <menuitem id="context-showonlythisframe"
                     data-l10n-id="main-context-menu-frame-show-this"
                     oncommand="gContextMenu.showOnlyThisFrame();"/>
+#ifndef PINEBUILD
           <menuitem id="context-openframeintab"
                     data-l10n-id="main-context-menu-frame-open-tab"
                     oncommand="gContextMenu.openFrameInTab();"/>
+#endif
           <menuitem id="context-openframe"
                     data-l10n-id="main-context-menu-frame-open-window"
                     oncommand="gContextMenu.openFrame();"/>
@@ -367,9 +381,11 @@
                     data-l10n-id="main-context-menu-frame-reload"
                     oncommand="gContextMenu.reloadFrame(event);"/>
           <menuseparator/>
+#ifndef PINEBUILD
           <menuitem id="context-bookmarkframe"
                     data-l10n-id="main-context-menu-frame-add-bookmark"
                     oncommand="gContextMenu.addBookmarkForFrame();"/>
+#endif
           <menuitem id="context-saveframe"
                     data-l10n-id="main-context-menu-frame-save-as"
                     oncommand="gContextMenu.saveFrame();"/>
@@ -419,6 +435,7 @@
       <menuitem hidden="true" id="context-bidi-page-direction-toggle"
                 data-l10n-id="main-context-menu-bidi-switch-page"
                 oncommand="gContextMenu.switchPageDirection();"/>
+#ifndef PINEBUILD
       <menuseparator id="inspect-separator" hidden="true"/>
       <menuitem id="context-viewpartialsource-selection"
                 data-l10n-id="main-context-menu-view-selection-source"
@@ -434,6 +451,7 @@
                 hidden="true"
                 data-l10n-id="main-context-menu-inspect"
                 oncommand="gContextMenu.inspectNode();"/>
+#endif
       <menuseparator id="context-media-eme-separator" hidden="true"/>
       <menuitem id="context-media-eme-learnmore"
                 class="menuitem-iconic"

@@ -1,0 +1,30 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this file,
+   - You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src chrome:; object-src 'none'; img-src blob: data:">
+    <link rel="localization" href="browser/historyCarousel.ftl"/>
+    <link rel="stylesheet" type="text/css" href="chrome://global/skin/in-content/common.css">
+    <link rel="stylesheet" href="chrome://browser/content/companion/historyCarousel.css">
+    <script type="module" src="chrome://browser/content/companion/historyCarousel.js"></script>
+  </head>
+  <body role="dialog" invisible="true">
+    <main role="presentation">
+      <ol id="preview-list" role="tablist" data-l10n-id="history-carousel-preview-list"></ol>
+      <nav role="presentation">
+        <button id="previous" data-l10n-id="history-carousel-previous-button"><span data-l10n-id="history-carousel-previous-button-label" class="visually-hidden"></span></button>
+        <input id="scrubber" type="range" step="1" min="0" data-l10n-id="history-carousel-scrubber"/>
+        <button id="next" data-l10n-id="history-carousel-next-button"><span data-l10n-id="history-carousel-next-button-label" class="visually-hidden"></span></button>
+      </nav>
+    </main>
+    <template id="preview-element-template">
+      <figure role="presentation" aria-hidden="true">
+        <figcaption><img class="favicon"/><span class="caption"/></figcaption>
+        <img class="preview-image"/>
+      </figure>
+    </template>
+  </body>
+</html>

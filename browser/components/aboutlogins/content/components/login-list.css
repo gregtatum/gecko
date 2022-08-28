@@ -52,6 +52,10 @@
   display: contents;
 }
 
+:host(.in-companion) .container {
+  overflow: hidden;
+}
+
 :host(.no-logins) .empty-search-message,
 :host(:not(.empty-search)) .empty-search-message,
 :host(.empty-search:not(.create-login-selected)) ol,
@@ -65,6 +69,14 @@
 :host(:not(.initialized)) .count,
 :host(:not(.initialized)) .empty-search-message {
   visibility: hidden;
+}
+
+:host(.in-companion) {
+  height: 100%;
+}
+
+:host(.editing) {
+  display: none;
 }
 
 .empty-search-message,
@@ -87,6 +99,10 @@ ol {
   overflow: hidden auto;
   flex-grow: 1;
   scroll-padding-top: 24px; /* there is the section header that is sticky to the top */
+}
+
+:host(.in-companion) ol {
+  margin-block: 0 1em;
 }
 
 .create-login-button {
@@ -168,6 +184,10 @@ ol {
   fill-opacity: 0.8;
 }
 
+:host(.in-companion) .favicon {
+  width: 24px;
+}
+
 .username {
   font-size: 0.85em;
   color: var(--in-content-deemphasized-text);
@@ -187,4 +207,126 @@ ol {
     fill: var(--red-60);
     fill-opacity: 1;
   }
+}
+
+:host(.in-companion) .create-login-button-container {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  background: var(--in-content-box-background);
+}
+
+:host(.in-companion) .create-login-button {
+  margin-block: 23.5px 28px;
+  font-size: 11px;
+  width: 13em;
+  margin-inline: auto;
+}
+
+:host(.in-companion) .meta > label {
+  display: flex;
+}
+
+:host(.in-companion) .meta > label > span {
+  margin-block: 8px;
+}
+
+:host(.in-companion) .meta {
+  border: 1px solid #F0F0F4;
+  border-inline: none;
+  margin-bottom: 12px;
+}
+
+:host(.in-companion) #login-sort {
+  right: 0;
+  position: absolute;
+  margin-inline-end: 8px;
+}
+
+:host(.in-companion) .count {
+  display: none;
+}
+
+:host(.in-companion) .favicon-wrapper {
+  background-color: #F9F9FB;
+  border-radius: 4px;
+  background-origin: content-box;
+  padding: 8px;
+  height: 24px;
+  width: 24px;
+  background-size: cover;
+  margin-inline-end: 4px;
+}
+
+:host(.in-companion) .login-list-item:hover .favicon-wrapper {
+  background-color: #F0F0F4;
+}
+
+:host(.in-companion) .favicon-wrapper .favicon[src=""] {
+  visibility: hidden;
+}
+
+:host(.in-companion) .login-list-item.selected .title {
+    font-weight: normal;
+}
+
+:host(.in-companion) .login-list-item {
+  padding: 4px;
+  margin: 0 16px 8px;
+  border-radius: 8px;
+  border-inline-start: none;
+  background-color: #F9F9FB;
+  box-sizing: border-box;
+  border: 0.5px solid #CFCFD8;
+}
+
+:host(.in-companion) .login-list-item:first-child {
+  margin-top: 0;
+}
+
+:host(.in-companion) .login-list-item:hover {
+  background: #F0F0F4;
+  border-color: #AFAFBA;
+}
+
+:host(.in-companion.create-login-selected) {
+  display: none;
+}
+
+:host(:not(.in-companion)) .more-dropdown {
+  visibility: hidden;
+}
+
+:host(.in-companion) .more-dropdown {
+  min-width: auto;
+  width: 24px;
+  min-height: auto;
+  height: 24px;
+  margin: 0;
+  margin-inline: 4px;
+  padding: 0;
+  padding-inline: 12px;
+  border: none;
+  background-image: url("chrome://global/skin/icons/more.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  fill: currentColor;
+  -moz-context-properties: fill;
+  cursor: pointer;
+}
+
+:host(.in-companion) .login-list-item:not(.selected):hover {
+  color: inherit;
+}
+
+:host(.in-companion) .login-list-item:hover .more-dropdown:hover {
+  background-color: #CFCFD8;
+}
+
+:host(:not(.in-companion)) .more-dropdown-container {
+  display: none;
+}
+
+:host(.in-companion) .more-dropdown-container {
+  display: flex;
 }

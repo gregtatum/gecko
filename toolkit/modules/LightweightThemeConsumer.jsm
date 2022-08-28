@@ -44,11 +44,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
-const DEFAULT_THEME_ID = "default-theme@mozilla.org";
+const DEFAULT_THEME_ID = AppConstants.PINEBUILD
+  ? "firefox-compact-light@mozilla.org"
+  : "default-theme@mozilla.org";
 
 // On Linux, the default theme picks up the right colors from dark GTK themes.
 const DEFAULT_THEME_RESPECTS_SYSTEM_COLOR_SCHEME =
-  AppConstants.platform == "linux";
+  AppConstants.platform == "linux" && !AppConstants.PINEBUILD;
 
 const toolkitVariableMap = [
   [
@@ -253,6 +255,9 @@ LightweightThemeConsumer.prototype = {
     const hasDarkTheme = !!themeData.darkTheme;
     let updateGlobalThemeData = true;
     let useDarkTheme = (() => {
+      if (AppConstants.PINEBUILD) {
+        return false;
+      }
       if (!hasDarkTheme) {
         return false;
       }
@@ -295,7 +300,7 @@ LightweightThemeConsumer.prototype = {
     }
 
     let theme = useDarkTheme ? themeData.darkTheme : themeData.theme;
-    if (!theme) {
+    if (!theme || AppConstants.PINEBUILD) {
       theme = { id: DEFAULT_THEME_ID };
     }
 
@@ -369,7 +374,7 @@ LightweightThemeConsumer.prototype = {
 
     this._lastExperimentData = {};
 
-    if (!active || !experiment) {
+    if (!active || !experiment || AppConstants.PINEBUILD) {
       return;
     }
 
@@ -489,6 +494,10 @@ function _determineToolbarAndContentTheme(
   }
 
   let toolbarTheme = (function() {
+    if (AppConstants.PINEBUILD) {
+      return 1;
+    }
+
     if (!aTheme) {
       if (!DEFAULT_THEME_RESPECTS_SYSTEM_COLOR_SCHEME) {
         return kLight;
@@ -659,6 +668,10 @@ function _setProperties(root, active, themeData) {
       let elem = optionalElementID
         ? doc.getElementById(optionalElementID)
         : root;
+      if (!elem) {
+        continue;
+      }
+
       let val = propertyOverrides.get(lwtProperty) || themeData[lwtProperty];
       if (isColor) {
         val = _cssColorToRGBA(doc, val);

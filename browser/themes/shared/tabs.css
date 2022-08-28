@@ -57,6 +57,77 @@
   background-color: var(--tabpanel-background-color);
 }
 
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+#appcontent {
+  overflow: hidden;
+}
+
+#tabbrowser-tabbox[companion-link-open] {
+  background-color: white;
+}
+
+#tabbrowser-tabpanels {
+  transition-property: transform, opacity, box-shadow;
+  transition-duration: 300ms;
+  animation-timing-function: var(--animation-easing-function);
+}
+
+#tabbrowser-tabbox[companion-link-open="1"] > #tabbrowser-tabpanels {
+  transition-duration: 0s;
+  opacity: 0;
+}
+
+#tabbrowser-tabpanels[session-change] {
+  transform: scale(0.96);
+  border-radius: 12px;
+  box-shadow: 0px 2px 6px 0px rgba(0.23, 0.22, 0.27, 0.2);
+}
+
+body[flow-reset] #tabbrowser-tabpanels[session-change] {
+  transform: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#tabbrowser-tabpanels[session-change] browser {
+  border-radius: 12px;
+}
+
+#tabbrowser-tabpanels[session-change="2"] {
+  transition-duration: 250ms;
+  transform: translateX(-100%) scale(0.96);
+  opacity: 0;
+}
+
+body[flow-reset] #tabbrowser-tabpanels[session-change="2"] {
+  transform: translateX(-100%);
+}
+
+#tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated] {
+  transition-property: none;
+  transform: translateX(-100%);
+}
+
+#tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox[deactivated][was-forward] {
+  transform: translateX(100%);
+}
+
+#tabbrowser-tabbox:not([disable-history-animations]) > #tabbrowser-tabpanels[multideck] > hbox {
+  transition-property: transform;
+  transition-timing-function: var(--animation-easing-function);
+  transition-duration: var(--panelui-subview-transition-duration);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #tabbrowser-tabpanels,
+  #tabbrowser-tabpanels[multideck] > hbox {
+    transition-duration: 0s !important;
+  }
+}
+}
+/** endif **/
+
 #tabbrowser-tabs,
 #tabbrowser-arrowscrollbox,
 #tabbrowser-tabs[positionpinnedtabs] > #tabbrowser-arrowscrollbox > .tabbrowser-tab[pinned] {

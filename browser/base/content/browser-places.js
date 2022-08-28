@@ -1549,6 +1549,10 @@ var BookmarkingUI = {
   updateEmptyToolbarMessage() {
     let emptyMsg = document.getElementById("personal-toolbar-empty");
 
+    if (!this.toolbar) {
+      return;
+    }
+
     // If the bookmarks are here but it's early in startup, show the message.
     // It'll get made visibility: hidden early in startup anyway - it's just
     // to ensure the toolbar has height.
@@ -1837,7 +1841,7 @@ var BookmarkingUI = {
     // Update the tooltip for elements that require it.
     let shortcut = document.getElementById(this.BOOKMARK_BUTTON_SHORTCUT);
     let l10nArgs = {
-      shortcut: ShortcutUtils.prettifyShortcut(shortcut),
+      shortcut: shortcut ? ShortcutUtils.prettifyShortcut(shortcut) : "",
     };
     document.l10n.setAttributes(
       this.starBox,

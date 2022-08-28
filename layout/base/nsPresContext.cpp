@@ -10,7 +10,7 @@
 #include "nsPresContextInlines.h"
 
 #include "mozilla/ArrayUtils.h"
-#if defined(MOZ_WIDGET_ANDROID)
+#if defined(MOZ_WIDGET_ANDROID) || defined(PINEBUILD)
 #  include "mozilla/AsyncEventDispatcher.h"
 #endif
 #include "mozilla/CycleCollectedJSContext.h"
@@ -2690,7 +2690,7 @@ void nsPresContext::NotifyContentfulPaint() {
     return;
   }
   if (!mHadNonTickContentfulPaint) {
-#ifdef MOZ_WIDGET_ANDROID
+#if defined(MOZ_WIDGET_ANDROID) || defined(PINEBUILD)
     (new AsyncEventDispatcher(mDocument, u"MozFirstContentfulPaint"_ns,
                               CanBubble::eYes, ChromeOnlyDispatch::eYes))
         ->PostDOMEvent();

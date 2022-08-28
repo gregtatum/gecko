@@ -444,14 +444,16 @@ var MigratorPrototype = {
         );
         browserGlue.observe(null, TOPIC_WILL_IMPORT_BOOKMARKS, "");
 
-        // Import the default bookmarks. We ignore whether or not we succeed.
-        await lazy.BookmarkHTMLUtils.importFromURL(
-          "chrome://browser/content/default-bookmarks.html",
-          {
-            replace: true,
-            source: lazy.PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,
-          }
-        ).catch(Cu.reportError);
+        if (!AppConstants.PINEBUILD) {
+          // Import the default bookmarks. We ignore whether or not we succeed.
+          await lazy.BookmarkHTMLUtils.importFromURL(
+            "chrome://browser/content/default-bookmarks.html",
+            {
+              replace: true,
+              source: lazy.PlacesUtils.bookmarks.SOURCES.RESTORE_ON_STARTUP,
+            }
+          ).catch(Cu.reportError);
+        }
 
         // We'll tell nsBrowserGlue we've imported bookmarks, but before that
         // we need to make sure we're going to know when it's finished

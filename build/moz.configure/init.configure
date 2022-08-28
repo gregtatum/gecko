@@ -958,6 +958,24 @@ set_define("MOZILLA_OFFICIAL", mozilla_official)
 add_old_configure_assignment("MOZILLA_OFFICIAL", mozilla_official)
 
 
+# Pinebuild
+# ==============================================================================
+option("--enable-pinebuild", help="Enable pinebuild customizations")
+
+
+@depends(build_project, when="--enable-pinebuild")
+def pinebuild(build_project):
+    return build_project == "browser"
+
+
+set_config("PINEBUILD", pinebuild)
+set_define("PINEBUILD", pinebuild)
+add_old_configure_assignment("PINEBUILD", pinebuild)
+
+
+imply_option("--enable-pinebuild", True)
+
+
 # Allow specifying custom paths to the version files used by the milestone() function below.
 option(
     "--with-version-file-path",
@@ -977,11 +995,11 @@ def version_path(path):
 # - if we have "a1" in GRE_MILESTONE, we're building Nightly (define NIGHTLY_BUILD)
 # - otherwise, if we have "a" in GRE_MILESTONE, we're building Nightly or Aurora
 # - otherwise, we're building Release/Beta (define RELEASE_OR_BETA)
-@depends(build_environment, build_project, version_path, "--help")
+@depends(build_environment, build_project, version_path, pinebuild, "--help")
 @imports(_from="__builtin__", _import="open")
 @imports("os")
 @imports("re")
-def milestone(build_env, build_project, version_path, _):
+def milestone(build_env, build_project, version_path, pinebuild, _):
     versions = []
     paths = ["config/milestone.txt"]
     if build_project == "js":
@@ -991,15 +1009,21 @@ def milestone(build_env, build_project, version_path, _):
             "browser/config/version.txt",
             "browser/config/version_display.txt",
         ]
-    if version_path:
-        version_path = version_path[0]
+    if pinebuild:
+        paths += [
+            "browser/config/version.txt",
+            "browser/pinebuild/version_display.txt",
+        ]
     else:
-        version_path = os.path.join(build_project, "config")
-    for f in ("version.txt", "version_display.txt"):
-        f = os.path.join(version_path, f)
-        if not os.path.exists(os.path.join(build_env.topsrcdir, f)):
-            break
-        paths.append(f)
+        if version_path:
+            version_path = version_path[0]
+        else:
+            version_path = os.path.join(build_project, "config")
+        for f in ("version.txt", "version_display.txt"):
+            f = os.path.join(version_path, f)
+            if not os.path.exists(os.path.join(build_env.topsrcdir, f)):
+                break
+            paths.append(f)
 
     for p in paths:
         with open(os.path.join(build_env.topsrcdir, p), "r") as fh:
@@ -1020,7 +1044,9 @@ def milestone(build_env, build_project, version_path, _):
 
     is_nightly = is_release_or_beta = is_early_beta_or_earlier = None
 
-    if "a1" in milestone:
+    if pinebuild:
+        is_release_or_beta = True
+    elif "a1" in milestone:
         is_nightly = True
     elif "a" not in milestone:
         is_release_or_beta = True

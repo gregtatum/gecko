@@ -27,9 +27,11 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when:
           by-project:
               mozilla-central: [{hour: 10, minute: 0}, {hour: 22, minute: 0}]
+              pine: []  # never (hook only)
               # No default
 
     - name: nightly-desktop-linux
@@ -50,6 +52,7 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when: []  # never (hook only)
 
     - name: nightly-desktop-win32
@@ -70,6 +73,7 @@ jobs:
           include-push-tasks: true
       run-on-projects:
           - mozilla-central
+          - pine
       when: []  # never (hook only)
 
     - name: nightly-desktop-win64-aarch64
@@ -81,6 +85,24 @@ jobs:
       run-on-projects:
           - mozilla-central
       when: []  # never (hook only)
+
+    - name: nightly-pinebuild
+      job:
+          type: decision-task
+          treeherder-symbol: Npi
+          target-tasks-method: nightly_pinebuild
+          include-push-tasks: true
+      run-on-projects:
+          - pine
+          - pine-stable
+          - maple
+      when:
+          by-project:
+              # 10pm PDT, after Pacific, before Europe.
+              # Also triggerable via hook.
+              pine: [{hour: 5, minute: 0}]
+              pine-stable: []  # never (hook only)
+              maple: []  # never (hook only)
 
     - name: ship-geckoview
       job:
@@ -122,6 +144,8 @@ jobs:
           - mozilla-esr91
           - mozilla-esr102
           - elm
+          - pine
+          - pine-stable
       # For all non m-c jobs we just run once daily matching the 10 UTC
       # nightly which is designed to align with searchfox's AWS cron
       # jobs (for legacy reasons) rather than trying to align with

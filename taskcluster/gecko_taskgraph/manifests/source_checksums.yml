@@ -8,6 +8,8 @@ s3_bucket_paths:
             - pub/devedition/candidates
         firefox-source:
             - pub/firefox/candidates
+        pinebuild-source:
+            - pub/pinebuild/candidates
 default_locales:  # if given an empty locale, use these locales
     - en-US
 tasktype_map:  # Map task reference to task type.
@@ -35,10 +37,12 @@ mapping:
             by-platform:
                 firefox-source: firefox-${version}.checksums.beet
                 devedition-source: firefox-${version}.checksums.beet
+                pinebuild-source: pinebuild-${version}.checksums.beet
         checksums_path:
             by-platform:
                 firefox-source: firefox-${version}.checksums.beet
                 devedition-source: firefox-${version}.checksums.beet
+                pinebuild-source: pinebuild-${version}.checksums.beet
     target-source.checksums.asc:
         <<: *default
         description: "Detached signature for the checksums file"
@@ -46,7 +50,9 @@ mapping:
             by-platform:
                 firefox-source: firefox-${version}.checksums.asc
                 devedition-source: firefox-${version}.checksums.asc
+                pinebuild-source: pinebuild-${version}.checksums.asc
         checksums_path:
             by-platform:
                 firefox-source: firefox-${version}.checksums.asc
                 devedition-source: firefox-${version}.checksums.asc
+                pinebuild-source: pinebuild-${version}.checksums.asc

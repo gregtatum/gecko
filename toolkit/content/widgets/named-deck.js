@@ -74,7 +74,7 @@
       } else if (e.type == "click") {
         let { deck } = this;
         if (deck) {
-          deck.selectedViewName = this.name;
+          deck.changeViewByEvent(this.name, e);
         }
       }
     }
@@ -352,8 +352,19 @@
         this._setSelectedViewAttributes();
 
         // Notify that the selected view changed.
-        this.dispatchEvent(new CustomEvent("view-changed"));
+        this.dispatchEvent(
+          new CustomEvent("view-changed", {
+            detail: { isKeyboardSource: this.isKeyboardSource },
+          })
+        );
+        this.isKeyboardSource = null;
       }
+    }
+
+    changeViewByEvent(viewName, e) {
+      let isKeyboardEvent = e.mozInputSource == MouseEvent.MOZ_SOURCE_KEYBOARD;
+      this.isKeyboardSource = isKeyboardEvent;
+      this.selectedViewName = viewName;
     }
 
     get selectedViewName() {
@@ -376,6 +387,17 @@
         view.setAttribute("role", "tabpanel");
 
         if (name === selectedViewName) {
+          if (view.localName == "template") {
+            let template = view;
+            view = template.content.cloneNode(true).firstElementChild;
+            view.setAttribute("aria-labelledby", `${this.id}-button-${name}`);
+            view.setAttribute("role", "tabpanel");
+            view.setAttribute("name", name);
+            if (template.id) {
+              view.id = template.id;
+            }
+            template.replaceWith(view);
+          }
           view.slot = "selected";
         } else {
           view.slot = "";

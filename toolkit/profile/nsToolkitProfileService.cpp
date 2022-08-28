@@ -53,6 +53,7 @@
 #include "mozilla/Sprintf.h"
 #include "nsPrintfCString.h"
 #include "mozilla/UniquePtr.h"
+#include "mozilla/XREAppData.h"
 #include "nsIToolkitShellService.h"
 #include "mozilla/Telemetry.h"
 #include "nsProxyRelease.h"
@@ -634,6 +635,154 @@ bool nsToolkitProfileService::IsProfileForCurrentInstall(
 }
 
 /**
+ * In the case where this application is running with a custom profile path and
+ * an expected profile was not found this attempts to migrate a matching profile
+ * from the default profile database.
+ *
+ * Pass a profile folder to find the profile for that folder (used in upgrade
+ * scenarios) or nullptr to find the profile marked as default for this install.
+ *
+ * If found, the profile is removed from the old profile database and added to
+ * the new profile database, marked as default if appropriate.
+ *
+ * Returns the profile when found.
+ *
+ * It is assumed that this all runs inside of the normal startup lock so any
+ * other running instances of the application are either already started, in
+ * which case they hold a lock on their active profile, or are waiting to obtain
+ * the startup lock.
+ */
+nsresult nsToolkitProfileService::MaybeMigrateProfile(
+    nsIFile* aFile, nsIToolkitProfile** aProfile) {
+  *aProfile = nullptr;
+
+  // If there isn't a custom profile path then there isn't anything to do.
+  if (!gAppData || !gAppData->profile) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIFile> appData;
+  MOZ_TRY(nsXREDirProvider::GetDefaultUserDataDirectory(getter_AddRefs(appData),
+                                                        false));
+
+  nsCOMPtr<nsIFile> profileDBFile;
+  MOZ_TRY(appData->Clone(getter_AddRefs(profileDBFile)));
+
+  MOZ_TRY(profileDBFile->AppendNative("profiles.ini"_ns));
+
+  nsINIParser profileDB;
+  MOZ_TRY(profileDB.Init(profileDBFile));
+
+  nsCString defaultDescriptor;
+  // We can ignore this failure, it will just mean defaultDescriptor remains
+  // empty and so will not match later.
+  profileDB.GetString(mInstallSection.get(), "Default", defaultDescriptor);
+
+  nsAutoCString buffer;
+  for (unsigned int c = 0; true; ++c) {
+    nsAutoCString profileID("Profile");
+    profileID.AppendInt(c);
+
+    nsAutoCString filePath;
+    nsresult rv = profileDB.GetString(profileID.get(), "Path", filePath);
+    // A missing value means we have gone past the end of the list of profiles.
+    if (NS_FAILED(rv)) break;
+
+    bool isDefaultProfile = filePath.Equals(defaultDescriptor);
+    // If we're looking for the default and this isn't the default then carry
+    // on.
+    if (!aFile && !isDefaultProfile) {
+      continue;
+    }
+
+    MOZ_TRY(profileDB.GetString(profileID.get(), "IsRelative", buffer));
+
+    bool isRelative = buffer == "1";
+
+    nsCOMPtr<nsIFile> rootDir;
+    MOZ_TRY(NS_NewNativeLocalFile(""_ns, true, getter_AddRefs(rootDir)));
+
+    if (isRelative) {
+      MOZ_TRY(rootDir->SetRelativeDescriptor(appData, filePath));
+    } else {
+      MOZ_TRY(rootDir->SetPersistentDescriptor(filePath));
+    }
+
+    // If we're looking for a specific profile folder and this isn't it then
+    // continue.
+    bool equals;
+    if (aFile && (NS_FAILED(rootDir->Equals(aFile, &equals)) || !equals)) {
+      continue;
+    }
+
+    // This is the correct profile, we need to migrate it now.
+
+    // Attempt to lock it.
+    nsProfileLock lock;
+    MOZ_TRY(lock.Lock(rootDir, nullptr));
+
+    nsAutoCString name;
+    MOZ_TRY(profileDB.GetString(profileID.get(), "Name", name));
+
+    // First add it to our database. Any failure to do this is a problem and
+    // we'll just have to create a new profile instead.
+    nsCOMPtr<nsIToolkitProfile> profile;
+    MOZ_TRY(CreateProfile(rootDir, name, getter_AddRefs(profile)));
+
+    // Mark it as the default.
+    if (isDefaultProfile) {
+      MOZ_TRY(SetDefaultProfile(profile));
+    }
+
+    // Flush everything.
+    MOZ_TRY(Flush());
+
+    // Return the new profile.
+    profile.forget(aProfile);
+
+    // Now remove it from the old profile database.
+    if (isDefaultProfile) {
+      // We can ignore this failure as we won't be looking in this place for
+      // profiles in the future.
+      profileDB.DeleteSection(mInstallSection.get());
+    }
+
+    rv = profileDB.DeleteSection(profileID.get());
+    // Profile section names must be contiguous so if deleting the section was
+    // successful we find the last section and rename it. Otherwise we can just
+    // ignore the error as leaving the profile in the old location isn't a
+    // problem.
+    if (NS_SUCCEEDED(rv)) {
+      unsigned int s = c;
+      do {
+      } while (NS_SUCCEEDED(profileDB.GetString(
+          nsPrintfCString("Profile%d", ++s).get(), "Path", filePath)));
+
+      // s is now one beyond the last section.
+      s--;
+      if (s != c) {
+        nsPrintfCString sectionID("Profile%d", s);
+
+        rv = profileDB.RenameSection(sectionID.get(), profileID.get());
+
+        // If the rename failed then we must not write out the database with
+        // the gap in the contiguous sections. We can continue with the
+        // migration though.
+        if (NS_FAILED(rv)) {
+          return NS_OK;
+        }
+      }
+    }
+
+    profileDB.WriteToFile(profileDBFile);
+
+    break;
+  }
+
+  return NS_OK;
+}
+
+/**
  * Used the first time an install with dedicated profile support runs. Decides
  * whether to mark the passed profile as the default for this install.
  *
@@ -752,11 +901,7 @@ bool IsFileOutdated(nsIFile* aFile, bool aExists, PRTime aLastModified,
 
   PRTime time;
   rv = aFile->GetLastModifiedTime(&time);
-  if (NS_FAILED(rv) || time != aLastModified) {
-    return true;
-  }
-
-  return false;
+  return NS_FAILED(rv) || time != aLastModified;
 }
 
 nsresult UpdateFileStats(nsIFile* aFile, bool* aExists, PRTime* aLastModified,
@@ -1075,7 +1220,7 @@ nsToolkitProfileService::GetProfiles(nsISimpleEnumerator** aResult) {
 
 NS_IMETHODIMP
 nsToolkitProfileService::ProfileEnumerator::HasMoreElements(bool* aResult) {
-  *aResult = mCurrent ? true : false;
+  *aResult = !!mCurrent;
   return NS_OK;
 }
 
@@ -1350,6 +1495,25 @@ nsresult nsToolkitProfileService::SelectStartupProfile(
         }
 
         NS_IF_ADDREF(*aProfile = mCurrent);
+        mCurrent->GetRootDir(aRootDir);
+        mCurrent->GetLocalDir(aLocalDir);
+
+        return NS_OK;
+      }
+    } else if (!profile) {
+      rv = MaybeMigrateProfile(lf, getter_AddRefs(profile));
+
+      // In the case of any failure just go on and create a new profile.
+      if (NS_SUCCEEDED(rv) && profile) {
+        if (profile ==
+            (mUseDevEditionProfile ? mDevEditionDefault : mNormalDefault)) {
+          mStartupReason = u"restart-migrated-profile"_ns;
+        } else {
+          mStartupReason = u"restart-migrated-default"_ns;
+        }
+        mCurrent = profile;
+        profile.forget(aProfile);
+
         mCurrent->GetRootDir(aRootDir);
         mCurrent->GetLocalDir(aLocalDir);
 
@@ -1675,6 +1839,19 @@ nsresult nsToolkitProfileService::SelectStartupProfile(
           // We're going to create a new profile for this install even though
           // another default exists.
           skippedDefaultProfile = true;
+        }
+      } else {
+        rv = MaybeMigrateProfile(nullptr, getter_AddRefs(profile));
+
+        if (NS_SUCCEEDED(rv) && profile) {
+          mStartupReason = u"firstrun-migrated-default"_ns;
+          mCurrent = profile;
+          profile.forget(aProfile);
+
+          mCurrent->GetRootDir(aRootDir);
+          mCurrent->GetLocalDir(aLocalDir);
+
+          return NS_OK;
         }
       }
     }

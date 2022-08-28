@@ -1,0 +1,114 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import url("chrome://browser/content/companion/lavender.css");
+
+:root {
+  --body-height: 600px;
+  --footer-height: 72px;
+}
+
+body {
+  block-size: var(--body-height);
+  inline-size: 700px;
+  /* Overflow hidden to avoid double scroll bars. */
+  overflow: hidden;
+  /* Relatively positioned so we can absolutely position the 'x' button. */
+  position: relative;
+}
+
+#release-notes-title {
+  font-style: normal;
+  font-weight: normal;
+  font-size: 24px;
+  color: var(--pine-onboarding-header-text-color);
+}
+
+#release-notes-title span {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 51px;
+  background-image: var(--pine-onboarding-application-name-gradient);
+  background-clip: text;
+  color: transparent;
+  display: block;
+  margin: 0;
+}
+
+.release-notes-date {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 36px;
+  color: var(--pine-onboarding-dates-text-color);
+  margin-inline: 0;
+}
+
+dt {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+dd {
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  margin-inline: 0;
+  margin-block-end: 1em;
+}
+
+footer {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  block-size: var(--footer-height);
+  border-block-start: 1px solid var(--pine-onboarding-footer-border-color);
+  /* Using flex to center the button. */
+  display: flex;
+  align-items: center;
+  background: white;
+}
+
+#release-notes {
+  block-size: calc(var(--body-height) - var(--footer-height));
+  margin-block-end: var(--footer-height);
+  overflow: scroll;
+  padding-block-start: 72px;
+  padding-block-end: 0;
+  padding-inline: 72px;
+}
+
+#ok {
+  margin-inline: auto;
+}
+
+#dismiss {
+  /* Unset default button styles. */
+  border: none;
+  margin: 0;
+  margin-inline: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  background-color: transparent;
+  text-transform: none;
+
+  position: absolute;
+  inline-size: 16px;
+  block-size: 16px;
+  inset-block-start: 30px;
+  inset-inline-end: 30px;
+  background-image: url("chrome://global/skin/icons/close.svg");
+}
+
+@media (prefers-contrast) {
+  #release-notes-title,
+  #release-notes-title span,
+  .release-notes-date {
+    color: unset;
+    background: unset;
+  }
+}

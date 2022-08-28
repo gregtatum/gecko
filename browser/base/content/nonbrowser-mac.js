@@ -115,6 +115,14 @@ function nonBrowserWindowStartup() {
       document.getElementById("key_quitApplication").remove();
       document.getElementById("menu_FileQuitItem").removeAttribute("key");
     }
+    // Disable the `New Window` dock menuitem if the user is onboarding in pinebuild.
+    if (
+      AppConstants.PINEBUILD &&
+      !Services.prefs.getBoolPref("browser.pinebuild.onboarding.complete")
+    ) {
+      let item = document.getElementById("macDockMenuNewWindow");
+      item.disabled = true;
+    }
   }
 
   delayedStartupTimeoutId = setTimeout(nonBrowserWindowDelayedStartup, 0);

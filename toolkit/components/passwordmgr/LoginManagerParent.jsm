@@ -7,6 +7,9 @@
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
+const { AppConstants } = ChromeUtils.import(
+  "resource://gre/modules/AppConstants.jsm"
+);
 
 const LoginInfo = new Components.Constructor(
   "@mozilla.org/login-manager/loginInfo;1",
@@ -361,6 +364,10 @@ class LoginManagerParent extends JSWindowActorParent {
       "passwordmgr-form-submission-detected",
       context.origin
     );
+    let browser = this.getRootBrowser();
+    browser.dispatchEvent(
+      new browser.ownerGlobal.CustomEvent("PasswordManager:onFormSubmit")
+    );
   }
 
   #onPasswordEditedOrGenerated(context, data) {
@@ -449,10 +456,14 @@ class LoginManagerParent extends JSWindowActorParent {
 
   #onOpenPreferences(hostname, entryPoint) {
     const window = this.getRootBrowser().ownerGlobal;
-    lazy.LoginHelper.openPasswordManager(window, {
-      filterString: hostname,
-      entryPoint,
-    });
+    if (AppConstants.PINEBUILD) {
+      Services.obs.notifyObservers(window, "companion-show-passwords-panel");
+    } else {
+      lazy.LoginHelper.openPasswordManager(window, {
+        filterString: hostname,
+        entryPoint,
+      });
+    }
   }
 
   #onFormProcessed(formid) {

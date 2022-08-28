@@ -73,15 +73,22 @@ export class OpenSearchEngine extends SearchEngine {
    * @param {object} [options]
    * @param {object} [options.json]
    *   An object that represents the saved JSON settings for the engine.
+   * @param {object} [options.shouldPersist]
+   *   A flag indicating whether the engine should be persisted to disk and made
+   *   available wherever engines are used (e.g. it can be set as the default
+   *   search engine, used for search shortcuts, etc.). Non-persisted engines
+   *   are intended for more limited or temporary use. Defaults to true.
    */
-  constructor(options = {}) {
+  constructor({ json = null, shouldPersist = true } = {}) {
     super({
       // We don't know what this is until after it has loaded, so add a placeholder.
-      loadPath: options.json?._loadPath ?? "[opensearch]loading",
+      loadPath: json?._loadPath ?? "[opensearch]loading",
     });
 
-    if (options.json) {
-      this._initWithJSON(options.json);
+    this._shouldPersist = shouldPersist;
+
+    if (json) {
+      this._initWithJSON(json);
     }
   }
 
@@ -211,9 +218,14 @@ export class OpenSearchEngine extends SearchEngine {
       );
     }
 
-    // Notify the search service of the successful load. It will deal with
-    // updates by checking this._engineToUpdate.
-    lazy.SearchUtils.notifyAction(this, lazy.SearchUtils.MODIFIED_TYPE.LOADED);
+    if (this._shouldPersist) {
+      // Notify the search service of the successful load. It will deal with
+      // updates by checking this._engineToUpdate.
+      lazy.SearchUtils.notifyAction(
+        this,
+        lazy.SearchUtils.MODIFIED_TYPE.LOADED
+      );
+    }
 
     callback?.();
   }

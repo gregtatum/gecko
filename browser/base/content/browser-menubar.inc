@@ -17,6 +17,9 @@
                          onpopupshowing="gFileMenu.onPopupShowing(event);">
                 <menuitem id="menu_newNavigatorTab"
                           command="cmd_newNavigatorTab"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           key="key_newNavigatorTab" data-l10n-id="menu-file-new-tab"/>
                 <menu id="menu_newUserContext"
                       hidden="true" data-l10n-id="menu-file-new-container-tab">
@@ -27,6 +30,9 @@
                           command="cmd_newNavigator" data-l10n-id="menu-file-new-window"/>
                 <menuitem id="menu_newPrivateWindow"
                           command="Tools:PrivateBrowsing"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           key="key_privatebrowsing" data-l10n-id="menu-file-new-private-window"/>
                 <menuitem id="menu_openLocation"
                           hidden="true"
@@ -37,6 +43,9 @@
                           key="openFileKb" data-l10n-id="menu-file-open-file"/>
                 <menuitem id="menu_close"
                           class="show-only-for-keyboard"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           key="key_close"
                           command="cmd_close" data-l10n-id="menu-file-close-tab" data-l10n-args='{"tabCount": 1}'/>
                 <menuitem id="menu_closeWindow"
@@ -65,6 +74,9 @@
                           command="cmd_file_importFromAnotherBrowser" data-l10n-id="menu-file-import-from-another-browser"/>
                 <menuseparator/>
                 <menuitem id="goOfflineMenuitem"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           type="checkbox"
                           command="cmd_toggleOfflineStatus" data-l10n-id="menu-file-go-offline"/>
                 <menuitem id="menu_FileQuitItem"
@@ -132,13 +144,26 @@
 
             <menu id="view-menu" data-l10n-id="menu-view">
               <menupopup id="menu_viewPopup">
-                <menu id="viewToolbarsMenu" data-l10n-id="menu-view-toolbars-menu">
-                  <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);">
+                <menu id="viewToolbarsMenu"
+                      data-l10n-id="menu-view-toolbars-menu"
+#if defined(PINEBUILD) && defined(XP_MACOSX)
+                      hidden="true"
+#endif
+                      >
+                  <menupopup id="view-menu-popup" onpopupshowing="onViewToolbarsPopupShowing(event);" >
+#ifndef PINEBUILD
                     <menuseparator/>
+#endif
                     <menuitem id="menu_customizeToolbars"
-                              command="cmd_CustomizeToolbars" data-l10n-id="menu-view-customize-toolbar2"/>
+                              command="cmd_CustomizeToolbars"
+                              data-l10n-id="menu-view-customize-toolbar2"
+#if defined(PINEBUILD) && !defined(XP_MACOSX)
+                              hidden="true"
+#endif
+                              />
                   </menupopup>
                 </menu>
+#ifndef PINEBUILD
                 <menu id="viewSidebarMenuMenu" data-l10n-id="menu-view-sidebar">
                   <menupopup id="viewSidebarMenu">
                     <menuitem id="menu_bookmarksSidebar"
@@ -155,6 +180,7 @@
                               oncommand="SidebarUI.toggle('viewTabsSidebar');" data-l10n-id="menu-view-synced-tabs-sidebar"/>
                   </menupopup>
                 </menu>
+#endif
                 <menuseparator/>
                 <menu id="viewFullZoomMenu" data-l10n-id="menu-view-full-zoom">
                   <menupopup>
@@ -245,11 +271,17 @@
                           oncommand="gSync.openSyncedTabsPanel();"
                           hidden="true" data-l10n-id="menu-history-synced-tabs"/>
                 <menuitem id="historyRestoreLastSession"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           command="Browser:RestoreLastSession" data-l10n-id="menu-history-restore-last-session"/>
                 <menuitem id="hiddenTabsMenu"
                           oncommand="gTabsPanel.showHiddenTabsPanel(event);"
                           hidden="true" data-l10n-id="menu-history-hidden-tabs"/>
                 <menu id="historyUndoMenu"
+#ifdef PINEBUILD
+                      hidden="true"
+#endif
                       disabled="true" data-l10n-id="menu-history-undo-menu">
                   <menupopup id="historyUndoPopup"
 #ifndef XP_MACOSX
@@ -283,6 +315,7 @@
               </menupopup>
             </menu>
 
+#ifndef PINEBUILD
   <menu id="bookmarksMenu"
         ondragenter="PlacesMenuDNDHandler.onDragEnter(event);"
         ondragover="PlacesMenuDNDHandler.onDragOver(event);"
@@ -361,15 +394,18 @@
       <!-- Bookmarks menu items -->
     </menupopup>
   </menu>
+#endif
 
             <menu id="tools-menu" data-l10n-id="menu-tools">
               <menupopup id="menu_ToolsPopup">
               <menuitem id="menu_openDownloads"
                         key="key_openDownloads"
                         command="Tools:Downloads" data-l10n-id="menu-tools-downloads"/>
+#ifndef PINEBUILD
               <menuitem id="menu_openAddons"
                         key="key_openAddons"
                         command="Tools:Addons" data-l10n-id="menu-tools-addons-and-themes"/>
+#endif
 
               <!-- only one of sync-setup, sync-enable, sync-unverifieditem, sync-syncnowitem or sync-reauthitem will be showing at once -->
               <menuitem id="sync-setup"
@@ -396,7 +432,12 @@
               <menuitem id="menu_openFirefoxView"
                         oncommand="FirefoxViewHandler.openTab();" data-l10n-id="menu-tools-firefox-view"/>
               <menuseparator id="devToolsSeparator"/>
-              <menu id="browserToolsMenu" data-l10n-id="menu-tools-browser-tools">
+              <menu id="browserToolsMenu"
+                    data-l10n-id="menu-tools-browser-tools"
+#if defined(PINEBUILD) && defined(MOZILLA_OFFICIAL)
+                    hidden="true"
+#endif
+              >
                 <menupopup id="menuWebDeveloperPopup">
                   <menuitem id="menu_taskManager"
                             oncommand="switchToTabHavingURI('about:processes', true)"
@@ -467,6 +508,9 @@
                           data-l10n-id="menu-help-share-ideas"
                           appmenu-data-l10n-id="appmenu-help-share-ideas"/>
                 <menuitem id="helpSafeMode"
+#ifdef PINEBUILD
+                          hidden="true"
+#endif
                           oncommand="safeModeRestart();"
                           data-l10n-id="menu-help-enter-troubleshoot-mode2"
                           appmenu-data-l10n-id="appmenu-help-enter-troubleshoot-mode2"/>

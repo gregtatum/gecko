@@ -6,6 +6,9 @@
 /*.app/***
 /certutil
 /@MOZ_APP_NAME@-bin
+#if defined(APP_STUB)
+/@APP_STUB@
+#endif
 #if defined(MOZ_GECKODRIVER)
 /geckodriver
 #endif

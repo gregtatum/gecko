@@ -19,10 +19,12 @@
         <vbox id="widget-overflow-fixed-list" class="widget-overflow-list" hidden="true" />
       </vbox>
       <toolbarseparator />
+#ifndef PINEBUILD
       <toolbarbutton command="cmd_CustomizeToolbars"
                       id="overflowMenu-customize-button"
                       class="subviewbutton panel-subview-footer-button"
                       data-l10n-id="toolbar-overflow-customize-button"/>
+#endif
     </panelview>
   </panelmultiview>
   <!-- This menu is here because not having it in the menu in which it's used flickers
@@ -57,10 +59,12 @@
               closemenu="single"
               class="customize-context-removeFromPanel"
               data-lazy-l10n-id="toolbar-context-menu-remove-from-toolbar"/>
+#ifndef PINEBUILD
     <menuseparator/>
     <menuitem command="cmd_CustomizeToolbars"
               class="viewCustomizeToolbar"
               data-lazy-l10n-id="toolbar-context-menu-view-customize-toolbar"/>
+#endif
   </menupopup>
 </panel>
 

@@ -20,6 +20,7 @@ only-for-build-platforms:
     - win64-shippable/opt
     - win32-devedition/opt
     - win64-devedition/opt
+    - win64-pinebuild/opt
 
 job-template:
     worker-type: 'b-win2012'
