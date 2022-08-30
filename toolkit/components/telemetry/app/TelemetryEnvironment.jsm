@@ -1525,7 +1525,8 @@ EnvironmentCache.prototype = {
   _getBuild() {
     let buildData = {
       applicationId: Services.appinfo.ID || null,
-      applicationName: Services.appinfo.name || null,
+      // Temporarily overridden to obscure the product name before release.
+      applicationName: Services.appinfo.name ? "Firefox" : null,
       architecture: Services.sysinfo.get("arch"),
       buildId: Services.appinfo.appBuildID || null,
       version: Services.appinfo.version || null,
