@@ -458,7 +458,7 @@ e-global-nav-debugging h2 {
 }
 
 .tab-button span {
-  padding-inline-start: 4px;
+  padding-inline-start: 8.75px;
   font-weight: normal;
   font-size: 14px;
 }
@@ -474,7 +474,8 @@ e-global-nav-debugging h2 {
 }
 
 #companion-deck-button-now img {
-  background: center center no-repeat url(chrome://browser/skin/trending.svg);
+  background: center center no-repeat url("chrome://browser/content/companion/now.svg");
+  width: 12px;
 }
 
 #companion-deck-button-history img {

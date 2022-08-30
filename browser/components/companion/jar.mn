@@ -3,6 +3,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 browser.jar:
+    content/browser/companion/add-circle-fill.svg (content/add-circle-fill.svg)
+    content/browser/companion/arrow-down.svg (content/arrow-down.svg)
+    content/browser/companion/arrow-left.svg (content/arrow-left.svg)
+    content/browser/companion/arrow-right.svg (content/arrow-right.svg)
+    content/browser/companion/arrow-up.svg (content/arrow-up.svg)
+    content/browser/companion/back.svg (content/back.svg)
     content/browser/companion/begin.wav (content/begin.wav)
     content/browser/companion/breakTime.svg (content/breakTime.svg)
     content/browser/companion/breadcrumb.svg (content/breadcrumb.svg)
@@ -12,10 +18,15 @@ browser.jar:
     content/browser/companion/calendar.js (content/calendar.js)
     content/browser/companion/calendar.svg (content/calendar.svg)
     content/browser/companion/card.css (content/card.css)
+    content/browser/companion/close.svg (content/close.svg)
     content/browser/companion/companion.css (content/companion.css)
     content/browser/companion/companion.js (content/companion.js)
+    content/browser/companion/companion.svg (content/companion.svg)
     content/browser/companion/companion.xhtml (content/companion.xhtml)
+    content/browser/companion/companion-selected.svg (content/companion-selected.svg)
     content/browser/companion/default-colors.css (content/default-colors.css)
+    content/browser/companion/defaultFavicon.svg (content/defaultFavicon.svg)
+    content/browser/companion/downloads.svg (content/downloads.svg)
     content/browser/companion/workshop.xhtml (content/workshop.xhtml)
     content/browser/companion/flow-reset.css (content/flow-reset.css)
     content/browser/companion/flow-reset.html (content/flow-reset.html)
@@ -25,20 +36,26 @@ browser.jar:
     content/browser/companion/flow-reset-bg3.png (content/flow-reset-bg3.png)
     content/browser/companion/flow-reset-bg4.png (content/flow-reset-bg4.png)
     content/browser/companion/fonts.css (content/fonts.css)
+    content/browser/companion/fullscreen.svg (content/fullscreen.svg)
     content/browser/companion/stagemanagerdebugging.js (content/stagemanagerdebugging.js)
     content/browser/companion/googleAccount.png (content/googleAccount.png)
     content/browser/companion/history.js (content/history.js)
     content/browser/companion/history.css (content/history.css)
+    content/browser/companion/history.svg (content/history.svg)
     content/browser/companion/historyCarousel.css (content/historyCarousel.css)
     content/browser/companion/historyCarousel.html (content/historyCarousel.html)
     content/browser/companion/historyCarousel.js (content/historyCarousel.js)
     content/browser/companion/lavender.css (content/lavender.css)
     content/browser/companion/listDiff.js (content/listDiff.js)
     content/browser/companion/lit.all.js (content/lit.all.js)
+    content/browser/companion/login.svg (content/login.svg)
     content/browser/companion/media.js (content/media.js)
+    content/browser/companion/menu.svg (content/menu.svg)
     content/browser/companion/microsoft365.svg (content/microsoft365.svg)
+    content/browser/companion/more.svg (content/more.svg)
     content/browser/companion/mozsocial.png (content/mozsocial.png)
     content/browser/companion/notifications.js (content/notifications.js)
+    content/browser/companion/now.svg (content/now.svg)
     content/browser/companion/onboarding-services.js (content/onboarding-services.js)
     content/browser/companion/firefoxParentBrand.png (content/firefoxParentBrand.png)
     content/browser/companion/onboarding.css (content/onboarding.css)
@@ -49,6 +66,7 @@ browser.jar:
     content/browser/companion/onboarding-flow.css (content/onboarding-flow.css)
     content/browser/companion/onboarding-flow.html (content/onboarding-flow.html)
     content/browser/companion/onboarding-flow.js (content/onboarding-flow.js)
+    content/browser/companion/open-in-new.svg (content/open-in-new.svg)
     content/browser/companion/pin.svg (content/pin.svg)
 #ifdef XP_MACOSX
     content/browser/companion/pinebuildBackground.css (content/pinebuildBackground-mac.css)
@@ -63,7 +81,9 @@ browser.jar:
     content/browser/companion/refresh-services-button.js (content/refresh-services-button.js)
     content/browser/companion/relative-time.js (content/relative-time.js)
     content/browser/companion/running-late.svg (content/running-late.svg)
+    content/browser/companion/search-glass.svg (content/search-glass.svg)
     content/browser/companion/section-panel.js (content/section-panel.js)
+    content/browser/companion/security.svg (content/security.svg)
     content/browser/companion/service-utils.js (content/service-utils.js)
     content/browser/companion/session-setaside.svg (content/session-setaside.svg)
     content/browser/companion/sessions.css (content/sessions.css)
@@ -74,6 +94,7 @@ browser.jar:
     content/browser/companion/setaside.wav (content/setaside.wav)
     content/browser/companion/snapshot-groups.js (content/snapshot-groups.js)
     content/browser/companion/snapshot-groups.svg (content/snapshot-groups.svg)
+    content/browser/companion/subtract-circle-fill.svg (content/subtract-circle-fill.svg)
     content/browser/companion/next.svg (content/next.svg)
     content/browser/companion/gotomeeting.png (content/gotomeeting.png)
     content/browser/companion/jitsi.png (content/jitsi.png)
@@ -127,3 +148,23 @@ browser.jar:
     content/browser/companion/components/river.js   (content/components/river.js)
     content/browser/companion/components/pinned-views.js (content/components/pinned-views.js)
     content/browser/companion/components/pinned-views.css (content/components/pinned-views.css)
+% override chrome://browser/skin/add-circle-fill.svg  chrome://browser/content/companion/add-circle-fill.svg
+% override chrome://global/skin/icons/arrow-down.svg  chrome://browser/content/companion/arrow-down.svg
+% override chrome://global/skin/icons/arrow-left.svg  chrome://browser/content/companion/arrow-left.svg
+% override chrome://global/skin/icons/arrow-right.svg  chrome://browser/content/companion/arrow-right.svg
+% override chrome://global/skin/icons/arrow-up.svg  chrome://browser/content/companion/arrow-up.svg
+% override chrome://browser/skin/back.svg  chrome://browser/content/companion/back.svg
+% override chrome://global/skin/icons/close.svg  chrome://browser/content/companion/close.svg
+% override chrome://global/skin/icons/defaultFavicon.svg  chrome://browser/content/companion/defaultFavicon.svg
+% override chrome://browser/skin/downloads/downloads.svg  chrome://browser/content/companion/downloads.svg
+% override chrome://browser/skin/fullscreen.svg  chrome://browser/content/companion/fullscreen.svg
+% override chrome://browser/skin/history.svg  chrome://browser/content/companion/history.svg
+% override chrome://browser/skin/login.svg  chrome://browser/content/companion/login.svg
+% override chrome://browser/skin/menu.svg  chrome://browser/content/companion/menu.svg
+% override chrome://global/skin/icons/more.svg  chrome://browser/content/companion/more.svg
+% override chrome://global/skin/icons/open-in-new.svg chrome://browser/content/companion/open-in-new.svg
+% override chrome://browser/skin/pin-12.svg  chrome://browser/content/companion/pin.svg
+% override chrome://browser/skin/reader-mode.svg  chrome://browser/content/companion/reader-mode.svg
+% override chrome://global/skin/icons/search-glass.svg  chrome://browser/content/companion/search-glass.svg
+% override chrome://global/skin/icons/security.svg  chrome://browser/content/companion/security.svg
+% override chrome://browser/skin/subtract-circle-fill.svg  chrome://browser/content/companion/subtract-circle-fill.svg

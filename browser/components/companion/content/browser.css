@@ -522,13 +522,13 @@ toolbar .toolbarbutton-1 > .toolbarbutton-icon {
 }
 
 #companion-sidebar-button > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/companion.svg");
+  background-image: url("chrome://browser/content/companion/companion.svg");
   border-radius: var(--companion-sidebar-button-border-radius);
 }
 
 /* When the companion is open, show the alternate icon */
 #companion-sidebar-button[checked] > .toolbarbutton-icon {
-  background-image: url("chrome://browser/skin/companion-selected.svg");
+  background-image: url("chrome://browser/content/companion/companion-selected.svg");
 }
 
 /**
@@ -1019,12 +1019,12 @@ body[flow-reset] #urlbar[open] #urlbar-background {
 @media not (prefers-contrast) {
   /* Switch to white fill when in flow-reset state, since the background is darker. */
   body[flow-reset] #companion-sidebar-button:not([checked]) > .toolbarbutton-icon {
-    background-image: url("chrome://browser/skin/companion.svg");
+    background-image: url("chrome://browser/content/companion/companion.svg");
     fill: var(--companion-sidebar-button-flow-reset-fill-color);
   }
 
   body[flow-reset] #companion-sidebar-button[checked] > .toolbarbutton-icon {
-    background-image: url("chrome://browser/skin/companion-selected.svg");
+    background-image: url("chrome://browser/content/companion/companion-selected.svg");
     background-color: var(--companion-sidebar-button-selected-flow-reset-bg-color);
   }
 

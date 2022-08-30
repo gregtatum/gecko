@@ -207,7 +207,7 @@ export class CalendarEvent extends MozLitElement {
       .event-expand-button {
         background-position: center;
         background-repeat: no-repeat;
-        background-image: url("chrome://global/skin/icons/arrow-down-12.svg");
+        background-image: url("chrome://global/skin/icons/arrow-down.svg");
         background-size: 14px auto;
         -moz-context-properties: fill;
         fill: var(--icon-color-default);
