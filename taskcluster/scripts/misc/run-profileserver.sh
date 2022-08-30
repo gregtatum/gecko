@@ -36,7 +36,15 @@ fi
 # the paths when the final PGO stage packages the build.
 mkdir -p $PGO_RUNDIR
 mkdir -p $UPLOAD_PATH
-mv $MOZ_FETCHES_DIR/firefox $PGO_RUNDIR
-./mach python build/pgo/profileserver.py --binary $PGO_RUNDIR/firefox/firefox
+if [ -d "$MOZ_FETCHES_DIR/flowstate" ]; then
+    mv $MOZ_FETCHES_DIR/flowstate $PGO_RUNDIR
+    ./mach python build/pgo/profileserver.py --binary $PGO_RUNDIR/flowstate/flowstate
+elif [ -d "$MOZ_FETCHES_DIR/firefox" ]; then
+    mv $MOZ_FETCHES_DIR/firefox $PGO_RUNDIR
+    ./mach python build/pgo/profileserver.py --binary $PGO_RUNDIR/firefox/firefox
+else
+    echo "Found no binary to run."
+    exit 1
+fi
 
 tar -acvf $UPLOAD_PATH/profdata.tar.xz merged.profdata en-US.log

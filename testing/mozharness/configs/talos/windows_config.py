@@ -14,6 +14,7 @@ VENV_PATH = os.path.join(os.getcwd(), "build/venv")
 config = {
     "log_name": "talos",
     "installer_path": "installer.exe",
+    "application": "flowstate",
     "virtualenv_path": VENV_PATH,
     "exes": {
         "python": PYTHON,

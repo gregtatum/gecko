@@ -10,6 +10,7 @@ VENV_PATH = "%s/build/venv" % os.getcwd()
 config = {
     "log_name": "talos",
     "installer_path": "installer.exe",
+    "application": "flowstate",
     "virtualenv_path": VENV_PATH,
     "title": os.uname()[1].lower().split(".")[0],
     "default_actions": [
