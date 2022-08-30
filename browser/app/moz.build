@@ -43,7 +43,7 @@ SOURCES += [
     "nsBrowserApp.cpp",
 ]
 
-# Neither channel-prefs.js nor firefox.exe want to end up in dist/bin/browser.
+# Neither channel-prefs.js nor the binary want to end up in dist/bin/browser.
 DIST_SUBDIR = ""
 
 LOCAL_INCLUDES += [
@@ -110,7 +110,7 @@ if CONFIG["OS_ARCH"] == "WINNT":
         libpath_flag + OBJDIR + "/winlauncher/freestanding",
     ]
 
-    # Don't build firefox.exe with CETCOMPAT, because we need to be able to
+    # Don't build the binary with CETCOMPAT, because we need to be able to
     # only enable it for processes that are not using JIT in xul.dll.
     LINK_FLAGS["CETCOMPAT"] = []
 
@@ -167,9 +167,14 @@ if CONFIG["MOZ_LINUX_32_SSE2_STARTUP_ERROR"]:
         "-mfpmath=387",
     ]
 
-for icon in ("firefox", "document", "newwindow", "newtab", "pbmode", "document_pdf"):
+for icon in ("document", "newwindow", "newtab", "pbmode", "document_pdf"):
     DEFINES[icon.upper() + "_ICO"] = '"%s/%s/%s.ico"' % (
         TOPSRCDIR,
         CONFIG["MOZ_BRANDING_DIRECTORY"],
         icon,
     )
+DEFINES["APP_ICO"] = '"%s/%s/%s.ico"' % (
+    TOPSRCDIR,
+    CONFIG["MOZ_BRANDING_DIRECTORY"],
+    CONFIG["MOZ_APP_NAME"],
+)

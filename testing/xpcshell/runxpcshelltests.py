@@ -1820,7 +1820,10 @@ class XPCShellTests(object):
         # test harness.
         appDirKey = None
         if "appname" in self.mozInfo:
-            appDirKey = self.mozInfo["appname"] + "-appdir"
+            if self.mozInfo["appname"] == "flowstate":
+                appDirKey = "firefox-appdir"
+            else:
+                appDirKey = self.mozInfo["appname"] + "-appdir"
 
         # We have to do this before we run tests that depend on having the node
         # http/2 server.

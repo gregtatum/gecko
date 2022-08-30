@@ -275,6 +275,8 @@ const DEFAULT_CANCELATIONS_OSX_MAX = 3;
 const APPID_TO_TOPIC = {
   // Firefox
   "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}": "sessionstore-windows-restored",
+  // Flowstate
+  "{27dca482-e0b1-440c-8490-086552ef58a7}": "sessionstore-windows-restored",
   // SeaMonkey
   "{92650c4d-4b8e-4d2a-b7eb-24ecf4f6b63a}": "sessionstore-windows-restored",
   // Thunderbird
