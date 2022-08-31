@@ -34,6 +34,16 @@ header {
   padding-inline-end: 23px;
 }
 
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+  :root.in-companion {
+    background: transparent;
+  }
+
+  header {
+    background-color: unset;
+  }
+}
+
 login-filter {
   min-width: 200px;
   max-width: 400px;

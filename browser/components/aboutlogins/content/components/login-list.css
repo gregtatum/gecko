@@ -213,7 +213,6 @@ ol {
   width: 100%;
   position: absolute;
   bottom: 0;
-  background: var(--in-content-box-background);
 }
 
 :host(.in-companion) .create-login-button {
@@ -329,4 +328,20 @@ ol {
 
 :host(.in-companion) .more-dropdown-container {
   display: flex;
+}
+
+:host(.in-companion) #login-sort:hover:not([disabled]) {
+  background-color: var(--in-content-button-background-hover);
+}
+
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+  :host,
+  .meta,
+  .create-login-button-container {
+    background-color: transparent;
+  }
+
+  :host {
+    border: unset;
+  }
 }

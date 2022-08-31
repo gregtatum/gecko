@@ -271,6 +271,10 @@ export default class LoginList extends HTMLElement {
       // selected sort so the user's current task isn't interrupted.
       this._sortSelect.namedItem("alerts").hidden = false;
     }
+
+    if (this.classList.contains("in-companion")) {
+      this._createLoginButton.classList.add("primary");
+    }
   }
 
   renderSectionHeader(header) {
