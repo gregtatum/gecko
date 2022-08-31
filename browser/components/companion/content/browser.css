@@ -19,6 +19,12 @@
   --urlbar-height: 44px;
   --urlbarbutton-border-radius: 4px;
   --urlbar-margin-inline: 8px;
+  /**
+   * We align this with the default height in about:downloads, since it is
+   * through about:downloads that downloads are shown to users within the
+   * Companion.
+   */
+  --downloads-item-height: 6em;
 
   /* pinebuild-specific variables: */
   --companion-width: 340px;
