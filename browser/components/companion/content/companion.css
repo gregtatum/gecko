@@ -91,10 +91,6 @@ a {
   flex-direction: column;
 }
 
-.last-sessions-panel {
-  width: 100vw;
-}
-
 .debug {
   display: none;
 }
@@ -607,14 +603,6 @@ e-global-nav-debugging h2 {
 
 #companion-login-browser {
   height: calc(100vh - 70px);
-}
-
-full-session-list,
-suggested-snapshot-list,
-snapshot-group-list-detail {
-  display: block;
-  height: 100%;
-  width: 100vw;
 }
 
 #companion-deck[selected-view=downloads] {
