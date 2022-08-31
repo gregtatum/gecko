@@ -6,3 +6,12 @@ html.private .showNormal,
 html.normal .showPrivate {
   display: none !important;
 }
+
+/** ifdef PINEBUILD **/
+@supports -moz-bool-pref("browser.pinebuild.enabled") {
+  .showNormal,
+  .showPrivate {
+    display: none !important;
+  }
+}
+/** endif **/
