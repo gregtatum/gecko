@@ -43,6 +43,7 @@
 .subtitle {
   display: flex;
   gap: 5px;
+  line-height: initial;
 }
 
 .snapshot-sitetitle {
@@ -58,6 +59,7 @@
   text-overflow: ellipsis;
   overflow: hidden;
   margin-bottom: 4px;
+  line-height: initial;
 }
 
 .sub {
