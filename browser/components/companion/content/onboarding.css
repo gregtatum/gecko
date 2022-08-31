@@ -75,7 +75,7 @@ footer {
 #release-notes {
   block-size: calc(var(--body-height) - var(--footer-height));
   margin-block-end: var(--footer-height);
-  overflow: scroll;
+  overflow: visible auto;
   padding-block-start: 72px;
   padding-block-end: 0;
   padding-inline: 72px;
