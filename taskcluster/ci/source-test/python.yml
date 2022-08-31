@@ -129,7 +129,7 @@ mochitest-harness:
         command: >
             source /builds/worker/scripts/xvfb.sh &&
             start_xvfb '1600x1200x24' 0 &&
-            export GECKO_BINARY_PATH=$MOZ_FETCHES_DIR/firefox/firefox &&
+            export GECKO_BINARY_PATH=$MOZ_FETCHES_DIR/flowstate/flowstate &&
             export TEST_HARNESS_ROOT=$MOZ_FETCHES_DIR/tests &&
             ./mach python-test --subsuite mochitest
     fetches:
@@ -310,7 +310,7 @@ reftest-harness:
         command: >
             source /builds/worker/scripts/xvfb.sh &&
             start_xvfb '1600x1200x24' 0 &&
-            export GECKO_BINARY_PATH=$MOZ_FETCHES_DIR/firefox/firefox &&
+            export GECKO_BINARY_PATH=$MOZ_FETCHES_DIR/flowstate/flowstate &&
             export TEST_HARNESS_ROOT=$MOZ_FETCHES_DIR/tests &&
             ./mach python-test --subsuite reftest
     fetches:
@@ -450,10 +450,10 @@ fxms-schemas:
         cwd: '{checkout}'
         command: >
             cd browser/components/newtab/content-src/asrouter/schemas &&
-            env LD_LIBRARY_PATH=${MOZ_FETCHES_DIR}/firefox \
+            env LD_LIBRARY_PATH=${MOZ_FETCHES_DIR}/flowstate \
                 ${MOZ_FETCHES_DIR}/bin/xpcshell \
-                    -g ${MOZ_FETCHES_DIR}/firefox \
-                    -a ${MOZ_FETCHES_DIR}/firefox/browser \
+                    -g ${MOZ_FETCHES_DIR}/flowstate \
+                    -a ${MOZ_FETCHES_DIR}/flowstate/browser \
                     extract-test-corpus.js
             ../../../../../../mach python -- make-schemas.py --check
     when:
@@ -543,7 +543,7 @@ telemetry-integration-tests:
         command: >
             source /builds/worker/scripts/xvfb.sh &&
             start_xvfb '1600x1200x24' 0 &&
-            export GECKO_BINARY_PATH=$MOZ_FETCHES_DIR/firefox/firefox &&
+            export GECKO_BINARY_PATH=$MOZ_FETCHES_DIR/flowstate/flowstate &&
             ./mach python-test --subsuite telemetry-integration-tests
     fetches:
         build:
