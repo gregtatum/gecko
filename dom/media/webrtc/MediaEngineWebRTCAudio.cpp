@@ -215,7 +215,7 @@ void MediaEngineWebRTCMicrophoneSource::ApplySettings(
   // info.  Our pref defaults to false, and if this is truly as unhelpful
   // as the upstream bug claim, we could delete the pref that drive this:
   // media.getusermedia.residual_echo_enabled.  See Bug 1779498.
-  //mAudioProcessingConfig.residual_echo_detector.enabled =
+  // mAudioProcessingConfig.residual_echo_detector.enabled =
   //    aPrefs.mResidualEchoOn;
 
   RefPtr<MediaEngineWebRTCMicrophoneSource> that = this;

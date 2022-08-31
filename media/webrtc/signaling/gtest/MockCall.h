@@ -87,7 +87,7 @@ class MockAudioReceiveStream : public webrtc::AudioReceiveStream {
   virtual void SetDecoderMap(
       std::map<int, webrtc::SdpAudioFormat> decoder_map) override;
   virtual void SetUseTransportCcAndNackHistory(bool use_transport_cc,
-                                               int history_ms)  override {
+                                               int history_ms) override {
     // Unimplemented after webrtc.org e2561e17e2 removed the Reconfigure
     // method.
     MOZ_ASSERT(false);
@@ -180,8 +180,8 @@ class MockVideoReceiveStream : public webrtc::VideoReceiveStream {
 
   void GenerateKeyFrame() override {}
 
-  void SetRtpExtensions(std::vector<webrtc::RtpExtension> extensions)
-      override {}
+  void SetRtpExtensions(std::vector<webrtc::RtpExtension> extensions) override {
+  }
   webrtc::RtpHeaderExtensionMap GetRtpExtensionMap() const override;
 
   virtual ~MockVideoReceiveStream() {}
@@ -275,7 +275,7 @@ class MockCall : public webrtc::Call {
       int transport_overhead_per_packet) override {}
 
   void OnLocalSsrcUpdated(webrtc::AudioReceiveStream& stream,
-      uint32_t local_ssrc) override {}
+                          uint32_t local_ssrc) override {}
 
   void OnUpdateSyncGroup(webrtc::AudioReceiveStream& stream,
                          const std::string& sync_group) override {}

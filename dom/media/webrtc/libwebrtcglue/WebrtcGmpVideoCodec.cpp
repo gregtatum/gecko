@@ -618,9 +618,8 @@ void WebrtcGmpVideoEncoder::Encoded(
   }
 
   webrtc::EncodedImage unit;
-  unit.SetEncodedData(
-      webrtc::EncodedImageBuffer::Create(aEncodedFrame->Buffer(),
-                                         aEncodedFrame->Size()));
+  unit.SetEncodedData(webrtc::EncodedImageBuffer::Create(
+      aEncodedFrame->Buffer(), aEncodedFrame->Size()));
   unit._frameType = ft;
   unit.SetTimestamp(timestamp);
   unit.capture_time_ms_ = capture_time.ms();
@@ -669,10 +668,10 @@ bool WebrtcGmpVideoDecoder::Configure(
   }
 
   RefPtr<GmpInitDoneRunnable> initDone(new GmpInitDoneRunnable(mPCHandle));
-  mGMPThread->Dispatch(WrapRunnableNM(&WebrtcGmpVideoDecoder::Configure_g,
-                                      RefPtr<WebrtcGmpVideoDecoder>(this),
-                                      settings, initDone),
-                       NS_DISPATCH_NORMAL);
+  mGMPThread->Dispatch(
+      WrapRunnableNM(&WebrtcGmpVideoDecoder::Configure_g,
+                     RefPtr<WebrtcGmpVideoDecoder>(this), settings, initDone),
+      NS_DISPATCH_NORMAL);
 
   return true;
 }
@@ -680,7 +679,7 @@ bool WebrtcGmpVideoDecoder::Configure(
 /* static */
 void WebrtcGmpVideoDecoder::Configure_g(
     const RefPtr<WebrtcGmpVideoDecoder>& aThis,
-    const webrtc::VideoDecoder::Settings& settings, // unused
+    const webrtc::VideoDecoder::Settings& settings,  // unused
     const RefPtr<GmpInitDoneRunnable>& aInitDone) {
   nsTArray<nsCString> tags;
   tags.AppendElement("h264"_ns);
@@ -861,7 +860,8 @@ void WebrtcGmpVideoDecoder::Decode_g(const RefPtr<WebrtcGmpVideoDecoder>& aThis,
   frame->SetEncodedHeight(aDecodeData->mImage._encodedHeight);
   frame->SetTimeStamp((aDecodeData->mImage.Timestamp() * 1000ll) /
                       90);  // rounds down
-  frame->SetCompleteFrame(true); // upstream no longer deals with incomplete frames
+  frame->SetCompleteFrame(
+      true);  // upstream no longer deals with incomplete frames
   frame->SetBufferType(GMP_BufferLength32);
 
   GMPVideoFrameType ft;
@@ -982,12 +982,11 @@ void WebrtcGmpVideoDecoder::Decoded(GMPVideoi420Frame* aDecodedFrame) {
       // but is currently called in the destructor of WrappedYuvBuffer when
       // the buffer is "no_longer_used".
       rtc::scoped_refptr<webrtc::I420BufferInterface> video_frame_buffer =
-          webrtc::WrapI420Buffer(aDecodedFrame->Width(),
-                                 aDecodedFrame->Height(), buffer_y,
-                                 aDecodedFrame->Stride(kGMPYPlane), buffer_u,
-                                 aDecodedFrame->Stride(kGMPUPlane), buffer_v,
-                                 aDecodedFrame->Stride(kGMPVPlane),
-                                 [buffer] {});
+          webrtc::WrapI420Buffer(
+              aDecodedFrame->Width(), aDecodedFrame->Height(), buffer_y,
+              aDecodedFrame->Stride(kGMPYPlane), buffer_u,
+              aDecodedFrame->Stride(kGMPUPlane), buffer_v,
+              aDecodedFrame->Stride(kGMPVPlane), [buffer] {});
 
       GMP_LOG_DEBUG("GMP Decoded: %" PRIu64, aDecodedFrame->Timestamp());
       auto videoFrame =

@@ -12,11 +12,11 @@
 #define RTC_BASE_PLATFORM_UITHREAD_H_
 
 #if defined(WEBRTC_WIN)
-#include "Assertions.h"
-#include "rtc_base/deprecated/recursive_critical_section.h"
-#include "rtc_base/platform_thread.h"
-#include "api/sequence_checker.h"
-#include "ThreadSafety.h"
+#  include "Assertions.h"
+#  include "rtc_base/deprecated/recursive_critical_section.h"
+#  include "rtc_base/platform_thread.h"
+#  include "api/sequence_checker.h"
+#  include "ThreadSafety.h"
 
 namespace rtc {
 /*
@@ -47,11 +47,12 @@ namespace rtc {
 
 class PlatformUIThread {
  public:
-  PlatformUIThread(std::function<void()> func, const char * name, ThreadAttributes attributes)
+  PlatformUIThread(std::function<void()> func, const char* name,
+                   ThreadAttributes attributes)
       : name_(name),
         native_event_callback_(std::move(func)),
-        monitor_thread_(PlatformThread::SpawnJoinable([this](){Run();}, name, attributes))
-        {}
+        monitor_thread_(PlatformThread::SpawnJoinable([this]() { Run(); }, name,
+                                                      attributes)) {}
 
   virtual ~PlatformUIThread();
 
@@ -71,7 +72,8 @@ class PlatformUIThread {
   // Initialize the UI thread that is servicing the timer events
   bool InternalInit();
 
-  // Needs to be initialized before monitor_thread_ as it takes a string view to name_
+  // Needs to be initialized before monitor_thread_ as it takes a string view to
+  // name_
   std::string name_;
   RecursiveCriticalSection cs_;
   std::function<void()> native_event_callback_;
