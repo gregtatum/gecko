@@ -730,6 +730,8 @@ class QuotaManager::Observer final : public nsIObserver {
  public:
   static nsresult Initialize();
 
+  static nsIObserver* GetInstance();
+
   static void ShutdownCompleted();
 
  private:
@@ -1046,7 +1048,7 @@ class OriginOperationBase : public BackgroundThreadObject, public Runnable {
   }
 
  protected:
-  explicit OriginOperationBase(nsIEventTarget* aOwningThread,
+  explicit OriginOperationBase(nsISerialEventTarget* aOwningThread,
                                const char* aRunnableName)
       : BackgroundThreadObject(aOwningThread),
         Runnable(aRunnableName),
@@ -1119,7 +1121,7 @@ class FinalizeOriginEvictionOp : public OriginOperationBase {
   nsTArray<RefPtr<OriginDirectoryLock>> mLocks;
 
  public:
-  FinalizeOriginEvictionOp(nsIEventTarget* aBackgroundThread,
+  FinalizeOriginEvictionOp(nsISerialEventTarget* aBackgroundThread,
                            nsTArray<RefPtr<OriginDirectoryLock>>&& aLocks)
       : OriginOperationBase(aBackgroundThread,
                             "dom::quota::FinalizeOriginEvictionOp"),
@@ -1164,7 +1166,7 @@ class NormalOriginOperationBase
   NormalOriginOperationBase(const char* aRunnableName,
                             const Nullable<PersistenceType>& aPersistenceType,
                             const OriginScope& aOriginScope, bool aExclusive)
-      : OriginOperationBase(GetCurrentEventTarget(), aRunnableName),
+      : OriginOperationBase(GetCurrentSerialEventTarget(), aRunnableName),
         mOriginScope(aOriginScope),
         mPersistenceType(aPersistenceType),
         mExclusive(aExclusive) {
@@ -1935,11 +1937,12 @@ Result<bool, nsresult> MaybeUpdateLastAccessTimeForOrigin(
 }  // namespace
 
 BackgroundThreadObject::BackgroundThreadObject()
-    : mOwningThread(GetCurrentEventTarget()) {
+    : mOwningThread(GetCurrentSerialEventTarget()) {
   AssertIsOnOwningThread();
 }
 
-BackgroundThreadObject::BackgroundThreadObject(nsIEventTarget* aOwningThread)
+BackgroundThreadObject::BackgroundThreadObject(
+    nsISerialEventTarget* aOwningThread)
     : mOwningThread(aOwningThread) {}
 
 #ifdef DEBUG
@@ -1954,7 +1957,7 @@ void BackgroundThreadObject::AssertIsOnOwningThread() const {
 
 #endif  // DEBUG
 
-nsIEventTarget* BackgroundThreadObject::OwningThread() const {
+nsISerialEventTarget* BackgroundThreadObject::OwningThread() const {
   MOZ_ASSERT(mOwningThread);
   return mOwningThread;
 }
@@ -2797,6 +2800,13 @@ nsresult QuotaManager::Observer::Initialize() {
 }
 
 // static
+nsIObserver* QuotaManager::Observer::GetInstance() {
+  MOZ_ASSERT(NS_IsMainThread());
+
+  return sInstance;
+}
+
+// static
 void QuotaManager::Observer::ShutdownCompleted() {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(sInstance);
@@ -3380,6 +3390,13 @@ QuotaManager* QuotaManager::Get() {
 }
 
 // static
+nsIObserver* QuotaManager::GetObserver() {
+  MOZ_ASSERT(NS_IsMainThread());
+
+  return Observer::GetInstance();
+}
+
+// static
 bool QuotaManager::IsShuttingDown() { return gShutdown; }
 
 // static
@@ -3398,6 +3415,15 @@ void QuotaManager::ShutdownInstance() {
   MOZ_ASSERT(runnable);
 
   MOZ_ALWAYS_SUCCEEDS(NS_DispatchToMainThread(runnable.forget()));
+}
+
+// static
+void QuotaManager::Reset() {
+  AssertIsOnBackgroundThread();
+  MOZ_ASSERT(!gInstance);
+  MOZ_ASSERT(gShutdown);
+
+  gShutdown = false;
 }
 
 // static

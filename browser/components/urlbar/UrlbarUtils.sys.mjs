@@ -1218,6 +1218,8 @@ export var UrlbarUtils = {
         if (result.providerName == "TabToSearch") {
           // This is the onboarding result.
           return "tabtosearch";
+        } else if (result.providerName == "quickactions") {
+          return "quickaction";
         }
         return "dynamic";
     }
