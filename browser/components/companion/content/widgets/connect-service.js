@@ -51,8 +51,16 @@ class ConnectServiceNotification extends MozLitElement {
     `;
   }
 
+  get connected() {
+    return this.status == "connected";
+  }
+
+  get authenticating() {
+    return this.status == "authenticating";
+  }
+
   connectService() {
-    if (this.status !== "connected") {
+    if (!this.connected) {
       this.connectServiceCallback();
     }
   }
@@ -69,7 +77,7 @@ class ConnectServiceNotification extends MozLitElement {
   }
 
   connectStatusTemplate() {
-    if (this.status == "connected") {
+    if (this.connected) {
       return html`
         <div class="connected" slot="primary-action">
           <span
@@ -90,7 +98,7 @@ class ConnectServiceNotification extends MozLitElement {
       <button
         slot="primary-action"
         class="primary"
-        ?disabled=${this.status == "authenticating"}
+        ?disabled=${this.authenticating}
         @click=${this.connectService}
         data-l10n-id=${this.connectButtonLabelId}
       ></button>
