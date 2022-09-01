@@ -76,7 +76,7 @@ body {
 
 .onboarding-flow-card button {
   border-radius: 8px 8px;
-  font-size: 1em; 
+  font-size: 1em;
   font-weight: 500;
   margin-inline: auto;
   width: 100%;
@@ -281,7 +281,7 @@ body {
 }
 
 .onboarding-forward-nav {
-  right: 13vw; 
+  right: 13vw;
 }
 
 .onboarding-backward-nav {
