@@ -2833,7 +2833,6 @@ pref("browser.firefox-view.view-count", 0);
   pref("browser.urlbar.opencompanionsearch.enabled", true);
   pref("browser.pinebuild.pinning-apps.enabled", false);
   pref("browser.pinebuild.sounds", true);
-  pref("browser.pinebuild.privacyPolicyURL", "https://www.mozilla.org/en-US/privacy/firefox/");
+  pref("browser.pinebuild.privacyPolicyURL", "https://support.mozilla.org/1/flowstate/%VERSION%/%OS%/%LOCALE%/data-sharing-flowstate");
   pref("browser.shell.checkDefaultBrowser", false);
 #endif
-

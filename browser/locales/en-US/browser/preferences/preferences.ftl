@@ -1410,7 +1410,7 @@ addon-recommendations =
 addon-recommendations-link = Learn more
 
 better-recommendations =
-  .label = Send websites you visit anonymously to { -vendor-short-name } to improve snapshot suggestions and other features
+  .label = Improve your snapshot suggestions by sharing your browsing history with { -vendor-short-name }. We will always put your privacy first.
 better-recommendations-link = Learn more
 
 # This message is displayed above disabled data sharing options in developer builds
