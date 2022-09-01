@@ -9,8 +9,16 @@ class SimpleNotification extends MozLitElement {
   static get properties() {
     return {
       icon: { type: String },
-      name: { type: String },
+      heading: { type: String },
       description: { type: String },
+    };
+  }
+
+  static get queries() {
+    return {
+      iconEl: ".notification-icon",
+      headingEl: ".notification-heading",
+      descriptionEl: ".notification-description",
     };
   }
 

@@ -19,6 +19,7 @@ class ConnectServiceNotification extends MozLitElement {
   static get queries() {
     return {
       connectButton: "button",
+      notificationContent: "simple-notification",
     };
   }
 

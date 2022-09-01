@@ -13,28 +13,37 @@ registerCleanupFunction(async () => {
   await gStageManager.reset();
 });
 
+const services = [
+  {
+    icon: "chrome://browser/content/companion/googleAccount.png",
+    name: "Test service",
+    services: "Test calendar things",
+    domains: ["example.net"],
+    type: "testservice",
+    api: "testservice",
+  },
+  {
+    icon: "chrome://browser/content/companion/microsoft365.svg",
+    name: "Test service 2",
+    services: "Test other things",
+    domains: ["example.com"],
+    type: "testservice2",
+    api: "testservice",
+  },
+];
+
 add_setup(async function setup() {
   await SpecialPowers.pushPrefEnv({
     set: [
       ["browser.pinebuild.companion-service-onboarding.enabled", true],
-      [
-        "browser.pinebuild.companion.test-services",
-        JSON.stringify([
-          {
-            icon: "chrome://browser/content/companion/googleAccount.png",
-            name: "Test service",
-            services: "Test calendar things",
-            domains: ["example.net"],
-            type: "testservice",
-            api: "testservice",
-          },
-        ]),
-      ],
+      ["browser.pinebuild.companion.test-services", JSON.stringify(services)],
     ],
   });
 });
 
 async function assertConnectCard(helper, _opts) {
+  _opts.expectedService =
+    _opts.service && services.find(s => s.type == _opts.service);
   await helper.runCompanionTask(
     async opts => {
       let servicesOnboarding = content.document.querySelector(
@@ -52,6 +61,21 @@ async function assertConnectCard(helper, _opts) {
             servicesOnboarding.currentService,
             opts.service,
             "Service is current"
+          );
+        }
+        if (opts.length) {
+          let notification = servicesOnboarding.connectServiceNotifications[0];
+          let content = notification.notificationContent;
+          is(content.iconEl.src, opts.expectedService.icon, "Icon matches");
+          is(
+            content.headingEl.textContent.trim(),
+            opts.expectedService.name,
+            "Heading matches"
+          );
+          is(
+            content.descriptionEl.textContent.trim(),
+            opts.expectedService.services,
+            "Services matches"
           );
         }
       } else {
@@ -225,6 +249,35 @@ add_task(async function testConnectOptionShown() {
       });
 
       await helper.logoutFromTestService("testservice");
+    }, win);
+  });
+});
+
+add_task(async function testConnectOptionChanges() {
+  await PinebuildTestUtils.withNewBrowserWindow(async win => {
+    const { gBrowser } = win;
+
+    await CompanionHelper.whenReady(async helper => {
+      await assertConnectCard(helper, { length: 0 });
+
+      let expectations = [
+        ["https://example.net/", "testservice"],
+        ["https://example.com/", "testservice2"],
+      ];
+
+      for (let [url, service] of expectations) {
+        let domain = new URL(url).host;
+        info("domain: " + domain);
+        let urlHandled = waitForDomainHandled(helper, domain);
+
+        await loadURI(gBrowser, url);
+        await urlHandled;
+        await assertConnectCard(helper, {
+          service,
+          length: 1,
+          connected: false,
+        });
+      }
     }, win);
   });
 });
