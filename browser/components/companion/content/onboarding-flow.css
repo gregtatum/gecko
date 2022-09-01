@@ -49,11 +49,13 @@ body {
   box-sizing: border-box;
   color: WindowText;
   font-size: 14px;
-  height: 643px;
   line-height: 20px;
   margin: 0 auto;
   text-align: center;
-  width: 1080px;
+  width: 60vw;
+  height: 55vh;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 @media not (prefers-contrast) {
@@ -69,17 +71,19 @@ body {
 }
 
 .onboarding-flow-card h2 {
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 28px;
+  margin-inline: 0;
 }
 
 .onboarding-flow-card button {
   border-radius: 8px 8px;
-  font-size: 12px;
+  font-size: 1em; 
   font-weight: 500;
-  margin-inline: 0;
+  margin-inline: auto;
   width: 100%;
+}
+
+.onboarding-account-connected-card button {
+  margin-top: 5vh;
 }
 
 .onboarding-card-text-container {
@@ -89,20 +93,19 @@ body {
   color: WindowText;
   display: flex;
   flex-direction: column;
-  height: 345px;
-  left: 55%;
   padding: 18px;
-  position: absolute;
-  top: 25%;
-  width: 360px;
-}
-
-.onboarding-card-text-container > p {
-  flex: content;
+  grid-area: 1 / 2 / 1 / 2;
+  width: 25vw;
+  height: 40vh;
+  margin: auto;
+  padding: 2em;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .onboarding-card-text-container img {
-  margin: 1em auto;
+  margin-inline: auto;
+  width: 6vh;
 }
 
 @media not (prefers-contrast) {
@@ -114,32 +117,16 @@ body {
   }
 }
 
-.onboarding-card-text-halvsies {
-  background: var(--colors-white);
-  border-bottom-right-radius: 36px;
-  border-top-right-radius: 36px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  margin-left: 50%;
-  padding: 1em 3em 1em 5em;
+.onboarding-welcome-card p {
+  margin-block: 0.5em;
 }
 
-/* Onboarding: welcome card */
-.onboarding-welcome-card p {
-  line-height: 16px;
-  margin-inline: 2em;
-  margin-top: 0;
+.onboarding-welcome-card button {
+  margin-top: 2.5vh;
 }
 
 .onboarding-connect-account-card p {
-  margin-top: 0;
-}
-
-.onboarding-connect-account-card h2,
-.onboarding-account-connected-card h2 {
-  margin-inline: 2em;
+  margin-block: 0 0.25em;
 }
 
 /* Onboarding: final card */
@@ -148,44 +135,13 @@ body {
   box-shadow: unset;
   height: unset;
   width: auto;
-  left: 60%;
-  top: 35%;
+  left: 57%;
+  top: 33%;
+  position: absolute;
 }
 
 .onboarding-ready-card h2 {
   margin-inline: 0;
-}
-
-/* onboarding: privacy policy card */
-.onboarding-privacy-policy-card {
-  text-align: start;
-}
-
-.onboarding-privacy-policy-card .onboarding-card-text-halvsies {
-  padding-inline-end: 0.5em;
-}
-
-.onboarding-privacy-policy-card .onboarding-card-text-scroll {
-  margin-block-end: 1em;
-  padding-block-start: 129px;
-  padding-inline-end: 3em;
-}
-
-.onboarding-privacy-policy-card .onboarding-buttons-row {
-  margin-inline-end: 3em;
-}
-
-.onboarding-card-text-scroll {
-  overflow-y: scroll;
-}
-
-.onboarding-card-text-scroll h2 {
-  margin-inline: 0;
-}
-
-/* onboarding: data prefs card */
-.onboarding-data-prefs-card {
-  text-align: start;
 }
 
 .onboarding-data-prefs-label-heading,
@@ -199,19 +155,6 @@ body {
 
 .onboarding-data-prefs-label-detail {
   font-size: 12px;
-}
-
-.onboarding-data-prefs-card p {
-  margin-inline-end: 5em;
-}
-
-.onboarding-data-prefs-card h2 {
-  margin-inline-start: 0;
-  margin-inline-end: 5em;
-}
-
-.onboarding-data-prefs-card img {
-  margin-top: 129px;
 }
 
 .onboarding-data-prefs-card .onboarding-privacy-learn-more {
@@ -246,6 +189,21 @@ body {
   --button-width: 30px;
   --dot-transform-x: 14px;
   border: none;
+}
+
+#about-flowstate-text-container,
+#privacy-policy-text-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 0 40px 40px 0;
+  padding: 8vh 2vw 8vh 3vw;
+  text-align: start;
+  box-shadow: none;
+}
+
+#about-flowstate-text-container img,
+#privacy-policy-text-container img {
+  margin: 0;
 }
 
 .onboarding-flow-card input[type="email"] {
@@ -285,10 +243,14 @@ body {
   }
 
   .onboarding-bg-3 {
-    background: left center no-repeat url("chrome://browser/content/companion/onboarding-flow-img/flowstate-onboarding-3.png");
-    background-size: contain;
+    background: no-repeat url("chrome://browser/content/companion/onboarding-flow-img/flowstate-onboarding-3.png");
+    background-size: cover;
     background-color: var(--pinebuild-onboarding-card-background-color);
   }
+}
+
+.onboarding-bg-3 {
+  border-radius: 40px 0 0 40px;
 }
 
 .onboarding-forward-nav,
@@ -319,11 +281,11 @@ body {
 }
 
 .onboarding-forward-nav {
-  right: 20px;
+  right: 13vw; 
 }
 
 .onboarding-backward-nav {
-  left: 20px;
+  left: 13vw;
 }
 
 .onboarding-flow-breadcrumbs {
@@ -337,9 +299,9 @@ body {
   border: 1px solid ButtonShadow;
   border-radius: 50%;
   display: inline-block;
-  height: 7px;
   margin-inline: 6px;
-  width: 7px;
+  height: 0.25em;
+  width: 0.25em;
 }
 
 .onboarding-flow-breadcrumbs span[data-active="true"] {

@@ -34,10 +34,15 @@ async function checkForNextButton(dataAction) {
 }
 
 async function navigateToNextPage(dataAction) {
-  await BrowserTestUtils.synthesizeMouseAtCenter(
-    `[data-card-name='${ONBOARDING_CARDS[currentPage]}'] [data-action=${dataAction}]`,
-    {},
-    browser
+  await SpecialPowers.spawn(
+    browser,
+    [currentPage, ONBOARDING_CARDS, dataAction],
+    (current, onboardingCards, selector) => {
+      let nextButton = content.document.querySelector(
+        `[data-card-name='${onboardingCards[current]}'] [data-action='${selector}']`
+      );
+      nextButton.click();
+    }
   );
   currentPage++;
 }
