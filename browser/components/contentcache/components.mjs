@@ -3,17 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// @ts-check
-
 /**
  * @template P
  * @typedef {import("react-redux").ResolveThunks<P>} ResolveThunks<P>
  */
 
-import { React, ReactDOMFactories, ReactRedux } from "./vendor.js";
+import { React, ReactDOMFactories, ReactRedux } from "./vendor.mjs";
 const { a, div, h1, input, img, b, span, button } = ReactDOMFactories;
-import * as Actions from "./actions/index.js";
-import * as Selectors from "./selectors.js";
+import * as Actions from "./actions.mjs";
+import * as Selectors from "./selectors.mjs";
 
 export function ContentCache() {
   const dispatch = ReactRedux.useDispatch();

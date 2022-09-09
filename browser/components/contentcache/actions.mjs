@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// @ts-check
-import * as Selectors from "../selectors.js";
-import { sql, console } from "../utils.js";
+import * as Selectors from "./selectors.mjs";
+import { sql, console } from "./utils.mjs";
 
 const lazy = {};
 

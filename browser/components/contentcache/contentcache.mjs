@@ -1,12 +1,11 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-// @ts-check
 
-import { ReactDOM, React, Redux, ReactRedux } from "./src/vendor.js";
-import { reducers } from "./src/reducers.js";
-import { ContentCache } from "./src/components.js";
-import { reduxLogger, thunkMiddleware } from "./src/utils.js";
+import { ReactDOM, React, Redux, ReactRedux } from "./contentcache/vendor.mjs";
+import { reducers } from "./contentcache/reducers.mjs";
+import { ContentCache } from "./contentcache/components.mjs";
+import { reduxLogger, thunkMiddleware } from "./contentcache/utils.mjs";
 
 /** @type {any[]} */
 const middleware = [thunkMiddleware];

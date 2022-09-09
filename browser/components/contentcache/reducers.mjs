@@ -3,9 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// @ts-check
-
-import { Redux } from "./vendor.js";
+import { Redux } from "./vendor.mjs";
 
 /**
  * @param {string} state

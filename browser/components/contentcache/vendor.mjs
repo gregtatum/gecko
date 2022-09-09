@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// @ts-check
-
 /**
  * This file loads all of the vendor files, and re-exports them using ES modules.
  */
