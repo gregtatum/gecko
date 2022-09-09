@@ -9,7 +9,7 @@ import { Redux } from "./vendor.js";
 
 /**
  * @param {string} state
- * @param {HistoryPlus.Action} action
+ * @param {ContentCache.Action} action
  */
 function searchString(state = "", action) {
   switch (action.type) {
@@ -21,8 +21,8 @@ function searchString(state = "", action) {
 }
 
 /**
- * @param {HistoryPlus.HistoryRow[]} state
- * @param {HistoryPlus.Action} action
+ * @param {ContentCache.HistoryRow[]} state
+ * @param {ContentCache.Action} action
  */
 function historyRows(state = [], action) {
   switch (action.type) {

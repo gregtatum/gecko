@@ -1,5 +1,5 @@
 {
-  "name": "history-plus",
+  "name": "contentcache",
   "version": "1.0.0",
   "scripts": {
     "test": "tsc",

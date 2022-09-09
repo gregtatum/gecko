@@ -28,7 +28,7 @@ export const PlainInternal = {
   },
 
   /**
-   * @param {HistoryPlus.HistoryRow[]} rows
+   * @param {ContentCache.HistoryRow[]} rows
    */
   setHistoryRows(rows) {
     return {
@@ -71,7 +71,7 @@ function parseSearch(search) {
 
 /**
  * @param {string} searchString
- * @returns {HistoryPlus.Thunk<Promise<HistoryPlus.HistoryRow[]>>}
+ * @returns {ContentCache.Thunk<Promise<ContentCache.HistoryRow[]>>}
  */
 export function searchHistory(searchString) {
   return async (dispatch, getState) => {
@@ -165,7 +165,7 @@ export function searchHistory(searchString) {
 
 /**
  * @param {string} site
- * @returns {HistoryPlus.Thunk<Promise<HistoryPlus.HistoryRow[]>>}
+ * @returns {ContentCache.Thunk<Promise<ContentCache.HistoryRow[]>>}
  */
 export function addSiteToSearchString(site) {
   return async (dispatch, getState) => {

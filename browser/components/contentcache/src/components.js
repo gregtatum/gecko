@@ -15,7 +15,7 @@ const { a, div, h1, input, img, b, span, button } = ReactDOMFactories;
 import * as Actions from "./actions/index.js";
 import * as Selectors from "./selectors.js";
 
-export function HistoryPlus() {
+export function ContentCache() {
   const dispatch = ReactRedux.useDispatch();
   const search = ReactRedux.useSelector(Selectors.getSearchString);
   const historyRows = ReactRedux.useSelector(Selectors.getHistoryRows);
@@ -55,7 +55,7 @@ export function HistoryPlus() {
 }
 
 /**
- * @param {{ historyRows: HistoryPlus.HistoryRow[] }} props
+ * @param {{ historyRows: ContentCache.HistoryRow[] }} props
  */
 function HistoryResults(props) {
   const { historyRows } = props;

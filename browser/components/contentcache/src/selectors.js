@@ -6,14 +6,14 @@
 // @ts-check
 
 /**
- * @param {HistoryPlus.State} state
+ * @param {ContentCache.State} state
  */
 export function getSearchString(state) {
   return state.searchString;
 }
 
 /**
- * @param {HistoryPlus.State} state
+ * @param {ContentCache.State} state
  */
 export function getHistoryRows(state) {
   return state.historyRows;

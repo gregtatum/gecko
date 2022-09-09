@@ -5,7 +5,7 @@
 
 import { ReactDOM, React, Redux, ReactRedux } from "./src/vendor.js";
 import { reducers } from "./src/reducers.js";
-import { HistoryPlus } from "./src/components.js";
+import { ContentCache } from "./src/components.js";
 import { reduxLogger, thunkMiddleware } from "./src/utils.js";
 
 /** @type {any[]} */
@@ -32,7 +32,7 @@ ReactDOM.render(
   React.createElement(
     ReactRedux.Provider,
     { store },
-    React.createElement(HistoryPlus)
+    React.createElement(ContentCache)
   ),
   root
 );

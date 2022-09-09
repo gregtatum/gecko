@@ -122,19 +122,19 @@ export function sql(strings, ...sqlStates) {
 // @ts-ignore
 export const console = window.console.createInstance({
   maxLogLevelPref: "browser.contentCache.logLevel",
-  prefix: "history-plus",
+  prefix: "contentcache",
 });
 
 /**
  * Create a more minimalist action logger.
- * @param {HistoryPlus.Store} store
+ * @param {ContentCache.Store} store
  */
 export function reduxLogger(store) {
   /**
-   * @param {(action: HistoryPlus.Action) => any} nextMiddleware
+   * @param {(action: ContentCache.Action) => any} nextMiddleware
    */
   return function (nextMiddleware) {
-    /** @type {(action: HistoryPlus.Action) => any} */
+    /** @type {(action: ContentCache.Action) => any} */
     return action => {
       const style = "font-weight: bold; color: #fa0";
       const prevState = store.getState();
@@ -154,11 +154,11 @@ export function reduxLogger(store) {
 /**
  * Apply thunks in the redux middleware.
  *
- * @param {HistoryPlus.Store} store
+ * @param {ContentCache.Store} store
  */
 export function thunkMiddleware({ dispatch, getState }) {
   /**
-   * @param {(action: HistoryPlus.Action) => any} nextMiddleware
+   * @param {(action: ContentCache.Action) => any} nextMiddleware
    */
   return function (nextMiddleware) {
     /**

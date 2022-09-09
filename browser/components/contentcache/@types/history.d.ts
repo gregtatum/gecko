@@ -3,16 +3,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This namespace provides a convenient global to refer to types for the HistoryPlus
+ * This namespace provides a convenient global to refer to types for the ContentCache
  * project. Otherwise these types would need to be manually imported via the verbose:
  *
  *   import("../../@types/history.d.ts").TypeName
  *
  * Instead the type can be accessed via:
  *
- *   HistoryPlus.TypeName
+ *   ContentCache.TypeName
  */
-declare namespace HistoryPlus {
+declare namespace ContentCache {
 
   /**
    * A utility function to extract the values from an Object.
@@ -56,7 +56,7 @@ declare namespace HistoryPlus {
   export type Dispatch = PlainDispatch & ThunkDispatch;
 
   /**
-   * This store knows about the HistoryPlus State and Actions.
+   * This store knows about the ContentCache State and Actions.
    */
   export type Store = {
     dispatch: Dispatch;
