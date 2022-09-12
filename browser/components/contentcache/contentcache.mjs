@@ -2,31 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { ReactDOM, React, Redux, ReactRedux } from "./contentcache/vendor.mjs";
-import { reducers } from "./contentcache/reducers.mjs";
-import { ContentCache } from "./contentcache/components.mjs";
-import { reduxLogger, thunkMiddleware } from "./contentcache/utils.mjs";
-import * as Actions from "./contentcache/actions.mjs";
-import * as Selectors from "./contentcache/selectors.mjs";
+import { sql, console } from "./contentcache/utils.mjs";
 
-/** @type {any[]} */
-const middleware = [thunkMiddleware];
-if (Services.prefs.getCharPref("browser.contentCache.logLevel") === "All") {
-  // Only add the logger if it is required, since it fires for every action.
-  middleware.push(reduxLogger);
-}
+const lazy = {};
 
-const store = Redux.createStore(reducers, Redux.applyMiddleware(...middleware));
-
-Object.assign(/** @type {any} */(window), {
-  store,
-  getState: store.getState,
-  dispatch: store.dispatch,
+ChromeUtils.defineESModuleGetters(lazy, {
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
 });
-
-/** @type {any} */ (window).store = store;
-/** @type {any} */ (window).getState = store.getState;
-/** @type {any} */ (window).dispatch = store.dispatch;
 
 document.addEventListener("DOMContentLoaded", () => {
   const state = new ContentCacheState();
@@ -36,9 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
 class ContentCacheState {
   /**
    * The current search string in the input.
-   * @type {string}
+   * @type {string | null}
    */
-  searchString = ""
+  searchString = null
 
   /**
    * The current results for the search.
@@ -52,12 +34,134 @@ class ContentCacheState {
    */
   historyRows = []
 
+  /**
+   * Let the view know when the history rows have been changed.
+   * @type {() => {}}
+   */
+  onChangeHistoryRows = null;
+
+  async searchHistory(searchString) {
+    this.searchString = searchString;
+    const { search, host } = ContentCacheState.parseSearch(searchString);
+    const db = await lazy.PlacesUtils.promiseDBConnection();
+    let rows;
+    let revHost = sql``;
+
+    /** @type {{ search: string, revHost?: string }} */
+    const args = { search };
+
+    if (!search) {
+      if (host) {
+        console.log("[db] Searching for only a host", host);
+        const statement = sql`
+        SELECT *
+        FROM moz_places
+        WHERE
+          rev_host LIKE :revHost
+        ORDER BY
+          last_visit_date DESC
+        LIMIT 100
+      `;
+        rows = await statement.run(db, {
+          revHost: `%${lazy.PlacesUtils.getReversedHost({ host })}%`,
+        });
+      } else {
+        console.log("[db] Searching all recent history");
+        const statement = sql`
+        SELECT *
+        FROM moz_places
+        ORDER BY
+          last_visit_date DESC
+        LIMIT 100
+      `;
+        rows = await statement.run(db);
+      }
+    } else {
+      if (host) {
+        console.log("[db] Searching a host and text", host, search);
+        args.revHost = `%${lazy.PlacesUtils.getReversedHost({ host })}%`;
+        revHost = sql`
+        AND moz_places.rev_host LIKE :revHost
+      `;
+      } else {
+        console.log("[db] Searching text", search);
+      }
+      const statement = sql`
+      SELECT
+        moz_contentcache_text.text as text,
+        moz_places.url             as url,
+        moz_places.title           as title,
+        snippet(
+          moz_contentcache_text,
+          0,    -- Zero-indexed column
+          '<b>',   -- Insert before text match
+          '</b>',   -- Insert after text match
+          '',   -- The text to add to the start or end of the selected text to indicate
+                -- that the returned text does not occur at the start or end of its
+                -- column, respectively.
+          40    -- 0-64 The maximum number of tokens in the returned text.
+        ) as description
+      FROM moz_contentcache_text
+      LEFT JOIN moz_places
+      ON moz_contentcache_text.rowid = moz_places.id
+      WHERE moz_contentcache_text MATCH :search
+        ${revHost}
+      ORDER BY  rank
+      LIMIT     100
+    `;
+      const now = performance.now();
+      rows = await statement.run(db, args);
+      console.log(
+        "[db] statement took ",
+        Math.round((performance.now() - now) * 100) / 100 + "ms"
+      );
+    }
+
+    this.historyRows = rows.map(row => ({
+      url: row.getResultByName("url"),
+      title: row.getResultByName("title"),
+      description: row.getResultByName("description"),
+      row,
+    }));
+    this.onChangeHistoryRows();
+  }
+
+  /**
+   * @param {string} search
+   * @returns {{
+   *   host?: string,
+   *   search: string,
+   * }}
+   */
+  static parseSearch(search) {
+    /** @type {ParsedSearch} */
+    const parsedSearch = { search: "" };
+    const regex = /^site:(.*)$/;
+
+    for (const part of search.split(" ")) {
+      const siteResult = regex.exec(part.trim());
+      if (siteResult) {
+        parsedSearch.host = siteResult[1];
+      } else {
+        if (parsedSearch.search.length !== 0) {
+          parsedSearch.search += " ";
+        }
+        parsedSearch.search += part;
+      }
+    }
+    parsedSearch.search = parsedSearch.search.trim();
+    return parsedSearch;
+  }
 
 }
 
 class ContentCacheView {
   constructor(state) {
+    /** @type {ContentCacheState} */
     this.state = state;
+    state.onChangeHistoryRows = () => {
+      this.updateRows();
+    }
     window.view = this;
     this.searchInput = document.getElementById("searchInput");
     this.resultsContainer = document.getElementById("resultsContainer");
@@ -68,39 +172,34 @@ class ContentCacheView {
     this.updateRows();
     this.updateSearch();
     this.resultsContainer.style.display = "block"
-    store.subscribe(this.updateRows.bind(this));
 
     this.resultRow.remove();
 
     this.searchInput.addEventListener("input", this.updateSearch.bind(this));
   }
 
-  prevInputValue = null
-
   updateSearch() {
     const { value } = this.searchInput;
-    if (value === this.prevInputValue) {
+    if (value === this.state.searchString) {
       return;
     }
-    this.prevInputValue = value;
-    store.dispatch(Actions.searchHistory(value))
+    this.state.searchHistory(value);
   }
 
   prevRows = null;
 
   updateRows() {
-    const rows = Selectors.getHistoryRows(store.getState());
+    const { historyRows } = this.state
     // Only update if the results have changed.
-    if (rows === this.prevRows) {
+    if (historyRows === this.prevRows) {
       return;
     }
-    this.prevRows = rows;
-
+    this.prevRows = historyRows;
 
     const fragment = document.createDocumentFragment();
 
     // Build the results rows.
-    for (const { description, row, title, url } of rows) {
+    for (const { description, row, title, url } of historyRows) {
       const rowEl = this.resultRow.cloneNode(true /* deep */);
       rowEl.querySelector("img").setAttribute("src", "page-icon:" + url);
       const linkEl = rowEl.querySelector(".contentCacheResultsTitle");
