@@ -70,9 +70,7 @@ window.gCalendarEventListener = {
   handleEvent({ type, detail }) {
     switch (type) {
       case "Companion:RegisterCalendarEvents": {
-        this.lastCalendarEvents = detail.events.sort(
-          (a, b) => new Date(a.startDate) - new Date(b.startDate)
-        );
+        this.lastCalendarEvents = detail.events.sort(sortByStatus);
         if (!workshopEnabled) {
           this.dispatchRefreshEventsEvent();
         }
@@ -89,6 +87,23 @@ window.gCalendarEventListener.init();
 
 function debugEnabled() {
   return window.CompanionUtils.getBoolPref("browser.companion.debugUI", false);
+}
+
+function sortByStatus(firstEvent, secondEvent) {
+  const now = new Date();
+  const firstEventFinished = new Date(firstEvent.endDate) < now ? 1 : 0;
+  const secondEventFinished = new Date(secondEvent.endDate) < now ? 1 : 0;
+  if (
+    (firstEventFinished || secondEventFinished) &&
+    firstEventFinished !== secondEventFinished
+  ) {
+    return secondEventFinished - firstEventFinished;
+  }
+  return sortByStartDate(firstEvent, secondEvent);
+}
+
+function sortByStartDate(firstEvent, secondEvent) {
+  return new Date(firstEvent.startDate) - new Date(secondEvent.startDate);
 }
 
 /**
@@ -343,9 +358,7 @@ export class CalendarEventList extends MozLitElement {
         );
       });
     }
-    return uniqueEvents.sort(
-      (a, b) => new Date(a.startDate) - new Date(b.startDate)
-    );
+    return uniqueEvents.sort(this.isBrowse ? sortByStatus : sortByStartDate);
   }
 
   handleEvent(e) {

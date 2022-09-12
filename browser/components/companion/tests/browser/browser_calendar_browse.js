@@ -476,6 +476,60 @@ add_task(async function testMessageHostButton() {
   });
 });
 
+add_task(async function testFinishedEventsAppearFirst() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.pinebuild.calendar.browseEnabled", true]],
+  });
+
+  await CompanionHelper.whenReady(async helper => {
+    await helper.reload();
+    let now = new Date(DEFAULT_FAKE_NOW_TS);
+    // generate times for a finished event (started 1 hour ago, 30 mins long)
+    let { start, end } = PinebuildTestUtils.generateEventTimes(
+      0,
+      30,
+      now.getHours() - 1
+    );
+    // generate times for an ongoing event that started before the finished event
+    let {
+      start: ongoingStart,
+      end: ongoingEnd,
+    } = PinebuildTestUtils.generateEventTimes(0, 180, now.getHours() - 2);
+    let events = [
+      {
+        summary: "Finished",
+        startDate: start,
+        endDate: end,
+      },
+      {
+        summary: "Ongoing",
+        startDate: ongoingStart,
+        endDate: ongoingEnd,
+      },
+    ];
+    await setBrowseCalendarEvents(helper, events);
+    await helper.runCompanionTask(
+      async _events => {
+        let browseEventList = content.document.getElementById(
+          "browse-event-list"
+        );
+        let visibleEvents = browseEventList.calendarEvents;
+        is(
+          visibleEvents[0].event.summary,
+          _events[0].summary,
+          "The finished event appears first"
+        );
+        is(
+          visibleEvents[1].event.summary,
+          _events[1].summary,
+          "The ongoing event appears after the finished event"
+        );
+      },
+      [events]
+    );
+  });
+});
+
 async function validateEmailButtonDetails(helper, expectedId, expectedUrl) {
   let openedUrl = helper.catchNextOpenedUrl();
   await helper.runCompanionTask(
