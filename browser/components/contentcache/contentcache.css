@@ -9,59 +9,64 @@ body {
   font-size: 1.36em;
 }
 
-.history {
+.contentCache {
   display: flex;
   flex-direction: column;
   max-width: 800px;
   margin: 0 auto;
 }
 
-.historyTitle {
+.contentCacheTitle {
   display: flex;
 }
 
-.historyTitleSpan {
+.contentCacheTitleSpan {
   flex: 1;
 }
 
-.historyTitleClear {
+.contentCacheTitleClear {
   font-size: 14px;
+  margin: 10px 0;
 }
 
-.historyInputWrapper {
+.contentCacheInputWrapper {
   display: flex;
   flex-direction: column;
   position: relative;
 }
 
-input.historyInput {
+input.contentCacheInput {
   padding-left: 35px;
 }
 
-.historyInputIcon {
+.contentCacheInputIcon {
   position: absolute;
-  width: 15px;
-  height: 15px;
-  top: 13px;
-  left: 14px;
+  width: 18px;
+  height: 18px;
+  top: 17px;
+  left: 15px;
   pointer-events: none;
   -moz-context-properties: fill, fill-opacity;
   fill: currentColor;
   fill-opacity: 0.8;
 }
 
-.historyResultsRow {
+.contentCacheResults {
+  display: none;
+}
+
+.contentCacheResultsRow {
   margin: 38px 0;
 }
 
-.historyResultsUrl {
+.contentCacheResultsUrl {
   margin: 4px 0;
   font-size: 14px;
   display: flex;
   align-items: center;
 }
 
-.historyResultsTitle {
+.contentCacheResultsTitle {
   display: block;
   font-size: 21px;
   white-space: nowrap;
@@ -71,34 +76,34 @@ input.historyInput {
   margin: 5px 0;
 }
 
-.historyResultsFavicon {
+.contentCacheResultsFavicon {
   width: 16px;
   height: 16px;
   margin-inline-end: 3px;
   user-select: none;
 }
 
-.historyResultsDescription {
+.contentCacheResultsDescription {
   line-height: 1.6;
 }
 
-.historyResultsUrlHost {
+.contentCacheResultsUrlHost {
   background: none;
   padding: 0;
   margin: 0;
   border: none;
-  padding-inline: 3px;
+  margin: 4px;
 }
 
-.historyResultsUrlSlash {
+.contentCacheResultsUrlSlash {
   margin-inline-end: 3px;
 }
 
-.historyResultsUrlRest {
+.contentCacheResultsUrlRest {
   opacity: 0.7;
 }
 
-.historyHostMenu {
+.contentCacheHostMenu {
   display: flex;
   flex-direction: column;
   position: absolute;
@@ -111,14 +116,14 @@ input.historyInput {
   margin-top: 33px;
 }
 
-.historyResultsUrlRow {
+.contentCacheResultsUrlRow {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
 
-.historyMoreOptions {
+.contentCacheMoreOptions {
   position: relative;
   background: none;
   padding: 0;
@@ -129,7 +134,7 @@ input.historyInput {
   border-radius: 100px;
 }
 
-.historyMoreOptionsMenu {
+.contentCacheMoreOptionsMenu {
   display: flex;
   flex-direction: column;
   position: absolute;
