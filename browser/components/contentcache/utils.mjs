@@ -3,47 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// @ts-check
-
-/**
- * @typedef {import("resource://gre/modules/PlacesUtils.jsm")["PlacesUtils"]} PlacesUtils
- */
-
-/**
- * @typedef {Awaited<
- *  ReturnType<(PlacesUtils)["promiseDBConnection"]>
- * >} Database
- */
-
-/**
- * @template T
- * @param {T | void | null} item
- * @param {string} [message]
- * @returns T
- */
-export function ensureExists(item, message) {
-  if (item === null) {
-    throw new Error(message || "Expected an item to exist, and it was null.");
-  }
-  if (item === undefined) {
-    throw new Error(
-      message || "Expected an item to exist, and it was undefined."
-    );
-  }
-  return item;
-}
-
-export class UnhandledCaseError extends Error {
-  /**
-   * @param {never} value - Check that
-   * @param {string} typeName - A friendly type name.
-   */
-  constructor(value, typeName) {
-    super(`There was an unhandled case for "${typeName}": ${value}`);
-    this.name = "UnhandledCaseError";
-  }
-}
-
 // The text is private to this module:
 const sqlText = Symbol("sqlText");
 
@@ -119,59 +78,45 @@ export function sql(strings, ...sqlStates) {
 }
 
 /** @type {Console} */
-// @ts-ignore
 export const console = window.console.createInstance({
   maxLogLevelPref: "browser.contentCache.logLevel",
   prefix: "contentcache",
 });
 
 /**
- * Create a more minimalist action logger.
- * @param {ContentCache.Store} store
- */
-export function reduxLogger(store) {
-  /**
-   * @param {(action: ContentCache.Action) => any} nextMiddleware
-   */
-  return function (nextMiddleware) {
-    /** @type {(action: ContentCache.Action) => any} */
-    return action => {
-      const style = "font-weight: bold; color: #fa0";
-      const prevState = store.getState();
-      const result = nextMiddleware(action);
-      const nextState = store.getState();
-      console.log(`[action] %c${action.type}`, style, {
-        action,
-        prevState,
-        nextState,
-        stack: (new Error().stack || "(no stack)").split("\n"),
-      });
-      return result;
-    };
-  };
-}
-
-/**
- * Apply thunks in the redux middleware.
+ * Converts <b> and </b> text in a string into bold tags.
  *
- * @param {ContentCache.Store} store
+ * @param {HTMLElement} container
+ * @param {string} text
  */
-export function thunkMiddleware({ dispatch, getState }) {
-  /**
-   * @param {(action: ContentCache.Action) => any} nextMiddleware
-   */
-  return function (nextMiddleware) {
-    /**
-     * @param {any} actionOrThunk
-     */
-    return actionOrThunk => {
-      if (typeof actionOrThunk === "function") {
-        // This is a thunk, apply it.
-        return actionOrThunk(dispatch, getState);
-      }
+export function applyBoldTags(container, text) {
+  if (!text) {
+    return null;
+  }
+  const parts = [];
+  const [firstChunk, ...chunks] = text.split("<b>");
 
-      // Apply the normal action.
-      return nextMiddleware(actionOrThunk);
-    };
-  };
+  // The first chunk will always not be a bold tag. If the text starts with <b>
+  // then the first chunk will be "".
+  container.appendChild(document.createTextNode(firstChunk));
+
+  for (const chunk of chunks) {
+    const [boldText, ...normalTexts] = chunk.split("</b>");
+    {
+      // Add the bold tag.
+      const b = document.createElement("b");
+      b.textContent = boldText;
+      container.appendChild(b);
+    }
+
+    // Add any of the rest of the non-bold text. The only reason this is a for loop
+    // is to handle when there are incorrectly nested </b> tags.
+    for (const normalText of normalTexts) {
+      container.appendChild(document.createTextNode(normalText));
+    }
+  }
+
+  return parts;
 }
+
+export function noop() {}

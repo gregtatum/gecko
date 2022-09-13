@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { sql, console } from "./contentcache/utils.mjs";
+import { sql, console, applyBoldTags, noop } from "./contentcache/utils.mjs";
 
 const lazy = {};
 
@@ -13,8 +13,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
 document.addEventListener("DOMContentLoaded", () => {
   const state = new ContentCacheState();
   const view = new ContentCacheView(state);
-  state.onChangeHistoryRows = view.updateRows.bind(view)
-  state.onChangeSearchString = view.updateSearchString.bind(view)
+  state.onChangeHistoryRows = view.updateRows.bind(view);
+  state.onChangeSearchString = view.updateSearchString.bind(view);
 
   // Aid in the debugging by making these globally accessible.
   window.state = state;
@@ -26,7 +26,7 @@ class ContentCacheState {
    * The current search string in the input.
    * @type {string | null}
    */
-  searchString = null
+  searchString = null;
 
   /**
    * The current results for the search.
@@ -38,7 +38,7 @@ class ContentCacheState {
    *  url: string
    * }}
    */
-  historyRows = []
+  historyRows = [];
 
   /**
    * Let the view know when the history rows have been changed.
@@ -50,7 +50,7 @@ class ContentCacheState {
    * Let the view know when the search string has been changed.
    * @type {() => {}}
    */
-  onChangeSearchString = null
+  onChangeSearchString = null;
 
   /**
    * Performs the actual search against the content cache.
@@ -73,26 +73,26 @@ class ContentCacheState {
       if (host) {
         console.log("[db] Searching for only a host", host);
         const statement = sql`
-        SELECT *
-        FROM moz_places
-        WHERE
-          rev_host LIKE :revHost
-        ORDER BY
-          last_visit_date DESC
-        LIMIT 100
-      `;
+          SELECT *
+          FROM moz_places
+          WHERE
+            rev_host LIKE :revHost
+          ORDER BY
+            last_visit_date DESC
+          LIMIT 100
+        `;
         rows = await statement.run(db, {
           revHost: `%${lazy.PlacesUtils.getReversedHost({ host })}%`,
         });
       } else {
         console.log("[db] Searching all recent history");
         const statement = sql`
-        SELECT *
-        FROM moz_places
-        ORDER BY
-          last_visit_date DESC
-        LIMIT 100
-      `;
+          SELECT *
+          FROM moz_places
+          ORDER BY
+            last_visit_date DESC
+          LIMIT 100
+        `;
         rows = await statement.run(db);
       }
     } else {
@@ -100,34 +100,34 @@ class ContentCacheState {
         console.log("[db] Searching a host and text", host, search);
         args.revHost = `%${lazy.PlacesUtils.getReversedHost({ host })}%`;
         revHost = sql`
-        AND moz_places.rev_host LIKE :revHost
-      `;
+          AND moz_places.rev_host LIKE :revHost
+        `;
       } else {
         console.log("[db] Searching text", search);
       }
       const statement = sql`
-      SELECT
-        moz_contentcache_text.text as text,
-        moz_places.url             as url,
-        moz_places.title           as title,
-        snippet(
-          moz_contentcache_text,
-          0,    -- Zero-indexed column
-          '<b>',   -- Insert before text match
-          '</b>',   -- Insert after text match
-          '',   -- The text to add to the start or end of the selected text to indicate
-                -- that the returned text does not occur at the start or end of its
-                -- column, respectively.
-          40    -- 0-64 The maximum number of tokens in the returned text.
-        ) as description
-      FROM moz_contentcache_text
-      LEFT JOIN moz_places
-      ON moz_contentcache_text.rowid = moz_places.id
-      WHERE moz_contentcache_text MATCH :search
-        ${revHost}
-      ORDER BY  rank
-      LIMIT     100
-    `;
+        SELECT
+          moz_contentcache_text.text as text,
+          moz_places.url             as url,
+          moz_places.title           as title,
+          snippet(
+            moz_contentcache_text,
+            0,    -- Zero-indexed column
+            '<b>',   -- Insert before text match
+            '</b>',   -- Insert after text match
+            '',   -- The text to add to the start or end of the selected text to indicate
+                  -- that the returned text does not occur at the start or end of its
+                  -- column, respectively.
+            40    -- 0-64 The maximum number of tokens in the returned text.
+          ) as description
+        FROM moz_contentcache_text
+        LEFT JOIN moz_places
+        ON moz_contentcache_text.rowid = moz_places.id
+        WHERE moz_contentcache_text MATCH :search
+          ${revHost}
+        ORDER BY  rank
+        LIMIT     100
+      `;
       const now = performance.now();
       rows = await statement.run(db, args);
       console.log(
@@ -211,7 +211,7 @@ class ContentCacheView {
     this.initializeSearch();
     this.addListeners();
 
-    this.resultsContainer.style.display = "block"
+    this.resultsContainer.style.display = "block";
   }
 
   initializeSearch() {
@@ -243,20 +243,28 @@ class ContentCacheView {
     for (const { description, title, url } of this.state.historyRows) {
       const rowEl = this.resultRow.cloneNode(true /* deep */);
       const linkEl = rowEl.querySelector(".contentCacheResultsTitle");
-      linkEl.innerText = title || url
+      linkEl.innerText = title || url;
       linkEl.setAttribute("href", url);
       rowEl.querySelector("img").setAttribute("src", "page-icon:" + url);
 
-      applyBoldTags(rowEl.querySelector(".contentCacheResultsDescription"), description);
-      this.buildDisplayURL(rowEl.querySelector(".contentCacheResultsUrlRow"), url)
+      applyBoldTags(
+        rowEl.querySelector(".contentCacheResultsDescription"),
+        description
+      );
+      this.buildDisplayURL(
+        rowEl.querySelector(".contentCacheResultsUrlRow"),
+        url
+      );
 
-      rowEl.querySelector(".contentCacheMoreOptions").addEventListener("click", this.showMoreOptions)
+      rowEl
+        .querySelector(".contentCacheMoreOptions")
+        .addEventListener("click", this.showMoreOptions);
 
       fragment.appendChild(rowEl);
     }
 
-    while(this.resultsContainer.firstChild) {
-      this.resultsContainer.removeChild(this.resultsContainer.firstChild);
+    while (this.resultsContainer.firstChild) {
+      this.resultsContainer.firstChild.remove();
     }
     this.resultsContainer.appendChild(fragment);
   }
@@ -270,7 +278,8 @@ class ContentCacheView {
     try {
       url = new URL(rawURL);
     } catch (error) {
-      return rawURL;
+      span.textContent = rawURL;
+      return;
     }
     const { host } = url;
     const index = rawURL.indexOf(host) + 1 + host.length;
@@ -293,7 +302,7 @@ class ContentCacheView {
     const urlRest = rawURL.slice(index);
     if (urlRest.length) {
       const s1 = document.createElement("span");
-      s1.className = "contentCacheResultsUrlRow";
+      s1.className = "contentCacheResultsUrlSlash";
       s1.textContent = "/";
 
       const s2 = document.createElement("span");
@@ -308,19 +317,20 @@ class ContentCacheView {
   /**
    * @param {MouseEvent} event
    */
-  onHostClick = (event) => {
+  onHostClick = event => {
     this.state.addSiteToSearchString(event.target.dataset.host);
-  }
+  };
 
   /** @type {HTMLElement | null} */
   moreOptionsButton = null;
+
   /** @type {() => void} */
   removeMoreOptions = noop;
 
   /**
    * @param {MouseEvent} event
    */
-  showMoreOptions = (event) => {
+  showMoreOptions = event => {
     if (event.target === this.moreOptionsButton) {
       // Toggling this button off.
       this.removeMoreOptions();
@@ -342,94 +352,29 @@ class ContentCacheView {
       document.body.removeEventListener("click", bodyClick, true);
       document.body.removeEventListener("keypress", escapeListener, true);
       this.moreOptionsButton.addEventListener("click", this.showMoreOptions);
-      this.moreOptionsButton = null
-      this.removeMoreOptions = noop
-    }
+      this.moreOptionsButton = null;
+      this.removeMoreOptions = noop;
+    };
 
-    const bodyClick = (clickEvent) => {
-      if (moreOptions.contains(clickEvent.target)) {
+    const bodyClick = ({ target }) => {
+      if (moreOptions.contains(target)) {
         return;
       }
       this.removeMoreOptions();
-    }
+    };
 
-    const escapeListener = (event) => {
-      if (event.key === "Escape") {
+    const escapeListener = ({ key }) => {
+      if (key === "Escape") {
         this.removeMoreOptions();
       }
-    }
+    };
 
     document.body.addEventListener("click", bodyClick, true /* use capture */);
-    document.body.addEventListener("keypress", escapeListener, true /* use capture */);
-    this.moreOptionsButton.parentNode.appendChild(moreOptions);
-  }
-}
-
-function buildMoreOptions() {
-  const { isOpen, setIsOpen } = useOpenCloseBehavior();
-
-  let menu = null;
-  if (isOpen) {
-    menu = div(
-      { className: "contentCacheMoreOptionsMenu" },
-      button({ className: "contentCacheHostMenuItem" }, "Forget this page"),
-      button({ className: "contentCacheHostMenuItem" }, "Forget this site"),
-      button({ className: "contentCacheHostMenuItem" }, "Add as bookmark")
+    document.body.addEventListener(
+      "keypress",
+      escapeListener,
+      true /* use capture */
     );
-  }
-
-  return button(
-    { className: "contentCacheMoreOptions", onClick: () => setIsOpen(true) },
-    span(
-      // TODO - Do not use a random unicode glyph here.
-      {
-        style: {
-          fontSize: "20px",
-          position: "relative",
-          display: "inline-block",
-          left: "-2px",
-        },
-      },
-      "⠸"
-    ),
-    menu
-  );
+    this.moreOptionsButton.parentNode.appendChild(moreOptions);
+  };
 }
-
-/**
- * Converts <b> and </b> text in a string into bold tags.
- *
- * @param {HTMLElement} container
- * @param {string} text
- */
-function applyBoldTags(container, text) {
-  if (!text) {
-    return null;
-  }
-  const parts = [];
-  const [firstChunk, ...chunks] = text.split("<b>");
-
-  // The first chunk will always not be a bold tag. If the text starts with <b>
-  // then the first chunk will be "".
-  container.appendChild(document.createTextNode(firstChunk))
-
-  for (const chunk of chunks) {
-    const [boldText, ...normalTexts] = chunk.split("</b>");
-    {
-      // Add the bold tag.
-      const b = document.createElement('b')
-      b.textContent = boldText;
-      container.appendChild(b);
-    }
-
-    // Add any of the rest of the non-bold text. The only reason this is a for loop
-    // is to handle when there are incorrectly nested </b> tags.
-    for (const normalText of normalTexts) {
-      container.appendChild(document.createTextNode(normalText))
-    }
-  }
-
-  return parts;
-}
-
-function noop() {}
