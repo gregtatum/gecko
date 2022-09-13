@@ -31,19 +31,21 @@
         <div class="contentCacheResultsRow">
           <div class="contentCacheResultsUrl">
             <img class="contentCacheResultsFavicon" />
+            <span class="contentCacheResultsUrlRow"></span>
+            <button class="contentCacheMoreOptions"></button>
           </div>
           <a class="contentCacheResultsTitle" target="_blank"></a>
           <div class="contentCacheResultsDescription"></div>
         </div>
 
-        <!-- This node gets removed and used as a template for the more options menu.  -->
-        <div class="contentCacheMoreOptionsMenu" data-place-id="">
-          <button className="contentCacheHostMenuItem" data-l10n-id="content-cache-forget-page"></button>
-          <button className="contentCacheHostMenuItem" data-l10n-id="content-cache-forget-site"></button>
-          <button className="contentCacheHostMenuItem" data-l10n-id="content-cache-add-bookmark"></button>
-        </div>
-
       </div>
+    </div>
+
+    <!-- This node gets removed and used as a template for the more options menu.  -->
+    <div class="contentCacheMoreOptionsMenu">
+      <button className="contentCacheHostMenuItem" data-l10n-id="content-cache-forget-page"></button>
+      <button className="contentCacheHostMenuItem" data-l10n-id="content-cache-forget-site"></button>
+      <button className="contentCacheHostMenuItem" data-l10n-id="content-cache-add-bookmark"></button>
     </div>
 
     <script type="module" src="chrome://browser/content/contentcache.mjs"></script>
