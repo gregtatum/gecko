@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Image for DBSCAN Tests</title>
+</head>
+<body>
+  <script>
+    /**
+     * @param {(CanvasRenderingContext2D: ctx) => void} callback
+     */
+    function addImage(callback) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 600;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#000"
+      ctx.fillRect(0, 0, 800, 600);
+      ctx.fillStyle = "#fff"
+
+      callback(ctx);
+
+      const img = document.createElement("img");
+      document.body.appendChild(img);
+      img.src = canvas.toDataURL();
+      img.style.width = "400px";
+      img.style.height = "300px";
+    }
+
+    addImage(ctx => {
+      ctx.font = "20px sans-serif"
+      const paragraphs = [
+        [
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+          "Nulla tincidunt, tortor at molestie aliquam, mauris ante",
+          "elementum nulla, ultricies dapibus lectus arcu at lacus.",
+          "Nulla eu magna ut enim laoreet luctus ut eu metus. Sed",
+          "quis nibh egestas, vehicula sapien eu, lacinia est.",
+        ],
+        [
+          "Maecenas lacus lectus, gravida nec varius nec, pretium",
+          "eget tortor. Duis elit odio, venenatis vitae molestie",
+          "feugiat, scelerisque non justo. Nam et mi ac arcu",
+          "imperdiet facilisis eu at eros. Nam at lectus quis",
+          "nisl vestibulum consequat vel eu ligula.",
+        ],
+        [
+          "Orci varius natoque penatibus et magnis dis parturient",
+          "montes, nascetur ridiculus mus. Mauris tincidunt lectus",
+          "risus, ac sodales quam venenatis id. Mauris pretium arcu",
+          "sed dignissim aliquet. Phasellus at tincidunt sem, vel",
+          "porttitor justo.",
+        ]
+      ]
+      const margin = 30;
+      const height = 20;
+      let cursor = margin;
+      for (let i = 0; i < paragraphs.length; i++) {
+        const paragraph = paragraphs[i];
+        for (let j = 0; j < paragraph.length; j++) {
+          const line = paragraph[j];
+          cursor += height
+          ctx.fillText(line, margin, cursor);
+        }
+        cursor += margin;
+      }
+    });
+  </script>
+</body>
+</html>
