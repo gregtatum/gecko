@@ -38,6 +38,9 @@
           "nsIMacSharingService",
         ],
       });
+      XPCOMUtils.defineLazyGetter(this, "tabLocalization", () => {
+        return new Localization(["browser/tabbrowser.ftl"], true);
+      });
 
       if (AppConstants.MOZ_CRASHREPORTER) {
         ChromeUtils.defineModuleGetter(
@@ -3181,26 +3184,27 @@
       // solve the problem of windows "obscuring" the prompt.
       // see bug #350299 for more details
       window.focus();
-      let warningTitle = gTabBrowserBundle.GetStringFromName(
-        "tabs.closeTabsTitle"
-      );
-      warningTitle = PluralForm.get(tabsToClose, warningTitle).replace(
-        "#1",
-        tabsToClose
+      const [title, button, checkbox] = this.tabLocalization.formatMessagesSync(
+        [
+          {
+            id: "tabbrowser-confirm-close-tabs-title",
+            args: { tabCount: tabsToClose },
+          },
+          { id: "tabbrowser-confirm-close-tabs-button" },
+          { id: "tabbrowser-confirm-close-tabs-checkbox" },
+        ]
       );
       let flags =
         ps.BUTTON_TITLE_IS_STRING * ps.BUTTON_POS_0 +
         ps.BUTTON_TITLE_CANCEL * ps.BUTTON_POS_1;
       let checkboxLabel =
-        aCloseTabs == this.closingTabsEnum.ALL
-          ? gTabBrowserBundle.GetStringFromName("tabs.closeTabsConfirmCheckbox")
-          : null;
+        aCloseTabs == this.closingTabsEnum.ALL ? checkbox.value : null;
       var buttonPressed = ps.confirmEx(
         window,
-        warningTitle,
+        title.value,
         null,
         flags,
-        gTabBrowserBundle.GetStringFromName("tabs.closeButtonMultiple"),
+        button.value,
         null,
         null,
         checkboxLabel,
@@ -5444,18 +5448,26 @@
         var checkValue = { value: false };
         var promptService = Services.prompt;
 
+        const [
+          title,
+          message,
+          checkbox,
+        ] = this.tabLocalization.formatMessagesSync([
+          "tabbrowser-confirm-browsewithcaret-title",
+          "tabbrowser-confirm-browsewithcaret-message",
+          "tabbrowser-confirm-browsewithcaret-checkbox",
+        ]);
+
         var buttonPressed = promptService.confirmEx(
           window,
-          gTabBrowserBundle.GetStringFromName(
-            "browsewithcaret.checkWindowTitle"
-          ),
-          gTabBrowserBundle.GetStringFromName("browsewithcaret.checkLabel"),
+          title.value,
+          message.value,
           // Make "No" the default:
           promptService.STD_YES_NO_BUTTONS | promptService.BUTTON_POS_1_DEFAULT,
           null,
           null,
           null,
-          gTabBrowserBundle.GetStringFromName("browsewithcaret.checkMsg"),
+          checkbox.value,
           checkValue
         );
         if (buttonPressed != 0) {
@@ -5551,12 +5563,12 @@
         }
       }
       if (tab.userContextId) {
-        label = gTabBrowserBundle.formatStringFromName(
-          "tabs.containers.tooltip",
-          [
-            label,
-            ContextualIdentityService.getUserContextLabel(tab.userContextId),
-          ]
+        const containerName = ContextualIdentityService.getUserContextLabel(
+          tab.userContextId
+        );
+        label = this.tabLocalization.formatValueSync(
+          "tabbrowser-container-tab-title",
+          { title: label, containerName }
         );
       }
       return label;
@@ -5570,64 +5582,34 @@
         return;
       }
 
-      let stringWithShortcut = (stringId, keyElemId, pluralCount) => {
-        let keyElem = document.getElementById(keyElemId);
-        let shortcut = ShortcutUtils.prettifyShortcut(keyElem);
-        return PluralForm.get(
-          pluralCount,
-          gTabBrowserBundle.GetStringFromName(stringId)
-        )
-          .replace("%S", shortcut)
-          .replace("#1", pluralCount);
-      };
-
-      let label;
-      const selectedTabs = this.selectedTabs;
-      const contextTabInSelection = selectedTabs.includes(tab);
-      const affectedTabsLength = contextTabInSelection
-        ? selectedTabs.length
+      let l10nId, l10nArgs;
+      const tabCount = this.selectedTabs.includes(tab)
+        ? this.selectedTabs.length
         : 1;
       if (tab.mOverCloseButton) {
-        label = tab.selected
-          ? stringWithShortcut(
-              "tabs.closeTabs.tooltip",
-              "key_close",
-              affectedTabsLength
-            )
-          : PluralForm.get(
-              affectedTabsLength,
-              gTabBrowserBundle.GetStringFromName("tabs.closeTabs.tooltip")
-            ).replace("#1", affectedTabsLength);
+        l10nId = "tabbrowser-close-tabs-tooltip";
+        l10nArgs = { tabCount };
       } else if (tab._overPlayingIcon) {
-        let stringID;
+        l10nArgs = { tabCount };
         if (tab.selected) {
-          stringID = tab.linkedBrowser.audioMuted
-            ? "tabs.unmuteAudio2.tooltip"
-            : "tabs.muteAudio2.tooltip";
-          label = stringWithShortcut(
-            stringID,
-            "key_toggleMute",
-            affectedTabsLength
-          );
+          l10nId = tab.linkedBrowser.audioMuted
+            ? "tabbrowser-unmute-tab-audio-tooltip"
+            : "tabbrowser-mute-tab-audio-tooltip";
+          const keyElem = document.getElementById("key_toggleMute");
+          l10nArgs.shortcut = ShortcutUtils.prettifyShortcut(keyElem);
+        } else if (tab.hasAttribute("activemedia-blocked")) {
+          l10nId = "tabbrowser-unblock-tab-audio-tooltip";
         } else {
-          if (tab.hasAttribute("activemedia-blocked")) {
-            stringID = "tabs.unblockAudio2.tooltip";
-          } else {
-            stringID = tab.linkedBrowser.audioMuted
-              ? "tabs.unmuteAudio2.background.tooltip"
-              : "tabs.muteAudio2.background.tooltip";
-          }
-
-          label = PluralForm.get(
-            affectedTabsLength,
-            gTabBrowserBundle.GetStringFromName(stringID)
-          ).replace("#1", affectedTabsLength);
+          l10nId = tab.linkedBrowser.audioMuted
+            ? "tabbrowser-unmute-tab-audio-background-tooltip"
+            : "tabbrowser-mute-tab-audio-background-tooltip";
         }
       } else {
-        label = this.getTabTooltip(tab);
+        l10nId = "tabbrowser-tab-tooltip";
+        l10nArgs = { title: this.getTabTooltip(tab, true) };
       }
 
-      event.target.setAttribute("label", label);
+      document.l10n.setAttributes(event.target, l10nId, l10nArgs);
     },
 
     handleEvent(aEvent) {
@@ -7034,14 +7016,10 @@ var TabBarVisibility = {
     navbar.setAttribute("tabs-hidden", collapse);
 
     document.getElementById("menu_closeWindow").hidden = collapse;
-    document
-      .getElementById("menu_close")
-      .setAttribute(
-        "label",
-        gTabBrowserBundle.GetStringFromName(
-          collapse ? "tabs.close" : "tabs.closeTab"
-        )
-      );
+    document.l10n.setAttributes(
+      document.getElementById("menu_close"),
+      collapse ? "tabbrowser-menuitem-close" : "tabbrowser-menuitem-close-tab"
+    );
 
     TabsInTitlebar.allowedBy("tabs-visible", !collapse);
   },
