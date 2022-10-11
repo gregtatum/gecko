@@ -39,7 +39,10 @@
         ],
       });
       XPCOMUtils.defineLazyGetter(this, "tabLocalization", () => {
-        return new Localization(["browser/tabbrowser.ftl"], true);
+        return new Localization(
+          ["browser/tabbrowser.ftl", "branding/brand.ftl"],
+          true
+        );
       });
 
       if (AppConstants.MOZ_CRASHREPORTER) {
@@ -1546,11 +1549,9 @@
       var title = browser.contentTitle;
 
       if (aTab.hasAttribute("customizemode")) {
-        let brandBundle = document.getElementById("bundle_brand");
-        let brandShortName = brandBundle.getString("brandShortName");
-        title = gNavigatorBundle.getFormattedString("customizeMode.tabTitle", [
-          brandShortName,
-        ]);
+        title = this.tabLocalization.formatValueSync(
+          "tabbrowser-customizemode-tab-title"
+        );
       }
 
       // Don't replace an initially set label with the URL while the tab
@@ -5666,32 +5667,21 @@
       //  - sameURI (bool)
       //     true if we're refreshing the page. false if we're redirecting.
 
-      let brandBundle = document.getElementById("bundle_brand");
-      let brandShortName = brandBundle.getString("brandShortName");
-      let message = gNavigatorBundle.getFormattedString(
-        "refreshBlocked." + (data.sameURI ? "refreshLabel" : "redirectLabel"),
-        [brandShortName]
-      );
-
       let notificationBox = this.getNotificationBox(browser);
       let notification = notificationBox.getNotificationWithValue(
         "refresh-blocked"
       );
 
+      let l10nId = data.sameURI
+        ? "refresh-blocked-refresh-label"
+        : "refresh-blocked-redirect-label";
       if (notification) {
-        notification.label = message;
+        const message = notification.querySelector("span");
+        document.l10n.setAttributes(message, l10nId);
       } else {
-        let refreshButtonText = gNavigatorBundle.getString(
-          "refreshBlocked.goButton"
-        );
-        let refreshButtonAccesskey = gNavigatorBundle.getString(
-          "refreshBlocked.goButton.accesskey"
-        );
-
-        let buttons = [
+        const buttons = [
           {
-            label: refreshButtonText,
-            accessKey: refreshButtonAccesskey,
+            "l10n-id": "refresh-blocked-allow",
             callback() {
               actor.sendAsyncMessage("RefreshBlocker:Refresh", data);
             },
@@ -5701,7 +5691,7 @@
         notificationBox.appendNotification(
           "refresh-blocked",
           {
-            label: message,
+            "l10n-id": l10nId,
             image: "chrome://browser/skin/notification-icons/popup.svg",
             priority: notificationBox.PRIORITY_INFO_MEDIUM,
           },
@@ -7210,31 +7200,17 @@ var TabContextMenu = {
     toggleMute.hidden = multiselectionContext;
     toggleMultiSelectMute.hidden = !multiselectionContext;
 
-    // Adjust the state of the toggle mute menu item.
-    if (this.contextTab.hasAttribute("muted")) {
-      toggleMute.label = gNavigatorBundle.getString("unmuteTab.label");
-      toggleMute.accessKey = gNavigatorBundle.getString("unmuteTab.accesskey");
-    } else {
-      toggleMute.label = gNavigatorBundle.getString("muteTab.label");
-      toggleMute.accessKey = gNavigatorBundle.getString("muteTab.accesskey");
-    }
-
-    // Adjust the state of the toggle mute menu item for multi-selected tabs.
-    if (this.contextTab.hasAttribute("muted")) {
-      toggleMultiSelectMute.label = gNavigatorBundle.getString(
-        "unmuteSelectedTabs2.label"
-      );
-      toggleMultiSelectMute.accessKey = gNavigatorBundle.getString(
-        "unmuteSelectedTabs2.accesskey"
-      );
-    } else {
-      toggleMultiSelectMute.label = gNavigatorBundle.getString(
-        "muteSelectedTabs2.label"
-      );
-      toggleMultiSelectMute.accessKey = gNavigatorBundle.getString(
-        "muteSelectedTabs2.accesskey"
-      );
-    }
+    const isMuted = this.contextTab.hasAttribute("muted");
+    document.l10n.setAttributes(
+      toggleMute,
+      isMuted ? "tabbrowser-unmute-tab" : "tabbrowser-mute-tab"
+    );
+    document.l10n.setAttributes(
+      toggleMultiSelectMute,
+      isMuted
+        ? "tabbrowser-unmute-selected-tabs"
+        : "tabbrowser-mute-selected-tabs"
+    );
 
     this.contextTab.toggleMuteMenuItem = toggleMute;
     this.contextTab.toggleMultiSelectMuteMenuItem = toggleMultiSelectMute;
