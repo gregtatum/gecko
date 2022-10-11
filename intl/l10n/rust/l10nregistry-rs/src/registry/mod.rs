@@ -17,36 +17,92 @@ pub use synchronous::GenerateBundlesSync;
 
 pub type FluentResourceSet = Vec<Rc<FluentResource>>;
 
-/// The shared information that makes up the configuration for the L10nRegistry.
+/// The shared information that makes up the configuration the L10nRegistry. It is
+/// broken out into a separate struct so that it can be shared via an Rc pointer.
 #[derive(Default)]
 struct Shared<P, B> {
-    metasources: Mutex<Vec<Vec<FileSource>>>,
+    /// The raw mutex lock for the MetaSources.
+    metasources_mutex: Mutex<Vec<Vec<FileSource>>>,
     provider: P,
     bundle_adapter: Option<B>,
 }
 
-/// A locked version of the [L10nRegistry]. This is used to access the [FileSource] and
-/// can be obtained via the [L10nRegistry::lock] method.
-pub struct L10nRegistryLocked<'a> {
-    metasources: MutexGuard<'a, Vec<Vec<FileSource>>>,
-}
+/// MetaSources can be obtained from multiple threads. This struct provides locked
+/// access for working with metasources and their FileSources. Each MetaSource
+/// contains a list of FileSources.
+pub struct MetaSources<'a>(MutexGuard<'a, Vec<Vec<FileSource>>>);
 
-impl<'a> L10nRegistryLocked<'a> {
-    /// Iterate over the FileSources for a metasource.
-    pub fn iter(&self, metasource_idx: usize) -> impl Iterator<Item = &FileSource> {
-        self.metasource(metasource_idx).iter()
+impl<'a> MetaSources<'a> {
+    /// Iterate over all FileSources in all MetaSources.
+    pub fn filesources(&self) -> impl Iterator<Item = &FileSource> {
+        self.0.iter().flatten()
+    }
+
+    /// Iterate over all FileSources in all MetaSources.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Vec<FileSource>> {
+        self.0.iter_mut()
+    }
+
+    /// The number of metasources.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// If there are no metasources.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Clears out all metasources.
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+
+    /// Clears out only empty metasources.
+    pub fn clear_empty_metasources(&mut self) {
+        self.0.retain(|metasource| !metasource.is_empty());
+    }
+
+    /// Adds a [FileSource] to its appropriate metasource.
+    pub fn add_filesource(&mut self, new_source: FileSource) {
+        if let Some(metasource) = self
+            .0
+            .iter_mut()
+            .find(|source| source[0].metasource == new_source.metasource)
+        {
+            // A metasource was found, add to the existing one.
+            metasource.push(new_source);
+        } else {
+            // Create a new metasource.
+            self.0.push(vec![new_source]);
+        }
+    }
+
+    /// Adds a [FileSource] to its appropriate metasource.
+    pub fn update_filesource(&mut self, new_source: &FileSource) -> bool {
+        if let Some(metasource) = self
+            .0
+            .iter_mut()
+            .find(|source| source[0].metasource == new_source.metasource)
+        {
+            if let Some(idx) = metasource.iter().position(|source| *source == *new_source) {
+                *metasource.get_mut(idx).unwrap() = new_source.clone();
+                return true;
+            }
+        }
+        false
     }
 
     /// Get a metasource by index, but provide a nice error message if the index
     /// is out of bounds.
     pub fn metasource(&self, metasource_idx: usize) -> &Vec<FileSource> {
-        if let Some(metasource) = self.metasources.get(metasource_idx) {
+        if let Some(metasource) = self.0.get(metasource_idx) {
             return &metasource;
         }
         panic!(
             "Metasource index of {} is out of range of the list of {} meta sources.",
             metasource_idx,
-            self.metasources.len()
+            self.0.len()
         );
     }
 
@@ -68,17 +124,21 @@ impl<'a> L10nRegistryLocked<'a> {
     /// Get a [FileSource] by name from a metasource. This is useful for testing.
     #[cfg(test)]
     pub fn file_source_by_name(&self, metasource_idx: usize, name: &str) -> Option<&FileSource> {
-        self.iter(metasource_idx)
+        self.metasource(metasource_idx)
+            .iter()
             .find(|&source| source.name == name)
     }
 
+    /// Get the list of
+    #[cfg(test)]
     pub fn generate_sources_for_file<'l>(
         &'l self,
         metasource: usize,
         langid: &'l LanguageIdentifier,
         resource_id: &'l ResourceId,
     ) -> impl Iterator<Item = &FileSource> {
-        self.iter(metasource)
+        self.metasource(metasource)
+            .iter()
             .filter(move |source| source.has_file(langid, resource_id) != Some(false))
     }
 }
@@ -90,10 +150,7 @@ pub trait BundleAdapter {
     fn adapt_bundle(&self, bundle: &mut FluentBundle);
 }
 
-/// The L10nRegistry contains a list of metasources, which each contain a list of
-/// FileSources. This metasources data can be accessed on multiple threads, and is
-/// protected behind a mutex. The [L10nRegistryLocked] struct is a variant of this
-/// struct that allows scoped access to the registry.
+/// The L10nRegistry is the main struct for owning the registry information.
 ///
 /// `P` - A provider
 /// `B` - A bundle adaptor
@@ -107,7 +164,7 @@ impl<P, B> L10nRegistry<P, B> {
     pub fn with_provider(provider: P) -> Self {
         Self {
             shared: Rc::new(Shared {
-                metasources: Default::default(),
+                metasources_mutex: Default::default(),
                 provider,
                 bundle_adapter: None,
             }),
@@ -124,29 +181,25 @@ impl<P, B> L10nRegistry<P, B> {
         Ok(())
     }
 
-    /// Creates a locked version of the registry that can be manipulated.
-    pub fn lock(&self) -> L10nRegistryLocked<'_> {
-        L10nRegistryLocked {
+    /// Creates a locked version of the MetaSources that can read.
+    pub fn metasources(&self) -> MetaSources<'_> {
+        MetaSources(
             // The lock() method only fails here if another thread has panicked
             // while holding the lock. In this case, we'll propagate the panic
             // as well. It's not clear what the recovery strategy would be for
             // us to deal with a panic in another thread.
-            metasources: self
-                .shared
-                .metasources
+            self.shared
+                .metasources_mutex
                 .lock()
-                .expect("Deadlock due to crashed thread holding a lock."),
-            bundle_adapter: self.shared.bundle_adapter.as_ref(),
-        }
+                .expect("Deadlock most likely due to a crashed thread holding a lock."),
+        )
     }
 
-    fn try_lock_metasources(
-        &self,
-    ) -> Result<MutexGuard<Vec<Vec<FileSource>>>, L10nRegistrySetupError> {
-        self.shared
-            .metasources
-            .try_lock()
-            .map_err(|_| L10nRegistrySetupError::RegistryLocked)
+    fn try_lock_metasources(&self) -> Result<MetaSources, L10nRegistrySetupError> {
+        match self.shared.metasources_mutex.try_lock() {
+            Ok(metasources) => Ok(MetaSources(metasources)),
+            Err(_) => Err(L10nRegistrySetupError::RegistryLocked),
+        }
     }
 
     /// Adds a new FileSource to the registry and to its appropriate metasource. If the
@@ -156,16 +209,8 @@ impl<P, B> L10nRegistry<P, B> {
         new_sources: Vec<FileSource>,
     ) -> Result<(), L10nRegistrySetupError> {
         let mut metasources = self.try_lock_metasources()?;
-
         for new_source in new_sources {
-            if let Some(metasource) = metasources
-                .iter_mut()
-                .find(|source| source[0].metasource == new_source.metasource)
-            {
-                metasource.push(new_source);
-            } else {
-                metasources.push(vec![new_source]);
-            }
+            metasources.add_filesource(new_source);
         }
         Ok(())
     }
@@ -180,17 +225,10 @@ impl<P, B> L10nRegistry<P, B> {
         let mut metasources = self.try_lock_metasources()?;
 
         for new_source in new_sources {
-            if let Some(metasource) = metasources
-                .iter_mut()
-                .find(|source| source[0].metasource == new_source.metasource)
-            {
-                if let Some(idx) = metasource.iter().position(|source| *source == new_source) {
-                    *metasource.get_mut(idx).unwrap() = new_source;
-                } else {
-                    return Err(L10nRegistrySetupError::MissingSource {
-                        name: new_source.name,
-                    });
-                }
+            if !metasources.update_filesource(&new_source) {
+                return Err(L10nRegistrySetupError::MissingSource {
+                    name: new_source.name,
+                });
             }
         }
         Ok(())
@@ -209,47 +247,48 @@ impl<P, B> L10nRegistry<P, B> {
             metasource.retain(|source| !del_sources.contains(&source.name));
         }
 
-        metasources.retain(|metasource| !metasource.is_empty());
+        metasources.clear_empty_metasources();
 
         Ok(())
     }
 
+    /// Clears out all metasources and sources.
     pub fn clear_sources(&self) -> Result<(), L10nRegistrySetupError> {
-        let mut metasources = self.try_lock_metasources()?;
-        metasources.clear();
+        self.try_lock_metasources()?.clear();
         Ok(())
     }
 
+    /// Flattens out all metasources and returns the complete list of source names.
     pub fn get_source_names(&self) -> Result<Vec<String>, L10nRegistrySetupError> {
         Ok(self
             .try_lock_metasources()?
-            .iter()
-            .flatten()
+            .filesources()
             .map(|s| s.name.clone())
             .collect())
     }
 
+    /// Checks if any metasources has a source, by the name.
     pub fn has_source(&self, name: &str) -> Result<bool, L10nRegistrySetupError> {
         Ok(self
             .try_lock_metasources()?
-            .iter()
-            .flatten()
+            .filesources()
             .any(|source| source.name == name))
     }
 
+    /// Gets a source by the name, from any metasource.
     pub fn get_source(&self, name: &str) -> Result<Option<FileSource>, L10nRegistrySetupError> {
         Ok(self
             .try_lock_metasources()?
-            .iter()
-            .flatten()
+            .filesources()
             .find(|source| source.name == name)
             .cloned())
     }
 
+    /// Returns a unique list of locale names from all sources.
     pub fn get_available_locales(&self) -> Result<Vec<LanguageIdentifier>, L10nRegistrySetupError> {
         let metasources = self.try_lock_metasources()?;
         let mut result = HashSet::new();
-        for source in metasources.iter().flatten() {
+        for source in metasources.filesources() {
             for locale in source.locales() {
                 result.insert(locale);
             }
@@ -258,6 +297,7 @@ impl<P, B> L10nRegistry<P, B> {
     }
 }
 
+/// Defines how to generate bundles synchronously and asynchronously.
 impl<P, B> BundleGenerator for L10nRegistry<P, B>
 where
     P: ErrorReporter + Clone,
@@ -268,6 +308,7 @@ where
     type Stream = GenerateBundles<P, B>;
     type LocalesIter = std::vec::IntoIter<LanguageIdentifier>;
 
+    /// The synchronous version of the bundle generator.
     fn bundles_iter(
         &self,
         locales: Self::LocalesIter,
@@ -277,6 +318,7 @@ where
         self.generate_bundles_sync(locales, resource_ids)
     }
 
+    /// The asynchronous version of the bundle generator.
     fn bundles_stream(
         &self,
         locales: Self::LocalesIter,

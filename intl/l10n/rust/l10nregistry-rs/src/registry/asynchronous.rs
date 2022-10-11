@@ -3,7 +3,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use super::{BundleAdapter, L10nRegistry, L10nRegistryLocked};
+use super::{BundleAdapter, L10nRegistry};
 use crate::solver::{AsyncTester, ParallelProblemSolver};
 use crate::{
     env::ErrorReporter,
@@ -19,8 +19,6 @@ use futures::{
 };
 use std::future::Future;
 use unic_langid::LanguageIdentifier;
-
-impl<'a> L10nRegistryLocked<'a> {}
 
 impl<P, B> L10nRegistry<P, B>
 where
@@ -129,7 +127,7 @@ impl<'l, P, B> AsyncTester for GenerateBundles<P, B> {
 
     fn test_async(&self, query: Vec<(usize, usize)>) -> Self::Result {
         let locale = self.state.get_locale();
-        let lock = self.reg.lock();
+        let lock = self.reg.metasources();
 
         let stream = query
             .iter()
@@ -156,7 +154,11 @@ macro_rules! try_next_metasource {
             $self.current_metasource -= 1;
             let solver = ParallelProblemSolver::new(
                 $self.resource_ids.len(),
-                $self.reg.lock().metasource($self.current_metasource).len(),
+                $self
+                    .reg
+                    .metasources()
+                    .metasource($self.current_metasource)
+                    .len(),
             );
             $self.state = State::Solver {
                 locale: $self.state.get_locale().clone(),
@@ -183,7 +185,7 @@ where
                     std::task::Poll::Ready(order) => match order {
                         Ok(Some(order)) => {
                             let locale = self.state.get_locale();
-                            let bundle = self.reg.lock().bundle_from_order(
+                            let bundle = self.reg.metasources().bundle_from_order(
                                 self.current_metasource,
                                 locale.clone(),
                                 &order,
@@ -223,16 +225,19 @@ where
                     }
                 }
             } else if let Some(locale) = self.locales.next() {
-                if self.reg.lock().metasources.is_empty() {
+                if self.reg.metasources().is_empty() {
                     return None.into();
                 }
 
-                let last_metasource_idx = self.reg.lock().metasources.len() - 1;
+                let last_metasource_idx = self.reg.metasources().len() - 1;
                 self.current_metasource = last_metasource_idx;
 
                 let solver = ParallelProblemSolver::new(
                     self.resource_ids.len(),
-                    self.reg.lock().metasource(self.current_metasource).len(),
+                    self.reg
+                        .metasources()
+                        .metasource(self.current_metasource)
+                        .len(),
                 );
                 self.state = State::Solver { locale, solver };
             } else {

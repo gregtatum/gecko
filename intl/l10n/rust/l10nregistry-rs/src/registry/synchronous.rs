@@ -1,4 +1,4 @@
-use super::{BundleAdapter, L10nRegistry, L10nRegistryLocked};
+use super::{BundleAdapter, L10nRegistry, MetaSources};
 use crate::env::ErrorReporter;
 use crate::errors::L10nRegistryError;
 use crate::fluent::{FluentBundle, FluentError};
@@ -7,7 +7,7 @@ use crate::source::ResourceOption;
 use fluent_fallback::{generator::BundleIterator, types::ResourceId};
 use unic_langid::LanguageIdentifier;
 
-impl<'a> L10nRegistryLocked<'a> {
+impl<'a> MetaSources<'a> {
     pub(crate) fn bundle_from_order<P, B>(
         &self,
         metasource: usize,
@@ -60,6 +60,8 @@ where
     P: Clone,
     B: Clone,
 {
+    /// A test-only function for easily generating bundles for a single langid.
+    #[cfg(test)]
     pub fn generate_bundles_for_lang_sync(
         &self,
         langid: LanguageIdentifier,
@@ -70,6 +72,8 @@ where
         GenerateBundlesSync::new(self.clone(), lang_ids.into_iter(), resource_ids)
     }
 
+    /// Wiring for hooking up the synchronous bundle generation to the
+    /// [BundleGenerator] trait.
     pub fn generate_bundles_sync(
         &self,
         locales: std::vec::IntoIter<LanguageIdentifier>,
@@ -148,7 +152,7 @@ impl<P, B> SyncTester for GenerateBundlesSync<P, B> {
         let resource_id = &self.resource_ids[res_idx];
         !self
             .reg
-            .lock()
+            .metasources()
             .filesource(self.current_metasource, source_idx)
             .fetch_file_sync(locale, resource_id, /* overload */ true)
             .is_required_and_missing()
@@ -178,7 +182,10 @@ where
         if let Some(locale) = self.locales.next() {
             let mut solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
-                self.reg.lock().metasource(self.current_metasource).len(),
+                self.reg
+                    .metasources()
+                    .metasource(self.current_metasource)
+                    .len(),
             );
             self.state = State::Locale(locale.clone());
             if let Err(idx) = solver.try_next(self, true) {
@@ -201,7 +208,11 @@ macro_rules! try_next_metasource {
             $self.current_metasource -= 1;
             let solver = SerialProblemSolver::new(
                 $self.resource_ids.len(),
-                $self.reg.lock().metasource($self.current_metasource).len(),
+                $self
+                    .reg
+                    .metasources()
+                    .metasource($self.current_metasource)
+                    .len(),
             );
             $self.state = State::Solver {
                 locale: $self.state.get_locale().clone(),
@@ -226,7 +237,7 @@ where
                 match solver.try_next(self, false) {
                     Ok(Some(order)) => {
                         let locale = self.state.get_locale();
-                        let bundle = self.reg.lock().bundle_from_order(
+                        let bundle = self.reg.metasources().bundle_from_order(
                             self.current_metasource,
                             locale.clone(),
                             &order,
@@ -260,13 +271,16 @@ where
             }
 
             let locale = self.locales.next()?;
-            if self.reg.lock().metasources.is_empty() {
+            if self.reg.metasources().is_empty() {
                 return None;
             }
-            self.current_metasource = self.reg.lock().metasources.len() - 1;
+            self.current_metasource = self.reg.metasources().len() - 1;
             let solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
-                self.reg.lock().metasource(self.current_metasource).len(),
+                self.reg
+                    .metasources()
+                    .metasource(self.current_metasource)
+                    .len(),
             );
             self.state = State::Solver { locale, solver };
         }

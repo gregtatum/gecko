@@ -19,7 +19,7 @@ fn test_generate_sources_for_file() {
     let (_, reg) = fetcher.get_registry_and_environment(setup);
 
     {
-        let lock = reg.lock();
+        let lock = reg.metasources();
 
         let toolkit = lock.filesource_by_name(0, "toolkit").unwrap();
         let browser = lock.filesource_by_name(0, "browser").unwrap();
