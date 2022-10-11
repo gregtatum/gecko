@@ -20,7 +20,7 @@ use futures::{
 use std::future::Future;
 use unic_langid::LanguageIdentifier;
 
-impl<'a, B> L10nRegistryLocked<'a, B> {}
+impl<'a> L10nRegistryLocked<'a> {}
 
 impl<P, B> L10nRegistry<P, B>
 where
@@ -189,6 +189,7 @@ where
                                 &order,
                                 &self.resource_ids,
                                 &self.reg.shared.provider,
+                                &self.reg.shared.bundle_adapter,
                             );
                             self.state.put_back_solver(solver);
                             if bundle.is_some() {

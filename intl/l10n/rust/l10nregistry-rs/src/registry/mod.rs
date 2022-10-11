@@ -27,12 +27,11 @@ struct Shared<P, B> {
 
 /// A locked version of the [L10nRegistry]. This is used to access the [FileSource] and
 /// can be obtained via the [L10nRegistry::lock] method.
-pub struct L10nRegistryLocked<'a, B> {
+pub struct L10nRegistryLocked<'a> {
     metasources: MutexGuard<'a, Vec<Vec<FileSource>>>,
-    bundle_adapter: Option<&'a B>,
 }
 
-impl<'a, B> L10nRegistryLocked<'a, B> {
+impl<'a> L10nRegistryLocked<'a> {
     /// Iterate over the FileSources for a metasource.
     pub fn iter(&self, metasource_idx: usize) -> impl Iterator<Item = &FileSource> {
         self.metasource(metasource_idx).iter()
@@ -126,7 +125,7 @@ impl<P, B> L10nRegistry<P, B> {
     }
 
     /// Creates a locked version of the registry that can be manipulated.
-    pub fn lock(&self) -> L10nRegistryLocked<'_, B> {
+    pub fn lock(&self) -> L10nRegistryLocked<'_> {
         L10nRegistryLocked {
             // The lock() method only fails here if another thread has panicked
             // while holding the lock. In this case, we'll propagate the panic
