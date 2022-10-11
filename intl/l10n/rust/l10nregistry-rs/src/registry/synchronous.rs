@@ -29,7 +29,7 @@ impl<'a, B> L10nRegistryLocked<'a, B> {
         let mut errors = vec![];
 
         for (&source_idx, resource_id) in source_order.iter().zip(resource_ids.iter()) {
-            let source = self.source_idx(metasource, source_idx);
+            let source = self.filesource(metasource, source_idx);
             if let ResourceOption::Some(res) =
                 source.fetch_file_sync(&locale, resource_id, /* overload */ true)
             {
@@ -148,7 +148,7 @@ impl<P, B> SyncTester for GenerateBundlesSync<P, B> {
         !self
             .reg
             .lock()
-            .source_idx(self.current_metasource, source_idx)
+            .filesource(self.current_metasource, source_idx)
             .fetch_file_sync(locale, resource_id, /* overload */ true)
             .is_required_and_missing()
     }
@@ -177,7 +177,7 @@ where
         if let Some(locale) = self.locales.next() {
             let mut solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
-                self.reg.lock().metasource_len(self.current_metasource),
+                self.reg.lock().metasource(self.current_metasource).len(),
             );
             self.state = State::Locale(locale.clone());
             if let Err(idx) = solver.try_next(self, true) {
@@ -200,7 +200,7 @@ macro_rules! try_next_metasource {
             $self.current_metasource -= 1;
             let solver = SerialProblemSolver::new(
                 $self.resource_ids.len(),
-                $self.reg.lock().metasource_len($self.current_metasource),
+                $self.reg.lock().metasource($self.current_metasource).len(),
             );
             $self.state = State::Solver {
                 locale: $self.state.get_locale().clone(),
@@ -258,13 +258,13 @@ where
             }
 
             let locale = self.locales.next()?;
-            if self.reg.lock().number_of_metasources() == 0 {
+            if self.reg.lock().metasources.is_empty() {
                 return None;
             }
-            self.current_metasource = self.reg.lock().number_of_metasources() - 1;
+            self.current_metasource = self.reg.lock().metasources.len() - 1;
             let solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
-                self.reg.lock().metasource_len(self.current_metasource),
+                self.reg.lock().metasource(self.current_metasource).len(),
             );
             self.state = State::Solver { locale, solver };
         }

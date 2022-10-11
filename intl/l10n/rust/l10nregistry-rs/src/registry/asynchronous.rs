@@ -135,7 +135,7 @@ impl<'l, P, B> AsyncTester for GenerateBundles<P, B> {
             .iter()
             .map(|(res_idx, source_idx)| {
                 let resource_id = &self.resource_ids[*res_idx];
-                lock.source_idx(self.current_metasource, *source_idx)
+                lock.filesource(self.current_metasource, *source_idx)
                     .fetch_file(locale, resource_id)
             })
             .collect::<FuturesOrdered<_>>();
@@ -156,7 +156,7 @@ macro_rules! try_next_metasource {
             $self.current_metasource -= 1;
             let solver = ParallelProblemSolver::new(
                 $self.resource_ids.len(),
-                $self.reg.lock().metasource_len($self.current_metasource),
+                $self.reg.lock().metasource($self.current_metasource).len(),
             );
             $self.state = State::Solver {
                 locale: $self.state.get_locale().clone(),
@@ -222,14 +222,16 @@ where
                     }
                 }
             } else if let Some(locale) = self.locales.next() {
-                if self.reg.lock().number_of_metasources() == 0 {
+                if self.reg.lock().metasources.is_empty() {
                     return None.into();
                 }
-                let number_of_metasources = self.reg.lock().number_of_metasources() - 1;
-                self.current_metasource = number_of_metasources;
+
+                let last_metasource_idx = self.reg.lock().metasources.len() - 1;
+                self.current_metasource = last_metasource_idx;
+
                 let solver = ParallelProblemSolver::new(
                     self.resource_ids.len(),
-                    self.reg.lock().metasource_len(self.current_metasource),
+                    self.reg.lock().metasource(self.current_metasource).len(),
                 );
                 self.state = State::Solver { locale, solver };
             } else {
