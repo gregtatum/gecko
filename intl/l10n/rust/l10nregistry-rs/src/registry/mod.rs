@@ -129,7 +129,8 @@ impl<'a> MetaSources<'a> {
             .find(|&source| source.name == name)
     }
 
-    /// Get the list of [FileSource]s for a given langid and
+    /// Get an iterator for the [FileSource]s that match the [LanguageIdentifier]
+    /// and [ResourceId].
     #[cfg(test)]
     pub fn get_sources_for_resource<'l>(
         &'l self,
@@ -181,7 +182,7 @@ impl<P, B> L10nRegistry<P, B> {
         Ok(())
     }
 
-    /// Creates a locked version of the MetaSources that can read.
+    /// Creates a locked version of the MetaSources that can be read.
     pub fn metasources(&self) -> MetaSources<'_> {
         MetaSources(
             // The lock() method only fails here if another thread has panicked
@@ -308,7 +309,8 @@ where
     type Stream = GenerateBundles<P, B>;
     type LocalesIter = std::vec::IntoIter<LanguageIdentifier>;
 
-    /// The synchronous version of the bundle generator.
+    /// The synchronous version of the bundle generator. This is hooked into Gecko
+    /// code via the `l10nregistry_generate_bundles_sync` function.
     fn bundles_iter(
         &self,
         locales: Self::LocalesIter,
@@ -318,7 +320,8 @@ where
         self.generate_bundles_sync(locales, resource_ids)
     }
 
-    /// The asynchronous version of the bundle generator.
+    /// The asynchronous version of the bundle generator. This is hooked into Gecko
+    /// code via the `l10nregistry_generate_bundles` function.
     fn bundles_stream(
         &self,
         locales: Self::LocalesIter,

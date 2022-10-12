@@ -25,6 +25,8 @@ where
     P: Clone,
     B: Clone,
 {
+    /// This method is useful for testing various configurations.
+    #[cfg(test)]
     pub fn generate_bundles_for_lang(
         &self,
         langid: LanguageIdentifier,
@@ -35,6 +37,7 @@ where
         GenerateBundles::new(self.clone(), lang_ids.into_iter(), resource_ids)
     }
 
+    // Asynchronously generate the bundles.
     pub fn generate_bundles(
         &self,
         locales: std::vec::IntoIter<LanguageIdentifier>,
@@ -44,6 +47,8 @@ where
     }
 }
 
+/// This enum contains the various states the [GenerateBundles] can be in during the
+/// asynchronous generation step.
 enum State<P, B> {
     Empty,
     Locale(LanguageIdentifier),
@@ -64,21 +69,21 @@ impl<P, B> State<P, B> {
         match self {
             Self::Locale(locale) => locale,
             Self::Solver { locale, .. } => locale,
-            Self::Empty => unreachable!(),
+            Self::Empty => unreachable!("Attempting to get a locale for an empty state."),
         }
     }
 
     fn take_solver(&mut self) -> ParallelProblemSolver<GenerateBundles<P, B>> {
         replace_with::replace_with_or_default_and_return(self, |self_| match self_ {
             Self::Solver { locale, solver } => (solver, Self::Locale(locale)),
-            _ => unreachable!(),
+            _ => unreachable!("Attempting to take a solver in an invalid state."),
         })
     }
 
     fn put_back_solver(&mut self, solver: ParallelProblemSolver<GenerateBundles<P, B>>) {
         replace_with::replace_with_or_default(self, |self_| match self_ {
             Self::Locale(locale) => Self::Solver { locale, solver },
-            _ => unreachable!(),
+            _ => unreachable!("Attempting to put back a solver in an invalid state."),
         })
     }
 }
