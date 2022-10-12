@@ -129,15 +129,15 @@ impl<'a> MetaSources<'a> {
             .find(|&source| source.name == name)
     }
 
-    /// Get the list of
+    /// Get the list of [FileSource]s for a given langid and
     #[cfg(test)]
-    pub fn generate_sources_for_file<'l>(
+    pub fn get_sources_for_resource<'l>(
         &'l self,
-        metasource: usize,
+        metasource_idx: usize,
         langid: &'l LanguageIdentifier,
         resource_id: &'l ResourceId,
     ) -> impl Iterator<Item = &FileSource> {
-        self.metasource(metasource)
+        self.metasource(metasource_idx)
             .iter()
             .filter(move |source| source.has_file(langid, resource_id) != Some(false))
     }

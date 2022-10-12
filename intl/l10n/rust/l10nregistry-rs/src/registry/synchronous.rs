@@ -202,27 +202,6 @@ where
     }
 }
 
-macro_rules! try_next_metasource {
-    ( $self:ident ) => {{
-        if $self.current_metasource > 0 {
-            $self.current_metasource -= 1;
-            let solver = SerialProblemSolver::new(
-                $self.resource_ids.len(),
-                $self
-                    .reg
-                    .metasources()
-                    .metasource($self.current_metasource)
-                    .len(),
-            );
-            $self.state = State::Solver {
-                locale: $self.state.get_locale().clone(),
-                solver,
-            };
-            continue;
-        }
-    }};
-}
-
 impl<P, B> Iterator for GenerateBundlesSync<P, B>
 where
     P: ErrorReporter,
@@ -230,51 +209,88 @@ where
 {
     type Item = Result<FluentBundle, (FluentBundle, Vec<FluentError>)>;
 
+    /// Synchronously generate a bundle based on a solver.
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if let State::Solver { .. } = self.state {
-                let mut solver = self.state.take_solver();
-                match solver.try_next(self, false) {
-                    Ok(Some(order)) => {
-                        let locale = self.state.get_locale();
-                        let bundle = self.reg.metasources().bundle_from_order(
-                            self.current_metasource,
-                            locale.clone(),
-                            &order,
-                            &self.resource_ids,
-                            &self.reg.shared.provider,
-                            &self.reg.shared.bundle_adapter,
-                        );
-                        self.state.put_back_solver(solver);
-                        if bundle.is_some() {
-                            return bundle;
-                        } else {
-                            continue;
-                        }
-                    }
-                    Ok(None) => {
-                        try_next_metasource!(self);
-                    }
-                    Err(idx) => {
-                        try_next_metasource!(self);
-                        // Only signal an error if we run out of metasources
-                        // to try.
-                        self.reg.shared.provider.report_errors(vec![
-                            L10nRegistryError::MissingResource {
-                                locale: self.state.get_locale().clone(),
-                                resource_id: self.resource_ids[idx].clone(),
-                            },
-                        ]);
-                    }
-                }
-                self.state = State::Empty;
-            }
-
-            let locale = self.locales.next()?;
             if self.reg.metasources().is_empty() {
+                // There are no metasources available, so no bundles can be generated.
                 return None;
             }
-            self.current_metasource = self.reg.metasources().len() - 1;
+
+            if let State::Solver { .. } = self.state {
+                // A solver has already been set up, continue iterating through the
+                // resources and generating a bundle.
+                let mut solver = self.state.take_solver();
+                let solver_result = solver.try_next(self, false);
+
+                if let Ok(Some(order)) = solver_result {
+                    // The solver resolved an ordering, and a bundle may be able
+                    // to be generated.
+
+                    let bundle = self.reg.metasources().bundle_from_order(
+                        self.current_metasource,
+                        self.state.get_locale().clone(),
+                        &order,
+                        &self.resource_ids,
+                        &self.reg.shared.provider,
+                        &self.reg.shared.bundle_adapter,
+                    );
+
+                    self.state.put_back_solver(solver);
+
+                    if bundle.is_some() {
+                        // The bundle was successfully generated.
+                        return bundle;
+                    }
+
+                    // No bundle was generated, continue on.
+                    continue;
+                }
+
+                // There is no bundle ordering available.
+
+                if self.current_metasource > 0 {
+                    // There are more metasources, create a new solver and try the
+                    // next metasource. If there is an error in the solver_result
+                    // ignore it for now, since there are more metasources.
+                    self.current_metasource -= 1;
+                    let solver = SerialProblemSolver::new(
+                        self.resource_ids.len(),
+                        self.reg
+                            .metasources()
+                            .metasource(self.current_metasource)
+                            .len(),
+                    );
+                    self.state = State::Solver {
+                        locale: self.state.get_locale().clone(),
+                        solver,
+                    };
+                    continue;
+                }
+
+                if let Err(idx) = solver_result {
+                    // Since there are no more metasources, and there is an error,
+                    // report it instead of ignoring it.
+                    self.reg.shared.provider.report_errors(vec![
+                        L10nRegistryError::MissingResource {
+                            locale: self.state.get_locale().clone(),
+                            resource_id: self.resource_ids[idx].clone(),
+                        },
+                    ]);
+                }
+
+                self.state = State::Empty;
+                continue;
+            }
+
+            // Try the next locale, or break out of the loop if there are none left.
+            let locale = self.locales.next()?;
+
+            // Restart at the end of the metasources for this locale, and iterate
+            // backwards.
+            let last_metasource_idx = self.reg.metasources().len() - 1;
+            self.current_metasource = last_metasource_idx;
+
             let solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
                 self.reg
@@ -282,6 +298,8 @@ where
                     .metasource(self.current_metasource)
                     .len(),
             );
+
+            // Continue iterating on the next solver.
             self.state = State::Solver { locale, solver };
         }
     }
