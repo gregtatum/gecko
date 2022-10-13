@@ -108,14 +108,13 @@ fn get_packaged_locales() -> Vec<LanguageIdentifier> {
 
 fn create_l10n_registry(sources: Option<Vec<FileSource>>) -> Rc<GeckoL10nRegistry> {
     let env = GeckoEnvironment::new(None);
-    let mut reg = L10nRegistry::with_provider(env);
+    let reg = L10nRegistry::with_provider(env);
 
     reg.set_bundle_adaptor(GeckoBundleAdapter::default())
         .expect("Failed to set bundle adaptation closure.");
 
     if let Some(sources) = sources {
-        reg.register_sources(sources)
-            .expect("Failed to register sources.");
+        reg.register_sources(sources);
     }
     Rc::new(reg)
 }
@@ -134,7 +133,7 @@ pub fn set_l10n_registry(new_sources: &ThinVec<L10nFileSourceDescriptor>) {
                 sources_to_be_removed.push(name);
             }
         }
-        reg.remove_sources(sources_to_be_removed).unwrap();
+        reg.remove_sources(sources_to_be_removed);
 
         let mut add_sources = vec![];
         for desc in new_sources {
@@ -152,7 +151,7 @@ pub fn set_l10n_registry(new_sources: &ThinVec<L10nFileSourceDescriptor>) {
                 ));
             }
         }
-        reg.register_sources(add_sources).unwrap();
+        reg.register_sources(add_sources);
     });
 }
 
@@ -195,7 +194,7 @@ pub enum L10nRegistryStatus {
 #[no_mangle]
 pub extern "C" fn l10nregistry_new(use_isolating: bool) -> *const GeckoL10nRegistry {
     let env = GeckoEnvironment::new(None);
-    let mut reg = L10nRegistry::with_provider(env);
+    let reg = L10nRegistry::with_provider(env);
     let _ = reg
         .set_bundle_adaptor(GeckoBundleAdapter { use_isolating })
         .report_error();
@@ -303,9 +302,7 @@ pub extern "C" fn l10nregistry_register_sources(
     reg: &GeckoL10nRegistry,
     sources: &ThinVec<&FileSource>,
 ) {
-    let _ = reg
-        .register_sources(sources.iter().map(|&s| s.clone()).collect())
-        .report_error();
+    let _ = reg.register_sources(sources.iter().map(|&s| s.clone()).collect());
 
     broadcast_settings_if_parent(reg);
 }
@@ -315,9 +312,7 @@ pub extern "C" fn l10nregistry_update_sources(
     reg: &GeckoL10nRegistry,
     sources: &mut ThinVec<&FileSource>,
 ) {
-    let _ = reg
-        .update_sources(sources.iter().map(|&s| s.clone()).collect())
-        .report_error();
+    let _ = reg.update_sources(sources.iter().map(|&s| s.clone()).collect());
     broadcast_settings_if_parent(reg);
 }
 
@@ -332,7 +327,7 @@ pub unsafe extern "C" fn l10nregistry_remove_sources(
     }
 
     let sources = std::slice::from_raw_parts(sources_elements, sources_length);
-    let _ = reg.remove_sources(sources.to_vec()).report_error();
+    let _ = reg.remove_sources(sources.to_vec());
     broadcast_settings_if_parent(reg);
 }
 
@@ -374,7 +369,7 @@ pub extern "C" fn l10nregistry_get_source(
 
 #[no_mangle]
 pub extern "C" fn l10nregistry_clear_sources(reg: &GeckoL10nRegistry) {
-    let _ = reg.clear_sources().report_error();
+    let _ = reg.clear_sources();
 
     broadcast_settings_if_parent(reg);
 }

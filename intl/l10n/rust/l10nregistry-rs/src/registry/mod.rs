@@ -1,7 +1,8 @@
 mod asynchronous;
 mod synchronous;
 
-use std::{collections::HashSet, rc::Rc, sync::Mutex, sync::MutexGuard};
+use std::cell::RefCell;
+use std::{collections::HashSet, rc::Rc};
 
 use crate::errors::L10nRegistrySetupError;
 use crate::source::{FileSource, ResourceId};
@@ -17,22 +18,29 @@ pub use synchronous::GenerateBundlesSync;
 
 pub type FluentResourceSet = Vec<Rc<FluentResource>>;
 
-/// The shared information that makes up the configuration the L10nRegistry. It is
-/// broken out into a separate struct so that it can be shared via an Rc pointer.
-#[derive(Default)]
-struct Shared<P, B> {
+/// The L10nRegistry has a shareable component that is placed behind an Rc pointer.
+/// If this pointer is unique, then the contents of the L10nRegistry are free
+/// to be mutated. However, if there are multiple copies of this pointer, then
+/// mutations are deferred in the pending_mutations vector. This acts as a locking
+/// mechanism so that the contents are not mutated while they are being iterated over.
+pub struct Share<P, B> {
     /// The raw mutex lock for the MetaSources.
-    metasources_mutex: Mutex<Vec<Vec<FileSource>>>,
+    metasources: MetaSources,
     provider: P,
     bundle_adapter: Option<B>,
+    async_bundle_iter_count: usize,
+
+    /// It's possible there are outstanding references to the [MetaSources] in
+    /// the async iterators, so defer mutations until it is safe to mutate
+    /// the [MetaSources].
+    pending_mutations: Vec<RegistryMutations>,
 }
 
-/// MetaSources can be obtained from multiple threads. This struct provides locked
-/// access for working with metasources and their FileSources. Each MetaSource
-/// contains a list of FileSources.
-pub struct MetaSources<'a>(MutexGuard<'a, Vec<Vec<FileSource>>>);
+/// TODO before landing - write docs.
+#[derive(Default)]
+pub struct MetaSources(Vec<Vec<FileSource>>);
 
-impl<'a> MetaSources<'a> {
+impl MetaSources {
     /// Iterate over all FileSources in all MetaSources.
     pub fn filesources(&self) -> impl Iterator<Item = &FileSource> {
         self.0.iter().flatten()
@@ -151,69 +159,63 @@ pub trait BundleAdapter {
     fn adapt_bundle(&self, bundle: &mut FluentBundle);
 }
 
+pub enum RegistryMutations {
+    RegisterSources(Vec<FileSource>),
+    UpdateSources(Vec<FileSource>),
+    RemoveSources(Vec<String>),
+    ClearSources,
+}
+
 /// The L10nRegistry is the main struct for owning the registry information.
 ///
 /// `P` - A provider
 /// `B` - A bundle adaptor
 #[derive(Clone)]
 pub struct L10nRegistry<P, B> {
-    shared: Rc<Shared<P, B>>,
+    shared: Rc<RefCell<Share<P, B>>>,
 }
 
 impl<P, B> L10nRegistry<P, B> {
     /// Create a new [L10nRegistry] from a provider.
     pub fn with_provider(provider: P) -> Self {
         Self {
-            shared: Rc::new(Shared {
-                metasources_mutex: Default::default(),
+            shared: Rc::new(RefCell::new(Share {
+                metasources: Default::default(),
                 provider,
                 bundle_adapter: None,
-            }),
+                async_bundle_iter_count: 0,
+                pending_mutations: Vec::new(),
+            })),
         }
     }
 
     /// Set the bundle adaptor. See [BundleAdapter] for more information.
-    pub fn set_bundle_adaptor(&mut self, bundle_adapter: B) -> Result<(), L10nRegistrySetupError>
+    pub fn set_bundle_adaptor(&self, bundle_adapter: B) -> Result<(), L10nRegistrySetupError>
     where
         B: BundleAdapter,
     {
-        let shared = Rc::get_mut(&mut self.shared).ok_or(L10nRegistrySetupError::RegistryLocked)?;
-        shared.bundle_adapter = Some(bundle_adapter);
-        Ok(())
-    }
-
-    /// Creates a locked version of the MetaSources that can be read.
-    pub fn metasources(&self) -> MetaSources<'_> {
-        MetaSources(
-            // The lock() method only fails here if another thread has panicked
-            // while holding the lock. In this case, we'll propagate the panic
-            // as well. It's not clear what the recovery strategy would be for
-            // us to deal with a panic in another thread.
-            self.shared
-                .metasources_mutex
-                .lock()
-                .expect("Deadlock most likely due to a crashed thread holding a lock."),
-        )
-    }
-
-    fn try_lock_metasources(&self) -> Result<MetaSources, L10nRegistrySetupError> {
-        match self.shared.metasources_mutex.try_lock() {
-            Ok(metasources) => Ok(MetaSources(metasources)),
-            Err(_) => Err(L10nRegistrySetupError::RegistryLocked),
+        if self.is_locked() {
+            Err(L10nRegistrySetupError::RegistryLocked)
+        } else {
+            self.shared.borrow_mut().bundle_adapter = Some(bundle_adapter);
+            Ok(())
         }
     }
 
     /// Adds a new FileSource to the registry and to its appropriate metasource. If the
     /// metasource for this FileSource does not exist, then it is created.
-    pub fn register_sources(
-        &self,
-        new_sources: Vec<FileSource>,
-    ) -> Result<(), L10nRegistrySetupError> {
-        let mut metasources = self.try_lock_metasources()?;
-        for new_source in new_sources {
-            metasources.add_filesource(new_source);
+    pub fn register_sources(&self, new_sources: Vec<FileSource>) {
+        if self.is_locked() {
+            self.shared
+                .borrow_mut()
+                .pending_mutations
+                .push(RegistryMutations::RegisterSources(new_sources));
+        } else {
+            let mut shared = self.shared.borrow_mut();
+            for new_source in new_sources {
+                shared.metasources.add_filesource(new_source);
+            }
         }
-        Ok(())
     }
 
     /// Update the information about sources already stored in the registry. Each
@@ -223,13 +225,23 @@ impl<P, B> L10nRegistry<P, B> {
         &self,
         new_sources: Vec<FileSource>,
     ) -> Result<(), L10nRegistrySetupError> {
-        let mut metasources = self.try_lock_metasources()?;
-
-        for new_source in new_sources {
-            if !metasources.update_filesource(&new_source) {
-                return Err(L10nRegistrySetupError::MissingSource {
-                    name: new_source.name,
-                });
+        if self.is_locked() {
+            self.shared
+                .borrow_mut()
+                .pending_mutations
+                .push(RegistryMutations::UpdateSources(new_sources));
+        } else {
+            for new_source in new_sources {
+                if !self
+                    .shared
+                    .borrow_mut()
+                    .metasources
+                    .update_filesource(&new_source)
+                {
+                    return Err(L10nRegistrySetupError::MissingSource {
+                        name: new_source.name,
+                    });
+                }
             }
         }
         Ok(())
@@ -237,32 +249,47 @@ impl<P, B> L10nRegistry<P, B> {
 
     /// Remove the provided sources. If a metasource becomes empty after this operation,
     /// the metasource is also removed.
-    pub fn remove_sources<S>(&self, del_sources: Vec<S>) -> Result<(), L10nRegistrySetupError>
+    pub fn remove_sources<S>(&self, del_sources: Vec<S>)
     where
         S: ToString,
     {
-        let mut metasources = self.try_lock_metasources()?;
         let del_sources: Vec<String> = del_sources.into_iter().map(|s| s.to_string()).collect();
 
-        for metasource in metasources.iter_mut() {
-            metasource.retain(|source| !del_sources.contains(&source.name));
+        if self.is_locked() {
+            self.shared
+                .borrow_mut()
+                .pending_mutations
+                .push(RegistryMutations::RemoveSources(del_sources));
+        } else {
+            for metasource in self.shared.borrow_mut().metasources.iter_mut() {
+                metasource.retain(|source| !del_sources.contains(&source.name));
+            }
+
+            self.shared
+                .borrow_mut()
+                .metasources
+                .clear_empty_metasources();
         }
-
-        metasources.clear_empty_metasources();
-
-        Ok(())
     }
 
     /// Clears out all metasources and sources.
-    pub fn clear_sources(&self) -> Result<(), L10nRegistrySetupError> {
-        self.try_lock_metasources()?.clear();
-        Ok(())
+    pub fn clear_sources(&self) {
+        if self.is_locked() {
+            self.shared
+                .borrow_mut()
+                .pending_mutations
+                .push(RegistryMutations::ClearSources);
+        } else {
+            self.shared.borrow_mut().metasources.clear();
+        }
     }
 
     /// Flattens out all metasources and returns the complete list of source names.
     pub fn get_source_names(&self) -> Result<Vec<String>, L10nRegistrySetupError> {
         Ok(self
-            .try_lock_metasources()?
+            .shared
+            .borrow()
+            .metasources
             .filesources()
             .map(|s| s.name.clone())
             .collect())
@@ -271,7 +298,9 @@ impl<P, B> L10nRegistry<P, B> {
     /// Checks if any metasources has a source, by the name.
     pub fn has_source(&self, name: &str) -> Result<bool, L10nRegistrySetupError> {
         Ok(self
-            .try_lock_metasources()?
+            .shared
+            .borrow()
+            .metasources
             .filesources()
             .any(|source| source.name == name))
     }
@@ -279,7 +308,9 @@ impl<P, B> L10nRegistry<P, B> {
     /// Gets a source by the name, from any metasource.
     pub fn get_source(&self, name: &str) -> Result<Option<FileSource>, L10nRegistrySetupError> {
         Ok(self
-            .try_lock_metasources()?
+            .shared
+            .borrow()
+            .metasources
             .filesources()
             .find(|source| source.name == name)
             .cloned())
@@ -287,14 +318,78 @@ impl<P, B> L10nRegistry<P, B> {
 
     /// Returns a unique list of locale names from all sources.
     pub fn get_available_locales(&self) -> Result<Vec<LanguageIdentifier>, L10nRegistrySetupError> {
-        let metasources = self.try_lock_metasources()?;
         let mut result = HashSet::new();
-        for source in metasources.filesources() {
+        let shareable = self.shared.borrow();
+        for source in shareable.metasources.filesources() {
             for locale in source.locales() {
                 result.insert(locale);
             }
         }
         Ok(result.into_iter().map(|l| l.to_owned()).collect())
+    }
+
+    pub fn increment_locks(&self) {
+        // Ensure any deferred mutations are applied before sharing.
+        self.shared.borrow_mut().async_bundle_iter_count += 1;
+    }
+
+    pub fn decrement_locks(&self) {
+        assert!(
+            self.shared.borrow().async_bundle_iter_count > 0,
+            "async_bundle_iter_count must be greater than 0."
+        );
+        self.shared.borrow_mut().async_bundle_iter_count -= 1;
+        if self.shared.borrow().async_bundle_iter_count == 0 {
+            self.apply_mutations();
+        }
+    }
+
+    fn is_locked(&self) -> bool {
+        self.shared.borrow().async_bundle_iter_count > 0
+    }
+
+    /// It's possible to have async iterators over the metasources that have not resolved
+    /// while trying to mutate the metasources list. When this happens the mutations
+    /// are stored to be applied at a later time.
+    fn apply_mutations(&self) {
+        if self.shared.borrow().pending_mutations.is_empty() {
+            // There is nothing to apply.
+            return;
+        }
+
+        if self.is_locked() {
+            // The metasources are not available to update. It's possible this means
+            // we'll continue using stale information, but async iterators could still
+            // be iterating over the old sources. Defer the updates until it is safe
+            // to apply them.
+            return;
+        }
+
+        let mut pending_mutations = Vec::new();
+        std::mem::swap(
+            &mut pending_mutations,
+            &mut self.shared.borrow_mut().pending_mutations,
+        );
+
+        // Actually apply the pending mutations.
+        for mutation in pending_mutations {
+            match mutation {
+                RegistryMutations::RegisterSources(sources) => self.register_sources(sources),
+                RegistryMutations::UpdateSources(sources) => {
+                    if let Err(_) = self.update_sources(sources) {
+                        // The common case is that this would be reported by the initial
+                        // calling function, but this update was deferred. Go ahead and
+                        // print the error to stderr so that the error isn't completely
+                        // lost.
+                        eprintln!(
+                            "An invalid source was provided for updating in the L10nRegistry."
+                        );
+                    }
+                }
+                RegistryMutations::RemoveSources(sources) => self.remove_sources(sources),
+                RegistryMutations::ClearSources => self.clear_sources(),
+            }
+        }
     }
 }
 

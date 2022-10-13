@@ -7,7 +7,7 @@ use crate::source::ResourceOption;
 use fluent_fallback::{generator::BundleIterator, types::ResourceId};
 use unic_langid::LanguageIdentifier;
 
-impl<'a> MetaSources<'a> {
+impl MetaSources {
     pub(crate) fn bundle_from_order<P, B>(
         &self,
         metasource: usize,
@@ -152,7 +152,9 @@ impl<P, B> SyncTester for GenerateBundlesSync<P, B> {
         let resource_id = &self.resource_ids[res_idx];
         !self
             .reg
-            .metasources()
+            .shared
+            .borrow()
+            .metasources
             .filesource(self.current_metasource, source_idx)
             .fetch_file_sync(locale, resource_id, /* overload */ true)
             .is_required_and_missing()
@@ -167,13 +169,12 @@ where
         if let State::Solver { .. } = self.state {
             let mut solver = self.state.take_solver();
             if let Err(idx) = solver.try_next(self, true) {
-                self.reg
-                    .shared
-                    .provider
-                    .report_errors(vec![L10nRegistryError::MissingResource {
+                self.reg.shared.borrow().provider.report_errors(vec![
+                    L10nRegistryError::MissingResource {
                         locale: self.state.get_locale().clone(),
                         resource_id: self.resource_ids[idx].clone(),
-                    }]);
+                    },
+                ]);
             }
             self.state.put_back_solver(solver);
             return;
@@ -183,19 +184,20 @@ where
             let mut solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
                 self.reg
-                    .metasources()
+                    .shared
+                    .borrow()
+                    .metasources
                     .metasource(self.current_metasource)
                     .len(),
             );
             self.state = State::Locale(locale.clone());
             if let Err(idx) = solver.try_next(self, true) {
-                self.reg
-                    .shared
-                    .provider
-                    .report_errors(vec![L10nRegistryError::MissingResource {
+                self.reg.shared.borrow().provider.report_errors(vec![
+                    L10nRegistryError::MissingResource {
                         locale,
                         resource_id: self.resource_ids[idx].clone(),
-                    }]);
+                    },
+                ]);
             }
             self.state.put_back_solver(solver);
         }
@@ -212,7 +214,7 @@ where
     /// Synchronously generate a bundle based on a solver.
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if self.reg.metasources().is_empty() {
+            if self.reg.shared.borrow().metasources.is_empty() {
                 // There are no metasources available, so no bundles can be generated.
                 return None;
             }
@@ -227,13 +229,13 @@ where
                     // The solver resolved an ordering, and a bundle may be able
                     // to be generated.
 
-                    let bundle = self.reg.metasources().bundle_from_order(
+                    let bundle = self.reg.shared.borrow().metasources.bundle_from_order(
                         self.current_metasource,
                         self.state.get_locale().clone(),
                         &order,
                         &self.resource_ids,
-                        &self.reg.shared.provider,
-                        &self.reg.shared.bundle_adapter,
+                        &self.reg.shared.borrow().provider,
+                        &self.reg.shared.borrow().bundle_adapter,
                     );
 
                     self.state.put_back_solver(solver);
@@ -257,7 +259,9 @@ where
                     let solver = SerialProblemSolver::new(
                         self.resource_ids.len(),
                         self.reg
-                            .metasources()
+                            .shared
+                            .borrow()
+                            .metasources
                             .metasource(self.current_metasource)
                             .len(),
                     );
@@ -271,7 +275,7 @@ where
                 if let Err(idx) = solver_result {
                     // Since there are no more metasources, and there is an error,
                     // report it instead of ignoring it.
-                    self.reg.shared.provider.report_errors(vec![
+                    self.reg.shared.borrow().provider.report_errors(vec![
                         L10nRegistryError::MissingResource {
                             locale: self.state.get_locale().clone(),
                             resource_id: self.resource_ids[idx].clone(),
@@ -288,13 +292,15 @@ where
 
             // Restart at the end of the metasources for this locale, and iterate
             // backwards.
-            let last_metasource_idx = self.reg.metasources().len() - 1;
+            let last_metasource_idx = self.reg.shared.borrow().metasources.len() - 1;
             self.current_metasource = last_metasource_idx;
 
             let solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
                 self.reg
-                    .metasources()
+                    .shared
+                    .borrow()
+                    .metasources
                     .metasource(self.current_metasource)
                     .len(),
             );
