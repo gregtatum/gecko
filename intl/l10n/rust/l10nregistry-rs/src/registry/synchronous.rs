@@ -1,4 +1,6 @@
-use super::{BundleAdapter, L10nRegistry, MetaSources};
+use std::rc::Rc;
+
+use super::{BundleAdapter, L10nRegistry, MetaSources, ShareableL10nRegistry};
 use crate::env::ErrorReporter;
 use crate::errors::L10nRegistryError;
 use crate::fluent::{FluentBundle, FluentError};
@@ -7,7 +9,7 @@ use crate::source::ResourceOption;
 use fluent_fallback::{generator::BundleIterator, types::ResourceId};
 use unic_langid::LanguageIdentifier;
 
-impl<'a> MetaSources<'a> {
+impl MetaSources {
     pub(crate) fn bundle_from_order<P, B>(
         &self,
         metasource: usize,
@@ -69,7 +71,7 @@ where
     ) -> GenerateBundlesSync<P, B> {
         let lang_ids = vec![langid];
 
-        GenerateBundlesSync::new(self.clone(), lang_ids.into_iter(), resource_ids)
+        GenerateBundlesSync::new(self.borrow(), lang_ids.into_iter(), resource_ids)
     }
 
     /// Wiring for hooking up the synchronous bundle generation to the
@@ -79,7 +81,7 @@ where
         locales: std::vec::IntoIter<LanguageIdentifier>,
         resource_ids: Vec<ResourceId>,
     ) -> GenerateBundlesSync<P, B> {
-        GenerateBundlesSync::new(self.clone(), locales, resource_ids)
+        GenerateBundlesSync::new(self.borrow(), locales, resource_ids)
     }
 }
 
@@ -123,7 +125,7 @@ impl State {
 }
 
 pub struct GenerateBundlesSync<P, B> {
-    reg: L10nRegistry<P, B>,
+    reg: Rc<ShareableL10nRegistry<P, B>>,
     locales: std::vec::IntoIter<LanguageIdentifier>,
     current_metasource: usize,
     resource_ids: Vec<ResourceId>,
@@ -132,7 +134,7 @@ pub struct GenerateBundlesSync<P, B> {
 
 impl<P, B> GenerateBundlesSync<P, B> {
     fn new(
-        reg: L10nRegistry<P, B>,
+        reg: Rc<ShareableL10nRegistry<P, B>>,
         locales: std::vec::IntoIter<LanguageIdentifier>,
         resource_ids: Vec<ResourceId>,
     ) -> Self {
@@ -152,7 +154,7 @@ impl<P, B> SyncTester for GenerateBundlesSync<P, B> {
         let resource_id = &self.resource_ids[res_idx];
         !self
             .reg
-            .metasources()
+            .metasources
             .filesource(self.current_metasource, source_idx)
             .fetch_file_sync(locale, resource_id, /* overload */ true)
             .is_required_and_missing()
@@ -168,7 +170,6 @@ where
             let mut solver = self.state.take_solver();
             if let Err(idx) = solver.try_next(self, true) {
                 self.reg
-                    .shared
                     .provider
                     .report_errors(vec![L10nRegistryError::MissingResource {
                         locale: self.state.get_locale().clone(),
@@ -183,14 +184,13 @@ where
             let mut solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
                 self.reg
-                    .metasources()
+                    .metasources
                     .metasource(self.current_metasource)
                     .len(),
             );
             self.state = State::Locale(locale.clone());
             if let Err(idx) = solver.try_next(self, true) {
                 self.reg
-                    .shared
                     .provider
                     .report_errors(vec![L10nRegistryError::MissingResource {
                         locale,
@@ -212,7 +212,7 @@ where
     /// Synchronously generate a bundle based on a solver.
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if self.reg.metasources().is_empty() {
+            if self.reg.metasources.is_empty() {
                 // There are no metasources available, so no bundles can be generated.
                 return None;
             }
@@ -227,13 +227,13 @@ where
                     // The solver resolved an ordering, and a bundle may be able
                     // to be generated.
 
-                    let bundle = self.reg.metasources().bundle_from_order(
+                    let bundle = self.reg.metasources.bundle_from_order(
                         self.current_metasource,
                         self.state.get_locale().clone(),
                         &order,
                         &self.resource_ids,
-                        &self.reg.shared.provider,
-                        &self.reg.shared.bundle_adapter,
+                        &self.reg.provider,
+                        &self.reg.bundle_adapter,
                     );
 
                     self.state.put_back_solver(solver);
@@ -257,7 +257,7 @@ where
                     let solver = SerialProblemSolver::new(
                         self.resource_ids.len(),
                         self.reg
-                            .metasources()
+                            .metasources
                             .metasource(self.current_metasource)
                             .len(),
                     );
@@ -271,12 +271,12 @@ where
                 if let Err(idx) = solver_result {
                     // Since there are no more metasources, and there is an error,
                     // report it instead of ignoring it.
-                    self.reg.shared.provider.report_errors(vec![
-                        L10nRegistryError::MissingResource {
+                    self.reg
+                        .provider
+                        .report_errors(vec![L10nRegistryError::MissingResource {
                             locale: self.state.get_locale().clone(),
                             resource_id: self.resource_ids[idx].clone(),
-                        },
-                    ]);
+                        }]);
                 }
 
                 self.state = State::Empty;
@@ -288,13 +288,13 @@ where
 
             // Restart at the end of the metasources for this locale, and iterate
             // backwards.
-            let last_metasource_idx = self.reg.metasources().len() - 1;
+            let last_metasource_idx = self.reg.metasources.len() - 1;
             self.current_metasource = last_metasource_idx;
 
             let solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
                 self.reg
-                    .metasources()
+                    .metasources
                     .metasource(self.current_metasource)
                     .len(),
             );

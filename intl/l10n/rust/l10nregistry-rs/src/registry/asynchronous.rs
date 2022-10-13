@@ -1,9 +1,10 @@
 use std::{
     pin::Pin,
+    rc::Rc,
     task::{Context, Poll},
 };
 
-use super::{BundleAdapter, L10nRegistry};
+use super::{BundleAdapter, L10nRegistry, ShareableL10nRegistry};
 use crate::solver::{AsyncTester, ParallelProblemSolver};
 use crate::{
     env::ErrorReporter,
@@ -34,7 +35,7 @@ where
     ) -> GenerateBundles<P, B> {
         let lang_ids = vec![langid];
 
-        GenerateBundles::new(self.clone(), lang_ids.into_iter(), resource_ids)
+        GenerateBundles::new(self.borrow(), lang_ids.into_iter(), resource_ids)
     }
 
     // Asynchronously generate the bundles.
@@ -43,7 +44,7 @@ where
         locales: std::vec::IntoIter<LanguageIdentifier>,
         resource_ids: Vec<ResourceId>,
     ) -> GenerateBundles<P, B> {
-        GenerateBundles::new(self.clone(), locales, resource_ids)
+        GenerateBundles::new(self.borrow(), locales, resource_ids)
     }
 }
 
@@ -89,7 +90,7 @@ impl<P, B> State<P, B> {
 }
 
 pub struct GenerateBundles<P, B> {
-    reg: L10nRegistry<P, B>,
+    reg: Rc<ShareableL10nRegistry<P, B>>,
     locales: std::vec::IntoIter<LanguageIdentifier>,
     current_metasource: usize,
     resource_ids: Vec<ResourceId>,
@@ -98,7 +99,7 @@ pub struct GenerateBundles<P, B> {
 
 impl<P, B> GenerateBundles<P, B> {
     fn new(
-        reg: L10nRegistry<P, B>,
+        reg: Rc<ShareableL10nRegistry<P, B>>,
         locales: std::vec::IntoIter<LanguageIdentifier>,
         resource_ids: Vec<ResourceId>,
     ) -> Self {
@@ -132,13 +133,14 @@ impl<'l, P, B> AsyncTester for GenerateBundles<P, B> {
 
     fn test_async(&self, query: Vec<(usize, usize)>) -> Self::Result {
         let locale = self.state.get_locale();
-        let lock = self.reg.metasources();
 
         let stream = query
             .iter()
             .map(|(res_idx, source_idx)| {
                 let resource_id = &self.resource_ids[*res_idx];
-                lock.filesource(self.current_metasource, *source_idx)
+                self.reg
+                    .metasources
+                    .filesource(self.current_metasource, *source_idx)
                     .fetch_file(locale, resource_id)
             })
             .collect::<FuturesOrdered<_>>();
@@ -166,7 +168,7 @@ where
     /// the Future runner will need to re-enter at some point in the future to try again.
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
-            if self.reg.metasources().is_empty() {
+            if self.reg.metasources.is_empty() {
                 // There are no metasources available, so no bundles can be generated.
                 return None.into();
             }
@@ -188,13 +190,13 @@ where
                         // The solver resolved an ordering, and a bundle may be able
                         // to be generated.
 
-                        let bundle = self.reg.metasources().bundle_from_order(
+                        let bundle = self.reg.metasources.bundle_from_order(
                             self.current_metasource,
                             self.state.get_locale().clone(),
                             &order,
                             &self.resource_ids,
-                            &self.reg.shared.provider,
-                            &self.reg.shared.bundle_adapter,
+                            &self.reg.provider,
+                            &self.reg.bundle_adapter,
                         );
 
                         self.state.put_back_solver(solver);
@@ -218,7 +220,7 @@ where
                         let solver = ParallelProblemSolver::new(
                             self.resource_ids.len(),
                             self.reg
-                                .metasources()
+                                .metasources
                                 .metasource(self.current_metasource)
                                 .len(),
                         );
@@ -232,12 +234,12 @@ where
                     if let Err(idx) = solver_result {
                         // Since there are no more metasources, and there is an error,
                         // report it instead of ignoring it.
-                        self.reg.shared.provider.report_errors(vec![
-                            L10nRegistryError::MissingResource {
+                        self.reg
+                            .provider
+                            .report_errors(vec![L10nRegistryError::MissingResource {
                                 locale: self.state.get_locale().clone(),
                                 resource_id: self.resource_ids[idx].clone(),
-                            },
-                        ]);
+                            }]);
                     }
 
                     // There are no more metasources.
@@ -257,13 +259,13 @@ where
             if let Some(locale) = self.locales.next() {
                 // Restart at the end of the metasources for this locale, and iterate
                 // backwards.
-                let last_metasource_idx = self.reg.metasources().len() - 1;
+                let last_metasource_idx = self.reg.metasources.len() - 1;
                 self.current_metasource = last_metasource_idx;
 
                 let solver = ParallelProblemSolver::new(
                     self.resource_ids.len(),
                     self.reg
-                        .metasources()
+                        .metasources
                         .metasource(self.current_metasource)
                         .len(),
                 );
