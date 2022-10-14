@@ -447,6 +447,7 @@ pub unsafe extern "C" fn l10nregistry_generate_bundles(
     res_ids_length: usize,
     status: &mut L10nRegistryStatus,
 ) -> *mut GeckoFluentBundleAsyncIteratorWrapper {
+    println!("l10nregistry_generate_bundles");
     let locales = std::slice::from_raw_parts(locales_elements, locales_length);
     let res_ids = std::slice::from_raw_parts(res_ids_elements, res_ids_length)
         .into_iter()
@@ -466,10 +467,12 @@ pub unsafe extern "C" fn l10nregistry_generate_bundles(
             moz_task::spawn_local("l10nregistry_generate_bundles", async move {
                 use futures::StreamExt;
                 while let Some(req) = receiver.next().await {
+                    println!("l10nregistry_generate_bundles iter.next");
                     let result = match iter.next().await {
                         Some(Ok(result)) => Box::into_raw(Box::new(result)),
                         _ => std::ptr::null_mut(),
                     };
+                    println!("l10nregistry_generate_bundles has result");
                     (req.callback)(&req.promise, result);
                 }
             })

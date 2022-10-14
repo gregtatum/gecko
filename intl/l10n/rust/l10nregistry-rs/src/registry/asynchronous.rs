@@ -103,6 +103,7 @@ impl<P, B> GenerateBundles<P, B> {
         resource_ids: Vec<ResourceId>,
     ) -> Self {
         reg.increment_locks();
+        println!("{:p} GenerateBundles::new", &reg);
         Self {
             reg,
             locales,
@@ -115,7 +116,7 @@ impl<P, B> GenerateBundles<P, B> {
 
 impl<P, B> Drop for GenerateBundles<P, B> {
     fn drop(&mut self) {
-        self.reg.decrement_locks();
+        println!("{:p} GenerateBundles Drop", &self.reg);
     }
 }
 
@@ -178,6 +179,8 @@ where
         loop {
             if self.reg.shared.borrow().metasources.is_empty() {
                 // There are no metasources available, so no bundles can be generated.
+                println!("!!! {:p} no metasources", &self.reg);
+                self.reg.decrement_locks();
                 return None.into();
             }
 
@@ -193,6 +196,7 @@ where
                     pinned_solver.try_poll_next(cx, &self, false)
                 {
                     // The solver is ready, but may not have generated an ordering.
+                    println!("!!! {:p} solver is ready", &self.reg);
 
                     if let Ok(Some(order)) = solver_result {
                         // The solver resolved an ordering, and a bundle may be able
@@ -215,16 +219,26 @@ where
 
                         if bundle.is_some() {
                             // The bundle was successfully generated.
+                            println!("!!! {:p} generated a bundle", &self.reg);
                             return bundle.into();
                         }
 
+                        println!("!!! {:p} No bundle was generated, continue on.", &self.reg);
                         // No bundle was generated, continue on.
                         continue;
                     }
 
-                    // There is no bundle ordering available.
+                    // There is no bundle ordering available yet.
+                    println!(
+                        "!!! {:p} There is no bundle ordering available yet.",
+                        &self.reg
+                    );
 
                     if self.current_metasource > 0 {
+                        println!(
+                            "!!! {:p} There are more metasources, create a new solver and try the next metasource. {:?}",
+                            &self.reg, self.current_metasource
+                        );
                         // There are more metasources, create a new solver and try the
                         // next metasource. If there is an error in the solver_result
                         // ignore it for now, since there are more metasources.
@@ -246,6 +260,7 @@ where
                     }
 
                     if let Err(idx) = solver_result {
+                        println!("!!! {:p} Since there are no more metasources, and there is an error, report it instead of ignoring it.", &self.reg);
                         // Since there are no more metasources, and there is an error,
                         // report it instead of ignoring it.
                         self.reg.shared.borrow().provider.report_errors(vec![
@@ -257,24 +272,35 @@ where
                     }
 
                     // There are no more metasources.
+                    println!("!!! {:p} There are no more metasources.", &self.reg);
                     self.state = State::Empty;
+                    self.reg.decrement_locks();
                     continue;
                 }
 
+                println!("!!! {:p} The solver is not ready yet, so exit out of this async task and mark it as pending. It can be tried again later.", &self.reg);
                 // The solver is not ready yet, so exit out of this async task
                 // and mark it as pending. It can be tried again later.
                 self.state.put_back_solver(solver);
                 return std::task::Poll::Pending;
             }
 
-            // There are no more metasources to search.
+            println!(
+                "!!! {:p} This is the first iteration, or there are no more metasources to search for this locale, continue with the next.",
+                &self.reg
+            );
 
-            // Try the next locale.
+            // This is the first iteration, or there are no more metasources to search for
+            // this locale, continue with the next.
             if let Some(locale) = self.locales.next() {
-                // Restart at the end of the metasources for this locale, and iterate
-                // backwards.
+                // Start at the last metasource and iterate backwards.
                 let last_metasource_idx = self.reg.shared.borrow().metasources.len() - 1;
                 self.current_metasource = last_metasource_idx;
+
+                println!(
+                    "!!! {:p} Start at the last metasource and iterate backwards. {:?}",
+                    &self.reg, locale
+                );
 
                 let solver = ParallelProblemSolver::new(
                     self.resource_ids.len(),
@@ -293,6 +319,8 @@ where
 
             // There are no more locales or metasources to search. This iterator
             // is done.
+            println!("!!! {:p} There are no more locales or metasources to search. This iterator is done.", &self.reg);
+            self.reg.decrement_locks();
             return None.into();
         }
     }

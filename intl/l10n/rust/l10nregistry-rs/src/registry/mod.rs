@@ -331,6 +331,11 @@ impl<P, B> L10nRegistry<P, B> {
     pub fn increment_locks(&self) {
         // Ensure any deferred mutations are applied before sharing.
         self.shared.borrow_mut().async_bundle_iter_count += 1;
+        println!(
+            "!!! increment_locks {:p} {:?}",
+            &self,
+            self.shared.borrow_mut().async_bundle_iter_count
+        );
     }
 
     pub fn decrement_locks(&self) {
@@ -339,7 +344,13 @@ impl<P, B> L10nRegistry<P, B> {
             "async_bundle_iter_count must be greater than 0."
         );
         self.shared.borrow_mut().async_bundle_iter_count -= 1;
+        println!(
+            "!!! decrement_locks {:p} {:?}",
+            &self,
+            self.shared.borrow_mut().async_bundle_iter_count
+        );
         if self.shared.borrow().async_bundle_iter_count == 0 {
+            println!("!!! apply_mutations {:p}", &self);
             self.apply_mutations();
         }
     }
