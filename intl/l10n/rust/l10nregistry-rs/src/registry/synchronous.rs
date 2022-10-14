@@ -59,6 +59,7 @@ where
     P: Clone,
     B: Clone,
 {
+    #[cfg(test)]
     pub fn generate_bundles_for_lang_sync(
         &self,
         langid: LanguageIdentifier,
