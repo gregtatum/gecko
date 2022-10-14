@@ -7,7 +7,7 @@ use crate::source::ResourceOption;
 use fluent_fallback::{generator::BundleIterator, types::ResourceId};
 use unic_langid::LanguageIdentifier;
 
-impl<'a> MetaSources<'a> {
+impl MetaSources {
     pub(crate) fn bundle_from_order<P, B>(
         &self,
         metasource: usize,
