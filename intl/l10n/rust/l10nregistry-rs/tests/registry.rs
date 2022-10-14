@@ -19,13 +19,13 @@ fn test_sources_for_resource() {
     let (_, reg) = fetcher.get_registry_and_environment(setup);
 
     {
-        let lock = reg.lock();
+        let metasources = reg.try_metasources();
 
-        let toolkit = lock.file_source_by_name(0, "toolkit").unwrap();
-        let browser = lock.file_source_by_name(0, "browser").unwrap();
+        let toolkit = metasources.filesource_by_name(0, "toolkit").unwrap();
+        let browser = metasources.filesource_by_name(0, "browser").unwrap();
         let toolkit_resource_id = FTL_RESOURCE_TOOLKIT.into();
 
-        let mut i = lock.get_sources_for_resource(0, &en_us, &toolkit_resource_id);
+        let mut i = metasources.get_sources_for_resource(0, &en_us, &toolkit_resource_id);
 
         assert_eq!(i.next(), Some(toolkit));
         assert_eq!(i.next(), Some(browser));
@@ -35,7 +35,7 @@ fn test_sources_for_resource() {
             .fetch_file_sync(&en_us, &FTL_RESOURCE_TOOLKIT.into(), false)
             .is_none());
 
-        let mut i = lock.get_sources_for_resource(0, &en_us, &toolkit_resource_id);
+        let mut i = metasources.get_sources_for_resource(0, &en_us, &toolkit_resource_id);
         assert_eq!(i.next(), Some(toolkit));
         assert_eq!(i.next(), None);
 
@@ -43,7 +43,7 @@ fn test_sources_for_resource() {
             .fetch_file_sync(&en_us, &FTL_RESOURCE_TOOLKIT.into(), false)
             .is_some());
 
-        let mut i = lock.get_sources_for_resource(0, &en_us, &toolkit_resource_id);
+        let mut i = metasources.get_sources_for_resource(0, &en_us, &toolkit_resource_id);
         assert_eq!(i.next(), Some(toolkit));
         assert_eq!(i.next(), None);
     }
