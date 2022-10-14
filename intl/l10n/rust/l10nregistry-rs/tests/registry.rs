@@ -19,7 +19,7 @@ fn test_sources_for_resource() {
     let (_, reg) = fetcher.get_registry_and_environment(setup);
 
     {
-        let metasources = reg.metasources();
+        let metasources = reg.try_metasources();
 
         let toolkit = metasources.filesource_by_name(0, "toolkit").unwrap();
         let browser = metasources.filesource_by_name(0, "browser").unwrap();

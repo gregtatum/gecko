@@ -152,7 +152,8 @@ impl<P, B> SyncTester for GenerateBundlesSync<P, B> {
         let resource_id = &self.resource_ids[res_idx];
         !self
             .reg
-            .metasources()
+            .try_metasources()
+            .expect("Unable to get the MetaSources.")
             .filesource(self.current_metasource, source_idx)
             .fetch_file_sync(locale, resource_id, /* overload */ true)
             .is_required_and_missing()
@@ -183,7 +184,8 @@ where
             let mut solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
                 self.reg
-                    .metasources()
+                    .try_metasources()
+                    .expect("Unable to get the MetaSources.")
                     .metasource(self.current_metasource)
                     .len(),
             );
@@ -211,8 +213,12 @@ where
 
     /// Synchronously generate a bundle based on a solver.
     fn next(&mut self) -> Option<Self::Item> {
+        let metasources = self
+            .reg
+            .try_metasources()
+            .expect("Unable to get the MetaSources.");
         loop {
-            if self.reg.metasources().is_empty() {
+            if metasources.is_empty() {
                 // There are no metasources available, so no bundles can be generated.
                 return None;
             }
@@ -227,7 +233,7 @@ where
                     // The solver resolved an ordering, and a bundle may be able
                     // to be generated.
 
-                    let bundle = self.reg.metasources().bundle_from_order(
+                    let bundle = metasources.bundle_from_order(
                         self.current_metasource,
                         self.state.get_locale().clone(),
                         &order,
@@ -256,10 +262,7 @@ where
                     self.current_metasource -= 1;
                     let solver = SerialProblemSolver::new(
                         self.resource_ids.len(),
-                        self.reg
-                            .metasources()
-                            .metasource(self.current_metasource)
-                            .len(),
+                        metasources.metasource(self.current_metasource).len(),
                     );
                     self.state = State::Solver {
                         locale: self.state.get_locale().clone(),
@@ -288,15 +291,12 @@ where
 
             // Restart at the end of the metasources for this locale, and iterate
             // backwards.
-            let last_metasource_idx = self.reg.metasources().len() - 1;
+            let last_metasource_idx = metasources.len() - 1;
             self.current_metasource = last_metasource_idx;
 
             let solver = SerialProblemSolver::new(
                 self.resource_ids.len(),
-                self.reg
-                    .metasources()
-                    .metasource(self.current_metasource)
-                    .len(),
+                metasources.metasource(self.current_metasource).len(),
             );
 
             // Continue iterating on the next solver.

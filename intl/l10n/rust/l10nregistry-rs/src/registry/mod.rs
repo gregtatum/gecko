@@ -61,7 +61,7 @@ impl MetaSources {
 
     /// Provide a shallow copy of the FileSources so that iterators won't be invalidated
     /// on mutation of the underlying list.
-    pub fn shallow_copy(&self) -> MetaSources {
+    pub fn shallow_clone(&self) -> MetaSources {
         MetaSources(
             self.0
                 .iter()
@@ -200,20 +200,30 @@ impl<P, B> L10nRegistry<P, B> {
         Ok(())
     }
 
-    pub fn metasources(&self) -> Ref<MetaSources> {
-        self.shared.metasources.borrow()
+    pub fn try_metasources(&self) -> Result<Ref<MetaSources>, L10nRegistrySetupError> {
+        self.shared
+            .metasources
+            .try_borrow()
+            .map_err(|_| L10nRegistrySetupError::RegistryLocked)
     }
 
-    pub fn metasources_mut(&self) -> RefMut<MetaSources> {
-        self.shared.metasources.borrow_mut()
+    pub fn try_metasources_mut(&self) -> Result<RefMut<MetaSources>, L10nRegistrySetupError> {
+        self.shared
+            .metasources
+            .try_borrow_mut()
+            .map_err(|_| L10nRegistrySetupError::RegistryLocked)
     }
 
     /// Adds a new FileSource to the registry and to its appropriate metasource. If the
     /// metasource for this FileSource does not exist, then it is created.
-    pub fn register_sources(&self, new_sources: Vec<FileSource>) {
+    pub fn register_sources(
+        &self,
+        new_sources: Vec<FileSource>,
+    ) -> Result<(), L10nRegistrySetupError> {
         for new_source in new_sources {
-            self.metasources_mut().add_filesource(new_source);
+            self.try_metasources_mut()?.add_filesource(new_source);
         }
+        Ok(())
     }
 
     /// Update the information about sources already stored in the registry. Each
@@ -224,12 +234,7 @@ impl<P, B> L10nRegistry<P, B> {
         new_sources: Vec<FileSource>,
     ) -> Result<(), L10nRegistrySetupError> {
         for new_source in new_sources {
-            if !self
-                .shared
-                .metasources
-                .borrow_mut()
-                .update_filesource(&new_source)
-            {
+            if !self.try_metasources_mut()?.update_filesource(&new_source) {
                 return Err(L10nRegistrySetupError::MissingSource {
                     name: new_source.name,
                 });
@@ -246,53 +251,57 @@ impl<P, B> L10nRegistry<P, B> {
     {
         let del_sources: Vec<String> = del_sources.into_iter().map(|s| s.to_string()).collect();
 
-        for metasource in self.metasources_mut().iter_mut() {
+        for metasource in self.try_metasources_mut()?.iter_mut() {
             metasource.retain(|source| !del_sources.contains(&source.name));
         }
 
-        self.metasources_mut().clear_empty_metasources();
+        self.try_metasources_mut()?.clear_empty_metasources();
 
         Ok(())
     }
 
     /// Clears out all metasources and sources.
-    pub fn clear_sources(&self) {
-        self.metasources_mut().clear();
+    pub fn clear_sources(&self) -> Result<(), L10nRegistrySetupError> {
+        self.try_metasources_mut()?.clear();
+        Ok(())
     }
 
     /// Flattens out all metasources and returns the complete list of source names.
-    pub fn get_source_names(&self) -> Vec<String> {
-        self.metasources()
+    pub fn get_source_names(&self) -> Result<Vec<String>, L10nRegistrySetupError> {
+        Ok(self
+            .try_metasources()?
             .filesources()
             .map(|s| s.name.clone())
-            .collect()
+            .collect())
     }
 
     /// Checks if any metasources has a source, by the name.
-    pub fn has_source(&self, name: &str) -> bool {
-        self.metasources()
+    pub fn has_source(&self, name: &str) -> Result<bool, L10nRegistrySetupError> {
+        Ok(self
+            .try_metasources()?
             .filesources()
-            .any(|source| source.name == name)
+            .any(|source| source.name == name))
     }
 
     /// Gets a source by the name, from any metasource.
-    pub fn get_source(&self, name: &str) -> Option<FileSource> {
-        self.metasources()
+    pub fn get_source(&self, name: &str) -> Result<Option<FileSource>, L10nRegistrySetupError> {
+        Ok(self
+            .try_metasources()?
             .filesources()
             .find(|source| source.name == name)
-            .map(|source| (**source).clone())
+            .map(|source| (**source).clone()))
     }
 
     /// Returns a unique list of locale names from all sources.
-    pub fn get_available_locales(&self) -> Vec<LanguageIdentifier> {
+    pub fn get_available_locales(&self) -> Result<Vec<LanguageIdentifier>, L10nRegistrySetupError> {
         let mut result = HashSet::new();
-        let metasources = self.metasources();
+        let metasources = self.try_metasources()?;
         for source in metasources.filesources() {
             for locale in source.locales() {
                 result.insert(locale);
             }
         }
-        result.into_iter().map(|l| l.to_owned()).collect()
+        Ok(result.into_iter().map(|l| l.to_owned()).collect())
     }
 }
 
@@ -327,5 +336,6 @@ where
     ) -> Self::Stream {
         let resource_ids = resource_ids.into_iter().collect();
         self.generate_bundles(locales, resource_ids)
+            .expect("Unable to get the MetaSources.")
     }
 }
