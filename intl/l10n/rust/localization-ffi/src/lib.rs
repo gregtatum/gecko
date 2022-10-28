@@ -294,6 +294,8 @@ impl LocalizationRc {
         let strong_promise = RefPtr::new(promise);
 
         moz_task::TaskBuilder::new("LocalizationRc::format_value", async move {
+            // I don't think there is anything keeping the L10nRegistry alive here and
+            // the string bundles that the Cow in FluentValues may be pointing to.
             let mut errors = vec![];
             let value = if let Some(value) = bundles
                 .format_value(&id.to_utf8(), args.as_ref(), &mut errors)
@@ -330,6 +332,29 @@ impl LocalizationRc {
         let strong_promise = RefPtr::new(promise);
 
         moz_task::TaskBuilder::new("LocalizationRc::format_values", async move {
+            for key in &keys {
+                println!(
+                    "!!! Is the key {:?} owned? {:?}",
+                    key.id,
+                    match key.id {
+                        Cow::Owned(_) => true,
+                        Cow::Borrowed(_) => false,
+                    }
+                );
+                assert!(
+                    match key.id {
+                        Cow::Owned(_) => true,
+                        Cow::Borrowed(_) => false,
+                    },
+                    "The key id is owned."
+                );
+
+                // if let Some(args) = key.args {
+                //     for arg in &args.0 {
+                //         assert!(arg.0.is_owned(), "The argument key is owned");
+                //     }
+                // }
+            }
             let mut errors = vec![];
             let ret_val = bundles
                 .format_values(&keys, &mut errors)
@@ -377,6 +402,8 @@ impl LocalizationRc {
         let strong_promise = RefPtr::new(promise);
 
         moz_task::TaskBuilder::new("LocalizationRc::format_messages", async move {
+            // I don't think there is anything keeping the L10nRegistry alive here and
+            // the string bundles that the Cow in FluentValues may be pointing to.
             let mut errors = vec![];
             let ret_val = bundles
                 .format_messages(&keys, &mut errors)
@@ -477,13 +504,19 @@ pub extern "C" fn localization_add_res_id(loc: &LocalizationRc, res_id: &GeckoRe
 }
 
 #[no_mangle]
-pub extern "C" fn localization_add_res_ids(loc: &LocalizationRc, res_ids: &ThinVec<GeckoResourceId>) {
+pub extern "C" fn localization_add_res_ids(
+    loc: &LocalizationRc,
+    res_ids: &ThinVec<GeckoResourceId>,
+) {
     let res_ids = res_ids.iter().map(ResourceId::from).collect();
     loc.add_resource_ids(res_ids);
 }
 
 #[no_mangle]
-pub extern "C" fn localization_remove_res_id(loc: &LocalizationRc, res_id: &GeckoResourceId) -> usize {
+pub extern "C" fn localization_remove_res_id(
+    loc: &LocalizationRc,
+    res_id: &GeckoResourceId,
+) -> usize {
     loc.remove_resource_id(res_id.into())
 }
 
