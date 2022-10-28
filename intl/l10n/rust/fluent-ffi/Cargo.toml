@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 fluent = { version = "0.16.0", features = ["fluent-pseudo"] }
-fluent-pseudo = "0.3.1"
-intl-memoizer = "0.5.1"
+fluent-pseudo = { path = "/Users/greg/dev/fluent-rs/fluent-pseudo" }
+intl-memoizer = { path = "/Users/greg/dev/fluent-rs/intl-memoizer" }
 unic-langid = "0.9"
 nsstring = { path = "../../../../xpcom/rust/nsstring" }
 cstr = "0.2"

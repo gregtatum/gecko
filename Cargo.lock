@@ -1637,11 +1637,19 @@ dependencies = [
 [[package]]
 name = "fluent"
 version = "0.16.0"
+dependencies = [
+ "fluent-bundle 0.15.2",
+ "unic-langid",
+]
+
+[[package]]
+name = "fluent"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61f69378194459db76abd2ce3952b790db103ceb003008d3d50d97c41ff847a7"
 dependencies = [
  "fluent-bundle 0.15.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "fluent-pseudo",
+ "fluent-pseudo 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unic-langid",
 ]
 
@@ -1678,6 +1686,18 @@ dependencies = [
 [[package]]
 name = "fluent-fallback"
 version = "0.6.0"
+dependencies = [
+ "async-trait",
+ "chunky-vec",
+ "fluent-bundle 0.15.2",
+ "futures 0.3.23",
+ "once_cell",
+ "unic-langid",
+]
+
+[[package]]
+name = "fluent-fallback"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0ebe8c34b89a10c8a431de9c0c5c2005b79c438d9a498a028c4e05b88afb3d6"
 dependencies = [
@@ -1694,11 +1714,11 @@ name = "fluent-ffi"
 version = "0.1.0"
 dependencies = [
  "cstr",
- "fluent",
- "fluent-fallback",
- "fluent-pseudo",
+ "fluent 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fluent-fallback 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fluent-pseudo 0.3.1",
  "futures 0.3.23",
- "intl-memoizer 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "intl-memoizer 0.5.1",
  "l10nregistry",
  "nsstring",
  "thin-vec",
@@ -1731,6 +1751,13 @@ dependencies = [
 [[package]]
 name = "fluent-pseudo"
 version = "0.3.1"
+dependencies = [
+ "regex",
+]
+
+[[package]]
+name = "fluent-pseudo"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fded62f95114baa010b4fcd54aedc7b0762059cf6dfb0097f5b5c95fb56ed42f"
 dependencies = [
@@ -1755,12 +1782,10 @@ dependencies = [
 
 [[package]]
 name = "fluent-testing"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4597df830d853d8a319c9cba05bc62d59288b613f1f445638444e05e4041fdf"
+version = "0.2.0"
 dependencies = [
- "fluent-bundle 0.15.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "fluent-fallback",
+ "fluent-bundle 0.15.2",
+ "fluent-fallback 0.6.0",
  "tokio 1.17.0",
 ]
 
@@ -2149,8 +2174,8 @@ dependencies = [
  "detect_win32k_conflicts",
  "dom",
  "encoding_glue",
- "fluent",
- "fluent-fallback",
+ "fluent 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fluent-fallback 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-ffi",
  "fluent-langneg",
  "fluent-langneg-ffi",
@@ -2911,7 +2936,7 @@ version = "0.3.0"
 dependencies = [
  "async-trait",
  "fluent-bundle 0.15.2",
- "fluent-fallback",
+ "fluent-fallback 0.6.0",
  "fluent-testing",
  "futures 0.3.23",
  "pin-project-lite",
@@ -2928,8 +2953,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "cstr",
- "fluent",
- "fluent-fallback",
+ "fluent 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fluent-fallback 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-ffi",
  "futures 0.3.23",
  "futures-channel",
@@ -3078,8 +3103,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "cstr",
- "fluent",
- "fluent-fallback",
+ "fluent 0.16.0",
+ "fluent-fallback 0.6.0",
  "fluent-ffi",
  "futures 0.3.23",
  "futures-channel",
