@@ -45,7 +45,7 @@ use crate::types::FluentValue;
 /// );
 /// ```
 #[derive(Debug, Default)]
-pub struct FluentArgs<'args>(Vec<(Cow<'args, str>, FluentValue<'args>)>);
+pub struct FluentArgs<'args>(pub Vec<(Cow<'args, str>, FluentValue<'args>)>);
 
 impl<'args> FluentArgs<'args> {
     pub fn new() -> Self {

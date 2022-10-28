@@ -1640,8 +1640,22 @@ version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61f69378194459db76abd2ce3952b790db103ceb003008d3d50d97c41ff847a7"
 dependencies = [
- "fluent-bundle",
+ "fluent-bundle 0.15.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-pseudo",
+ "unic-langid",
+]
+
+[[package]]
+name = "fluent-bundle"
+version = "0.15.2"
+dependencies = [
+ "fluent-langneg",
+ "fluent-syntax 0.11.0",
+ "intl-memoizer 0.5.1",
+ "intl_pluralrules",
+ "rustc-hash",
+ "self_cell",
+ "smallvec",
  "unic-langid",
 ]
 
@@ -1652,8 +1666,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e242c601dec9711505f6d5bbff5bedd4b61b2469f2e8bb8e57ee7c9747a87ffd"
 dependencies = [
  "fluent-langneg",
- "fluent-syntax",
- "intl-memoizer",
+ "fluent-syntax 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "intl-memoizer 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "intl_pluralrules",
  "rustc-hash",
  "self_cell",
@@ -1669,7 +1683,7 @@ checksum = "e0ebe8c34b89a10c8a431de9c0c5c2005b79c438d9a498a028c4e05b88afb3d6"
 dependencies = [
  "async-trait",
  "chunky-vec",
- "fluent-bundle",
+ "fluent-bundle 0.15.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.23",
  "once_cell",
  "unic-langid",
@@ -1684,7 +1698,7 @@ dependencies = [
  "fluent-fallback",
  "fluent-pseudo",
  "futures 0.3.23",
- "intl-memoizer",
+ "intl-memoizer 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "l10nregistry",
  "nsstring",
  "thin-vec",
@@ -1726,6 +1740,13 @@ dependencies = [
 [[package]]
 name = "fluent-syntax"
 version = "0.11.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "fluent-syntax"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0abed97648395c902868fee9026de96483933faa54ea3b40d652f7dfe61ca78"
 dependencies = [
@@ -1738,7 +1759,7 @@ version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4597df830d853d8a319c9cba05bc62d59288b613f1f445638444e05e4041fdf"
 dependencies = [
- "fluent-bundle",
+ "fluent-bundle 0.15.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "fluent-fallback",
  "tokio 1.17.0",
 ]
@@ -2650,6 +2671,14 @@ dependencies = [
 [[package]]
 name = "intl-memoizer"
 version = "0.5.1"
+dependencies = [
+ "type-map",
+ "unic-langid",
+]
+
+[[package]]
+name = "intl-memoizer"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c310433e4a310918d6ed9243542a6b83ec1183df95dff8f23f87bb88a264a66f"
 dependencies = [
@@ -2881,7 +2910,7 @@ name = "l10nregistry"
 version = "0.3.0"
 dependencies = [
  "async-trait",
- "fluent-bundle",
+ "fluent-bundle 0.15.2",
  "fluent-fallback",
  "fluent-testing",
  "futures 0.3.23",

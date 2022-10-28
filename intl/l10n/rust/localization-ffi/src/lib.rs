@@ -349,11 +349,17 @@ impl LocalizationRc {
                     "The key id is owned."
                 );
 
-                // if let Some(args) = key.args {
-                //     for arg in &args.0 {
-                //         assert!(arg.0.is_owned(), "The argument key is owned");
-                //     }
-                // }
+                if let Some(args) = key.args {
+                    for arg in &args.0 {
+                        assert!(
+                            match arg.0 {
+                                Cow::Owned(_) => true,
+                                Cow::Borrowed(_) => false,
+                            },
+                            "The argument key is owned"
+                        );
+                    }
+                }
             }
             let mut errors = vec![];
             let ret_val = bundles
