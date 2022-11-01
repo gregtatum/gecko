@@ -516,3 +516,5 @@ details-notification-softblocked = { $name } is known to cause security or stabi
 details-notification-softblocked-link = More Information
 
 details-notification-gmp-pending = { $name } will be installed shortly.
+
+greg-test1 = { $name } placeholder

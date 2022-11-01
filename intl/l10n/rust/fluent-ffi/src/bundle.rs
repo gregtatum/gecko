@@ -27,7 +27,7 @@ pub enum FluentArgument<'s> {
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct L10nArg<'s> {
+pub struct GeckoL10nArg<'s> {
     pub id: &'s nsACString,
     pub value: FluentArgument<'s>,
 }
@@ -260,7 +260,7 @@ pub extern "C" fn fluent_bundle_format_pattern(
     bundle: &FluentBundleRc,
     id: &nsACString,
     attr: &nsACString,
-    args: &ThinVec<L10nArg>,
+    args: &ThinVec<GeckoL10nArg>,
     ret_val: &mut nsACString,
     ret_errors: &mut ThinVec<nsCString>,
 ) -> bool {
@@ -308,7 +308,7 @@ pub unsafe extern "C" fn fluent_bundle_add_resource(
     }
 }
 
-pub fn convert_args<'s>(args: &[L10nArg<'s>]) -> Option<FluentArgs<'s>> {
+pub fn convert_args<'s>(args: &[GeckoL10nArg<'s>]) -> Option<FluentArgs<'s>> {
     if args.is_empty() {
         return None;
     }

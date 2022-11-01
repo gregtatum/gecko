@@ -275,3 +275,12 @@ async function installAddonsFromFilePicker() {
     });
   });
 }
+
+
+document.l10n.formatValues([
+  { id: "addon-install-from-file-dialog-title" },
+  { id: "addon-install-from-file-filter-name" },
+  { id: "greg-test1", args:  { name: "Greg's" } },
+]).then(messages => {
+  console.log(`!!! l10n`, messages);
+});

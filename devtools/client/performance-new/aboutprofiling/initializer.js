@@ -150,3 +150,9 @@ if (window.location.hash !== "#remote") {
     { once: true }
   );
 }
+
+document.l10n
+  .formatMessages([
+    "perftools-range-interval-milliseconds",
+    "perftools-presets-firefox-description"
+  ]).then(messages => console.log(`!!! messages`, messages));

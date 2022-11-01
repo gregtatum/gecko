@@ -92,7 +92,7 @@ fluent = { path = "/Users/greg/dev/fluent-rs/fluent", version = "0.16.0", featur
 fluent-ffi = { path = "../../../../intl/l10n/rust/fluent-ffi" }
 l10nregistry-ffi = { path = "../../../../intl/l10n/rust/l10nregistry-ffi" }
 l10nregistry = { path = "../../../../intl/l10n/rust/l10nregistry-rs" }
-fluent-fallback = { path = "/Users/greg/dev/fluent-rs/fluent" }
+fluent-fallback = { path = "/Users/greg/dev/fluent-rs/fluent-fallback" }
 localization-ffi = { path = "../../../../intl/l10n/rust/localization-ffi" }
 
 processtools = { path = "../../../components/processtools" }

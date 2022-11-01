@@ -5,12 +5,11 @@
 use fluent::FluentValue;
 use fluent_fallback::{
     types::{
-        L10nAttribute as FluentL10nAttribute, L10nKey as FluentL10nKey,
-        L10nMessage as FluentL10nMessage, ResourceId,
+        L10nAttribute as FluentL10nAttribute, L10nKey, L10nMessage as FluentL10nMessage, ResourceId,
     },
     Localization,
 };
-use fluent_ffi::{convert_args, FluentArgs, FluentArgument, L10nArg};
+use fluent_ffi::{convert_args, FluentArgs, FluentArgument, GeckoL10nArg};
 use l10nregistry_ffi::{
     env::GeckoEnvironment,
     registry::{get_l10n_registry, GeckoL10nRegistry, GeckoResourceId},
@@ -27,14 +26,14 @@ use xpcom::{
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct L10nKey<'s> {
+pub struct GeckoL10nKey<'s> {
     id: &'s nsACString,
-    args: ThinVec<L10nArg<'s>>,
+    args: ThinVec<GeckoL10nArg<'s>>,
 }
 
-impl<'s> From<&'s L10nKey<'s>> for FluentL10nKey<'static> {
-    fn from(input: &'s L10nKey<'s>) -> Self {
-        FluentL10nKey {
+impl<'s> From<&'s GeckoL10nKey<'s>> for L10nKey<'static> {
+    fn from(input: &'s GeckoL10nKey<'s>) -> Self {
+        L10nKey {
             id: input.id.to_utf8().to_string().into(),
             args: convert_args_to_owned(&input.args),
         }
@@ -43,7 +42,7 @@ impl<'s> From<&'s L10nKey<'s>> for FluentL10nKey<'static> {
 
 // This is a variant of `convert_args` from `fluent-ffi` with a 'static constrain
 // put on the resulting `FluentArgs` to make it acceptable into `spqwn_current_thread`.
-pub fn convert_args_to_owned(args: &[L10nArg]) -> Option<FluentArgs<'static>> {
+pub fn convert_args_to_owned(args: &[GeckoL10nArg]) -> Option<FluentArgs<'static>> {
     if args.is_empty() {
         return None;
     }
@@ -189,7 +188,7 @@ impl LocalizationRc {
     pub fn format_value_sync(
         &self,
         id: &nsACString,
-        args: &ThinVec<L10nArg>,
+        args: &ThinVec<GeckoL10nArg>,
         ret_val: &mut nsACString,
         ret_err: &mut ThinVec<nsCString>,
     ) -> bool {
@@ -214,12 +213,12 @@ impl LocalizationRc {
 
     pub fn format_values_sync(
         &self,
-        keys: &ThinVec<L10nKey>,
+        keys: &ThinVec<GeckoL10nKey>,
         ret_val: &mut ThinVec<nsCString>,
         ret_err: &mut ThinVec<nsCString>,
     ) -> bool {
         ret_val.reserve(keys.len());
-        let keys: Vec<FluentL10nKey> = keys.into_iter().map(|k| k.into()).collect();
+        let keys: Vec<L10nKey> = keys.into_iter().map(|k| k.into()).collect();
         let mut errors = vec![];
         if let Ok(values) = self
             .inner
@@ -245,13 +244,13 @@ impl LocalizationRc {
 
     pub fn format_messages_sync(
         &self,
-        keys: &ThinVec<L10nKey>,
+        keys: &ThinVec<GeckoL10nKey>,
         ret_val: &mut ThinVec<OptionalL10nMessage>,
         ret_err: &mut ThinVec<nsCString>,
     ) -> bool {
         ret_val.reserve(keys.len());
         let mut errors = vec![];
-        let keys: Vec<FluentL10nKey> = keys.into_iter().map(|k| k.into()).collect();
+        let keys: Vec<L10nKey> = keys.into_iter().map(|k| k.into()).collect();
         if let Ok(messages) = self
             .inner
             .borrow()
@@ -282,7 +281,7 @@ impl LocalizationRc {
     pub fn format_value(
         &self,
         id: &nsACString,
-        args: &ThinVec<L10nArg>,
+        args: &ThinVec<GeckoL10nArg>,
         promise: &xpcom::Promise,
         callback: extern "C" fn(&xpcom::Promise, &nsACString, &ThinVec<nsCString>),
     ) {
@@ -321,24 +320,28 @@ impl LocalizationRc {
 
     pub fn format_values(
         &self,
-        keys: &ThinVec<L10nKey>,
+        keys: &ThinVec<GeckoL10nKey>,
         promise: &xpcom::Promise,
         callback: extern "C" fn(&xpcom::Promise, &ThinVec<nsCString>, &ThinVec<nsCString>),
     ) {
         let bundles = self.inner.borrow().bundles().clone();
 
-        let keys: Vec<FluentL10nKey> = keys.into_iter().map(|k| k.into()).collect();
+        let keys: Vec<L10nKey> = keys.into_iter().map(|key| k.into()).collect();
 
         let strong_promise = RefPtr::new(promise);
 
         moz_task::TaskBuilder::new("LocalizationRc::format_values", async move {
             for key in &keys {
                 println!(
-                    "!!! Is the key {:?} owned? {:?}",
+                    "!!! LocalizationRc::format_values - Is the key {:?} owned? {:?}, (args: {})",
                     key.id,
                     match key.id {
                         Cow::Owned(_) => true,
                         Cow::Borrowed(_) => false,
+                    },
+                    match key.args {
+                        Some(ref args) => args.0.len(),
+                        None => 0,
                     }
                 );
                 assert!(
@@ -349,15 +352,33 @@ impl LocalizationRc {
                     "The key id is owned."
                 );
 
-                if let Some(args) = key.args {
-                    for arg in &args.0 {
-                        assert!(
-                            match arg.0 {
-                                Cow::Owned(_) => true,
-                                Cow::Borrowed(_) => false,
-                            },
-                            "The argument key is owned"
+                if let Some(ref args) = key.args {
+                    for (ref key, ref value) in &args.0 {
+                        let is_owned = match key {
+                            Cow::Owned(_) => true,
+                            Cow::Borrowed(_) => false,
+                        };
+                        println!(
+                            "!!! LocalizationRc::format_values - Arg key {:?} is owned? {:?}",
+                            key, is_owned
                         );
+                        assert!(is_owned, "The argument key is owned");
+                        match value {
+                            FluentValue::String(str) => println!(
+                                "!!! FluentValue::String {:?} is owned? {:?}",
+                                str,
+                                match str {
+                                    Cow::Owned(_) => true,
+                                    Cow::Borrowed(_) => false,
+                                }
+                            ),
+                            FluentValue::Number(num) => {
+                                println!("!!! FluentValue::Number {:?}", num)
+                            }
+                            FluentValue::Custom(_) => println!("!!! FluentValue::Custom"),
+                            FluentValue::None => println!("!!! FluentValue::None"),
+                            FluentValue::Error => println!("!!! FluentValue::Error"),
+                        }
                     }
                 }
             }
@@ -393,7 +414,7 @@ impl LocalizationRc {
 
     pub fn format_messages(
         &self,
-        keys: &ThinVec<L10nKey>,
+        keys: &ThinVec<GeckoL10nKey>,
         promise: &xpcom::Promise,
         callback: extern "C" fn(
             &xpcom::Promise,
@@ -403,7 +424,7 @@ impl LocalizationRc {
     ) {
         let bundles = self.inner.borrow().bundles().clone();
 
-        let keys: Vec<FluentL10nKey> = keys.into_iter().map(|k| k.into()).collect();
+        let keys: Vec<L10nKey> = keys.into_iter().map(|k| k.into()).collect();
 
         let strong_promise = RefPtr::new(promise);
 
@@ -539,7 +560,7 @@ pub extern "C" fn localization_remove_res_ids(
 pub extern "C" fn localization_format_value_sync(
     loc: &LocalizationRc,
     id: &nsACString,
-    args: &ThinVec<L10nArg>,
+    args: &ThinVec<GeckoL10nArg>,
     ret_val: &mut nsACString,
     ret_err: &mut ThinVec<nsCString>,
 ) -> bool {
@@ -549,7 +570,7 @@ pub extern "C" fn localization_format_value_sync(
 #[no_mangle]
 pub extern "C" fn localization_format_values_sync(
     loc: &LocalizationRc,
-    keys: &ThinVec<L10nKey>,
+    keys: &ThinVec<GeckoL10nKey>,
     ret_val: &mut ThinVec<nsCString>,
     ret_err: &mut ThinVec<nsCString>,
 ) -> bool {
@@ -559,7 +580,7 @@ pub extern "C" fn localization_format_values_sync(
 #[no_mangle]
 pub extern "C" fn localization_format_messages_sync(
     loc: &LocalizationRc,
-    keys: &ThinVec<L10nKey>,
+    keys: &ThinVec<GeckoL10nKey>,
     ret_val: &mut ThinVec<OptionalL10nMessage>,
     ret_err: &mut ThinVec<nsCString>,
 ) -> bool {
@@ -570,7 +591,7 @@ pub extern "C" fn localization_format_messages_sync(
 pub extern "C" fn localization_format_value(
     loc: &LocalizationRc,
     id: &nsACString,
-    args: &ThinVec<L10nArg>,
+    args: &ThinVec<GeckoL10nArg>,
     promise: &xpcom::Promise,
     callback: extern "C" fn(&xpcom::Promise, &nsACString, &ThinVec<nsCString>),
 ) {
@@ -580,7 +601,7 @@ pub extern "C" fn localization_format_value(
 #[no_mangle]
 pub extern "C" fn localization_format_values(
     loc: &LocalizationRc,
-    keys: &ThinVec<L10nKey>,
+    keys: &ThinVec<GeckoL10nKey>,
     promise: &xpcom::Promise,
     callback: extern "C" fn(&xpcom::Promise, &ThinVec<nsCString>, &ThinVec<nsCString>),
 ) {
@@ -590,7 +611,7 @@ pub extern "C" fn localization_format_values(
 #[no_mangle]
 pub extern "C" fn localization_format_messages(
     loc: &LocalizationRc,
-    keys: &ThinVec<L10nKey>,
+    keys: &ThinVec<GeckoL10nKey>,
     promise: &xpcom::Promise,
     callback: extern "C" fn(&xpcom::Promise, &ThinVec<OptionalL10nMessage>, &ThinVec<nsCString>),
 ) {
