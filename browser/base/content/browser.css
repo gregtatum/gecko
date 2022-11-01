@@ -1561,7 +1561,7 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
   overflow-x: auto;
 }
 
-.dialogBox:not(.spotlightBox) {
+.dialogBox:not(.spotlightBox, .imageToolsDialogBox) {
   box-shadow: 0 2px 14px 0 rgba(0, 0, 0, 0.2);
   border-radius: 8px;
 }
@@ -1705,7 +1705,8 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
 }
 
 .imageToolsDialogBox {
-  border-radius: 0;
+  min-width: none;
+  margin: 0;
 }
 
 .imageToolsDialogOverlay, .imageToolsDialogBox, .imageToolsDialogBox > browser {
@@ -1715,12 +1716,10 @@ toolbar[keyNav=true]:not([collapsed=true], [customizing=true]) toolbartabstop {
 }
 
 .imageToolsDialogFrame {
-  width: 100% !important; /* override element style */
-  height: 100% !important; /* override element style */
-}
-
-.imageToolsContentArea {
-  /* filter: saturate(50%) contrast(50%) brightness(150%) blur(5px); */
+  /* override element style with !important */
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
 }
 
 /**

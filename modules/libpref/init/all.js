@@ -179,6 +179,8 @@ pref("dom.mouseevent.click.hack.use_legacy_non-primary_dispatch", "");
 // Text recognition is a platform dependent feature, so even if this preference is
 // enabled here, the feature may not be visible in all browsers.
 pref("dom.text-recognition.enabled", true);
+// The partial text UI is a new UI for more fine-grained selection of text.
+pref("dom.text-recognition.partial-text", false);
 
 // Fastback caching - if this pref is negative, then we calculate the number
 // of content viewers to cache based on the amount of available memory.

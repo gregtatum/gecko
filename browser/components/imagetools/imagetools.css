@@ -3,6 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :root {
+  --image-tools-sidebar-width: 360px;
+  --image-tools-margin: 80px;
+  --image-tools-border-radius: 3px;
   background-color: transparent;
 }
 
@@ -13,10 +16,10 @@
 }
 
 .imageToolsImage {
-  --image-tools-margin: 80px;
-  --image-tools-border-radius: 3px;
   flex: 1;
   height: 100vh;
+  width: calc(100% - var(--image-tools-sidebar-width));
+  overflow-x: hidden;
   overflow-y: auto;
   position: relative;
   display: flex;
@@ -53,8 +56,21 @@
   transform-origin: 0 0;
   color: transparent;
   white-space: nowrap;
-  margin-bottom: 16px;
+  outline: 1px solid red;
+  /* Add padding so that text selection works nicer for multi-line spans. This bridges
+     the gap between spans making it so the text selection stays consistent. Keep this
+     number in sync with imagetools.mjs. */
+  padding-bottom: 16px;
 }
+
+/**
+ * Ensure the text selection is transparent over the text.
+ */
+.imageToolsImageSpan::selection {
+  color: transparent;
+  background: #204e8a66;
+}
+
 
 .imageToolsName {
   font-weight: 600;
@@ -97,7 +113,7 @@
   display: flex;
   flex-direction: column;
   background-color: var(--in-content-page-background);
-  width: 360px;
+  width: var(--image-tools-sidebar-width);
   height: 100vh;
   overflow: scroll;
 }

@@ -3,25 +3,20 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 const ourBrowser = window.docShell.chromeEventHandler;
+
 ourBrowser
   .closest(".dialogBox")
   ?.classList.add("imageToolsDialogBox", "noShadow");
 ourBrowser.closest(".dialogOverlay")?.classList.add("imageToolsDialogOverlay");
 ourBrowser.classList.add("imageToolsDialogFrame");
-const contentEl = ourBrowser
-  .closest(".browserStack")
-  .querySelector('browser[type="content"]');
-
-contentEl?.classList.add("imageToolsContentArea");
 
 window.addEventListener("DOMContentLoaded", () => {
   // The arguments are passed in as the final parameters to TabDialogBox.prototype.open.
   new ImageTools(...window.arguments);
 });
 
-window.addEventListener("unload", () => {
-  contentEl?.classList.remove("imageToolsContentArea");
-});
+// Value in `.imageToolsImageSpan`.
+const SPAN_PADDING_BOTTOM = 16;
 
 /**
  * @typedef {Object} ImageInfo
@@ -66,6 +61,7 @@ class ImageTools {
     /** @type {HTMLDivElement} */
     this.imageToolsName = document.querySelector(".imageToolsName");
 
+    /** @type {HTMLElement} */
     this.loadingEL = document.querySelector(".imageToolsTextLoading");
 
     const parts = this.imageInfo.currentSrc.split("/");
@@ -107,14 +103,16 @@ class ImageTools {
       /** @type {TextRecognitionResult[]} */
       const results = await img.recognizeCurrentImageText();
 
-      // TODO - Remove this. This is a hack to remove the shadow root functionality.
-      img.openOrClosedShadowRoot.children[0].remove();
-
       this.loadingEL.style.display = "none";
 
       const spans = this.runClustering(results);
       requestAnimationFrame(() => {
         this.positionSpans(results, spans, img);
+      });
+      window.addEventListener("resize", () => {
+        requestAnimationFrame(() => {
+          this.positionSpans(results, spans, img);
+        });
       });
     };
     img.src = imageInfo.currentSrc;
@@ -128,13 +126,10 @@ class ImageTools {
    * @param {HTMLImageElement} img
    */
   positionSpans(results, spans, img) {
-    /** @type {Map<HTMLSpanElement, DOMRect>} */
-    const spanRects = new Map();
     const { textClustersEl, canvasEl, textEl } = this;
 
-    const rect = this.imageWrapperEl
-      .querySelector("img")
-      .getBoundingClientRect();
+    const rect = img.getBoundingClientRect();
+
     textClustersEl.style.top = rect.top + "px";
     textClustersEl.style.left = rect.left + "px";
     textClustersEl.style.width = rect.width + "px";
@@ -175,16 +170,21 @@ class ImageTools {
     if (results.length !== spans.length) {
       throw new Error("Expected results and spans to have the same length.");
     }
+
     for (let i = 0; i < results.length; i++) {
       const span = spans[i];
       const {
         quad: { p1, p2, p3, p4 },
       } = results[i];
-      let spanRect = spanRects.get(span);
-      if (!spanRect) {
+      let spanWidth = span.dataset.width;
+      let spanHeight = span.dataset.height;
+      if (spanWidth === undefined || spanHeight === undefined) {
         // This only needs to happen once.
-        spanRect = span.getBoundingClientRect();
-        spanRects.set(span, spanRect);
+        const spanRect = span.getBoundingClientRect();
+        span.dataset.width = spanRect.width;
+        span.dataset.height = spanRect.height;
+        spanWidth = spanRect.width;
+        spanHeight = spanRect.height;
       }
 
       let bottomLeftX = p1.x;
@@ -199,14 +199,18 @@ class ImageTools {
       // Create a projection matrix to position the <span> relative to the bounds.
       // prettier-ignore
       const mat4 = projectPoints(
-        spanRect.width, spanRect.height,
+        spanWidth,
+        // The spans have a padding applied to them to make the text selection work
+        // better when dragging between spans.
+        spanHeight - SPAN_PADDING_BOTTOM,
         rect.width * topLeftX, rect.height * topLeftY,
         rect.width * topRightX, rect.height * topRightY,
         rect.width * bottomLeftX, rect.height * bottomLeftY,
         rect.width * bottomRightX, rect.height * bottomRightY
       );
 
-      span.style.transform = "matrix3d(" + mat4.join(", ") + ")";
+      let transform = "matrix3d(" + mat4.join(", ") + ")";
+      span.style.transform = transform;
 
       if (ctx) {
         const inset = 3;

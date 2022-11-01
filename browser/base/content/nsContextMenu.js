@@ -2331,33 +2331,34 @@ class nsContextMenu {
 
   getImageText() {
     let dialogBox = gBrowser.getTabDialogBox(this.browser);
-    const imageTextResult = this.actor.getImageText(this.targetIdentifier);
-    TelemetryStopwatch.start(
-      "TEXT_RECOGNITION_API_PERFORMANCE",
-      imageTextResult
-    );
-    const { dialog } = dialogBox.open(
-      "chrome://browser/content/textrecognition/textrecognition.html",
-      {
-        features: "resizable=no",
-        modalType: Services.prompt.MODAL_TYPE_CONTENT,
-      },
-      imageTextResult,
-      () => dialog.resizeVertically(),
-      openLinkIn
-    );
-  }
-
-  getImageText2() {
-    let dialogBox = gBrowser.getTabDialogBox(this.browser);
-    dialogBox.open(
-      "chrome://browser/content/imagetools/imagetools.html",
-      {
-        features: "resizable=no",
-        modalType: Services.prompt.MODAL_TYPE_CONTENT,
-      },
-      this.imageInfo
-    );
+    if (
+      Services.prefs.getBoolPref("dom.text-recognition.partial-text", false)
+    ) {
+      dialogBox.open(
+        "chrome://browser/content/imagetools/imagetools.html",
+        {
+          features: "resizable=no",
+          modalType: Services.prompt.MODAL_TYPE_CONTENT,
+        },
+        this.imageInfo
+      );
+    } else {
+      const imageTextResult = this.actor.getImageText(this.targetIdentifier);
+      TelemetryStopwatch.start(
+        "TEXT_RECOGNITION_API_PERFORMANCE",
+        imageTextResult
+      );
+      const { dialog } = dialogBox.open(
+        "chrome://browser/content/textrecognition/textrecognition.html",
+        {
+          features: "resizable=no",
+          modalType: Services.prompt.MODAL_TYPE_CONTENT,
+        },
+        imageTextResult,
+        () => dialog.resizeVertically(),
+        openLinkIn
+      );
+    }
   }
 
   drmLearnMore(aEvent) {
