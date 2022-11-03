@@ -56,7 +56,6 @@
   transform-origin: 0 0;
   color: transparent;
   white-space: nowrap;
-  outline: 1px solid red;
   /* Add padding so that text selection works nicer for multi-line spans. This bridges
      the gap between spans making it so the text selection stays consistent. Keep this
      number in sync with imagetools.mjs. */
@@ -100,13 +99,13 @@
   top: 0;
 }
 
+/**
+ * Clusters must not create stacking contexts. They are used for grouping areas of text
+ * that should be selected together, for instance a cluster that forms a paragraph.
+ */
 .imageToolsImageCluster {
-  /* Clusters should not be used for positioning. */
-  position: absolute;
-  top: 0;
-  margin: 0;
-  padding: 0;
-  display: block;
+  width: 0;
+  height: 0;
 }
 
 .imageToolsSidebar {

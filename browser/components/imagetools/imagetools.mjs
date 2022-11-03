@@ -232,6 +232,25 @@ class ImageTools {
         );
         ctx.closePath();
       }
+
+      // Create an explicit z-ordering that is independent from the clustering. This
+      // helps ensure that text selection isn't covered up by the padding-bottom of
+      // spans that happened to be clustered above a span.
+      //
+      // It's important that the clustering div not create a stacking context so that
+      // this z-index is respected across clusters. Each span creates a stacking context.
+      const sortedResults = results
+        .map((_, index) => index)
+        .sort((aIndex, bIndex) => {
+          const a = results[aIndex];
+          const b = results[bIndex];
+          return b.quad.p1.y - a.quad.p1.y;
+        });
+
+      let zIndex = 0;
+      for (const resultIndex of sortedResults) {
+        spans[resultIndex].style.zIndex = zIndex++;
+      }
     }
 
     if (ctx) {
