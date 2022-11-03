@@ -15,9 +15,6 @@ window.addEventListener("DOMContentLoaded", () => {
   new ImageTools(...window.arguments);
 });
 
-// Value in `.imageToolsImageSpan`.
-const SPAN_PADDING_BOTTOM = 16;
-
 /**
  * @typedef {Object} ImageInfo
  * @property {string} currentSrc
@@ -33,12 +30,25 @@ const SPAN_PADDING_BOTTOM = 16;
  * @property {DOMQuad} quad
  */
 
+/**
+ * @typedef {Object} BoundingBox
+ * @property {number} top
+ * @property {number} left
+ * @property {number} bottom
+ * @property {number} top
+ * @property {number} width
+ * @property {number} height
+ */
+
 class ImageTools {
   /** @type {null | string} */
   text = null;
 
   /** @type {null | number} */
   lastCanvasStyleWidth = null;
+
+  /** @type {BoundingBox[]} */
+  boundingBoxes = [];
 
   /**
    * @param {ImageInfo} imageInfo
@@ -105,13 +115,30 @@ class ImageTools {
 
       this.loadingEL.style.display = "none";
 
-      const spans = this.runClustering(results);
+      const {
+        spans,
+        clusterBoundingBoxes,
+        spanToBoundingBox,
+      } = this.runClustering(results);
+
       requestAnimationFrame(() => {
-        this.positionSpans(results, spans, img);
+        this.positionSpans(
+          results,
+          spans,
+          img,
+          clusterBoundingBoxes,
+          spanToBoundingBox
+        );
       });
       window.addEventListener("resize", () => {
         requestAnimationFrame(() => {
-          this.positionSpans(results, spans, img);
+          this.positionSpans(
+            results,
+            spans,
+            img,
+            clusterBoundingBoxes,
+            spanToBoundingBox
+          );
         });
       });
     };
@@ -124,8 +151,10 @@ class ImageTools {
    * @param {TextRecognitionResult[]} results
    * @param {HTMLSpanElement[]} spans
    * @param {HTMLImageElement} img
+   * @param {BoundingBox[]} clusterBoundingBoxes
+   * @param {Map<number, BoundingBox>} spanToBoundingBox
    */
-  positionSpans(results, spans, img) {
+  positionSpans(results, spans, img, clusterBoundingBoxes, spanToBoundingBox) {
     const { textClustersEl, canvasEl, textEl } = this;
 
     const rect = img.getBoundingClientRect();
@@ -140,6 +169,24 @@ class ImageTools {
     canvasEl.style.height = rect.height + "px";
     canvasEl.style.opacity = 1;
     textEl.style.opacity = 1;
+
+    for (let i = 0; i < clusterBoundingBoxes.length; i++) {
+      const clusterBoundingBox = clusterBoundingBoxes[i];
+      const clusterEl = textClustersEl.children[i];
+      if (!clusterEl) {
+        throw new Error("Expected to find a cluster element.");
+      }
+      clusterEl.style.width =
+        rect.width * (clusterBoundingBox.right - clusterBoundingBox.left) +
+        "px";
+      clusterEl.style.height =
+        rect.height * (clusterBoundingBox.bottom - clusterBoundingBox.top) +
+        "px";
+
+      clusterEl.style.top =
+        rect.height * (1 - clusterBoundingBox.bottom) + "px";
+      clusterEl.style.left = rect.width * clusterBoundingBox.left + "px";
+    }
 
     // The ctx is only available when redrawing the canvas. This is operation is only
     // done when necessary, as it can be expensive.
@@ -171,11 +218,11 @@ class ImageTools {
       throw new Error("Expected results and spans to have the same length.");
     }
 
-    for (let i = 0; i < results.length; i++) {
-      const span = spans[i];
+    for (let spanIndex = 0; spanIndex < results.length; spanIndex++) {
+      const span = spans[spanIndex];
       const {
         quad: { p1, p2, p3, p4 },
-      } = results[i];
+      } = results[spanIndex];
       let spanWidth = span.dataset.width;
       let spanHeight = span.dataset.height;
       if (spanWidth === undefined || spanHeight === undefined) {
@@ -196,17 +243,25 @@ class ImageTools {
       let bottomRightX = p4.x;
       let bottomRightY = 1 - p4.y;
 
+      const clusterBoundingBox = spanToBoundingBox.get(spanIndex);
+      if (!clusterBoundingBox) {
+        throw new Error("Unable to find bounding box from span.");
+      }
+
       // Create a projection matrix to position the <span> relative to the bounds.
-      // prettier-ignore
       const mat4 = projectPoints(
         spanWidth,
         // The spans have a padding applied to them to make the text selection work
         // better when dragging between spans.
-        spanHeight - SPAN_PADDING_BOTTOM,
-        rect.width * topLeftX, rect.height * topLeftY,
-        rect.width * topRightX, rect.height * topRightY,
-        rect.width * bottomLeftX, rect.height * bottomLeftY,
-        rect.width * bottomRightX, rect.height * bottomRightY
+        spanHeight,
+        rect.width * (topLeftX - clusterBoundingBox.left),
+        rect.height * (topLeftY - (1 - clusterBoundingBox.bottom)),
+        rect.width * (topRightX - clusterBoundingBox.left),
+        rect.height * (topRightY - (1 - clusterBoundingBox.bottom)),
+        rect.width * (bottomLeftX - clusterBoundingBox.left),
+        rect.height * (bottomLeftY - (1 - clusterBoundingBox.bottom)),
+        rect.width * (bottomRightX - clusterBoundingBox.left),
+        rect.height * (bottomRightY - (1 - clusterBoundingBox.bottom))
       );
 
       let transform = "matrix3d(" + mat4.join(", ") + ")";
@@ -251,7 +306,6 @@ class ImageTools {
   /**
    * @param {TextRecognitionResult[]} results
    * @param {"ltr" | "rtl"} direction
-   * @returns {HTMLSpanElement[]}
    */
   runClustering(results, direction = "ltr") {
     // Cluster close groups of text to allow for better text selection.
@@ -314,6 +368,10 @@ class ImageTools {
     );
 
     this.text = "";
+    /** @type {BoundingBox[]} */
+    const clusterBoundingBoxes = [];
+    /** @type {Map<number, BoundingBox>} */
+    const spanToBoundingBox = new Map();
     for (const cluster of clusters) {
       const divCluster = document.createElement("div");
       divCluster.className = "imageToolsImageCluster";
@@ -321,15 +379,26 @@ class ImageTools {
       const pCluster = document.createElement("p");
       pCluster.className = "imageToolsTextCluster";
 
+      // The cluster's bounding box.
+      /** @type {BoundingBox} */
+      const boundingBox = {
+        top: Infinity,
+        left: Infinity,
+        right: 0,
+        bottom: 0,
+      };
+      clusterBoundingBoxes.push(boundingBox);
+
       for (let i = 0; i < cluster.length; i++) {
-        const index = cluster[i];
+        const spanIndex = cluster[i];
+        spanToBoundingBox.set(spanIndex, boundingBox);
         // Each cluster could be a paragraph, so add a newline to the end
         // for better copying.
         const ending = i + 1 === cluster.length ? "\n" : " ";
 
         {
           // Handle the span inside of the image.
-          const span = spans[index];
+          const span = spans[spanIndex];
           if (!span) {
             throw new Error(
               "Logic error, expected to find a span at that index."
@@ -343,16 +412,48 @@ class ImageTools {
         {
           // Handle the span inside of the text-only area.
           const span = document.createElement("span");
-          const result = results[index];
+          const result = results[spanIndex];
           span.innerText = result.string + ending;
           pCluster.appendChild(span);
+        }
+        {
+          // Compute the cluster's bounding box.
+          const result = results[spanIndex];
+          boundingBox.top = Math.min(
+            boundingBox.top,
+            result.quad.p1.y,
+            result.quad.p2.y,
+            result.quad.p3.y,
+            result.quad.p4.y
+          );
+          boundingBox.left = Math.min(
+            boundingBox.left,
+            result.quad.p1.x,
+            result.quad.p2.x,
+            result.quad.p3.x,
+            result.quad.p4.x
+          );
+          boundingBox.bottom = Math.max(
+            boundingBox.bottom,
+            result.quad.p1.y,
+            result.quad.p2.y,
+            result.quad.p3.y,
+            result.quad.p4.y
+          );
+          boundingBox.right = Math.max(
+            boundingBox.right,
+            result.quad.p1.x,
+            result.quad.p2.x,
+            result.quad.p3.x,
+            result.quad.p4.x
+          );
         }
       }
       this.textClustersEl.appendChild(divCluster);
       this.textEl.appendChild(pCluster);
     }
 
-    return spans;
+    return { spans, clusterBoundingBoxes, spanToBoundingBox };
   }
 }
 

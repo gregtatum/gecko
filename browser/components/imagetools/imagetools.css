@@ -57,10 +57,6 @@
   color: transparent;
   white-space: nowrap;
   outline: 1px solid red;
-  /* Add padding so that text selection works nicer for multi-line spans. This bridges
-     the gap between spans making it so the text selection stays consistent. Keep this
-     number in sync with imagetools.mjs. */
-  padding-bottom: 16px;
 }
 
 /**
@@ -107,6 +103,7 @@
   margin: 0;
   padding: 0;
   display: block;
+  outline: #0f0 2px solid;
 }
 
 .imageToolsSidebar {
