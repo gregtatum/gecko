@@ -88,11 +88,11 @@ uniffi-example-custom-types = { path = "../../../components/uniffi-example-custo
 # changing this version.
 rusqlite = { version = "0.27.0", features = ["modern_sqlite", "in_gecko"] }
 
-fluent = { version = "0.16.0", features = ["fluent-pseudo"] }
+fluent = { path = "/Users/greg/dev/fluent-rs/fluent", version = "0.16.0", features = ["fluent-pseudo"] }
 fluent-ffi = { path = "../../../../intl/l10n/rust/fluent-ffi" }
 l10nregistry-ffi = { path = "../../../../intl/l10n/rust/l10nregistry-ffi" }
 l10nregistry = { path = "../../../../intl/l10n/rust/l10nregistry-rs" }
-fluent-fallback = "0.6.0"
+fluent-fallback = { path = "/Users/greg/dev/fluent-rs/fluent-fallback" }
 localization-ffi = { path = "../../../../intl/l10n/rust/localization-ffi" }
 
 processtools = { path = "../../../components/processtools" }
