@@ -36,3 +36,164 @@ canvas {
   padding: 0;
   display: block;
 }
+
+:root {
+  --image-tools-sidebar-width: 360px;
+  --image-tools-margin: 80px;
+  --image-tools-border-radius: 3px;
+  background-color: transparent;
+}
+
+.imageTools {
+  display: flex;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.imageToolsImage {
+  flex: 1;
+  height: 100vh;
+  width: calc(100% - var(--image-tools-sidebar-width));
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageToolsImage img {
+  box-shadow: 3px 0 15px 0 #0007;
+  border-radius: var(--image-tools-border-radius);
+}
+
+.imageToolsHorizontal {
+  max-width: calc(100% - var(--image-tools-margin));
+  height: auto;
+}
+
+.imageToolsVertical {
+  max-height: calc(100% - var(--image-tools-margin));
+  width: auto;
+}
+
+.imageToolsImage canvas {
+  position: absolute;
+  user-select: none;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 200ms;
+  border-radius: var(--image-tools-border-radius);
+}
+
+.imageToolsImageSpan {
+  position: absolute;
+  transform-origin: 0 0;
+  color: transparent;
+  white-space: nowrap;
+  /* Add padding so that text selection works nicer for multi-line spans. This bridges
+     the gap between spans making it so the text selection stays consistent. Keep this
+     number in sync with imagetools.mjs. */
+  padding-bottom: 16px;
+}
+
+/**
+ * Ensure the text selection is transparent over the text.
+ */
+.imageToolsImageSpan::selection {
+  color: transparent;
+  background: #204e8a66;
+}
+
+
+.imageToolsName {
+  font-weight: 600;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.imageToolsText {
+  overflow-y: auto;
+  flex: 1;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.imageToolsText p:first-child {
+  margin-top: 0;
+}
+
+.imageToolsText p:last-child {
+  margin-bottom: 0;
+}
+
+.imageToolsTextClusters {
+  position: absolute;
+  top: 0;
+}
+
+/**
+ * Clusters must not create stacking contexts. They are used for grouping areas of text
+ * that should be selected together, for instance a cluster that forms a paragraph.
+ */
+.imageToolsImageCluster {
+  width: 0;
+  height: 0;
+}
+
+.imageToolsSidebar {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--in-content-page-background);
+  width: var(--image-tools-sidebar-width);
+  height: 100vh;
+  overflow: scroll;
+}
+
+.imageToolsSidebar section {
+  margin: 16px;
+}
+
+.imageToolsButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.imageToolsButtons > button {
+  flex: 1;
+}
+
+.imageToolsTextLoading {
+  display: flex;
+  align-items: center;
+}
+
+.imageToolsThrobber {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  position: relative;
+  overflow: hidden;
+  margin-inline-end: 5.5px;
+}
+
+.imageToolsThrobber::before {
+  content: "";
+  position: absolute;
+  background-image: url("chrome://browser/skin/tabbrowser/loading.svg");
+  background-position: left center;
+  background-repeat: no-repeat;
+  width: 480px;
+  height: 100%;
+  animation: throbber-animation 1.05s steps(30) infinite;
+  -moz-context-properties: fill;
+  fill: currentColor;
+  opacity: 0.7;
+}
+
+@keyframes throbber-animation {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
