@@ -176,16 +176,6 @@ add_task(async function comprehensive() {
     },
     {
       id: "attrs2",
-      expected: {
-        value: null,
-        attributes: {
-          label: "attrs2 label has zero args",
-          tooltiptext: "attrs2 tooltiptext arg value is {$arg1}",
-        },
-      },
-    },
-    {
-      id: "attrs2",
       args: {
         arg1: "arg A",
       },
