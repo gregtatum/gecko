@@ -205,7 +205,6 @@ impl LocalizationRc {
             } else {
                 ret_val.set_is_void(true);
             }
-            #[cfg(debug_assertions)]
             debug_assert_variables_exist(&errors, &[id], |id| id.to_string());
             ret_err.extend(errors.into_iter().map(|err| err.to_string().into()));
             true
@@ -238,7 +237,6 @@ impl LocalizationRc {
                     ret_val.push(void_string);
                 }
             }
-            #[cfg(debug_assertions)]
             debug_assert_variables_exist(&errors, &keys, |key| key.id.to_string());
             ret_err.extend(errors.into_iter().map(|err| err.to_string().into()));
             true
@@ -276,7 +274,6 @@ impl LocalizationRc {
                 });
             }
             assert_eq!(keys.len(), ret_val.len());
-            #[cfg(debug_assertions)]
             debug_assert_variables_exist(&errors, &keys, |key| key.id.to_string());
             ret_err.extend(errors.into_iter().map(|err| err.to_string().into()));
             true
@@ -312,7 +309,6 @@ impl LocalizationRc {
                 v.set_is_void(true);
                 v
             };
-            #[cfg(debug_assertions)]
             debug_assert_variables_exist(&errors, &[id], |id| id.to_string());
             let errors = errors
                 .into_iter()
@@ -356,7 +352,6 @@ impl LocalizationRc {
 
             assert_eq!(keys.len(), ret_val.len());
 
-            #[cfg(debug_assertions)]
             debug_assert_variables_exist(&errors, &keys, |key| key.id.to_string());
             let errors = errors
                 .into_iter()
@@ -409,7 +404,6 @@ impl LocalizationRc {
 
             assert_eq!(keys.len(), ret_val.len());
 
-            #[cfg(debug_assertions)]
             debug_assert_variables_exist(&errors, &keys, |key| key.id.to_string());
 
             let errors = errors
@@ -585,7 +579,6 @@ pub extern "C" fn localization_on_change(loc: &LocalizationRc) {
     loc.on_change();
 }
 
-#[cfg(debug_assertions)]
 fn debug_assert_variables_exist<K, F>(
     errors: &[fluent_fallback::LocalizationError],
     keys: &[K],
