@@ -323,7 +323,7 @@ export class ProtonScreen extends React.PureComponent {
         )
       : "";
 
-    const currentStep = this.props.order + 1;
+    const currentStep = (this.props.order ?? 0) + 1;
 
     return (
       <main
