@@ -1095,7 +1095,7 @@ function setTechnicalDetailsOnCertError(
     });
   }
 
-  let hostname = HOST_NAME;
+  let hostname = HOST_NAME ?? "";
   const { port } = document.location;
   if (port && port != 443) {
     hostname += ":" + port;
@@ -1169,7 +1169,7 @@ function setTechnicalDetailsOnCertError(
         } else if (subjectAltNames.length > 1) {
           const names = subjectAltNames.join(", ");
           addLabel("cert-error-domain-mismatch-multiple", {
-            hostname,
+            hostname: hostname ?? "",
             "subject-alt-names": names,
           });
         } else {
