@@ -24,7 +24,10 @@ const { parse, pemToDER } = globalThis.certDecoderInitializer(
 
 const formatter = new Intl.DateTimeFormat();
 
-const HOST_NAME = new URL(RPMGetInnerMostURI(document.location.href)).hostname;
+
+const innerMostURI = RPMGetInnerMostURI(document.location.href);
+dump("!!!greg innerMostURI:" + innerMostURI + "\n");
+const HOST_NAME = new URL(innerMostURI).hostname;
 
 // Used to check if we have a specific localized message for an error.
 const KNOWN_ERROR_TITLE_IDS = new Set([
@@ -1067,6 +1070,7 @@ function setTechnicalDetailsOnCertError(
       elem.appendChild(link);
     }
 
+    dump("!!!greg addLabel " + JSON.stringify(l10nId) + " " + JSON.stringify(args) + "\n");
     document.l10n.setAttributes(elem, l10nId, args);
   }
 
@@ -1100,6 +1104,8 @@ function setTechnicalDetailsOnCertError(
   if (port && port != 443) {
     hostname += ":" + port;
   }
+
+  dump("!!!greg hostname:" + hostname + "\n");
 
   switch (failedCertInfo.overridableErrorCategory) {
     case "trust-error":
