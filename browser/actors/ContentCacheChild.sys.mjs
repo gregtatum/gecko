@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-var EXPORTED_SYMBOLS = ["ContentCacheChild"];
-
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
@@ -18,7 +16,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 /**
  * Cache any content a user views in order to build a local searchable database.
  */
-class ContentCacheChild extends JSWindowActorChild {
+export class ContentCacheChild extends JSWindowActorChild {
   async handleEvent(event) {
     if (event.originalTarget.defaultView != this.contentWindow) {
       return;
@@ -48,10 +46,8 @@ class ContentCacheChild extends JSWindowActorChild {
         if (text.length > 100) {
           // TODO - This is duplicating the work of TranslationChild. Perhaps this could
           // be smart enough to share the work?
-          const {
-            confident,
-            language,
-          } = await lazy.LanguageDetector.detectLanguage(text);
+          const { confident, language } =
+            await lazy.LanguageDetector.detectLanguage(text);
           if (confident) {
             locale = language;
           }

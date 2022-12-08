@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-var EXPORTED_SYMBOLS = ["ContentCacheParent"];
-
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
@@ -38,7 +36,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * The ContentCacheParent adds pages to the contentcache.sql file through the
  * PlacesUtils database API.
  */
-class ContentCacheParent extends JSWindowActorParent {
+export class ContentCacheParent extends JSWindowActorParent {
   /**
    * @param {{
    *  name: "ContentCache",
@@ -163,11 +161,11 @@ class DB {
       // Virtual tables do not support the "upsert" command that can update or insert
       // in one database call.
       if (await DB.doesPlaceExistInContentCache(db, placesId)) {
-        lazy.console.log("Updating the text");
+        lazy.console.log("Updating the text", text);
         await DB.updateText(db, text, placesId);
       } else {
         // This is the first time a URL has been visited for caching.
-        lazy.console.log("Inserting the text");
+        lazy.console.log("Inserting the text", text);
         await DB.insertText(db, text, placesId);
       }
     });
