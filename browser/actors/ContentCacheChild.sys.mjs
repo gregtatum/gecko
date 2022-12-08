@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-var EXPORTED_SYMBOLS = ["ContentCacheChild"];
-
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
@@ -18,14 +16,17 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 /**
  * Cache any content a user views in order to build a local searchable database.
  */
-class ContentCacheChild extends JSWindowActorChild {
+export class ContentCacheChild extends JSWindowActorChild {
   async handleEvent(event) {
     if (event.originalTarget.defaultView != this.contentWindow) {
       return;
     }
 
+    console.log(`!!! ContentCacheChild handleEvent`, event.type);
+
     switch (event.type) {
-      case "pageshow":
+      case "MozAfterPaint":
+        debugger
         // TODO - Should we use the canonical URL here? For instance:
         // https://en.wikipedia.org/wiki/Carnivorous is not canonical.
         // It has a <link rel="canonical" href="https://en.wikipedia.org/wiki/Carnivore"/>

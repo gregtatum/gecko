@@ -469,13 +469,13 @@ let JSWINDOWACTORS = {
 
   ContentCache: {
     parent: {
-      moduleURI: "resource:///actors/ContentCacheParent.jsm",
+      esModuleURI: "resource:///actors/ContentCacheParent.sys.mjs",
     },
     child: {
-      moduleURI: "resource:///actors/ContentCacheChild.jsm",
+      esModuleURI: "resource:///actors/ContentCacheChild.sys.mjs",
       events: {
-        pageshow: {},
-        load: { mozSystemGroup: true, capture: true },
+        DOMDocElementInserted: { capture: true },
+        MozAfterPaint: {},
       },
     },
     enablePreference: "browser.contentCache.enabled",
