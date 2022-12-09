@@ -424,8 +424,9 @@ let JSWINDOWACTORS = {
       esModuleURI: "resource:///actors/BrowserTabChild.sys.mjs",
 
       events: {
-        DOMDocElementInserted: {},
-        MozAfterPaint: {},
+        DOMDocElementInserted: { capture: true },
+        MozAfterPaint: { capture: true },
+        DOMContentLoaded: { capture: true },
       },
     },
 
