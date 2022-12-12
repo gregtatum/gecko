@@ -47,41 +47,46 @@ interface mozIMozIntl : nsISupports
 
 
   /**
-   * Returns a list of locale codes for a given type.
-   * At the moment only type="region" is supported.
+   * Returns a list of region codes.
    *
    * Example:
-   *   let codes = getAvailableLocaleDisplayNames("region");
+   *   let codes = getAvailableRegionCodes();
    *   codes === ["ar", "ae", "af", ...]
    */
-  jsval getAvailableLocaleDisplayNames(in jsval type);
+  jsval getAvailableRegionCodes();
 
   /**
-   * Returns a list of language names formatted for display.
+   * Returns a list of language names formatted for display in the user's current app
+   * language. This list of language names is translated and curated by Mozilla
+   * translators, but will fall back to CLDR data.
    *
    * Example:
-   *   let langs = getLanguageDisplayNames(["pl"], ["fr", "de", "en"]);
+   *   let langs = getLanguageDisplayNames(["fr", "de", "en"]);
    *   langs === ["Francuski", "Niemiecki", "Angielski"]
    */
-  jsval getLanguageDisplayNames(in jsval locales, in jsval langCodes);
+  jsval getLanguageDisplayNames(in jsval langCodes);
 
   /**
-   * Returns a list of region names formatted for display.
+   * Returns a list of region names formatted for display in the user's current app
+   * language. This list of region names is translated and curated by Mozilla translators,
+   * but will fall back to CLDR data.
    *
    * Example:
-   *   let regs = getRegionDisplayNames(["pl"], ["US", "CA", "MX"]);
+   *   let regs = getRegionDisplayNames(["US", "CA", "MX"]);
    *   regs === ["Stany Zjednoczone", "Kanada", "Meksyk"]
    */
-  jsval getRegionDisplayNames(in jsval locales, in jsval regionCodes);
+  jsval getRegionDisplayNames(in jsval regionCodes);
 
   /**
-   * Returns a list of locale names formatted for display.
+   * Returns a list of locale names formatted for display in the user's current app
+   * language. This list of locale names is translated and curated by Mozilla translators,
+   * but will fall back to CLDR data.
    *
    * Example:
-   *   let locs = getLocaleDisplayNames(["pl"], ["sr-RU", "es-MX", "fr-CA"]);
+   *   let locs = getLocaleDisplayNames(["sr-RU", "es-MX", "fr-CA"]);
    *   locs === ["Serbski (Rosja)", "Hiszpański (Meksyk)", "Francuski (Kanada)"]
    */
-  jsval getLocaleDisplayNames(in jsval locales, in jsval localeCodes, [optional] in jsval options);
+  jsval getLocaleDisplayNames(in jsval localeCodes, [optional] in jsval options);
 
   /**
    * Returns the assumed script directionality for known Firefox locales. This is

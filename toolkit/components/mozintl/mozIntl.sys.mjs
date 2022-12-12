@@ -887,17 +887,17 @@ export class MozIntl {
     return new Error("Unimplemented!");
   }
 
-  getLanguageDisplayNames(locales, langCodes) {
-    if (locales !== undefined) {
-      throw new Error("First argument support not implemented yet");
-    }
-
+  /**
+   * @param {string[]} langCodes
+   */
+  getLanguageDisplayNames(langCodes) {
     if (!this._cache.hasOwnProperty("languageLocalization")) {
       const loc = new Localization(["toolkit/intl/languageNames.ftl"], true);
       this._cache.languageLocalization = loc;
     }
 
     const loc = this._cache.languageLocalization;
+    let cldrDisplayNames;
 
     return langCodes.map(langCode => {
       if (typeof langCode !== "string") {
@@ -909,16 +909,23 @@ export class MozIntl {
         if (value !== null) {
           return value;
         }
+      } else {
+        // Try the CLDR display names as well.
+        try {
+          if (!cldrDisplayNames) {
+            cldrDisplayNames = new Intl.DisplayNames(undefined, {type: "language" });
+          }
+        return cldrDisplayNames.of(langCode)
+        } catch (_error) {}
       }
       return lcLangCode;
     });
   }
 
-  getRegionDisplayNames(locales, regionCodes) {
-    if (locales !== undefined) {
-      throw new Error("First argument support not implemented yet");
-    }
-
+  /**
+   * @param {string[]} regionCodes
+   */
+  getRegionDisplayNames(regionCodes) {
     if (!this._cache.hasOwnProperty("regionLocalization")) {
       const loc = new Localization(["toolkit/intl/regionNames.ftl"], true);
       this._cache.regionLocalization = loc;
@@ -963,12 +970,9 @@ export class MozIntl {
     });
   }
 
-  getLocaleDisplayNames(locales, localeCodes, options = {}) {
+  getLocaleDisplayNames(localeCodes, options = {}) {
     const { preferNative = false } = options;
 
-    if (locales !== undefined) {
-      throw new Error("First argument support not implemented yet");
-    }
     // Patterns hardcoded from CLDR 33 english.
     // We can later look into fetching them from CLDR directly.
     const localePattern = "{0} ({1})";
@@ -999,7 +1003,7 @@ export class MozIntl {
       const variantSubtags = locale.baseName.match(variantSubtagsMatch);
 
       const displayName = [
-        this.getLanguageDisplayNames(locales, [languageSubtag])[0],
+        this.getLanguageDisplayNames([languageSubtag])[0],
       ];
 
       if (scriptSubtag) {
@@ -1008,7 +1012,7 @@ export class MozIntl {
 
       if (regionSubtag) {
         displayName.push(
-          this.getRegionDisplayNames(locales, [regionSubtag])[0]
+          this.getRegionDisplayNames([regionSubtag])[0]
         );
       }
 

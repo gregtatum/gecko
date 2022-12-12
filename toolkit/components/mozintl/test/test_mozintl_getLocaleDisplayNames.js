@@ -60,6 +60,11 @@ add_test(function test_valid_language_tag() {
   run_next_test();
 });
 
+add_test(function test_cldr_only_language_tag() {
+  deepEqual(gLocDN(["vec"]), ["Venetian"]);
+  run_next_test();
+});
+
 add_test(function test_valid_region_tag() {
   deepEqual(gLocDN(["en-US"]), ["English (United States)"]);
   deepEqual(gLocDN(["en-XY"]), ["English (XY)"]);
