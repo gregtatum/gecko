@@ -1815,11 +1815,16 @@ pref("media.videocontrols.picture-in-picture.video-toggle.enabled", true);
 pref("media.videocontrols.picture-in-picture.video-toggle.visibility-threshold", "1.0");
 pref("media.videocontrols.picture-in-picture.keyboard-controls.enabled", true);
 
+// Enable the under-development UI for the translation services backed by wasm machine
+// learning models. This also enables about:translations. See Bug 971044.
+pref("browser.translation.enable", false);
 pref("browser.translation.detectLanguage", false);
 pref("browser.translation.neverForLanguages", "");
-// Show the translation UI bits, like the info bar, notification icon and preferences.
+// Show the older translation UI that uses external services. This includes UI such as
+// the info bar, notification icon and preferences.
 pref("browser.translation.ui.show", false);
 // Allows to define the translation engine. Google is default, Bing or Yandex are other options.
+// This only affects the older UI.
 pref("browser.translation.engine", "Google");
 
 // Telemetry settings.
