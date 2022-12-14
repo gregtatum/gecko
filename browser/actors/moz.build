@@ -84,6 +84,8 @@ FINAL_TARGET_FILES.actors += [
     "SearchSERPTelemetryChild.jsm",
     "SearchSERPTelemetryParent.jsm",
     "SwitchDocumentDirectionChild.jsm",
+    "TranslationsChild.sys.mjs",
+    "TranslationsParent.sys.mjs",
     "WebRTCChild.jsm",
     "WebRTCParent.jsm",
 ]

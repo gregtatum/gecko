@@ -776,6 +776,7 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  // The older translations feature backed by external services.
   Translation: {
     parent: {
       moduleURI: "resource:///modules/translation/TranslationParent.jsm",
@@ -788,6 +789,21 @@ let JSWINDOWACTORS = {
       },
     },
     enablePreference: "browser.translation.detectLanguage",
+  },
+
+  // The newer translations feature backed by local machine learning models.
+  // See Bug 971044.
+  Translations: {
+    parent: {
+      moduleURI: "resource:///modules/translation/TranslationsParent.jsm",
+    },
+    child: {
+      moduleURI: "resource:///modules/translation/TranslationsChild.jsm",
+      events: {
+        pageshow: {},
+      },
+    },
+    enablePreference: "browser.translation.enabled",
   },
 
   UITour: {
