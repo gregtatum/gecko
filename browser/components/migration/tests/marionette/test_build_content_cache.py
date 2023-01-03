@@ -4,16 +4,17 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import absolute_import
-import textwrap
-import urllib
-import time
-import subprocess
-import shutil
-import os
-import json
-import tempfile
-from urllib.parse import urlparse
+
 import distutils.dir_util
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+import textwrap
+import time
+import urllib
+from urllib.parse import urlparse
 
 from marionette_harness.marionette_test import MarionetteTestCase
 

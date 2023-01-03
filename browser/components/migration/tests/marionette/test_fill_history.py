@@ -4,13 +4,14 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from __future__ import absolute_import
-import time
-import json
-from urllib.parse import urlparse
-import mozprofile
-import random
-import os
 
+import json
+import os
+import random
+import time
+from urllib.parse import urlparse
+
+import mozprofile
 from marionette_harness.marionette_test import MarionetteTestCase
 
 
