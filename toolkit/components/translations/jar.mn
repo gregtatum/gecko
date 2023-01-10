@@ -3,6 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 toolkit.jar:
-    content/global/translations.html
-    content/global/translations.css
-    content/global/translations.mjs
+    content/global/translations/translations.html         (content/translations.html)
+    content/global/translations/translations.css          (content/translations.css)
+    content/global/translations/translations.mjs          (content/translations.mjs)
+    content/global/translations/worker.js                 (content/worker.js)
+    content/global/translations/bergamot-translator.js    (content/bergamot-translator.js)
+    content/global/translations/bergamot-translator.wasm  (content/bergamot-translator.wasm)

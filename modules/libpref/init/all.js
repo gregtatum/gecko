@@ -3818,6 +3818,8 @@ pref("browser.sanitizer.loglevel", "Warn");
 // [1]: https://browser.mt/
 // [2]: https://github.com/mozilla/firefox-translations
 pref("browser.translations.enable", false);
+// Set to "all" to see all logs, which are useful for debugging.
+pref("browser.translations.logLevel", "error");
 
 // When a user cancels this number of authentication dialogs coming from
 // a single web page in a row, all following authentication dialogs will

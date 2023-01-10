@@ -2,6 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const lazy = {};
+
+const { XPCOMUtils } = ChromeUtils.importESModule(
+  "resource://gre/modules/XPCOMUtils.sys.mjs"
+);
+
+XPCOMUtils.defineLazyGetter(lazy, "console", () => {
+  return console.createInstance({
+    maxLogLevelPref: "browser.contentCache.logLevel",
+    prefix: "Translations",
+  });
+});
+
 /**
  * TODO - The translations actor will eventually be used to handle in-page translations
  * See Bug 971044
@@ -13,6 +26,6 @@ export class TranslationsChild extends JSWindowActorChild {
    */
   handleEvent(event) {
     // TODO
-    console.log("Translation actor observed a pageshow event.");
+    lazy.console.log("TranslationsChild observed a pageshow event.");
   }
 }
