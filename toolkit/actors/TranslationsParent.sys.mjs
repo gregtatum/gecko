@@ -6,6 +6,4 @@
  * TODO - The translations actor will eventually be used to handle in-page translations
  * See Bug 971044
  */
-export class TranslationsParent extends JSWindowActorParent {
-
-}
+export class TranslationsParent extends JSWindowActorParent {}

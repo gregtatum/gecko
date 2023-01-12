@@ -4,13 +4,11 @@
 
 const lazy = {};
 
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
-    maxLogLevelPref: "browser.contentCache.logLevel",
+    maxLogLevelPref: "browser.translations.logLevel",
     prefix: "Translations",
   });
 });
@@ -20,7 +18,6 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * See Bug 971044
  */
 export class TranslationsChild extends JSWindowActorChild {
-
   /**
    * @param {{ type: string }} event
    */

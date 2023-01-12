@@ -2,14 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
- /* global loadEmscriptenGlueCode, serializeError, importScripts */
+/* global loadEmscriptenGlueCode, serializeError, importScripts */
 
-importScripts("chrome://global/content/translations/bergamot-translator.js")
+importScripts("chrome://global/content/translations/bergamot-translator.js");
 
 const console = self.console.createInstance({
-  maxLogLevelPref: "browser.contentCache.logLevel",
+  maxLogLevelPref: "browser.translations.logLevel",
   prefix: "Translations",
-})
+});
 
 class Queue {
   constructor() {
@@ -43,7 +43,7 @@ class Queue {
 
 let engineWasmLocalPath;
 
-const sendException = (ex) => {
+const sendException = ex => {
   console.error(ex);
   postMessage(["reportException", ex?.message]);
 };
@@ -94,7 +94,9 @@ class TranslationHelper {
     postMessage(["updateProgress", "loadingTranslationEngine"]);
 
     // first we load the wasm engine
-    const response = await fetch("chrome://global/content/translations/bergamot-translator.wasm");
+    const response = await fetch(
+      "chrome://global/content/translations/bergamot-translator.wasm"
+    );
     if (!response.ok) {
       sendException(new Error("Error loading engine as buffer"));
       postMessage(["reportError", "engine_download"]);
@@ -105,7 +107,7 @@ class TranslationHelper {
     const wasmArrayBuffer = await response.arrayBuffer();
     const initialModule = {
       preRun: [
-        function () {
+        function() {
           this.wasmModuleStartTimestamp = Date.now();
         }.bind(this),
       ],
@@ -121,9 +123,9 @@ class TranslationHelper {
          * initialized, we then load the language models
          */
         console.log(
-          `Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${
-            (Date.now() - this.wasmModuleStartTimestamp) / 1000
-          } secs`
+          `Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() -
+            this.wasmModuleStartTimestamp) /
+            1000} secs`
         );
         this.getLanguageModels(
           sourceLanguage,
@@ -146,7 +148,7 @@ class TranslationHelper {
 
   translateOutboundTranslation(message) {
     Promise.resolve().then(
-      function () {
+      function() {
         let total_words = message[0].sourceParagraph
           .replace(/(<([^>]+)>)/gi, "")
           .trim()
@@ -180,11 +182,11 @@ class TranslationHelper {
         ["translationProgress", [`${this.totalPendingElements}`]],
       ]);
       Promise.resolve().then(
-        function () {
-          if (translationMessagesBatch && translationMessagesBatch.length > 0) {
+        function() {
+          if (translationMessagesBatch && translationMessagesBatch.length) {
             try {
               let total_words = 0;
-              translationMessagesBatch.forEach((message) => {
+              translationMessagesBatch.forEach(message => {
                 let words = message.sourceParagraph
                   .replace(/(<([^>]+)>)/gi, "")
                   .trim()
@@ -197,7 +199,7 @@ class TranslationHelper {
                * messages. Therefore, always encode and pass source messages as HTML to the
                * engine and restore them afterwards to their original form.
                */
-              const escapeHtml = (text) => {
+              const escapeHtml = text => {
                 return String(text)
                   .replace(/&/g, "&amp;")
                   .replace(/"/g, "&quot;")
@@ -336,11 +338,11 @@ class TranslationHelper {
       languagePairs.push(
         {
           name: this._getLanguagePair(sourceLanguage, this.PIVOT_LANGUAGE),
-          withQualityEstimation
+          withQualityEstimation,
         },
         {
           name: this._getLanguagePair(this.PIVOT_LANGUAGE, targetLanguage),
-          withQualityEstimation
+          withQualityEstimation,
         }
       );
 
@@ -348,23 +350,23 @@ class TranslationHelper {
         languagePairs.push(
           {
             name: this._getLanguagePair(targetLanguage, this.PIVOT_LANGUAGE),
-            withQualityEstimation: false
+            withQualityEstimation: false,
           },
           {
             name: this._getLanguagePair(this.PIVOT_LANGUAGE, sourceLanguage),
-            withQualityEstimation: false
+            withQualityEstimation: false,
           }
         );
       }
     } else {
       languagePairs.push({
-          name: this._getLanguagePair(sourceLanguage, targetLanguage),
-          withQualityEstimation
+        name: this._getLanguagePair(sourceLanguage, targetLanguage),
+        withQualityEstimation,
       });
       if (withOutboundTranslation) {
         languagePairs.push({
-            name: this._getLanguagePair(targetLanguage, sourceLanguage),
-            withQualityEstimation: false
+          name: this._getLanguagePair(targetLanguage, sourceLanguage),
+          withQualityEstimation: false,
         });
       }
     }
@@ -409,9 +411,8 @@ class TranslationHelper {
       console.log(
         `Model '${this.sourceLanguage}${
           this.targetLanguage
-        }' successfully constructed. Time taken: ${
-          (finish - start) / 1000
-        } secs`
+        }' successfully constructed. Time taken: ${(finish - start) /
+          1000} secs`
       );
       postMessage([
         "reportPerformanceTimespan",
@@ -502,7 +503,7 @@ class TranslationHelper {
   ) {
     console.log(`Constructing translation model ${languagePair}`);
     const modelConfigQualityEstimation = !withQualityEstimation;
-    let languageModel = languageModels.find((lm) => lm.name === languagePair);
+    let languageModel = languageModels.find(lm => lm.name === languagePair);
 
     /*
      * for available configuration options,
@@ -557,8 +558,7 @@ class TranslationHelper {
     const alignedShortlistMemory = alignedMemories.lex;
     let alignedMemoryLogMessage = `Aligned memory sizes: Model:${alignedModelMemory.size()}, Shortlist:${alignedShortlistMemory.size()}, `;
 
-    const alignedVocabMemoryList =
-      new this.WasmEngineModule.AlignedMemoryList();
+    const alignedVocabMemoryList = new this.WasmEngineModule.AlignedMemoryList();
     if ("vocab" in alignedMemories) {
       alignedVocabMemoryList.push_back(alignedMemories.vocab);
       alignedMemoryLogMessage += ` Vocab: ${alignedMemories.vocab.size()}`;
@@ -687,10 +687,15 @@ class TranslationHelper {
       throw e; // to do: Should we re-throw?
     } finally {
       // necessary clean up
-      if (typeof vectorSourceText !== "undefined") vectorSourceText.delete();
-      if (typeof vectorResponseOptions !== "undefined")
+      if (typeof vectorSourceText !== "undefined") {
+        vectorSourceText.delete();
+      }
+      if (typeof vectorResponseOptions !== "undefined") {
         vectorResponseOptions.delete();
-      if (typeof vectorResponse !== "undefined") vectorResponse.delete();
+      }
+      if (typeof vectorResponse !== "undefined") {
+        vectorResponse.delete();
+      }
     }
   }
 
@@ -703,10 +708,9 @@ class TranslationHelper {
   }
 
   _prepareResponseOptions(messages) {
-    const vectorResponseOptions =
-      new this.WasmEngineModule.VectorResponseOptions();
+    const vectorResponseOptions = new this.WasmEngineModule.VectorResponseOptions();
     // eslint-disable-next-line no-unused-vars
-    messages.forEach((message) => {
+    messages.forEach(message => {
       vectorResponseOptions.push_back({
         qualityScores: message.withQualityEstimation,
         alignment: true,
@@ -722,10 +726,12 @@ class TranslationHelper {
 
   _prepareSourceText(messages) {
     let vectorSourceText = new this.WasmEngineModule.VectorString();
-    messages.forEach((message) => {
+    messages.forEach(message => {
       const sourceParagraph = message.sourceParagraph;
       // prevent empty paragraph - it breaks the translation
-      if (sourceParagraph.trim() === "") return;
+      if (sourceParagraph.trim() === "") {
+        return;
+      }
       vectorSourceText.push_back(sourceParagraph);
     });
     if (vectorSourceText.size() === 0) {
@@ -753,8 +759,9 @@ class TranslationHelper {
       sentenceIndex < response.size();
       sentenceIndex += 1
     ) {
-      const utf8SentenceByteRange =
-        response.getTranslatedSentence(sentenceIndex);
+      const utf8SentenceByteRange = response.getTranslatedSentence(
+        sentenceIndex
+      );
       sentences.push(
         this._getSentenceFromByteRange(text, utf8SentenceByteRange)
       );
@@ -796,7 +803,7 @@ class TranslationHelper {
 }
 
 const translationHelper = new TranslationHelper();
-onmessage = function (message) {
+onmessage = function(message) {
   switch (message.data[0]) {
     case "translate":
       try {
