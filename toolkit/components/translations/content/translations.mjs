@@ -34,7 +34,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 /**
  * The JSON that is synced from RemoteSettings for the translation models.
  *
- * @typedef {Object} Model
+ * @typedef {Object} ModelRecord
  *
  * @prop {string} name - The model name  e.g. "lex.50.50.deen.s2t.bin"
  * @prop {string} fromLang -             e.g. "de"
@@ -53,8 +53,14 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 let translationsState;
 
 /**
+ * TODO(Docs) - Document or point to documentation for what all of these are and mean.
+ *
+ * @typedef {"model" | "lex" | "vocab" | "qualityModel" | "srcvocab" | "trgvocab"} ModelTypes
+ */
+
+/**
  * While the feature is in development, hide the feature behind a pref. See
- * browser/app/profile/firefox.js for the status of enabling this project.
+ * modules/libpref/init/all.js and Bug 971044 for the status of enabling this project.
  */
 function updateEnabledState() {
   if (Services.prefs.getBoolPref("browser.translations.enable")) {
@@ -93,21 +99,27 @@ class TranslationsUI {
    */
   constructor(state) {
     this.state = state;
-    this.initiateDropdowns();
-    this.state.remoteModels.then(this.uiReady.bind(this));
+    this.setupDropdowns();
+    this.setupTextarea();
+    this.state.modelRecords.then(this.uiReady.bind(this));
   }
 
   uiReady() {
-    this.translationTo.classList.remove("about-translations-input-results-loading");
+    this.translationTo.classList.remove(
+      "about-translations-input-results-loading"
+    );
   }
 
   /**
    * Once the models have been synced from remote settings, populate them with the display
    * names of the languages.
    */
-  async initiateDropdowns() {
+  async setupDropdowns() {
     // Update the DOM elements with the display names.
-    for (const {langTag, displayName} of await this.state.getSupportedLanguages()) {
+    for (const {
+      langTag,
+      displayName,
+    } of await this.state.getSupportedLanguages()) {
       let option = document.createElement("option");
       option.value = langTag;
       option.text = displayName;
@@ -120,7 +132,9 @@ class TranslationsUI {
     }
 
     // Set the translate "from" to the app locale, if it is in the list.
-    const appLocale = new Services.intl.Locale(Services.locale.appLocaleAsBCP47);
+    const appLocale = new Services.intl.Locale(
+      Services.locale.appLocaleAsBCP47
+    );
     for (const option of this.languageFrom.options) {
       if (option.value === appLocale.language) {
         this.languageFrom.value = option.value;
@@ -128,7 +142,7 @@ class TranslationsUI {
       }
     }
 
-    // Finally enable the controls.
+    // Enable the controls.
     this.languageFrom.disabled = false;
     this.languageTo.disabled = false;
 
@@ -138,7 +152,47 @@ class TranslationsUI {
     } else if (this.languageTo.value == "") {
       this.languageTo.focus();
     }
+
+    this.state.setFromLanguage(this.languageFrom.value);
+    this.state.setToLanguage(this.languageTo.value);
+
+    this.languageFrom.addEventListener("input", () => {
+      this.state.setFromLanguage(this.languageFrom.value);
+    });
+
+    this.languageTo.addEventListener("input", () => {
+      this.state.setToLanguage(this.languageTo.value);
+    });
   }
+
+  setupTextarea() {
+    this.translationFrom.addEventListener("input", () => {
+      this.state.setMessageToTranslate(this.translationFrom.value);
+    });
+  }
+
+  /**
+   * @param {string} message
+   */
+  updateTranslation(message) {
+    this.translationTo.innerText = message;
+  }
+}
+
+/**
+ * Measure the time in milliseconds.
+ *
+ * @returns {() => number}
+ */
+function timer() {
+  const start = performance.now();
+  let result;
+  return () => {
+    if (result === undefined) {
+      result = performance.now() - start;
+    }
+    return result;
+  };
 }
 
 /**
@@ -148,8 +202,8 @@ class TranslationsState {
   worker = new Worker("chrome://global/content/translations/worker.js");
   messageId = 0;
 
-  /** @type {Promise<Model[]>} */
-  remoteModels;
+  /** @type {Promise<ModelRecord[]>} */
+  modelRecords;
 
   /** @type {TranslationsUI} */
   ui;
@@ -157,25 +211,38 @@ class TranslationsState {
   /** @type {RemoteSettingsClient} */
   translationsModels;
 
+  /**
+   * The language to translate from, in the form of a BCP 47 language tag,
+   * e.g. "en" or "fr".
+   *
+   * @type {string}
+   */
+  fromLanguage = "";
+
+  /**
+   * The language to translate to, in the form of a BCP 47 language tag,
+   * e.g. "en" or "fr".
+   *
+   * @type {string}
+   */
+  toLanguage = "";
+
+  /**
+   * The message to translate, cached so that it can be determined if the text
+   * needs to be re-translated.
+   *
+   * @type {string}
+   */
+  messageToTranslate = "";
+
   constructor() {
     this.translationsModels = lazy.RemoteSettings("translations-models");
-    this.remoteModels = TranslationsState.setupRemoteModels(this.translationsModels);
+    this.modelRecords = TranslationsState.setupRemoteModels(
+      this.translationsModels
+    );
     this.ui = new TranslationsUI(this);
 
-    const translationMessage = {
-      messageID: this.messageId++,
-      translatedParagraph: null,
-      sourceParagraph: "This is some text to translate.",
-      sourceLanguage: "en",
-      targetLanguage: "es",
-      tabId: null,
-      frameId: null,
-      origin: null,
-      type: null,
-    };
-
-    this.worker.addEventListener("message", this.onMessage);
-    this.worker.postMessage(["translate", [translationMessage]]);
+    this.worker.addEventListener("message", this.onMessage.bind(this));
   }
 
   destroy() {
@@ -183,61 +250,143 @@ class TranslationsState {
   }
 
   /**
-   * @param {RemoteSettingsClient} remoteModels
+   * @param {RemoteSettingsClient} modelRecords
    * @returns {Models}
    */
-  static async setupRemoteModels(remoteModels) {
+  static async setupRemoteModels(modelRecords) {
     // DO NOT LAND!!
     // The signatures were broken on the Dev server.
-    remoteModels.verifySignature = false;
+    modelRecords.verifySignature = false;
 
-    remoteModels.on("sync", async ({ data: { created, updated, deleted } }) => {
-      lazy.console.log(`"sync" event for remote models `, { created, updated, deleted });
+    modelRecords.on("sync", async ({ data: { created, updated, deleted } }) => {
+      lazy.console.log(`"sync" event for remote models `, {
+        created,
+        updated,
+        deleted,
+      });
 
       // Remove local attachments of remotely deleted records.
       await Promise.all(
         deleted.map(async record => {
           if (record.attachment) {
-            await remoteModels.attachments.deleteDownloaded(record);
+            await modelRecords.attachments.deleteDownloaded(record);
           }
         })
       );
 
-      const newRecords = [...created, update.map(record => record.new)];
-
-      // Download new attachments
-      await Promise.all(
-        newRecords.map(async record => {
-          // const { buffer } = await client.attachments.download(record);
-        })
-      );
+      // eslint-disable-next-line no-unused-vars
+      const _newRecords = [...created, updated.map(record => record.new)];
     });
 
     try {
-      await remoteModels.sync();
+      await modelRecords.sync();
     } catch (error) {
       // TODO - Update the UI with errors.
       lazy.console.error(`Syncing the remote models failed`, error);
     }
 
-    const models = await remoteModels.get();
-    console.log(`Models loaded`, models);
-    return models
+    const models = await modelRecords.get();
+    lazy.console.log(`Models loaded`, models);
+    return models;
+  }
+
+  /**
+   * @prop {Array<{ name: string, withQualityEstimation: boolean }} languagePairs
+   */
+  async getLanguageModels(languagePairs) {
+    const totalModelTime = timer();
+
+    const models = [];
+    const allModelRecords = await this.modelRecords;
+
+    for (const { name, withQualityEstimation } of languagePairs) {
+      // TODO(Refactor) - Pass the fromLang and toLang in the message rather than the
+      // combined name.
+      const fromLang = name[0] + name[1];
+      const toLang = name[2] + name[3];
+
+      // Get the records of models that match the translation.
+      const modelRecords = allModelRecords.filter(modelRecord => {
+        if (!withQualityEstimation && modelRecord.fileType === "qualityModel") {
+          // Do not include the quality models if they aren't needed.
+          return false;
+        }
+
+        // Does the models match the languages?
+        return (
+          modelRecord.fromLang === fromLang && modelRecord.toLang === toLang
+        );
+      });
+
+      /** @type {Record<ModelTypes, Blob>} */
+      const languageModelBlobs = {};
+
+      // TODO(refactor) - This precision seems like it should be computed in the worker.
+      // We should instead pass the full model file name along instead. The
+      // languageModelBlobs can be refactored from a `Record<ModelTypes, Blob>` to a
+      // `Record<ModelTypes, {blob: Blob, name: string}>` or maybe even just
+      // `Array<{ blob, name, fileType }>`
+      let precision = "int8shiftAlphaAll";
+
+      for (const modelRecord of modelRecords) {
+        const { fileType } = modelRecord;
+        const logInfo = { fromLang, toLang, fileType };
+        lazy.console.log("Downloading model", logInfo);
+
+        const modelTime = timer();
+        const download = await this.translationsModels.attachments.download(
+          modelRecord
+        );
+        const { buffer } = download;
+        lazy.console.log(`Model fetched in ${modelTime() / 1000} seconds`, {
+          ...logInfo,
+          download,
+          buffer,
+        });
+        languageModelBlobs[modelRecord.fileType] = new Blob([buffer]);
+
+        if (fileType === "model") {
+          precision = modelRecord.name.endsWith("intgemm8.bin")
+            ? "int8shiftAll"
+            : "int8shiftAlphaAll";
+        }
+      }
+
+      models.push({
+        name,
+        // TODO - This withQualityEstimation doesn't need to be passed. It can be
+        // inferred if the `languageModelBlobs.qualityModel` exists.
+        withQualityEstimation,
+        languageModelBlobs,
+        precision,
+      });
+    }
+
+    // TODO(Telemetry) - Report on this performance.
+    lazy.console.log(
+      `${languagePairs.length} Language model(s) took ${totalModelTime() /
+        1000} seconds to get.`,
+      models
+    );
+
+    return models;
   }
 
   /**
    * @param {MessageEvent} event
    */
-  onMessage = event => {
+  async onMessage(event) {
     const [name, ...args] = event.data;
     lazy.console.log(`worker.js message`, name, args);
 
+    // TODO(Refactor) - remove this once all of the messages are used or refactored.
+    /* eslint-disable no-unused-vars */
     switch (name) {
       case "reportPerformanceTimespan": {
         // TODO(Telemetry)
 
         /** @type {"model_load_time_num"} */
-        const perfType = args[0];
+        const _perfType = args[0];
 
         /** @type {number} */
         const elapsedMS = args[1];
@@ -283,7 +432,7 @@ class TranslationsState {
            | "marian"
           }
           */
-        const error = data;
+        const error = args[0];
         // TODO(Telemetry) - This is a specific error.
         break;
       }
@@ -291,15 +440,28 @@ class TranslationsState {
       case "translationComplete": {
         /**
          * The translated message.
-         * @type {string}
+         * @typedef {Object} TranslatedMessage
+         * @prop {null | any} frameId
+         * @prop {number} messageID
+         * @prop {null | any} origin
+         * @prop {string} sourceLanguage
+         * @prop {string} sourceParagraph
+         * @prop {null | any} tabId
+         * @prop {string} targetLanguage
+         * @prop {string} translatedParagraph
+         * @prop {null | any} type
+         * }}
          */
-        const message = args[0];
+
+        /** @type {TranslatedMessage} */
+        const message = args[0][0];
 
         /**
          * A tuple of total words, and milliseconds elapsed.
          * @type {[number, number]}
          */
         const timeElapsed = args[1];
+        this.ui.updateTranslation(message.translatedParagraph);
         break;
       }
 
@@ -308,9 +470,16 @@ class TranslationsState {
          * @type {Array<{ name: string, withQualityEstimation: boolean }}
          */
         const languagePairs = args[0];
-        for (const { name } of languagePairs) {
-          // downloadModel(name);
-        }
+
+        // TODO(Correctness) - Handle the error when models fail to download.
+        // TODO(Refactor) - The addon mixes "download" and "get" verbs. It would be nice
+        // to refactor to use "get" as this may be getting it from the cache, or
+        // downloading it.
+        this.worker.postMessage([
+          "responseDownloadLanguageModels",
+          await this.getLanguageModels(languagePairs),
+        ]);
+
         break;
       }
 
@@ -333,7 +502,8 @@ class TranslationsState {
         break;
       }
     }
-  };
+    /* eslint-enable no-unused-vars */
+  }
 
   /**
    * Get the list of languages and their display names, sorted by their display names.
@@ -342,18 +512,78 @@ class TranslationsState {
    */
   async getSupportedLanguages() {
     const languages = new Set();
-    for (const model of await this.remoteModels) {
-      languages.add(model.fromLang);
+    for (const { fromLang } of await this.modelRecords) {
+      languages.add(fromLang);
     }
 
-    const displayNames = new Services.intl.DisplayNames(undefined, { type: "language" });
+    const displayNames = new Services.intl.DisplayNames(undefined, {
+      type: "language",
+    });
 
     return [...languages]
       .map(langTag => ({
         langTag,
-        displayName: displayNames.of(langTag)
+        displayName: displayNames.of(langTag),
       }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+
+  /**
+   * Only request translation when it's needed.
+   */
+  maybeRequestTranslation() {
+    if (!this.fromLanguage || !this.toLanguage || !this.messageToTranslate) {
+      // Not everything is set for translation.
+      this.ui.updateTranslation("");
+      return;
+    }
+
+    this.worker.postMessage([
+      "translate",
+      [
+        {
+          messageID: this.messageId++,
+          translatedParagraph: null,
+          sourceParagraph: this.messageToTranslate,
+          sourceLanguage: this.fromLanguage,
+          targetLanguage: this.toLanguage,
+          tabId: null,
+          frameId: null,
+          origin: null,
+          type: null,
+        },
+      ],
+    ]);
+  }
+
+  /**
+   * @param {string} lang
+   */
+  setFromLanguage(lang) {
+    if (lang !== this.fromLanguage) {
+      this.fromLanguage = lang;
+      this.maybeRequestTranslation();
+    }
+  }
+
+  /**
+   * @param {string} lang
+   */
+  setToLanguage(lang) {
+    if (lang !== this.toLanguage) {
+      this.toLanguage = lang;
+      this.maybeRequestTranslation();
+    }
+  }
+
+  /**
+   * @param {string} message
+   */
+  setMessageToTranslate(message) {
+    if (message !== this.messageToTranslate) {
+      this.messageToTranslate = message;
+      this.maybeRequestTranslation();
+    }
   }
 }
 

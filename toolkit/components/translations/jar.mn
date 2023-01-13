@@ -7,5 +7,6 @@ toolkit.jar:
     content/global/translations/translations.css          (content/translations.css)
     content/global/translations/translations.mjs          (content/translations.mjs)
     content/global/translations/worker.js                 (content/worker.js)
-    content/global/translations/bergamot-translator.js    (content/bergamot-translator.js)
-    content/global/translations/bergamot-translator.wasm  (content/bergamot-translator.wasm)
+
+    content/global/translations/bergamot-translator.js    (content/generated/bergamot-translator.js)
+    content/global/translations/bergamot-translator.wasm  (content/generated/bergamot-translator.wasm)

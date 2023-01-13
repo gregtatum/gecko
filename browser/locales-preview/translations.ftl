@@ -6,7 +6,7 @@
 ### appropriate place in /toolkit when it is no longer preview.
 
 about-translations-title = Translations
-about-translations-header = Firefox Translations
+about-translations-header = { -brand-short-name } Translations
 about-translations-results-placeholder = Translation
 about-translations-select = Select language…
 about-translations-textarea =

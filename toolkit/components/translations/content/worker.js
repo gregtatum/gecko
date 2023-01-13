@@ -804,17 +804,19 @@ class TranslationHelper {
 
 const translationHelper = new TranslationHelper();
 onmessage = function(message) {
-  switch (message.data[0]) {
+  const [name, ...args] = message.data;
+  console.log(`received message`, name, args);
+  switch (name) {
     case "translate":
       try {
-        translationHelper.requestTranslation(message.data[1]);
+        translationHelper.requestTranslation(args[0]);
       } catch (ex) {
         sendException(ex);
         throw ex;
       }
       break;
     case "responseDownloadLanguageModels":
-      translationHelper.loadLanguageModel(message.data[1]);
+      translationHelper.loadLanguageModel(args[0]);
       break;
     default:
     // ignore
