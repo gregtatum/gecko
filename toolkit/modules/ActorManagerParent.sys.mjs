@@ -89,6 +89,22 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  AboutTranslations: {
+    parent: {
+      esModuleURI: "resource://gre/actors/AboutTranslationsParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "resource://gre/actors/AboutTranslationsChild.sys.mjs",
+      events: {
+        // Run the actor before any content of the page appears.
+        DOMDocElementInserted: {},
+      },
+    },
+    matches: ["about:translations"],
+
+    enablePreference: "browser.translations.enable",
+  },
+
   AudioPlayback: {
     parent: {
       moduleURI: "resource://gre/actors/AudioPlaybackParent.jsm",

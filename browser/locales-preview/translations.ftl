@@ -6,4 +6,8 @@
 ### appropriate place in /toolkit when it is no longer preview.
 
 about-translations-title = Translations
-about-translations-header = { -brand-short-name } Translations
+about-translations-header = { -translations-brand-name }
+about-translations-results-placeholder = Translation
+about-translations-select = Select language…
+about-translations-textarea =
+  .placeholder = Add text to translate…
