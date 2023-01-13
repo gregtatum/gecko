@@ -476,6 +476,21 @@ let JSWINDOWACTORS = {
     },
   },
 
+  // The newer translations feature backed by local machine learning models.
+  // See Bug 971044.
+  Translations: {
+    parent: {
+      esModuleURI: "resource://gre/actors/TranslationsParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "resource://gre/actors/TranslationsChild.sys.mjs",
+      events: {
+        pageshow: {},
+      },
+    },
+    enablePreference: "browser.translations.enable",
+  },
+
   UAWidgets: {
     child: {
       moduleURI: "resource://gre/actors/UAWidgetsChild.jsm",
