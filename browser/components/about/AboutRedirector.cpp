@@ -96,6 +96,7 @@ static const RedirEntry kRedirMap[] = {
          nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT},
     {"translations", "chrome://global/content/translations/translations.html",
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::IS_SECURE_CHROME_UI |
+         nsIAboutModule::URI_MUST_LOAD_IN_CHILD |
          nsIAboutModule::HIDE_FROM_ABOUTABOUT},
     {"welcomeback", "chrome://browser/content/aboutWelcomeBack.xhtml",
      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::HIDE_FROM_ABOUTABOUT |
