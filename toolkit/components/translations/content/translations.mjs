@@ -32,7 +32,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  */
 
 /**
- * The JSON that is synced from RemoteSettings for the translation models.
+ * The JSON that is synced from Remote Settings for the translation models.
  *
  * @typedef {Object} ModelRecord
  *
@@ -45,6 +45,17 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * @prop {string} id -                   e.g. "0d4db293-a17c-4085-9bd8-e2e146c85000"
  * @prop {number} schema -               e.g. 1673023100578
  * @prop {string} last_modified -        e.g. 1673455932527
+ */
+
+/**
+ * The JSON that is synced from Remote Settings for the wasm binaries.
+ *
+ * @typedef {Object} WasmRecord
+ *
+ * @prop {string} name - The name of the project, e.g. "bergamot-translator"
+ * @prop {string} release - The human readable identifier for the release. e.g. "v0.4.4"
+ * @prop {string} revision - The commit hash for the project that generated the wasm.
+ * @prop {string} license - The license of the wasm, as a https://spdx.org/licenses/
  */
 
 /**
@@ -197,14 +208,32 @@ class TranslationsState {
   worker = new Worker("chrome://global/content/translations/worker.js");
   messageId = 0;
 
-  /** @type {Promise<ModelRecord[]>} */
+  /**
+   * The models are managed through Remote Settings file attachments.
+   *
+   * https://firefox-source-docs.mozilla.org/services/settings/index.html#file-attachments
+   *
+   * @type {Promise<ModelRecord[]>}
+   */
   modelRecords;
 
-  /** @type {TranslationsUI} */
+  /**
+   * The wasm binary is downloaded from Remote Settings, as it is too large to bundle
+   * with Firefox.
+   *
+   * @type {Promise<ArrayBuffer>}
+   */
+  bergamotTranslatorWasm;
+
+  /**
+   * This class is responsible for all UI updated.
+   *
+   * @type {TranslationsUI}
+   */
   ui;
 
   /** @type {RemoteSettingsClient} */
-  translationsModels;
+  translationsModelsClient;
 
   /**
    * The language to translate from, in the form of a BCP 47 language tag,
@@ -230,31 +259,121 @@ class TranslationsState {
    */
   messageToTranslate = "";
 
+  /**
+   * The worker needs the wasm binary loaded before it is ready.
+   */
+  isWorkerReady = false;
+
   constructor() {
-    this.translationsModels = lazy.RemoteSettings("translations-models");
+    this.translationsModelsClient = lazy.RemoteSettings("translations-models");
+
     this.modelRecords = TranslationsState.setupRemoteModels(
-      this.translationsModels
-    );
+      this.translationsModelsClient
+    ).catch(error => {
+      // TODO - Handle the failure with UI and the option to re-trigger a download. This
+      // error could be due to a transient network error, or if a user is offline, or if
+      // the Remote Settings service is down. The UI should present these errors nicely.
+      lazy.console.error("Error getting the remote language models", error);
+    });
+
+    this.bergamotTranslatorWasm = TranslationsState.getBergamotTranslatorWasm(
+      this.translationsWasmClient
+    ).catch(error => {
+      // TODO - Handle the failure with UI and the option to re-trigger a download. This
+      // error could be due to a transient network error, or if a user is offline, or if
+      // the Remote Settings service is down. The UI should present these errors nicely.
+      lazy.console.error(
+        "Error getting the remote wasm for the bergamot translator",
+        error
+      );
+    });
+
     this.ui = new TranslationsUI(this);
 
     this.worker.addEventListener("message", this.onMessage.bind(this));
+
+    this.setupWorker();
   }
 
   destroy() {
     this.worker.removeEventListener("message", this.onMessage);
   }
 
-  /**
-   * @param {RemoteSettingsClient} modelRecords
-   * @returns {Models}
-   */
-  static async setupRemoteModels(modelRecords) {
-    // DO NOT LAND!!
-    // The signatures were broken on the Dev server.
-    modelRecords.verifySignature = false;
+  async setupWorker() {
+    const wasmArrayBuffer = await this.bergamotTranslatorWasm;
+    this.worker.postMessage(["setupBergamotTranslator", wasmArrayBuffer]);
+    this.isWorkerReady = true;
+    this.maybeRequestTranslation();
+  }
 
-    modelRecords.on("sync", async ({ data: { created, updated, deleted } }) => {
-      lazy.console.log(`"sync" event for remote models `, {
+  /**
+   * @param {RemoteSettingsClient} client
+   * @returns {Promise<ModelRecord[]>}
+   */
+  static async setupRemoteModels(client) {
+    // DO NOT LAND! This is working around a bug in Remote Settings dev server.
+    client.verifySignature = false;
+
+    client.on("sync", async ({ data: { created, updated, deleted } }) => {
+      // Language model attachments will only be downloaded when they are used.
+      lazy.console.log(
+        `Remote Settings "sync" event for remote language models `,
+        {
+          created,
+          updated,
+          deleted,
+        }
+      );
+
+      // Remove local attachments of remotely deleted records.
+      await Promise.all(
+        deleted.map(async record => {
+          if (record.attachment) {
+            await client.attachments.deleteDownloaded(record);
+          }
+        })
+      );
+
+      // TODO - Handle updated records, by invalidating old attachments, and downloading
+      // new ones.
+      for (const record of updated) {
+        // eslint-disable-next-line no-unused-vars
+        const { new: updatedRecord } = record;
+      }
+    });
+
+    // Load the models. If no data is present, then there will be an initial sync.
+    // Rely on Remote Settings for the syncing strategy for receiving updates.
+    lazy.console.log(`Getting remote language models.`);
+
+    /** @type {ModelRecord[]} */
+    const modelRecords = await client.get({
+      // Pull the records from the network so that we never get an empty list.
+      syncIfEmpty: true,
+      // TODO - We should consider the verification process. For now do the slow/safe
+      // thing of always verifying the signature.
+      verifySignature: true,
+    });
+
+    lazy.console.log(`Remote language models loaded.`, modelRecords);
+
+    return modelRecords;
+  }
+
+  /**
+   * @returns {Promise<ArrayBuffer>}
+   */
+  static async getBergamotTranslatorWasm() {
+    const downloadTimer = timer();
+
+    /** @type {RemoteSettingsClient} */
+    const client = lazy.RemoteSettings("translations-wasm");
+
+    // DO NOT LAND! This is working around a bug in Remote Settings dev server.
+    client.verifySignature = false;
+
+    client.on("sync", async ({ data: { created, updated, deleted } }) => {
+      lazy.console.log(`"sync" event for remote wasm `, {
         created,
         updated,
         deleted,
@@ -264,25 +383,50 @@ class TranslationsState {
       await Promise.all(
         deleted.map(async record => {
           if (record.attachment) {
-            await modelRecords.attachments.deleteDownloaded(record);
+            await client.attachments.deleteDownloaded(record);
           }
         })
       );
 
-      // eslint-disable-next-line no-unused-vars
-      const _newRecords = [...created, updated.map(record => record.new)];
+      // TODO - Handle updated records, by invalidating old attachments, and downloading
+      // new ones.
+      for (const record of updated) {
+        // eslint-disable-next-line no-unused-vars
+        const { new: updatedRecord } = record;
+      }
     });
 
-    try {
-      await modelRecords.sync();
-    } catch (error) {
-      // TODO - Update the UI with errors.
-      lazy.console.error(`Syncing the remote models failed`, error);
+    // Load the wasm binary from remote settings, if it hasn't been already.
+    lazy.console.log(`Getting remote bergamot-translator wasm records.`);
+
+    /** @type {WasmRecord[]} */
+    const wasmRecords = await client.get({
+      // Pull the records from the network so that we never get an empty list.
+      syncIfEmpty: true,
+      // TODO - We should consider the verification process. For now do the slow/safe
+      // thing of always verifying the signature.
+      verifySignature: true,
+      // Only get the bergamot-translator record.
+      filter: { name: "bergamot-translator" },
+    });
+
+    const wasmRecord = wasmRecords[0];
+    if (wasmRecords.length !== 1 || !wasmRecord) {
+      lazy.console.error(
+        "Expected the bergamot-translator to only have 1 record."
+      );
     }
 
-    const models = await modelRecords.get();
-    lazy.console.log(`Models loaded`, models);
-    return models;
+    // Unlike the models, greedily download the wasm.
+    const { buffer } = await client.attachments.download(wasmRecord);
+
+    lazy.console.log(
+      `"bergamot-translator" wasm binary loaded in ${downloadTimer() / 1000} seconds`,
+      wasmRecord,
+      buffer
+    );
+
+    return buffer;
   }
 
   /**
@@ -329,7 +473,7 @@ class TranslationsState {
         lazy.console.log("Downloading model", logInfo);
 
         const modelTime = timer();
-        const download = await this.translationsModels.attachments.download(
+        const download = await this.translationsModelsClient.attachments.download(
           modelRecord
         );
         const { buffer } = download;
@@ -527,7 +671,7 @@ class TranslationsState {
    * Only request translation when it's needed.
    */
   maybeRequestTranslation() {
-    if (!this.fromLanguage || !this.toLanguage || !this.messageToTranslate) {
+    if (!this.fromLanguage || !this.toLanguage || !this.messageToTranslate || !this.isWorkerReady) {
       // Not everything is set for translation.
       this.ui.updateTranslation("");
       return;

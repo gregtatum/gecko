@@ -87,6 +87,14 @@ class TranslationHelper {
     };
   }
 
+  /**
+   * @param {ArrayBuffer} wasmArrayBuffer
+   */
+  async setupBergamotTranslator(wasmArrayBuffer) {
+    // TODO - Sort out this loading.
+    this.wasmArrayBuffer = wasmArrayBuffer;
+  }
+
   async loadTranslationEngine(
     sourceLanguage,
     targetLanguage,
@@ -95,18 +103,10 @@ class TranslationHelper {
   ) {
     postMessage(["updateProgress", "loadingTranslationEngine"]);
 
-    // first we load the wasm engine
-    const response = await fetch(
-      "chrome://global/content/translations/bergamot-translator/wasm.wasm"
-    );
-    if (!response.ok) {
-      sendException(new Error("Error loading engine as buffer"));
-      postMessage(["reportError", "engine_download"]);
-      console.log("Error loading engine as buffer.");
-      return;
+    if (!this.wasmArrayBuffer) {
+      throw new Error("No wasm binary loaded for the translation engine.");
     }
 
-    const wasmArrayBuffer = await response.arrayBuffer();
     const initialModule = {
       preRun: [
         function() {
@@ -136,7 +136,7 @@ class TranslationHelper {
           withQualityEstimation
         );
       },
-      wasmBinary: wasmArrayBuffer,
+      wasmBinary: this.wasmArrayBuffer,
     };
     try {
       this.WasmEngineModule = loadEmscriptenGlueCode(initialModule);
@@ -819,6 +819,9 @@ onmessage = function(message) {
       break;
     case "responseDownloadLanguageModels":
       translationHelper.loadLanguageModel(args[0]);
+      break;
+    case "setupBergamotTranslator":
+      translationHelper.setupBergamotTranslator(args[0]);
       break;
     default:
     // ignore
