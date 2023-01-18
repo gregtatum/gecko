@@ -4,6 +4,19 @@
 
 /* global loadEmscriptenGlueCode, serializeError, importScripts */
 
+/**
+ * @typedef {import("../translations").BergamotModule} BergamotModule
+ * @typedef {import("../translations").TranslationMessage} TranslationMessage
+ * @typedef {import("../translations").LanguageModelBlobs} LanguageModelBlobs
+ * @typedef {import("../translations").AlignedMemory} AlignedMemory
+ * @typedef {import("../translations").TranslationModel} TranslationModel
+ * @typedef {import("../translations").EnginePhase} EnginePhase
+ * @typedef {import("../translations").BlockingService} BlockingService
+ * @typedef {import("../translations").VectorString} VectorString
+ * @typedef {import("../translations").VectorResponse} VectorResponse
+ * @typedef {import("../translations").Vector} Vector
+ */
+
 importScripts(
   "chrome://global/content/translations/bergamot-translator/worker.js"
 );
@@ -13,41 +26,40 @@ const console = self.console.createInstance({
   prefix: "Translations",
 });
 
-class Queue {
-  constructor() {
-    this.elements = [];
-  }
-
-  enqueue(e) {
-    this.elements.push(e);
-  }
-
-  // remove an element from the front of the queue
-  dequeue() {
-    return this.elements.shift();
-  }
-
-  isEmpty() {
-    return this.elements.length === 0;
-  }
-
-  peek() {
-    if (!this.isEmpty()) {
-      return this.elements[0];
-    }
-    return null;
-  }
-
-  length() {
-    return this.elements.length;
-  }
-}
-
-let engineWasmLocalPath;
-
 const sendException = ex => {
   console.error(ex);
   postMessage(["reportException", ex?.message]);
+};
+
+/**
+ * The pivot language is used to pivot between two different language translations
+ * when there is not a language between. In this case "en" is common between the
+ * various supported models.
+ *
+ * For instance given the following two models:
+ *   "fr" -> "en"
+ *   "en" -> "it"
+ *
+ * You can accomplish:
+ *   "fr" -> "it"
+ *
+ * By doing:
+ *   "fr" -> "en" -> "it"
+ */
+const PIVOT_LANGUAGE = "en";
+
+//
+/**
+ * The alignment for each file type, file type strings should be same as in the
+ * model registry.
+ */
+const MODEL_FILE_ALIGNMENTS = {
+  model: 256,
+  lex: 64,
+  vocab: 64,
+  qualityModel: 64,
+  srcvocab: 64,
+  trgvocab: 64,
 };
 
 /*
@@ -57,35 +69,33 @@ const sendException = ex => {
  * their states of operation
  */
 class TranslationHelper {
-  constructor() {
-    // all variables specific to translation service
-    this.translationService = null;
+  /** @type {Array<TranslationMessage>} */
+  translationQueue = [];
 
-    // a map of language-pair to TranslationModel object
-    this.translationModels = new Map();
-    this.wasmModuleStartTimestamp = null;
-    this.WasmEngineModule = null;
-    this.engineState = this.ENGINE_STATE.LOAD_PENDING;
-    this.PIVOT_LANGUAGE = "en";
-    this.totalPendingElements = 0;
-    // alignment for each file type, file type strings should be same as in the model registry
-    this.modelFileAlignments = {
-      model: 256,
-      lex: 64,
-      vocab: 64,
-      qualityModel: 64,
-      srcvocab: 64,
-      trgvocab: 64,
-    };
-  }
+  /** @type {BergamotModule | null} */
+  BergamotModule = null;
 
-  get ENGINE_STATE() {
-    return {
-      LOAD_PENDING: 0,
-      LOADING: 1,
-      LOADED: 2,
-    };
-  }
+  /** @type {BlockingService | null} */
+  translationService = null;
+
+  /** @type {number} */
+  totalPendingElements = 0;
+
+  /**
+   * A map of language-pair to Bergamot TranslationModel object.
+   *
+   * @type {Map<string, TranslationModel>}
+   */
+  translationModels = new Map();
+
+  /**
+   * The engine starts out as "engine-not-loaded" mode when the worker is constructed.
+   * It is changed to "loading" when the first request is made, then to "loaded" when
+   * the language model is loaded.
+   *
+   * @type {"engine-not-loaded" | "loading" | "loaded"}
+   */
+  enginePhase = "engine-not-loaded";
 
   /**
    * @param {ArrayBuffer} wasmArrayBuffer
@@ -98,7 +108,6 @@ class TranslationHelper {
   async loadTranslationEngine(
     sourceLanguage,
     targetLanguage,
-    withOutboundTranslation,
     withQualityEstimation
   ) {
     postMessage(["updateProgress", "loadingTranslationEngine"]);
@@ -107,11 +116,14 @@ class TranslationHelper {
       throw new Error("No wasm binary loaded for the translation engine.");
     }
 
+    /** @type {number} */
+    let wasmModuleStartTimestamp;
+
     const initialModule = {
       preRun: [
-        function() {
-          this.wasmModuleStartTimestamp = Date.now();
-        }.bind(this),
+        () => {
+          wasmModuleStartTimestamp = performance.now();
+        },
       ],
       onAbort() {
         sendException(new Error("Error loading engine (onAbort)"));
@@ -124,22 +136,20 @@ class TranslationHelper {
          * once we have the wasm engine module successfully
          * initialized, we then load the language models
          */
+        const seconds = (performance.now() - wasmModuleStartTimestamp) / 1000;
         console.log(
-          `Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() -
-            this.wasmModuleStartTimestamp) /
-            1000} secs`
+          `Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${seconds} secs`
         );
         this.getLanguageModels(
           sourceLanguage,
           targetLanguage,
-          withOutboundTranslation,
           withQualityEstimation
         );
       },
       wasmBinary: this.wasmArrayBuffer,
     };
     try {
-      this.WasmEngineModule = loadEmscriptenGlueCode(initialModule);
+      this.BergamotModule = loadEmscriptenGlueCode(initialModule);
     } catch (e) {
       console.log("Error loading wasm module:", e);
       sendException(e);
@@ -176,8 +186,8 @@ class TranslationHelper {
   }
 
   consumeTranslationQueue() {
-    while (this.translationQueue.length() > 0) {
-      const translationMessagesBatch = this.translationQueue.dequeue();
+    while (this.translationQueue.length) {
+      const translationMessagesBatch = this.translationQueue.shift();
       this.totalPendingElements += translationMessagesBatch.length;
       postMessage([
         "updateProgress",
@@ -273,37 +283,26 @@ class TranslationHelper {
   }
 
   requestTranslation(message) {
-    /*
-     * there are three possible states to the engine:
-     * INIT, LOADING, LOADED
-     * the engine is put on LOAD_PENDING mode when the worker is constructed, on
-     * LOADING when the first request is made and the engine is still on
-     * LOAD_PENDING, and on LOADED when the langauge model is loaded
-     */
-
-    switch (this.engineState) {
-      // if the engine hasn't loaded yet.
-      case this.ENGINE_STATE.LOAD_PENDING:
-        this.translationQueue = new Queue();
-        this.engineState = this.ENGINE_STATE.LOADING;
+    switch (this.enginePhase) {
+      case "engine-not-loaded":
+        this.enginePhase = "loading";
         this.loadTranslationEngine(
           message[0].sourceLanguage,
           message[0].targetLanguage,
-          message[0].withOutboundTranslation ?? false,
           message[0].withQualityEstimation ?? false
         );
 
-        this.translationQueue.enqueue(message);
+        this.translationQueue.push(message);
         break;
-      case this.ENGINE_STATE.LOADING:
+      case "loading":
         /*
          * if we get a translation request while the engine is
-         * being loaded, we enqueue the messae and break
+         * being loaded, we enqueue the message and break
          */
-        this.translationQueue.enqueue(message);
+        this.translationQueue.push(message);
         break;
 
-      case this.ENGINE_STATE.LOADED:
+      case "loaded":
         if (message[0] && message[0].type === "outbound") {
           /*
            * we skip the line if the message is from ot.
@@ -311,23 +310,22 @@ class TranslationHelper {
            */
           this.translateOutboundTranslation([message[0]]);
         } else {
-          this.translationQueue.enqueue(message);
+          this.translationQueue.push(message);
           this.consumeTranslationQueue();
         }
         break;
       default:
+        console.warn("Unknown engine state", this.enginePhase);
     }
   }
 
   getLanguageModels(
     sourceLanguage,
     targetLanguage,
-    withOutboundTranslation,
     withQualityEstimation
   ) {
     this.sourceLanguage = sourceLanguage;
     this.targetLanguage = targetLanguage;
-    this.withOutboundTranslation = withOutboundTranslation;
     this.withQualityEstimation = withQualityEstimation;
 
     /**
@@ -335,95 +333,59 @@ class TranslationHelper {
      */
     let languagePairs = [];
 
-    if (this._isPivotingRequired(sourceLanguage, targetLanguage)) {
+    if (isPivotingRequired(sourceLanguage, targetLanguage)) {
       // Pivoting requires 2 translation models.
       languagePairs.push(
         {
-          name: this._getLanguagePair(sourceLanguage, this.PIVOT_LANGUAGE),
+          name: getLanguagePair(sourceLanguage, PIVOT_LANGUAGE),
           withQualityEstimation,
         },
         {
-          name: this._getLanguagePair(this.PIVOT_LANGUAGE, targetLanguage),
+          name: getLanguagePair(PIVOT_LANGUAGE, targetLanguage),
           withQualityEstimation,
         }
       );
-
-      if (withOutboundTranslation) {
-        languagePairs.push(
-          {
-            name: this._getLanguagePair(targetLanguage, this.PIVOT_LANGUAGE),
-            withQualityEstimation: false,
-          },
-          {
-            name: this._getLanguagePair(this.PIVOT_LANGUAGE, sourceLanguage),
-            withQualityEstimation: false,
-          }
-        );
-      }
     } else {
       languagePairs.push({
-        name: this._getLanguagePair(sourceLanguage, targetLanguage),
+        name: getLanguagePair(sourceLanguage, targetLanguage),
         withQualityEstimation,
       });
-      if (withOutboundTranslation) {
-        languagePairs.push({
-          name: this._getLanguagePair(targetLanguage, sourceLanguage),
-          withQualityEstimation: false,
-        });
-      }
     }
     postMessage(["downloadLanguageModels", languagePairs]);
   }
 
-  async loadLanguageModel(languageModels) {
+  /**
+   * @param {LanguageModelBlobs[]} languageModelBlobs
+   */
+  async loadLanguageModel(languageModelBlobs) {
     /*
      * let's load the models and communicate to the caller (translation)
      * when we are finished
      */
-    let start = Date.now();
-    let isReversedModelLoadingFailed = false;
+    let start = performance.now();
     try {
       this.constructTranslationService();
-      await this.constructTranslationModel(
-        languageModels,
+      await this.constructTranslationModels(
+        languageModelBlobs,
         this.sourceLanguage,
         this.targetLanguage,
         this.withQualityEstimation
       );
 
-      if (this.withOutboundTranslation) {
-        try {
-          // the Outbound Translation doesn't require supporting Quality Estimation
-          await this.constructTranslationModel(
-            languageModels,
-            this.targetLanguage,
-            this.sourceLanguage,
-            /* withQualityEstimation=*/ false
-          );
-          postMessage(["displayOutboundTranslation", null]);
-        } catch (ex) {
-          console.warn(
-            "Error while constructing a reversed model for outbound translation. It might be not supported.",
-            ex
-          );
-          isReversedModelLoadingFailed = true;
-        }
-      }
-      let finish = Date.now();
+      const duration = performance.now() - start;
       console.log(
-        `Model '${this.sourceLanguage}${
-          this.targetLanguage
-        }' successfully constructed. Time taken: ${(finish - start) /
-          1000} secs`
+        `Model '${this.sourceLanguage} -> ${this.targetLanguage}' successfully ` +
+          `constructed in ${duration /1000} secs`
       );
       postMessage([
         "reportPerformanceTimespan",
         "model_load_time_num",
-        finish - start,
+        duration,
       ]);
     } catch (error) {
-      console.log(
-        `Model '${this.sourceLanguage}${this.targetLanguage}' construction failed: '${error.message} - ${error.stack}'`
+      console.error(
+        `Model '${this.sourceLanguage} -> ${this.targetLanguage}' construction failed.`,
+        error
       );
       sendException(error);
       postMessage(["reportError", "model_load"]);
@@ -431,213 +393,162 @@ class TranslationHelper {
       return;
     }
 
-    this.engineState = this.ENGINE_STATE.LOADED;
-    if (isReversedModelLoadingFailed) {
-      postMessage(["updateProgress", "translationEnabledNoOT"]);
-    } else {
-      postMessage(["updateProgress", "translationEnabled"]);
-    }
+    this.enginePhase = "loaded";
+
+    postMessage(["updateProgress", "translationEnabled"]);
 
     this.consumeTranslationQueue();
+
     console.log("loadLanguageModel function complete");
   }
 
-  // instantiate the Translation Service
+  /**
+   * Initializes the Bergamot translation service that provides the translations.
+   */
   constructTranslationService() {
     if (!this.translationService) {
-      // caching is disabled (see https://github.com/mozilla/firefox-translations/issues/288)
-      let translationServiceConfig = { cacheSize: 0 };
-      console.log(
-        `Creating Translation Service with config: ${JSON.stringify(
-          translationServiceConfig
-        )}`
+      const config = {
+        // Caching is disabled (see https://github.com/mozilla/firefox-translations/issues/288)
+        cacheSize: 0
+      };
+      this.translationService = new this.BergamotModule.BlockingService(
+        config
       );
-      this.translationService = new this.WasmEngineModule.BlockingService(
-        translationServiceConfig
-      );
-      console.log("Translation Service created successfully");
+      console.log("Translation Service created with config", config);
     }
   }
 
-  deleteModels() {
-    // delete all previously constructed translation models and clear the map
-    this.translationModels.forEach((value, key) => {
-      console.log(`Destructing model '${key}'`);
-      value.delete();
-    });
-    this.translationModels.clear();
-  }
-
-  async constructTranslationModel(
-    languageModels,
+  /**
+   * Construct any language models that are needed for the translation. Sometimes
+   * two models are needed for pivot translations, when there is not a model available
+   * to directly translate between two languages.
+   *
+   * @prop {LanguageModelBlobs} languageModels
+   * @prop {string} from
+   * @prop {string} to
+   * @prop {boolean} withQualityEstimation
+   */
+  async constructTranslationModels(
+    languageModelBlobs,
     from,
     to,
     withQualityEstimation
   ) {
-    if (this._isPivotingRequired(from, to)) {
-      // pivoting requires 2 translation models to be constructed
+    if (isPivotingRequired(from, to)) {
+      // Pivoting requires 2 translation models to be constructed
       await Promise.all([
-        this.constructTranslationModelHelper(
-          languageModels,
-          this._getLanguagePair(from, this.PIVOT_LANGUAGE),
+        this.constructSingleTranslationModel(
+          languageModelBlobs,
+          getLanguagePair(from, PIVOT_LANGUAGE),
           withQualityEstimation
         ),
-        this.constructTranslationModelHelper(
-          languageModels,
-          this._getLanguagePair(this.PIVOT_LANGUAGE, to),
+        this.constructSingleTranslationModel(
+          languageModelBlobs,
+          getLanguagePair(PIVOT_LANGUAGE, to),
           withQualityEstimation
         ),
       ]);
     } else {
       // non-pivoting case requires only 1 translation model
-      await this.constructTranslationModelHelper(
-        languageModels,
-        this._getLanguagePair(from, to),
+      await this.constructSingleTranslationModel(
+        languageModelBlobs,
+        getLanguagePair(from, to),
         withQualityEstimation
       );
     }
   }
 
-  async constructTranslationModelHelper(
+  /**
+   * Construct a single translation model.
+   *
+   * @param {LanguageModelBlobs[]} languageModels
+   * @param {string} languagePair
+   * @param {boolean} withQualityEstimation
+   */
+  async constructSingleTranslationModel(
     languageModels,
     languagePair,
     withQualityEstimation
   ) {
     console.log(`Constructing translation model ${languagePair}`);
-    const modelConfigQualityEstimation = !withQualityEstimation;
-    let languageModel = languageModels.find(lm => lm.name === languagePair);
 
-    /*
-     * for available configuration options,
-     * please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-     * DONOT CHANGE THE SPACES BETWEEN EACH ENTRY OF CONFIG
-     */
-    const modelConfig = `
-            beam-size: 1
-            normalize: 1.0
-            word-penalty: 0
-            max-length-break: 128
-            mini-batch-words: 1024
-            workspace: 128
-            max-length-factor: 2.0
-            skip-cost: ${modelConfigQualityEstimation}
-            cpu-threads: 0
-            quiet: true
-            quiet-translation: true
-            gemm-precision: ${languageModel.precision}
-            alignment: soft
-            `;
-
-    // download files into buffers
-    let languageModelBlobs = languageModel.languageModelBlobs;
-    let downloadedBuffersPromises = [];
-
-    let filesToLoad = Object.entries(this.modelFileAlignments)
-      .filter(
-        ([fileType]) => fileType !== "qualityModel" || withQualityEstimation
-      )
-      .filter(([fileType]) => fileType in languageModelBlobs);
-    filesToLoad.map(([fileType, fileAlignment]) =>
-      downloadedBuffersPromises.push(
-        this.fetchFile(fileType, fileAlignment, languageModelBlobs)
-      )
+    const languageModel = languageModels.find(
+      ({ name }) => name === languagePair
     );
 
-    let downloadedBuffers = await Promise.all(downloadedBuffersPromises);
+    if (!languageModel) {
+      throw new Error("Could not find language model: " + languagePair);
+    }
 
-    // prepare aligned memories from buffers
-    let alignedMemories = Object.assign(
-      {},
-      ...filesToLoad.map(([name, alignment], index) => ({
-        [name]: this.prepareAlignedMemoryFromBuffer(
-          downloadedBuffers[index].buffer,
-          alignment
-        ),
-      }))
-    );
+    const {
+      model,
+      lex,
+      vocab,
+      qualityModel,
+      srcvocab,
+      trgvocab,
+    } = allocateModelMemory(this.BergamotModule, languageModels, withQualityEstimation);
 
-    const alignedModelMemory = alignedMemories.model;
-    const alignedShortlistMemory = alignedMemories.lex;
-    let alignedMemoryLogMessage = `Aligned memory sizes: Model:${alignedModelMemory.size()}, Shortlist:${alignedShortlistMemory.size()}, `;
+    let memoryLog =
+      `Aligned memory sizes: `
+      + `Model:${model.size()}, `
+      + `Shortlist:${lex.size()}, `;
 
-    const alignedVocabMemoryList = new this.WasmEngineModule.AlignedMemoryList();
-    if ("vocab" in alignedMemories) {
-      alignedVocabMemoryList.push_back(alignedMemories.vocab);
-      alignedMemoryLogMessage += ` Vocab: ${alignedMemories.vocab.size()}`;
-    } else if ("srcvocab" in alignedMemories && "trgvocab" in alignedMemories) {
-      alignedVocabMemoryList.push_back(alignedMemories.srcvocab);
-      alignedVocabMemoryList.push_back(alignedMemories.trgvocab);
-      alignedMemoryLogMessage += ` Src Vocab: ${alignedMemories.srcvocab.size()}`;
-      alignedMemoryLogMessage += ` Trg Vocab: ${alignedMemories.trgvocab.size()}`;
+    // Set up the vocab list, which could either be a single "vocab" model, or a
+    // "srcvocab" and "trgvocab" pair.
+    const vocabList = new this.BergamotModule.AlignedMemoryList();
+
+    if (vocab) {
+      vocabList.push_back(vocab);
+      memoryLog += ` Vocab: ${vocab.size()}`;
+    } else if (srcvocab && trgvocab) {
+      vocabList.push_back(alignedMemories.srcvocab);
+      vocabList.push_back(alignedMemories.trgvocab);
+      memoryLog += ` Src Vocab: ${alignedMemories.srcvocab.size()}`;
+      memoryLog += ` Trg Vocab: ${alignedMemories.trgvocab.size()}`;
     } else {
       throw new Error("vocabulary key is not found");
     }
 
-    let alignedQEMemory = null;
-    if ("qualityModel" in alignedMemories) {
-      alignedQEMemory = alignedMemories.qualityModel;
-      alignedMemoryLogMessage += ` QualityModel: ${alignedQEMemory.size()}`;
+    if (qualityModel) {
+      memoryLog += ` QualityModel: ${qualityModel.size()}`;
     }
-    console.log(`Translation Model config: ${modelConfig}`);
-    console.log(alignedMemoryLogMessage);
 
-    // construct model
-    let translationModel = new this.WasmEngineModule.TranslationModel(
-      modelConfig,
-      alignedModelMemory,
-      alignedShortlistMemory,
-      alignedVocabMemoryList,
-      alignedQEMemory
-    );
-    this.translationModels.set(languagePair, translationModel);
+    console.log(memoryLog);
 
-    // report metric about supervised/non-supervised qe model only if qe feature is on
-    if (withQualityEstimation) {
-      let isSuperVised = alignedQEMemory !== null;
-      postMessage(["reportQeIsSupervised", isSuperVised]);
-    }
-  }
-
-  _isPivotingRequired(from, to) {
-    return from !== this.PIVOT_LANGUAGE && to !== this.PIVOT_LANGUAGE;
-  }
-
-  _getLanguagePair(from, to) {
-    return `${from}${to}`;
-  }
-
-  // fetch file as buffer from given blob
-  async fetchFile(fileType, fileAlignment, languageModelBlobs) {
-    let buffer;
-    try {
-      buffer = await languageModelBlobs[fileType].arrayBuffer();
-    } catch (e) {
-      console.log(
-        `Error Fetching "${fileType}:${languageModelBlobs[fileType]}" (error: ${e})`
-      );
-      throw new Error(
-        `Error Fetching "${fileType}:${languageModelBlobs[fileType]}" (error: ${e})`
-      );
-    }
-    return {
-      buffer,
-      fileAlignment,
-      fileType,
+    const config = {
+      "beam-size": "1",
+      normalize: "1.0",
+      "word-penalty": "0",
+      "max-length-break": "128",
+      "mini-batch-words": "1024",
+      workspace: "128",
+      "max-length-factor": "2.0",
+      "skip-cost": (!withQualityEstimation).toString(),
+      "cpu-threads": "0",
+      quiet: "true",
+      "quiet-translation": "true",
+      "gemm-precision": languageModel.precision,
+      alignment: "soft",
     };
-  }
 
-  // this function constructs and initializes the AlignedMemory from the array buffer and alignment size
-  prepareAlignedMemoryFromBuffer(buffer, alignmentSize) {
-    let byteArray = new Int8Array(buffer);
-    let alignedMemory = new this.WasmEngineModule.AlignedMemory(
-      byteArray.byteLength,
-      alignmentSize
+    console.log(`Translation model config: ${config}`);
+
+    const translationModel = new this.BergamotModule.TranslationModel(
+      generateMarianConfig(config),
+      model,
+      lex,
+      vocabList,
+      qualityModel ?? null
     );
-    const alignedByteArrayView = alignedMemory.getByteArrayView();
-    alignedByteArrayView.set(byteArray);
-    return alignedMemory;
+
+    this.translationModels.set(languagePair, translationModel);
+    return translationModel;
   }
 
+  /**
+   * @param {TranslationMessage[]} messages
+   */
   translate(messages) {
     const from = messages[0].sourceLanguage;
     const to = messages[0].targetLanguage;
@@ -647,19 +558,28 @@ class TranslationHelper {
      * and vectorResponse is the result where each of its item corresponds to an item
      * of vectorSourceText in the same order.
      */
-    let vectorResponse, vectorResponseOptions, vectorSourceText;
-    try {
-      vectorResponseOptions = this._prepareResponseOptions(messages);
-      vectorSourceText = this._prepareSourceText(messages);
 
-      if (this._isPivotingRequired(from, to)) {
+    /** @type {VectorResponse | undefined} */
+    let vectorResponse;
+
+    /** @type {VectorResponseOptions | undefined} */
+    let vectorResponseOptions;
+
+    /** @type {VectorString | undefined} */
+    let vectorSourceText;
+
+    try {
+      vectorResponseOptions = this.prepareResponseOptions(messages);
+      vectorSourceText = this.prepareSourceText(messages);
+
+      if (isPivotingRequired(from, to)) {
         // translate via pivoting
-        const translationModelSrcToPivot = this._getLoadedTranslationModel(
+        const translationModelSrcToPivot = this.getLoadedTranslationModel(
           from,
-          this.PIVOT_LANGUAGE
+          PIVOT_LANGUAGE
         );
-        const translationModelPivotToTarget = this._getLoadedTranslationModel(
-          this.PIVOT_LANGUAGE,
+        const translationModelPivotToTarget = this.getLoadedTranslationModel(
+          PIVOT_LANGUAGE,
           to
         );
         vectorResponse = this.translationService.translateViaPivoting(
@@ -670,7 +590,7 @@ class TranslationHelper {
         );
       } else {
         // translate without pivoting
-        const translationModel = this._getLoadedTranslationModel(from, to);
+        const translationModel = this.getLoadedTranslationModel(from, to);
         vectorResponse = this.translationService.translate(
           translationModel,
           vectorSourceText,
@@ -678,47 +598,51 @@ class TranslationHelper {
         );
       }
 
-      // parse all relevant information from vectorResponse
-      const listTranslatedText = this._parseTranslatedText(vectorResponse);
-      return listTranslatedText;
-    } catch (e) {
-      console.error("Error in translation engine ", e);
-      sendException(e);
+      return mapVector(
+        vectorResponse,
+        response => response.getTranslatedText()
+      );
+    } catch (error) {
+      console.error("Error in translation engine ", error);
+      sendException(error);
       postMessage(["reportError", "marian"]);
       postMessage(["updateProgress", "translationLoadedWithErrors"]);
-      throw e; // to do: Should we re-throw?
     } finally {
-      // necessary clean up
-      if (typeof vectorSourceText !== "undefined") {
-        vectorSourceText.delete();
-      }
-      if (typeof vectorResponseOptions !== "undefined") {
-        vectorResponseOptions.delete();
-      }
-      if (typeof vectorResponse !== "undefined") {
-        vectorResponse.delete();
-      }
+      // Clean up any of the data that is no longer needed.
+      vectorSourceText?.delete();
+      vectorResponseOptions?.delete();
+      vectorResponse?.delete();
     }
   }
 
-  _getLoadedTranslationModel(from, to) {
-    const languagePair = this._getLanguagePair(from, to);
-    if (!this.translationModels.has(languagePair)) {
+  /**
+   * Returns the already constructed model given the language pair.
+   * @returns {TranslationModel}
+   */
+  getLoadedTranslationModel(from, to) {
+    const languagePair = getLanguagePair(from, to);
+    const translationModel = this.translationModels.get(languagePair);
+    if (!translationModel) {
       throw Error(`Translation model '${languagePair}' not loaded`);
     }
-    return this.translationModels.get(languagePair);
+    return translationModel;
   }
 
-  _prepareResponseOptions(messages) {
-    const vectorResponseOptions = new this.WasmEngineModule.VectorResponseOptions();
-    // eslint-disable-next-line no-unused-vars
-    messages.forEach(message => {
+  /**
+   * @param {TranslationMessage[]} messages
+   * @returns {VectorResponseOptions}
+   */
+  prepareResponseOptions(messages) {
+    const vectorResponseOptions = new this.BergamotModule.VectorResponseOptions();
+
+    for (const message of messages) {
       vectorResponseOptions.push_back({
         qualityScores: message.withQualityEstimation,
         alignment: true,
         html: message.isHTML,
       });
-    });
+    }
+
     if (vectorResponseOptions.size() === 0) {
       vectorResponseOptions.delete();
       throw Error("No Translation Options provided");
@@ -726,85 +650,146 @@ class TranslationHelper {
     return vectorResponseOptions;
   }
 
-  _prepareSourceText(messages) {
-    let vectorSourceText = new this.WasmEngineModule.VectorString();
-    messages.forEach(message => {
-      const sourceParagraph = message.sourceParagraph;
-      // prevent empty paragraph - it breaks the translation
+  /**
+   * @param {TranslationMessage[]} messages
+   * @returns {VectorString}
+   */
+  prepareSourceText(messages) {
+    const vectorSourceText = new this.BergamotModule.VectorString();
+
+    for (const { sourceParagraph } of messages) {
+      // Empty paragraphs break the translation.
       if (sourceParagraph.trim() === "") {
-        return;
+        continue;
       }
       vectorSourceText.push_back(sourceParagraph);
-    });
+    }
+
     if (vectorSourceText.size() === 0) {
       vectorSourceText.delete();
       throw Error("No text provided to translate");
     }
+
     return vectorSourceText;
-  }
-
-  _parseTranslatedText(vectorResponse) {
-    const result = [];
-    for (let i = 0; i < vectorResponse.size(); i += 1) {
-      const response = vectorResponse.get(i);
-      result.push(response.getTranslatedText());
-    }
-    return result;
-  }
-
-  // this function extracts all the translated sentences from the Response and returns them.
-  getAllTranslatedSentencesOfParagraph(response) {
-    const sentences = [];
-    const text = response.getTranslatedText();
-    for (
-      let sentenceIndex = 0;
-      sentenceIndex < response.size();
-      sentenceIndex += 1
-    ) {
-      const utf8SentenceByteRange = response.getTranslatedSentence(
-        sentenceIndex
-      );
-      sentences.push(
-        this._getSentenceFromByteRange(text, utf8SentenceByteRange)
-      );
-    }
-    return sentences;
-  }
-
-  // this function extracts all the source sentences from the Response and returns them.
-  getAllSourceSentencesOfParagraph(response) {
-    const sentences = [];
-    const text = response.getOriginalText();
-    for (
-      let sentenceIndex = 0;
-      sentenceIndex < response.size();
-      sentenceIndex += 1
-    ) {
-      const utf8SentenceByteRange = response.getSourceSentence(sentenceIndex);
-      sentences.push(
-        this._getSentenceFromByteRange(text, utf8SentenceByteRange)
-      );
-    }
-    return sentences;
-  }
-
-  /*
-   * this function returns a substring of text (a string). The substring is represented by
-   * byteRange (begin and end endices) within the utf-8 encoded version of the text.
-   */
-  _getSentenceFromByteRange(text, byteRange) {
-    const encoder = new TextEncoder(); // string to utf-8 converter
-    const decoder = new TextDecoder(); // utf-8 to string converter
-    const utf8BytesView = encoder.encode(text);
-    const utf8SentenceBytes = utf8BytesView.subarray(
-      byteRange.begin,
-      byteRange.end
-    );
-    return decoder.decode(utf8SentenceBytes);
   }
 }
 
+/**
+ * Transforms a langauge pair, like "en" -> "es" to "enes".
+ *
+ * @param {string} from
+ * @param {string} to
+ * @returns {boolean}
+ */
+function isPivotingRequired(from, to) {
+  return from !== PIVOT_LANGUAGE && to !== PIVOT_LANGUAGE;
+}
+
+/**
+ * Transforms a langauge pair, like "en" -> "es" to "enes".
+ *
+ * @param {string} from
+ * @param {string} to
+ * @returns {string}
+ */
+function getLanguagePair(from, to) {
+  return `${from}${to}`;
+}
+
+/**
+ * Maps the Bergamot Vector to a JS array
+ * @param {Vector} vector
+ * @param {Function} fn
+ */
+function mapVector(vector, fn) {
+  const result = [];
+  for (let index = 0; index < vector.size(); index++) {
+    result.push(fn(vector.get(index), index));
+  }
+  return result;
+}
+
+/**
+ * This function returns a substring of text. The substring is represented by
+ * byteRange (begin and end indices) within the utf-8 encoded version of the text.
+ *
+ * @param {string} text
+ * @param {{ begin: number, end: number }} byteRange
+ */
+function getSentenceFromByteRange(text, byteRange) {
+  const encoder = new TextEncoder(); // string to utf-8 converter
+  const decoder = new TextDecoder(); // utf-8 to string converter
+  const utf8BytesView = encoder.encode(text);
+  const utf8SentenceBytes = utf8BytesView.subarray(
+    byteRange.begin,
+    byteRange.end
+  );
+  return decoder.decode(utf8SentenceBytes);
+}
+
+/**
+ * Generate a config for the Marian translation service. It requires specific whitespace.
+ *
+ * https://marian-nmt.github.io/docs/cmd/marian-decoder/
+ *
+ * @param {Record<string, string>} config
+ * @returns {string}
+ */
+function generateMarianConfig(config) {
+  const indent = "            ";
+  let result = "\n";
+
+  for (const [key, value] of Object.entries(config)) {
+    result += `${indent}${key}: ${value}\n`;
+  }
+
+  return result + indent;
+}
+
+/**
+ * The models must be placed in aligned memory that the Bergamot wasm module has access
+ * to. This function copies over the model blobs into this memory space.
+ *
+ * @param {BergamotModule} BergamotModule,
+ * @param {LanguageModelBlobs} languageModel
+ * @returns {Record<ModelTypes, AlignedMemory>}
+ */
+async function allocateModelMemory(
+  BergamotModule,
+  languageModel,
+  withQualityEstimation
+) {
+  /** @type {Record<ModelTypes, AlignedMemory} */
+  const results = {};
+
+  for (const [fileType, alignment] of Object.entries(MODEL_FILE_ALIGNMENTS)) {
+    if (fileType === "qualityModel" && !withQualityEstimation) {
+      continue;
+    }
+
+    /** @type {Blob} */
+    const blob = languageModel.languageModelBlobs[fileType];
+    if (!blob) {
+      continue;
+    }
+
+    const alignedMemory = new BergamotModule.AlignedMemory(
+      byteArray.byteLength,
+      alignment
+    );
+
+    alignedMemory.getByteArrayView().set(
+      new Int8Array(await blob.arrayBuffer())
+    );
+
+    results[fileType] = alignedMemory;
+  }
+
+  return results;
+}
+
 const translationHelper = new TranslationHelper();
+
 onmessage = function(message) {
   const [name, ...args] = message.data;
   console.log(`received message`, name, args);

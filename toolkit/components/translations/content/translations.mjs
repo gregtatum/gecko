@@ -19,55 +19,21 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   });
 });
 
-/**
- * The JSON details about the attachment
- *
- * @typedef {Object} Attachment
- *
- * @prop {string} hash -     e.g. "2f7c0f7bbc...ca79f0850c4de",
- * @prop {string} size -     e.g. 5047568,
- * @prop {string} filename - e.g. "lex.50.50.deen.s2t.bin",
- * @prop {string} location - e.g. "main-workspace/translations-models/316ebb3a-0682-42cc-8e73-a3ba4bbb280f.bin",
- * @prop {string} mimetype - e.g. "application/octet-stream"
- */
 
 /**
- * The JSON that is synced from Remote Settings for the translation models.
+ * This comment block imports the types for use in JSDoc. The TypeScript language server
+ * can provide in-editor hints for the types.
  *
- * @typedef {Object} ModelRecord
- *
- * @prop {string} name - The model name  e.g. "lex.50.50.deen.s2t.bin"
- * @prop {string} fromLang -             e.g. "de"
- * @prop {string} toLang -               e.g. "en"
- * @prop {number} version -              e.g. 1
- * @prop {string} fileType -             e.g. "lex"
- * @prop {string} attachment -           e.g. Attachment
- * @prop {string} id -                   e.g. "0d4db293-a17c-4085-9bd8-e2e146c85000"
- * @prop {number} schema -               e.g. 1673023100578
- * @prop {string} last_modified -        e.g. 1673455932527
- */
-
-/**
- * The JSON that is synced from Remote Settings for the wasm binaries.
- *
- * @typedef {Object} WasmRecord
- *
- * @prop {string} name - The name of the project, e.g. "bergamot-translator"
- * @prop {string} release - The human readable identifier for the release. e.g. "v0.4.4"
- * @prop {string} revision - The commit hash for the project that generated the wasm.
- * @prop {string} license - The license of the wasm, as a https://spdx.org/licenses/
+ * @typedef {import("../translations").WasmRecord} WasmRecord
+ * @typedef {import("../translations").ModelRecord} ModelRecord
+ * @typedef {import("../translations").TranslationMessage} TranslationMessage
+ * @typedef {import("../translations").ModelTypes} ModelTypes
  */
 
 /**
  * @type {TranslationsState | undefined}
  */
 let translationsState;
-
-/**
- * TODO(Docs) - Document or point to documentation for what all of these are and mean.
- *
- * @typedef {"model" | "lex" | "vocab" | "qualityModel" | "srcvocab" | "trgvocab"} ModelTypes
- */
 
 /**
  * While the feature is in development, hide the feature behind a pref. See
@@ -399,7 +365,7 @@ class TranslationsState {
     // Load the wasm binary from remote settings, if it hasn't been already.
     lazy.console.log(`Getting remote bergamot-translator wasm records.`);
 
-    /** @type {WasmRecord[]} */
+    /** @type {import("../translations").WasmRecord[]} */
     const wasmRecords = await client.get({
       // Pull the records from the network so that we never get an empty list.
       syncIfEmpty: true,
@@ -458,7 +424,7 @@ class TranslationsState {
       });
 
       /** @type {Record<ModelTypes, Blob>} */
-      const languageModelBlobs = {};
+      const blobs = {};
 
       // TODO(refactor) - This precision seems like it should be computed in the worker.
       // We should instead pass the full model file name along instead. The
@@ -482,7 +448,7 @@ class TranslationsState {
           download,
           buffer,
         });
-        languageModelBlobs[modelRecord.fileType] = new Blob([buffer]);
+        blobs[modelRecord.fileType] = new Blob([buffer]);
 
         if (fileType === "model") {
           precision = modelRecord.name.endsWith("intgemm8.bin")
@@ -496,7 +462,7 @@ class TranslationsState {
         // TODO - This withQualityEstimation doesn't need to be passed. It can be
         // inferred if the `languageModelBlobs.qualityModel` exists.
         withQualityEstimation,
-        languageModelBlobs,
+        blobs,
         precision,
       });
     }
@@ -577,22 +543,7 @@ class TranslationsState {
       }
 
       case "translationComplete": {
-        /**
-         * The translated message.
-         * @typedef {Object} TranslatedMessage
-         * @prop {null | any} frameId
-         * @prop {number} messageID
-         * @prop {null | any} origin
-         * @prop {string} sourceLanguage
-         * @prop {string} sourceParagraph
-         * @prop {null | any} tabId
-         * @prop {string} targetLanguage
-         * @prop {string} translatedParagraph
-         * @prop {null | any} type
-         * }}
-         */
-
-        /** @type {TranslatedMessage} */
+        /** @type {TranslationMessage} */
         const message = args[0][0];
 
         /**
