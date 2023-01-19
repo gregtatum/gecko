@@ -8,17 +8,12 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
 
-XPCOMUtils.defineLazyModuleGetters(lazy, {
-  RemoteSettings: "resource://services-settings/remote-settings.js",
-});
-
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
     prefix: "Translations",
   });
 });
-
 
 /**
  * This comment block imports the types for use in JSDoc. The TypeScript language server
@@ -73,7 +68,8 @@ class TranslationsUI {
     this.state = state;
     this.setupDropdowns();
     this.setupTextarea();
-    this.state.modelRecords.then(this.uiReady.bind(this));
+    // TODO - I think this can be removed.
+    this.uiReady();
   }
 
   uiReady() {
@@ -87,11 +83,9 @@ class TranslationsUI {
    * names of the languages.
    */
   async setupDropdowns() {
+    const supportedLanguages = await this.state.supportedLanguages;
     // Update the DOM elements with the display names.
-    for (const {
-      langTag,
-      displayName,
-    } of await this.state.getSupportedLanguages()) {
+    for (const { langTag, displayName } of supportedLanguages) {
       let option = document.createElement("option");
       option.value = langTag;
       option.text = displayName;
@@ -152,54 +146,15 @@ class TranslationsUI {
 }
 
 /**
- * Measure the time in milliseconds.
- *
- * @returns {() => number}
- */
-function timer() {
-  const start = performance.now();
-  let result;
-  return () => {
-    if (result === undefined) {
-      result = performance.now() - start;
-    }
-    return result;
-  };
-}
-
-/**
  * The model and controller for initializing about:translations.
  */
 class TranslationsState {
-  worker = new Worker("chrome://global/content/translations/worker.js");
-  messageId = 0;
-
-  /**
-   * The models are managed through Remote Settings file attachments.
-   *
-   * https://firefox-source-docs.mozilla.org/services/settings/index.html#file-attachments
-   *
-   * @type {Promise<ModelRecord[]>}
-   */
-  modelRecords;
-
-  /**
-   * The wasm binary is downloaded from Remote Settings, as it is too large to bundle
-   * with Firefox.
-   *
-   * @type {Promise<ArrayBuffer>}
-   */
-  bergamotTranslatorWasm;
-
   /**
    * This class is responsible for all UI updated.
    *
    * @type {TranslationsUI}
    */
   ui;
-
-  /** @type {RemoteSettingsClient} */
-  translationsModelsClient;
 
   /**
    * The language to translate from, in the form of a BCP 47 language tag,
@@ -225,425 +180,47 @@ class TranslationsState {
    */
   messageToTranslate = "";
 
+  translationsChild = window.windowGlobalChild.getActor("Translations");
+
   /**
-   * The worker needs the wasm binary loaded before it is ready.
+   * The translations worker is only valid for a single language pair, and needs
+   * to be recreated if the language pair changes.
+   *
+   * @type {null | Promise<TranslationsWorker>}
    */
-  isWorkerReady = false;
+  translationsWorker = null;
 
   constructor() {
-    this.translationsModelsClient = lazy.RemoteSettings("translations-models");
-
-    this.modelRecords = TranslationsState.setupRemoteModels(
-      this.translationsModelsClient
-    ).catch(error => {
-      // TODO - Handle the failure with UI and the option to re-trigger a download. This
-      // error could be due to a transient network error, or if a user is offline, or if
-      // the Remote Settings service is down. The UI should present these errors nicely.
-      lazy.console.error("Error getting the remote language models", error);
-    });
-
-    this.bergamotTranslatorWasm = TranslationsState.getBergamotTranslatorWasm(
-      this.translationsWasmClient
-    ).catch(error => {
-      // TODO - Handle the failure with UI and the option to re-trigger a download. This
-      // error could be due to a transient network error, or if a user is offline, or if
-      // the Remote Settings service is down. The UI should present these errors nicely.
-      lazy.console.error(
-        "Error getting the remote wasm for the bergamot translator",
-        error
-      );
-    });
-
+    this.supportedLanguages = this.translationsChild.getSupportedLanguages();
     this.ui = new TranslationsUI(this);
-
-    this.worker.addEventListener("message", this.onMessage.bind(this));
-
-    this.setupWorker();
-  }
-
-  destroy() {
-    this.worker.removeEventListener("message", this.onMessage);
-  }
-
-  async setupWorker() {
-    const wasmArrayBuffer = await this.bergamotTranslatorWasm;
-    this.worker.postMessage(["setupBergamotTranslator", wasmArrayBuffer]);
-    this.isWorkerReady = true;
-    this.maybeRequestTranslation();
-  }
-
-  /**
-   * @param {RemoteSettingsClient} client
-   * @returns {Promise<ModelRecord[]>}
-   */
-  static async setupRemoteModels(client) {
-    // DO NOT LAND! This is working around a bug in Remote Settings dev server.
-    client.verifySignature = false;
-
-    client.on("sync", async ({ data: { created, updated, deleted } }) => {
-      // Language model attachments will only be downloaded when they are used.
-      lazy.console.log(
-        `Remote Settings "sync" event for remote language models `,
-        {
-          created,
-          updated,
-          deleted,
-        }
-      );
-
-      // Remove local attachments of remotely deleted records.
-      await Promise.all(
-        deleted.map(async record => {
-          if (record.attachment) {
-            await client.attachments.deleteDownloaded(record);
-          }
-        })
-      );
-
-      // TODO - Handle updated records, by invalidating old attachments, and downloading
-      // new ones.
-      for (const record of updated) {
-        // eslint-disable-next-line no-unused-vars
-        const { new: updatedRecord } = record;
-      }
-    });
-
-    // Load the models. If no data is present, then there will be an initial sync.
-    // Rely on Remote Settings for the syncing strategy for receiving updates.
-    lazy.console.log(`Getting remote language models.`);
-
-    /** @type {ModelRecord[]} */
-    const modelRecords = await client.get({
-      // Pull the records from the network so that we never get an empty list.
-      syncIfEmpty: true,
-      // TODO - We should consider the verification process. For now do the slow/safe
-      // thing of always verifying the signature.
-      verifySignature: true,
-    });
-
-    lazy.console.log(`Remote language models loaded.`, modelRecords);
-
-    return modelRecords;
-  }
-
-  /**
-   * @returns {Promise<ArrayBuffer>}
-   */
-  static async getBergamotTranslatorWasm() {
-    const downloadTimer = timer();
-
-    /** @type {RemoteSettingsClient} */
-    const client = lazy.RemoteSettings("translations-wasm");
-
-    // DO NOT LAND! This is working around a bug in Remote Settings dev server.
-    client.verifySignature = false;
-
-    client.on("sync", async ({ data: { created, updated, deleted } }) => {
-      lazy.console.log(`"sync" event for remote wasm `, {
-        created,
-        updated,
-        deleted,
-      });
-
-      // Remove local attachments of remotely deleted records.
-      await Promise.all(
-        deleted.map(async record => {
-          if (record.attachment) {
-            await client.attachments.deleteDownloaded(record);
-          }
-        })
-      );
-
-      // TODO - Handle updated records, by invalidating old attachments, and downloading
-      // new ones.
-      for (const record of updated) {
-        // eslint-disable-next-line no-unused-vars
-        const { new: updatedRecord } = record;
-      }
-    });
-
-    // Load the wasm binary from remote settings, if it hasn't been already.
-    lazy.console.log(`Getting remote bergamot-translator wasm records.`);
-
-    /** @type {import("../translations").WasmRecord[]} */
-    const wasmRecords = await client.get({
-      // Pull the records from the network so that we never get an empty list.
-      syncIfEmpty: true,
-      // TODO - We should consider the verification process. For now do the slow/safe
-      // thing of always verifying the signature.
-      verifySignature: true,
-      // Only get the bergamot-translator record.
-      filter: { name: "bergamot-translator" },
-    });
-
-    const wasmRecord = wasmRecords[0];
-    if (wasmRecords.length !== 1 || !wasmRecord) {
-      lazy.console.error(
-        "Expected the bergamot-translator to only have 1 record."
-      );
-    }
-
-    // Unlike the models, greedily download the wasm.
-    const { buffer } = await client.attachments.download(wasmRecord);
-
-    lazy.console.log(
-      `"bergamot-translator" wasm binary loaded in ${downloadTimer() / 1000} seconds`,
-      wasmRecord,
-      buffer
-    );
-
-    return buffer;
-  }
-
-  /**
-   * @prop {Array<{ name: string, withQualityEstimation: boolean }} languagePairs
-   */
-  async getLanguageModels(languagePairs) {
-    const totalModelTime = timer();
-
-    const models = [];
-    const allModelRecords = await this.modelRecords;
-
-    for (const { name, withQualityEstimation } of languagePairs) {
-      // TODO(Refactor) - Pass the fromLang and toLang in the message rather than the
-      // combined name.
-      const fromLang = name[0] + name[1];
-      const toLang = name[2] + name[3];
-
-      // Get the records of models that match the translation.
-      const modelRecords = allModelRecords.filter(modelRecord => {
-        if (!withQualityEstimation && modelRecord.fileType === "qualityModel") {
-          // Do not include the quality models if they aren't needed.
-          return false;
-        }
-
-        // Does the models match the languages?
-        return (
-          modelRecord.fromLang === fromLang && modelRecord.toLang === toLang
-        );
-      });
-
-      /** @type {Record<ModelTypes, Blob>} */
-      const blobs = {};
-
-      // TODO(refactor) - This precision seems like it should be computed in the worker.
-      // We should instead pass the full model file name along instead. The
-      // languageModelBlobs can be refactored from a `Record<ModelTypes, Blob>` to a
-      // `Record<ModelTypes, {blob: Blob, name: string}>` or maybe even just
-      // `Array<{ blob, name, fileType }>`
-      let precision = "int8shiftAlphaAll";
-
-      for (const modelRecord of modelRecords) {
-        const { fileType } = modelRecord;
-        const logInfo = { fromLang, toLang, fileType };
-        lazy.console.log("Downloading model", logInfo);
-
-        const modelTime = timer();
-        const download = await this.translationsModelsClient.attachments.download(
-          modelRecord
-        );
-        const { buffer } = download;
-        lazy.console.log(`Model fetched in ${modelTime() / 1000} seconds`, {
-          ...logInfo,
-          download,
-          buffer,
-        });
-        blobs[modelRecord.fileType] = new Blob([buffer]);
-
-        if (fileType === "model") {
-          precision = modelRecord.name.endsWith("intgemm8.bin")
-            ? "int8shiftAll"
-            : "int8shiftAlphaAll";
-        }
-      }
-
-      models.push({
-        name,
-        // TODO - This withQualityEstimation doesn't need to be passed. It can be
-        // inferred if the `languageModelBlobs.qualityModel` exists.
-        withQualityEstimation,
-        blobs,
-        precision,
-      });
-    }
-
-    // TODO(Telemetry) - Report on this performance.
-    lazy.console.log(
-      `${languagePairs.length} Language model(s) took ${totalModelTime() /
-        1000} seconds to get.`,
-      models
-    );
-
-    return models;
-  }
-
-  /**
-   * @param {MessageEvent} event
-   */
-  async onMessage(event) {
-    const [name, ...args] = event.data;
-    lazy.console.log(`worker.js message`, name, args);
-
-    // TODO(Refactor) - remove this once all of the messages are used or refactored.
-    /* eslint-disable no-unused-vars */
-    switch (name) {
-      case "reportPerformanceTimespan": {
-        // TODO(Telemetry)
-
-        /** @type {"model_load_time_num"} */
-        const _perfType = args[0];
-
-        /** @type {number} */
-        const elapsedMS = args[1];
-        break;
-      }
-
-      case "reportException": {
-        // TODO(Telemetry) - In the addon this uses Sentry. Firefox currently cannot
-        // capture stacks, but potentially could. The addon uses some complicated
-        // tricks to serialize the Error message.
-        //
-        // See https://bugzilla.mozilla.org/show_bug.cgi?id=1728784
-
-        /** @type {string} */
-        const errorMessage = args[0];
-        break;
-      }
-
-      case "updateProgress": {
-        /**
-         @type {
-            "loadingTranslationEngine"
-            | "errorLoadingWasm"
-            | "translationLoadedWithErrors"
-            | "translationEnabledNoOT"
-            | "translationEnabled"
-            | "translationLoadedWithErrors"
-            | ["translationProgress", string]
-          }
-          */
-        const progress = args[0];
-        break;
-      }
-
-      case "reportError": {
-        /**
-          @type {
-           "engine_download"
-           | "engine_load"
-           | "engine_load"
-           | "translation"
-           | "model_load"
-           | "marian"
-          }
-          */
-        const error = args[0];
-        // TODO(Telemetry) - This is a specific error.
-        break;
-      }
-
-      case "translationComplete": {
-        /** @type {TranslationMessage} */
-        const message = args[0][0];
-
-        /**
-         * A tuple of total words, and milliseconds elapsed.
-         * @type {[number, number]}
-         */
-        const timeElapsed = args[1];
-        this.ui.updateTranslation(message.translatedParagraph);
-        break;
-      }
-
-      case "downloadLanguageModels": {
-        /**
-         * @type {Array<{ name: string, withQualityEstimation: boolean }}
-         */
-        const languagePairs = args[0];
-
-        // TODO(Correctness) - Handle the error when models fail to download.
-        // TODO(Refactor) - The addon mixes "download" and "get" verbs. It would be nice
-        // to refactor to use "get" as this may be getting it from the cache, or
-        // downloading it.
-        this.worker.postMessage([
-          "responseDownloadLanguageModels",
-          await this.getLanguageModels(languagePairs),
-        ]);
-
-        break;
-      }
-
-      case "displayOutboundTranslation": {
-        // TODO - Remove me. This displays the widget to translate forms which has
-        // no immediate plans of being used.
-
-        /** @type {null} */
-        const unknown = args[0];
-        break;
-      }
-
-      case "reportQeIsSupervised": {
-        // TODO(Telemetry) This seems like it doesn't need to go through message passing
-        // perhaps this can be simplified to the UI layer.
-
-        // Reports on quality estimation whether or not it is supervised.
-        /** @type {boolean} */
-        const isSupervised = args[0];
-        break;
-      }
-    }
-    /* eslint-enable no-unused-vars */
-  }
-
-  /**
-   * Get the list of languages and their display names, sorted by their display names.
-   *
-   * @returns {Promise<Array<{ langTag: string, displayName }>>}
-   */
-  async getSupportedLanguages() {
-    const languages = new Set();
-    for (const { fromLang } of await this.modelRecords) {
-      languages.add(fromLang);
-    }
-
-    const displayNames = new Services.intl.DisplayNames(undefined, {
-      type: "language",
-    });
-
-    return [...languages]
-      .map(langTag => ({
-        langTag,
-        displayName: displayNames.of(langTag),
-      }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
   /**
    * Only request translation when it's needed.
    */
-  maybeRequestTranslation() {
-    if (!this.fromLanguage || !this.toLanguage || !this.messageToTranslate || !this.isWorkerReady) {
+  async maybeRequestTranslation() {
+    if (
+      !this.fromLanguage ||
+      !this.toLanguage ||
+      !this.messageToTranslate ||
+      !this.translationsWorker
+    ) {
       // Not everything is set for translation.
       this.ui.updateTranslation("");
       return;
     }
 
-    this.worker.postMessage([
-      "translate",
-      [
-        {
-          messageID: this.messageId++,
-          translatedParagraph: null,
-          sourceParagraph: this.messageToTranslate,
-          sourceLanguage: this.fromLanguage,
-          targetLanguage: this.toLanguage,
-          tabId: null,
-          frameId: null,
-          origin: null,
-          type: null,
-        },
-      ],
-    ]);
+    const translationsWorker = await this.translationsWorker;
+    const start = performance.now();
+    lazy.console.log(
+      "Requesting translation:",
+      JSON.stringify(this.messageToTranslate.slice(0, 20)) + "..."
+    );
+    this.ui.updateTranslation(
+      await translationsWorker.translate(this.messageToTranslate)
+    );
+    const duration = performance.now() - start;
+    lazy.console.log(`Translation done in ${duration / 1000} seconds`);
   }
 
   /**
@@ -652,7 +229,29 @@ class TranslationsState {
   setFromLanguage(lang) {
     if (lang !== this.fromLanguage) {
       this.fromLanguage = lang;
+      if (this.toLanguage) {
+        // The language pair changed, rebuild the worker.
+        this.rebuildWorker();
+      }
       this.maybeRequestTranslation();
+    }
+  }
+
+  async rebuildWorker() {
+    const start = performance.now();
+    lazy.console.log("Rebuilding the translations worker");
+    this.translationsWorker = this.translationsChild.getTranslationsWorker(
+      this.fromLanguage,
+      this.toLanguage
+    );
+    try {
+      await this.translationsWorker;
+      const duration = performance.now() - start;
+      lazy.console.log(
+        `Rebuilt the translations worker in ${duration / 1000} seconds`
+      );
+    } catch (error) {
+      lazy.console.error("Failed to get the Translations worker", error);
     }
   }
 
@@ -662,6 +261,10 @@ class TranslationsState {
   setToLanguage(lang) {
     if (lang !== this.toLanguage) {
       this.toLanguage = lang;
+      if (this.fromLanguage) {
+        // The language pair changed, rebuild the worker.
+        this.rebuildWorker();
+      }
       this.maybeRequestTranslation();
     }
   }

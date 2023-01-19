@@ -319,11 +319,7 @@ class TranslationHelper {
     }
   }
 
-  getLanguageModels(
-    sourceLanguage,
-    targetLanguage,
-    withQualityEstimation
-  ) {
+  getLanguageModels(sourceLanguage, targetLanguage, withQualityEstimation) {
     this.sourceLanguage = sourceLanguage;
     this.targetLanguage = targetLanguage;
     this.withQualityEstimation = withQualityEstimation;
@@ -375,7 +371,7 @@ class TranslationHelper {
       const duration = performance.now() - start;
       console.log(
         `Model '${this.sourceLanguage} -> ${this.targetLanguage}' successfully ` +
-          `constructed in ${duration /1000} secs`
+          `constructed in ${duration / 1000} secs`
       );
       postMessage([
         "reportPerformanceTimespan",
@@ -409,11 +405,9 @@ class TranslationHelper {
     if (!this.translationService) {
       const config = {
         // Caching is disabled (see https://github.com/mozilla/firefox-translations/issues/288)
-        cacheSize: 0
+        cacheSize: 0,
       };
-      this.translationService = new this.BergamotModule.BlockingService(
-        config
-      );
+      this.translationService = new this.BergamotModule.BlockingService(config);
       console.log("Translation Service created with config", config);
     }
   }
@@ -487,12 +481,16 @@ class TranslationHelper {
       qualityModel,
       srcvocab,
       trgvocab,
-    } = allocateModelMemory(this.BergamotModule, languageModels, withQualityEstimation);
+    } = allocateModelMemory(
+      this.BergamotModule,
+      languageModels,
+      withQualityEstimation
+    );
 
     let memoryLog =
-      `Aligned memory sizes: `
-      + `Model:${model.size()}, `
-      + `Shortlist:${lex.size()}, `;
+      `Aligned memory sizes: ` +
+      `Model:${model.size()}, ` +
+      `Shortlist:${lex.size()}, `;
 
     // Set up the vocab list, which could either be a single "vocab" model, or a
     // "srcvocab" and "trgvocab" pair.
@@ -516,6 +514,11 @@ class TranslationHelper {
 
     console.log(memoryLog);
 
+    const modelName = "";
+    if (!modelName) {
+      throw new Error("Expected the main model' name here");
+    }
+
     const config = {
       "beam-size": "1",
       normalize: "1.0",
@@ -528,7 +531,9 @@ class TranslationHelper {
       "cpu-threads": "0",
       quiet: "true",
       "quiet-translation": "true",
-      "gemm-precision": languageModel.precision,
+      "gemm-precision": modelName.endsWith("intgemm8.bin")
+        ? "int8shiftAll"
+        : "int8shiftAlphaAll",
       alignment: "soft",
     };
 
@@ -598,9 +603,8 @@ class TranslationHelper {
         );
       }
 
-      return mapVector(
-        vectorResponse,
-        response => response.getTranslatedText()
+      return mapVector(vectorResponse, response =>
+        response.getTranslatedText()
       );
     } catch (error) {
       console.error("Error in translation engine ", error);
@@ -778,9 +782,9 @@ async function allocateModelMemory(
       alignment
     );
 
-    alignedMemory.getByteArrayView().set(
-      new Int8Array(await blob.arrayBuffer())
-    );
+    alignedMemory
+      .getByteArrayView()
+      .set(new Int8Array(await blob.arrayBuffer()));
 
     results[fileType] = alignedMemory;
   }
