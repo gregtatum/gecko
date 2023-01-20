@@ -216,9 +216,10 @@ class TranslationsState {
       "Requesting translation:",
       JSON.stringify(this.messageToTranslate.slice(0, 20)) + "..."
     );
-    this.ui.updateTranslation(
-      await translationsWorker.translate(this.messageToTranslate)
-    );
+    const [translation] = await translationsWorker.translate([
+      this.messageToTranslate,
+    ]);
+    this.ui.updateTranslation(translation);
     const duration = performance.now() - start;
     lazy.console.log(`Translation done in ${duration / 1000} seconds`);
   }
@@ -250,6 +251,7 @@ class TranslationsState {
       lazy.console.log(
         `Rebuilt the translations worker in ${duration / 1000} seconds`
       );
+      this.maybeRequestTranslation();
     } catch (error) {
       lazy.console.error("Failed to get the Translations worker", error);
     }

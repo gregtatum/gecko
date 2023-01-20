@@ -44,8 +44,11 @@ class TranslationsWorker {
     /** @type {Promise<void>} */
     this.isReady = new Promise((resolve, reject) => {
       const onMessage = ({ data }) => {
-        if (data.type === "initialized") {
-          lazy.console.log("TranslationsWorker is now ready.");
+        lazy.console.log(
+          "TranslationsWorker received an initialization message",
+          data.type
+        );
+        if (data.type === "initialization-success") {
           resolve();
         } else if (data.type === "initialization-failure") {
           reject(data.error);
@@ -65,20 +68,21 @@ class TranslationsWorker {
   }
 
   /**
-   * @param {string} message
+   * @param {string[]} messageBatch
    * @returns {Promise<string>}
    */
-  translate(message) {
-    const messageGeneration = this.#messageGeneration++;
+  translate(messageBatch) {
+    const generation = this.#messageGeneration++;
 
     return new Promise((resolve, reject) => {
       const onMessage = ({ data }) => {
-        if (data.messageGeneration !== messageGeneration) {
+        console.log("Received message", data);
+        if (data.generation !== generation) {
           // This message was for someone else.
           return;
         }
         if (data.type === "translation-response") {
-          resolve(data.message);
+          resolve(data.translations);
         }
         if (data.type === "translation-error") {
           reject(data.error);
@@ -90,7 +94,8 @@ class TranslationsWorker {
 
       this.worker.postMessage({
         type: "translation-request",
-        message,
+        messageBatch,
+        generation,
       });
     });
   }
