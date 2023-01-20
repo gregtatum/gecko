@@ -11,7 +11,7 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations",
+    prefix: "Translations [about]",
   });
 });
 
@@ -38,8 +38,6 @@ function updateEnabledState() {
   if (Services.prefs.getBoolPref("browser.translations.enable")) {
     translationsState = new TranslationsState();
 
-    lazy.console.log("Translation state initialized", translationsState);
-
     document.body.style.visibility = "visible";
   } else {
     translationsState?.destroy();
@@ -58,6 +56,8 @@ class TranslationsUI {
   translationFrom = document.getElementById("translation-from");
   /** @type {HTMLDivElement} */
   translationTo = document.getElementById("translation-to");
+  /** @type {HTMLDivElement} */
+  translationToBlank = document.getElementById("translation-to-blank");
   /** @type {TranslationsState} */
   state;
 
@@ -68,14 +68,7 @@ class TranslationsUI {
     this.state = state;
     this.setupDropdowns();
     this.setupTextarea();
-    // TODO - I think this can be removed.
-    this.uiReady();
-  }
-
-  uiReady() {
-    this.translationTo.classList.remove(
-      "about-translations-input-results-loading"
-    );
+    this.translationTo.style.visibility = "visible";
   }
 
   /**
@@ -121,17 +114,50 @@ class TranslationsUI {
 
     this.state.setFromLanguage(this.languageFrom.value);
     this.state.setToLanguage(this.languageTo.value);
+    this.updateDropdownLanguageVisibility();
 
     this.languageFrom.addEventListener("input", () => {
       this.state.setFromLanguage(this.languageFrom.value);
+      this.updateDropdownLanguageVisibility();
     });
 
     this.languageTo.addEventListener("input", () => {
       this.state.setToLanguage(this.languageTo.value);
+      this.updateDropdownLanguageVisibility();
     });
   }
 
+  /**
+   * You cant translate from one language to another language. Hide the options
+   * if this is the case.
+   */
+  updateDropdownLanguageVisibility() {
+    for (const option of this.languageFrom.options) {
+      option.hidden = false;
+    }
+    for (const option of this.languageTo.options) {
+      option.hidden = false;
+    }
+    if (this.state.toLanguage) {
+      const option = this.languageFrom.querySelector(
+        `[value=${this.state.toLanguage}]`
+      );
+      if (option) {
+        option.hidden = true;
+      }
+    }
+    if (this.state.fromLanguage) {
+      const option = this.languageTo.querySelector(
+        `[value=${this.state.fromLanguage}]`
+      );
+      if (option) {
+        option.hidden = true;
+      }
+    }
+  }
+
   setupTextarea() {
+    this.state.setMessageToTranslate(this.translationFrom.value);
     this.translationFrom.addEventListener("input", () => {
       this.state.setMessageToTranslate(this.translationFrom.value);
     });
@@ -142,6 +168,13 @@ class TranslationsUI {
    */
   updateTranslation(message) {
     this.translationTo.innerText = message;
+    if (message) {
+      this.translationTo.style.visibility = "visible";
+      this.translationToBlank.style.visibility = "hidden";
+    } else {
+      this.translationTo.style.visibility = "hidden";
+      this.translationToBlank.style.visibility = "visible";
+    }
   }
 }
 
@@ -240,7 +273,10 @@ class TranslationsState {
 
   async rebuildWorker() {
     const start = performance.now();
-    lazy.console.log("Rebuilding the translations worker");
+    lazy.console.log(
+      `Rebuilding the translations worker for "${this.fromLanguage}" to "${this.toLanguage}"`
+    );
+    this.ui.updateTranslation("");
     this.translationsWorker = this.translationsChild.getTranslationsWorker(
       this.fromLanguage,
       this.toLanguage

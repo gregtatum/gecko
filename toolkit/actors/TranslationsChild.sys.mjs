@@ -9,7 +9,7 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations",
+    prefix: "Translations [child]",
   });
 });
 
@@ -44,10 +44,6 @@ class TranslationsWorker {
     /** @type {Promise<void>} */
     this.isReady = new Promise((resolve, reject) => {
       const onMessage = ({ data }) => {
-        lazy.console.log(
-          "TranslationsWorker received an initialization message",
-          data.type
-        );
         if (data.type === "initialization-success") {
           resolve();
         } else if (data.type === "initialization-failure") {
@@ -64,6 +60,8 @@ class TranslationsWorker {
       toLanguage,
       bergmotWasmArrayBuffer,
       languageModels,
+      isLoggingEnabled:
+        Services.prefs.getCharPref("browser.translations.logLevel") !== "Error",
     });
   }
 

@@ -21,10 +21,13 @@ importScripts(
   "chrome://global/content/translations/bergamot-translator/worker.js"
 );
 
-const console = self.console.createInstance({
-  maxLogLevelPref: "browser.translations.logLevel",
-  prefix: "Translations",
-});
+// Respect the preference "browser.translations.logLevel".
+let _isLoggingEnabled = false;
+function log(...args) {
+  if (_isLoggingEnabled) {
+    console.log("Translations [worker]", ...args);
+  }
+}
 
 /**
  * The pivot language is used to pivot between two different language translations
@@ -76,10 +79,15 @@ async function initialize({ data }) {
       toLanguage,
       bergmotWasmArrayBuffer,
       languageModels,
+      isLoggingEnabled,
     } = data;
-    console.log("Loading wasm");
+
+    if (isLoggingEnabled) {
+      // Respect the "browser.translations.logLevel" preference.
+      _isLoggingEnabled = true;
+    }
+
     const bergamot = await BergamotUtils.initializeWasm(bergmotWasmArrayBuffer);
-    console.log("Starting up TranslationsEngine");
     new TranslationsEngine(fromLanguage, toLanguage, bergamot, languageModels);
   } catch (error) {
     // TODO - Handle this error in the UI.
@@ -115,7 +123,6 @@ class TranslationsEngine {
       )
     );
 
-    console.log("Blocking service", Object.keys(bergamot));
     /** @type {BlockingService} */
     this.translationService = new bergamot.BlockingService({
       // Caching is disabled (see https://github.com/mozilla/firefox-translations/issues/288)
@@ -129,6 +136,7 @@ class TranslationsEngine {
     if (data.type === "initialize") {
       throw new Error("The Translations engine must not be re-initialized.");
     }
+    log("Received message", data);
 
     switch (data.type) {
       case "translation-request": {
@@ -217,7 +225,7 @@ class BergamotUtils {
    * @return {TranslationModel}
    */
   static constructSingleTranslationModel(bergamot, languageModelFiles) {
-    console.log(`Constructing translation model.`);
+    log(`Constructing translation model.`);
 
     const {
       model,
@@ -228,10 +236,12 @@ class BergamotUtils {
       trgvocab,
     } = BergamotUtils.allocateModelMemory(bergamot, languageModelFiles);
 
-    let memoryLog =
-      `Aligned memory sizes: ` +
-      `Model:${model.size()}, ` +
-      `Shortlist:${lex.size()}, `;
+    // Transform the bytes to mb, like "10.2mb"
+    const getMemory = memory => `${Math.floor(memory.size() / 100_000) / 10}mb`;
+
+    let memoryLog = `Model memory sizes in wasm heap:`;
+    memoryLog += `\n  Model: ${getMemory(model)}`;
+    memoryLog += `\n  Shortlist: ${getMemory(lex)}`;
 
     // Set up the vocab list, which could either be a single "vocab" model, or a
     // "srcvocab" and "trgvocab" pair.
@@ -239,21 +249,21 @@ class BergamotUtils {
 
     if (vocab) {
       vocabList.push_back(vocab);
-      memoryLog += ` Vocab: ${vocab.size()}`;
+      memoryLog += `\n  Vocab: ${getMemory(vocab)}`;
     } else if (srcvocab && trgvocab) {
       vocabList.push_back(srcvocab);
       vocabList.push_back(trgvocab);
-      memoryLog += ` Src Vocab: ${srcvocab.size()}`;
-      memoryLog += ` Trg Vocab: ${trgvocab.size()}`;
+      memoryLog += `\n  Src Vocab: ${getMemory(srcvocab)}`;
+      memoryLog += `\n  Trg Vocab: ${getMemory(trgvocab)}`;
     } else {
-      throw new Error("vocabulary key is not found");
+      throw new Error("Vocabulary key is not found.");
     }
 
     if (qualityModel) {
-      memoryLog += ` QualityModel: ${qualityModel.size()}`;
+      memoryLog += `\n  QualityModel: ${getMemory(qualityModel)}\n`;
     }
 
-    const config = {
+    const config = BergamotUtils.generateTextConfig({
       "beam-size": "1",
       normalize: "1.0",
       "word-penalty": "0",
@@ -271,13 +281,13 @@ class BergamotUtils {
         ? "int8shiftAll"
         : "int8shiftAlphaAll",
       alignment: "soft",
-    };
+    });
 
-    console.log(`Translation model config: ${config}`);
-    console.log(memoryLog);
+    log(`Bergamot translation model config: ${config}`);
+    log(memoryLog);
 
     return new bergamot.TranslationModel(
-      BergamotUtils.generateTextConfig(config),
+      config,
       model,
       lex,
       vocabList,
@@ -339,9 +349,7 @@ class BergamotUtils {
         },
         onRuntimeInitialized: async () => {
           const duration = performance.now() - start;
-          console.log(
-            `Bergamot wasm runtime initialized in ${duration / 1000} secs`
-          );
+          log(`Bergamot wasm runtime initialized in ${duration / 1000} secs`);
           // await at least one microtask so that the captured `bergamot` variable is
           // fully isnitializzed.
           await Promise.resolve();

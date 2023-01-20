@@ -30,7 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations",
+    prefix: "Translations [parent]",
   });
 });
 
@@ -92,14 +92,10 @@ export class TranslationsParent extends JSWindowActorParent {
           return [buffers];
         }
         // No matching model was found, try to pivot between English.
-        const buffer1 = await this.getLanguageModelBuffers(
-          fromLanguage,
-          PIVOT_LANGUAGE
-        );
-        const buffer2 = await this.getLanguageModelBuffers(
-          PIVOT_LANGUAGE,
-          toLanguage
-        );
+        const [buffer1, buffer2] = await Promise.all([
+          this.getLanguageModelBuffers(fromLanguage, PIVOT_LANGUAGE),
+          this.getLanguageModelBuffers(PIVOT_LANGUAGE, toLanguage),
+        ]);
         if (!buffer1 || !buffer2) {
           throw new Error(
             `No language models were found for ${fromLanguage} to ${toLanguage}`
@@ -335,50 +331,95 @@ export class TranslationsParent extends JSWindowActorParent {
     toLanguage,
     withQualityEstimation = false
   ) {
+    const client = this.#getModelsRemoteClient();
+
+    lazy.console.log(
+      `Beginning model downloads: "${fromLanguage}" to "${toLanguage}"`
+    );
+
+    const records = [...(await this.#getModelRecords()).values()];
+
     /**
-     * Only generate results if the model is found.
-     *
      * @type {null | Record<ModelTypes, { buffer: ArrayBuffer, record: ModelRecord }>}
      */
     let results = null;
 
-    const client = this.#getModelsRemoteClient();
+    // Use Promise.all to download (or retrieve from cache) the model files in parallel.
+    await Promise.all(
+      records.map(async record => {
+        if (record.fileType === "qualityModel" && !withQualityEstimation) {
+          // Do not include the quality models if they aren't needed.
+          return;
+        }
 
-    lazy.console.log(
-      `Beginning model downloads: "${fromLanguage}" to ${toLanguage}`
+        if (record.fromLang !== fromLanguage || record.toLang !== toLanguage) {
+          // Only use models that match.
+          return;
+        }
+
+        if (!results) {
+          results = {};
+        }
+
+        const start = Date.now();
+
+        // Download or retrieve from the locale cache:
+        const download = await client.attachments.download(record);
+
+        results[record.fileType] = {
+          buffer: download.buffer,
+          record,
+        };
+
+        lazy.console.log(
+          `Model fetched in ${(Date.now() - start) / 1000} seconds:`,
+          record.fromLang,
+          record.toLang,
+          record.fileType
+        );
+      })
     );
 
-    for (const record of (await this.#getModelRecords()).values()) {
-      if (record.fileType === "qualityModel" && !withQualityEstimation) {
-        // Do not include the quality models if they aren't needed.
-        continue;
+    if (!results) {
+      // No model files were found, pivoting will be required.
+      return null;
+    }
+
+    // Validate that all of the files we expected were actually available and
+    // downloaded.
+
+    if (!results.model) {
+      throw new Error(
+        `No model file was found for "${fromLanguage}" to "${toLanguage}."`
+      );
+    }
+
+    if (!results.lex) {
+      throw new Error(
+        `No lex file was found for "${fromLanguage}" to "${toLanguage}."`
+      );
+    }
+
+    if (withQualityEstimation && !results.qualityModel) {
+      throw new Error(
+        `No quality file was found for "${fromLanguage}" to "${toLanguage}."`
+      );
+    }
+
+    if (results.vocab) {
+      if (results.srcvocab) {
+        throw new Error(
+          `A srcvocab and vocab file were both included for "${fromLanguage}" to "${toLanguage}." Only one is needed.`
+        );
       }
-
-      if (record.fromLang !== fromLanguage || record.toLang !== toLanguage) {
-        // Only use models that match.
-        continue;
+      if (results.trgvocab) {
+        throw new Error(
+          `A trgvocab and vocab file were both included for "${fromLanguage}" to "${toLanguage}." Only one is needed.`
+        );
       }
-
-      if (results === null) {
-        // A matching model was found, generate the results.
-        results = {};
-      }
-
-      const start = Date.now();
-
-      // Download or retrieve from the locale cache:
-      const download = await client.attachments.download(record);
-
-      results[record.fileType] = {
-        buffer: download.buffer,
-        record,
-      };
-
-      lazy.console.log(
-        `Model fetched in ${(Date.now() - start) / 1000} seconds:`,
-        record.fromLang,
-        record.toLang,
-        record.fileType
+    } else if (!results.srcvocab || !results.srcvocab) {
+      throw new Error(
+        `No vocab files were provided for "${fromLanguage}" to "${toLanguage}."`
       );
     }
 
