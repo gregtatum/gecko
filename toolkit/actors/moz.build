@@ -74,8 +74,6 @@ FINAL_TARGET_FILES.actors += [
     "SelectChild.jsm",
     "SelectParent.jsm",
     "ThumbnailsChild.jsm",
-    "TranslationsChild.sys.mjs",
-    "TranslationsParent.sys.mjs",
     "UAWidgetsChild.jsm",
     "UnselectedTabHoverChild.jsm",
     "UnselectedTabHoverParent.jsm",

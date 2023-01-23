@@ -316,7 +316,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
   /**
    * Gets the language model files in an array buffer by downloading attachments from
-   * Remote Settings, or retrieving them from the locale cache. Each translation
+   * Remote Settings, or retrieving them from the local cache. Each translation
    * requires multiple files, which are enumerated in the ModelTypes.
    *
    * Results are only returned if the model is found.
@@ -363,7 +363,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
         const start = Date.now();
 
-        // Download or retrieve from the locale cache:
+        // Download or retrieve from the local cache:
         const download = await client.attachments.download(record);
 
         results[record.fileType] = {

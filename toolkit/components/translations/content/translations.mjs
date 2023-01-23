@@ -2,18 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const lazy = {};
-
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
-
-XPCOMUtils.defineLazyGetter(lazy, "console", () => {
-  return console.createInstance({
-    maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations [about]",
-  });
-});
+import { createTranslationsEngine } from "chrome://global/content/translations/engine.mjs";
 
 /**
  * This comment block imports the types for use in JSDoc. The TypeScript language server
@@ -25,25 +14,164 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * @typedef {import("../translations").ModelTypes} ModelTypes
  */
 
-/**
- * @type {TranslationsState | undefined}
- */
-let translationsState;
+// The following globals are injected via the AboutTranslationsChild actor.
+// translations.mjs is running in an unprivileged context, and these injected functions
+// allow for the page to get access to additional privileged features.
+
+/* global AT_isEnabled, AT_getSupportedLanguages, AT_log, AT_getBergmotWasmArrayBuffer,
+   AT_getTranslationModels, AT_isLoggingEnabled, AT_getAppLocale, AT_logError */
 
 /**
- * While the feature is in development, hide the feature behind a pref. See
- * modules/libpref/init/all.js and Bug 971044 for the status of enabling this project.
+ * While the feature is in development, hide the feature behind a pref. See the
+ * "browser.translations.enable" pref in modules/libpref/init/all.js and Bug 971044
+ * for the status of enabling this project.
  */
-function updateEnabledState() {
-  if (Services.prefs.getBoolPref("browser.translations.enable")) {
-    translationsState = new TranslationsState();
+if (AT_isEnabled()) {
+  // Expose the state to the global object to help with debugging.
+  window.translationsState = new TranslationsState();
+  document.body.style.visibility = "visible";
+}
 
-    document.body.style.visibility = "visible";
-  } else {
-    translationsState?.destroy();
-    translationsState = undefined;
+/**
+ * The model and controller for initializing about:translations.
+ */
+class TranslationsState {
+  /**
+   * This class is responsible for all UI updated.
+   *
+   * @type {TranslationsUI}
+   */
+  ui;
 
-    document.body.style.visibility = "hidden";
+  /**
+   * The language to translate from, in the form of a BCP 47 language tag,
+   * e.g. "en" or "fr".
+   *
+   * @type {string}
+   */
+  fromLanguage = "";
+
+  /**
+   * The language to translate to, in the form of a BCP 47 language tag,
+   * e.g. "en" or "fr".
+   *
+   * @type {string}
+   */
+  toLanguage = "";
+
+  /**
+   * The message to translate, cached so that it can be determined if the text
+   * needs to be re-translated.
+   *
+   * @type {string}
+   */
+  messageToTranslate = "";
+
+  /**
+   * The translations engine is only valid for a single language pair, and needs
+   * to be recreated if the language pair changes.
+   *
+   * @type {null | Promise<TranslationsEngine>}
+   */
+  engine = null;
+
+  constructor() {
+    this.supportedLanguages = AT_getSupportedLanguages();
+    this.ui = new TranslationsUI(this);
+  }
+
+  /**
+   * Only request translation when it's needed.
+   */
+  async maybeRequestTranslation() {
+    if (
+      !this.fromLanguage ||
+      !this.toLanguage ||
+      !this.messageToTranslate ||
+      !this.engine
+    ) {
+      // Not everything is set for translation.
+      this.ui.updateTranslation("");
+      return;
+    }
+
+    const engine = await this.engine;
+    const start = performance.now();
+    AT_log(
+      "Requesting translation:",
+      JSON.stringify(this.messageToTranslate.slice(0, 20)) + "..."
+    );
+    const [translation] = await engine.translate([this.messageToTranslate]);
+    this.ui.updateTranslation(translation);
+    const duration = performance.now() - start;
+    AT_log(`Translation done in ${duration / 1000} seconds`);
+  }
+
+  /**
+   * @param {string} lang
+   */
+  setFromLanguage(lang) {
+    if (lang !== this.fromLanguage) {
+      this.fromLanguage = lang;
+      if (this.toLanguage) {
+        // The language pair changed, rebuild the worker.
+        this.rebuildWorker();
+      }
+      this.maybeRequestTranslation();
+    }
+  }
+
+  /**
+   * Any time a language pair is changed, the TranslationsEngine needs to be rebuilt.
+   */
+  async rebuildWorker() {
+    const start = performance.now();
+    AT_log(
+      `Rebuilding the translations worker for "${this.fromLanguage}" to "${this.toLanguage}"`
+    );
+    this.ui.updateTranslation("");
+
+    this.engine = createTranslationsEngine(
+      this.fromLanguage,
+      this.toLanguage,
+      await AT_getBergmotWasmArrayBuffer(),
+      await AT_getTranslationModels(this.fromLanguage, this.toLanguage),
+      AT_isLoggingEnabled() ? AT_log : null
+    );
+
+    try {
+      await this.engine;
+      const duration = performance.now() - start;
+      AT_log(`Rebuilt the TranslationsEngine in ${duration / 1000} seconds`);
+      // TODO - Report this error in the UI.
+      this.maybeRequestTranslation();
+    } catch (error) {
+      AT_logError("Failed to get the Translations worker", error);
+    }
+  }
+
+  /**
+   * @param {string} lang
+   */
+  setToLanguage(lang) {
+    if (lang !== this.toLanguage) {
+      this.toLanguage = lang;
+      if (this.fromLanguage) {
+        // The language pair changed, rebuild the worker.
+        this.rebuildWorker();
+      }
+      this.maybeRequestTranslation();
+    }
+  }
+
+  /**
+   * @param {string} message
+   */
+  setMessageToTranslate(message) {
+    if (message !== this.messageToTranslate) {
+      this.messageToTranslate = message;
+      this.maybeRequestTranslation();
+    }
   }
 }
 
@@ -91,9 +219,7 @@ class TranslationsUI {
     }
 
     // Set the translate "from" to the app locale, if it is in the list.
-    const appLocale = new Services.intl.Locale(
-      Services.locale.appLocaleAsBCP47
-    );
+    const appLocale = AT_getAppLocale();
     for (const option of this.languageFrom.options) {
       if (option.value === appLocale.language) {
         this.languageFrom.value = option.value;
@@ -177,148 +303,3 @@ class TranslationsUI {
     }
   }
 }
-
-/**
- * The model and controller for initializing about:translations.
- */
-class TranslationsState {
-  /**
-   * This class is responsible for all UI updated.
-   *
-   * @type {TranslationsUI}
-   */
-  ui;
-
-  /**
-   * The language to translate from, in the form of a BCP 47 language tag,
-   * e.g. "en" or "fr".
-   *
-   * @type {string}
-   */
-  fromLanguage = "";
-
-  /**
-   * The language to translate to, in the form of a BCP 47 language tag,
-   * e.g. "en" or "fr".
-   *
-   * @type {string}
-   */
-  toLanguage = "";
-
-  /**
-   * The message to translate, cached so that it can be determined if the text
-   * needs to be re-translated.
-   *
-   * @type {string}
-   */
-  messageToTranslate = "";
-
-  translationsChild = window.windowGlobalChild.getActor("Translations");
-
-  /**
-   * The translations worker is only valid for a single language pair, and needs
-   * to be recreated if the language pair changes.
-   *
-   * @type {null | Promise<TranslationsWorker>}
-   */
-  translationsWorker = null;
-
-  constructor() {
-    this.supportedLanguages = this.translationsChild.getSupportedLanguages();
-    this.ui = new TranslationsUI(this);
-  }
-
-  /**
-   * Only request translation when it's needed.
-   */
-  async maybeRequestTranslation() {
-    if (
-      !this.fromLanguage ||
-      !this.toLanguage ||
-      !this.messageToTranslate ||
-      !this.translationsWorker
-    ) {
-      // Not everything is set for translation.
-      this.ui.updateTranslation("");
-      return;
-    }
-
-    const translationsWorker = await this.translationsWorker;
-    const start = performance.now();
-    lazy.console.log(
-      "Requesting translation:",
-      JSON.stringify(this.messageToTranslate.slice(0, 20)) + "..."
-    );
-    const [translation] = await translationsWorker.translate([
-      this.messageToTranslate,
-    ]);
-    this.ui.updateTranslation(translation);
-    const duration = performance.now() - start;
-    lazy.console.log(`Translation done in ${duration / 1000} seconds`);
-  }
-
-  /**
-   * @param {string} lang
-   */
-  setFromLanguage(lang) {
-    if (lang !== this.fromLanguage) {
-      this.fromLanguage = lang;
-      if (this.toLanguage) {
-        // The language pair changed, rebuild the worker.
-        this.rebuildWorker();
-      }
-      this.maybeRequestTranslation();
-    }
-  }
-
-  async rebuildWorker() {
-    const start = performance.now();
-    lazy.console.log(
-      `Rebuilding the translations worker for "${this.fromLanguage}" to "${this.toLanguage}"`
-    );
-    this.ui.updateTranslation("");
-    this.translationsWorker = this.translationsChild.getTranslationsWorker(
-      this.fromLanguage,
-      this.toLanguage
-    );
-    try {
-      await this.translationsWorker;
-      const duration = performance.now() - start;
-      lazy.console.log(
-        `Rebuilt the translations worker in ${duration / 1000} seconds`
-      );
-      this.maybeRequestTranslation();
-    } catch (error) {
-      lazy.console.error("Failed to get the Translations worker", error);
-    }
-  }
-
-  /**
-   * @param {string} lang
-   */
-  setToLanguage(lang) {
-    if (lang !== this.toLanguage) {
-      this.toLanguage = lang;
-      if (this.fromLanguage) {
-        // The language pair changed, rebuild the worker.
-        this.rebuildWorker();
-      }
-      this.maybeRequestTranslation();
-    }
-  }
-
-  /**
-   * @param {string} message
-   */
-  setMessageToTranslate(message) {
-    if (message !== this.messageToTranslate) {
-      this.messageToTranslate = message;
-      this.maybeRequestTranslation();
-    }
-  }
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  updateEnabledState();
-  Services.prefs.addObserver("browser.translations.enable", updateEnabledState);
-});

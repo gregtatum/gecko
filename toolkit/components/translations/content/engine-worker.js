@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* global loadEmscriptenGlueCode, serializeError, importScripts */
-
 /**
  * @typedef {import("../translations").BergamotModule} BergamotModule
  * @typedef {import("../translations").TranslationMessage} TranslationMessage
@@ -17,6 +15,7 @@
  * @typedef {import("../translations").Vector} Vector
  */
 
+/* global loadEmscriptenGlueCode */
 importScripts(
   "chrome://global/content/translations/bergamot-translator/worker.js"
 );
@@ -65,6 +64,8 @@ addEventListener("message", initialize);
 
 /**
  * Initialize the engine, and get it ready to handle translation requests.
+ * The "initialize" message must be received before any other message handling
+ * requests will be processed.
  */
 async function initialize({ data }) {
   if (data.type !== "initialize") {
@@ -88,7 +89,7 @@ async function initialize({ data }) {
     }
 
     const bergamot = await BergamotUtils.initializeWasm(bergmotWasmArrayBuffer);
-    new TranslationsEngine(fromLanguage, toLanguage, bergamot, languageModels);
+    new TranslationsEngineWorker(fromLanguage, toLanguage, bergamot, languageModels);
   } catch (error) {
     // TODO - Handle this error in the UI.
     console.error(error);
@@ -101,7 +102,8 @@ async function initialize({ data }) {
   removeEventListener("message", initialize);
 }
 
-class TranslationsEngine {
+// TODO - Add docs
+class TranslationsEngineWorker {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
