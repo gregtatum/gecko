@@ -2,19 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { createTranslationsEngine } from "chrome://global/content/translations/engine.mjs";
-
-/**
- * @typedef {import("./engine.mjs").createTranslationsEngine} createTranslationsEngine
- * @typedef {import("./engine.mjs").TranslationsEngine} TranslationsEngine
- */
-
 // The following globals are injected via the AboutTranslationsChild actor.
 // translations.mjs is running in an unprivileged context, and these injected functions
 // allow for the page to get access to additional privileged features.
 
-/* global AT_isEnabled, AT_getSupportedLanguages, AT_log, AT_getBergmotWasmArrayBuffer,
-   AT_getLanguageModelFiles, AT_isLoggingEnabled, AT_getAppLocale, AT_logError */
+/* global AT_isEnabled, AT_getSupportedLanguages, AT_log,
+   AT_getAppLocale, AT_logError,
+   AT_createTranslationsEngine, AT_translate */
 
 /**
  * The model and controller for initializing about:translations.
@@ -80,13 +74,9 @@ class TranslationsState {
       return;
     }
 
-    const engine = await this.engine;
+    await this.engine;
     const start = performance.now();
-    AT_log(
-      "Requesting translation:",
-      JSON.stringify(this.messageToTranslate.slice(0, 20)) + "..."
-    );
-    const [translation] = await engine.translate([this.messageToTranslate]);
+    const [translation] = await AT_translate([this.messageToTranslate]);
     this.ui.updateTranslation(translation);
     const duration = performance.now() - start;
     AT_log(`Translation done in ${duration / 1000} seconds`);
@@ -116,12 +106,9 @@ class TranslationsState {
     );
     this.ui.updateTranslation("");
 
-    this.engine = createTranslationsEngine(
+    this.engine = AT_createTranslationsEngine(
       this.fromLanguage,
       this.toLanguage,
-      await AT_getBergamotWasmArrayBuffer(),
-      await AT_getLanguageModelFiles(this.fromLanguage, this.toLanguage),
-      AT_isLoggingEnabled() ? AT_log : null
     );
 
     try {
@@ -210,7 +197,7 @@ class TranslationsUI {
     }
 
     // Set the translate "from" to the app locale, if it is in the list.
-    const appLocale = AT_getAppLocale();
+    const appLocale = new Intl.Locale(AT_getAppLocale());
     for (const option of this.languageFrom.options) {
       if (option.value === appLocale.language) {
         this.languageFrom.value = option.value;

@@ -30,7 +30,7 @@ XPCOMUtils.defineLazyModuleGetters(lazy, {
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations [parent]",
+    prefix: "Translations",
   });
 });
 
@@ -65,7 +65,7 @@ export class TranslationsParent extends JSWindowActorParent {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "Translations:GetBergamotWasmArrayBuffer": {
-        return this.#getBergmotWasmArrayBuffer();
+        return this.#getBergamotWasmArrayBuffer();
       }
       case "Translations:GetLanguageModelFiles": {
         const { fromLanguage, toLanguage } = data;
@@ -181,6 +181,7 @@ export class TranslationsParent extends JSWindowActorParent {
       return this.#modelRecords;
     }
 
+    const now = Date.now();
     const client = this.#getModelsRemoteClient();
 
     // Load the models. If no data is present, then there will be an initial sync.
@@ -200,7 +201,8 @@ export class TranslationsParent extends JSWindowActorParent {
       this.#modelRecords.set(modelRecord.id, modelRecord);
     }
 
-    lazy.console.log(`Remote language models loaded.`, records);
+    const duration = (Date.now() - now) / 1000
+    lazy.console.log(`Remote language models loaded in ${duration} seconds.`, records);
 
     return this.#modelRecords;
   }
@@ -253,7 +255,7 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @returns {Promise<ArrayBuffer>}
    */
-  async #getBergmotWasmArrayBuffer() {
+  async #getBergamotWasmArrayBuffer() {
     const start = Date.now();
     const client = this.#getWasmRemoteClient();
 

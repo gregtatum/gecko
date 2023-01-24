@@ -6,4 +6,3 @@ toolkit.jar:
     content/global/translations/translations.html  (content/translations.html)
     content/global/translations/translations.css   (content/translations.css)
     content/global/translations/translations.mjs   (content/translations.mjs)
-    content/global/translations/engine.mjs         (content/engine.mjs)

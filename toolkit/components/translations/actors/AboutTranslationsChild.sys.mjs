@@ -9,21 +9,27 @@ const lazy = {};
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations [about]",
+    prefix: "Translations",
   });
 });
+
+/**
+ * @typedef {import("./TranslationsChild.sys.mjs").TranslationsEngine} TranslationsEngine
+ */
 
 /**
  * The AboutTranslationsChild is responsible for coordinating what privileged APIs
  * are exposed to the un-privileged scope of the about:translations page.
  */
 export class AboutTranslationsChild extends JSWindowActorChild {
-  actorCreated() {
-    this.#exportFunctions();
-  }
 
-  handleEvent() {
-    // This is a required function.
+  /** @type {TranslationsEngine | null} */
+  engine = null;
+
+  handleEvent(event) {
+    if (event.type === "DOMDocElementInserted") {
+      this.#exportFunctions();
+    }
   }
 
   /**
@@ -57,12 +63,10 @@ export class AboutTranslationsChild extends JSWindowActorChild {
       "AT_isEnabled",
       "AT_log",
       "AT_logError",
-      "AT_isLoggingEnabled",
       "AT_getAppLocale",
       "AT_getSupportedLanguages",
-      "AT_getBergamotWasmArrayBuffer",
-      "AT_getLanguageModelFiles",
-      "AT_getWorker",
+      "AT_createTranslationsEngine",
+      "AT_translate",
     ];
     for (const name of fns) {
       Cu.exportFunction(this[name].bind(this), window, { defineAs: name });
@@ -93,24 +97,12 @@ export class AboutTranslationsChild extends JSWindowActorChild {
   }
 
   /**
-   * Log messages if "browser.translations.logLevel" is set to "All".
-   */
-  AT_isLoggingEnabled(...args) {
-    return (
-      Services.prefs.getCharPref("browser.translations.logLevel") === "All"
-    );
-  }
-
-  /**
    * Returns the app's locale.
    *
    * @return {Intl.Locale}
    */
   AT_getAppLocale() {
-    return Cu.cloneInto(
-      {...(new Services.intl.Locale(Services.locale.appLocaleAsBCP47))},
-      this.contentWindow
-    );
+    return Services.locale.appLocaleAsBCP47;
   }
 
   /**
@@ -127,37 +119,31 @@ export class AboutTranslationsChild extends JSWindowActorChild {
   }
 
   /**
-   * Wire this function to the TranslationsChild.
-   */
-  AT_getBergamotWasmArrayBuffer() {
-    return this.#wrapPromise(
-      this.#getTranslationsChild()
-        .getBergamotWasmArrayBuffer()
-        .then(data => Cu.cloneInto(data, this.contentWindow))
-    );
-  }
-
-  /**
-   * Wire this function to the TranslationsChild.
-   *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @returns {Promise<void>}
    */
-  AT_getLanguageModelFiles(fromLanguage, toLanguage) {
+  AT_createTranslationsEngine(fromLanguage, toLanguage) {
     return this.#wrapPromise(
       this.#getTranslationsChild()
-        .getLanguageModelFiles(fromLanguage, toLanguage)
-        .then(data => Cu.cloneInto(data, this.contentWindow))
+      .createTranslationsEngine(fromLanguage, toLanguage)
+      .then(engine => {
+        this.engine = engine;
+      })
     );
   }
 
   /**
-   * @returns {Worker}
+   * @param {string[]} messageBatch
+   * @returns {Promise<string[]>}
    */
-  AT_getWorker() {
-    return Cu.cloneInto(
-      new Worker("resource://gre/modules/translations/engine-worker.js"),
-      this.contentWindow
+  AT_translate(messageBatch) {
+    if (!this.engine) {
+      throw new this.contentWindow.Error("The translations engine was not created.");
+    }
+    return this.#wrapPromise(
+      this.engine.translate(messageBatch)
+      .then(translations => Cu.cloneInto(translations, this.contentWindow))
     );
   }
 }

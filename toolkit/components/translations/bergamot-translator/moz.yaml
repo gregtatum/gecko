@@ -46,3 +46,6 @@ origin:
       return Module;
     }
     ```
+
+    Then replace `console.log()` calls with `log()` calls so that logging preferences
+    are respected.

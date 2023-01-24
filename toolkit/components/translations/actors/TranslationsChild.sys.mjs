@@ -9,9 +9,105 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations [child]",
+    prefix: "Translations",
   });
 });
+
+/**
+ * @typedef {import("../translations").LanguageModelFiles} LanguageModelFiles
+ */
+
+/**
+ * The TranslationsEngine encapsulates the logic for translating messages. It can
+ * only be set up for a single language translation pair. In order to change languages
+ * a new engine should be constructed.
+ *
+ * The actual work for the translations happens in a worker. This class manages
+ * instantiating and messaging the server.
+ */
+export class TranslationsEngine {
+  #messageGeneration = 0;
+
+  /**
+   * Construct and initialize the worker.
+   *
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   * @param {ArrayBuffer} bergamotWasmArrayBuffer
+   * @param {LanguageModelFiles[]} languageModelFiles
+   */
+  constructor(
+    fromLanguage,
+    toLanguage,
+    bergamotWasmArrayBuffer,
+    languageModelFiles,
+  ) {
+    /** @type {string} */
+    this.fromLanguage = fromLanguage;
+    /** @type {string} */
+    this.toLanguage = toLanguage;
+    /** @type {Worker} */
+    this.worker = new Worker("resource://gre/modules/translations/engine-worker.js");
+
+    /** @type {Promise<void>} */
+    this.isReady = new Promise((resolve, reject) => {
+      const onMessage = ({ data }) => {
+        lazy.console.log("Received initialization message", data);
+        if (data.type === "initialization-success") {
+          resolve();
+        } else if (data.type === "initialization-failure") {
+          reject(data.error);
+        }
+        this.worker.removeEventListener("message", onMessage);
+      };
+      this.worker.addEventListener("message", onMessage);
+    });
+
+    this.worker.postMessage({
+      type: "initialize",
+      fromLanguage,
+      toLanguage,
+      bergamotWasmArrayBuffer,
+      languageModelFiles,
+      messageGeneration: this.#messageGeneration++,
+      isLoggingEnabled: Services.prefs.getCharPref("browser.translations.logLevel") === "All",
+    });
+  }
+
+  /**
+   * @param {string[]} messageBatch
+   * @returns {Promise<string>}
+   */
+  translate(messageBatch) {
+    const generation = this.#messageGeneration++;
+    lazy.console.log("Translating", messageBatch);
+
+    return new Promise((resolve, reject) => {
+      const onMessage = ({ data }) => {
+        lazy.console.log("Received message", data);
+        if (data.generation !== generation) {
+          // This message was for someone else.
+          return;
+        }
+        if (data.type === "translation-response") {
+          resolve(data.translations);
+        }
+        if (data.type === "translation-error") {
+          reject(data.error);
+        }
+        this.worker.removeEventListener("message", onMessage);
+      };
+
+      this.worker.addEventListener("message", onMessage);
+
+      this.worker.postMessage({
+        type: "translation-request",
+        messageBatch,
+        generation,
+      });
+    });
+  }
+}
 
 /**
  * See the TranslationsParent for documentation.
@@ -26,18 +122,18 @@ export class TranslationsChild extends JSWindowActorChild {
    *
    * @type {ArrayBuffer | null}
    */
-  #bergmotWasmArrayBuffer = null;
+  #bergamotWasmArrayBuffer = null;
 
   /**
    * @returns {Promise<ArrayBuffer>}
    */
-  async getBergamotWasmArrayBuffer() {
-    let arrayBuffer = this.#bergmotWasmArrayBuffer;
+  async #getBergamotWasmArrayBuffer() {
+    let arrayBuffer = this.#bergamotWasmArrayBuffer;
     if (!arrayBuffer) {
       arrayBuffer = await this.sendQuery(
         "Translations:GetBergamotWasmArrayBuffer"
       );
-      this.#bergmotWasmArrayBuffer = arrayBuffer;
+      this.#bergamotWasmArrayBuffer = arrayBuffer;
     }
     return arrayBuffer;
   }
@@ -45,9 +141,9 @@ export class TranslationsChild extends JSWindowActorChild {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @returns {Promise<any>}
+   * @returns {Promise<LanguageModelFiles[]>}
    */
-  async getLanguageModelFiles(fromLanguage, toLanguage) {
+  async #getLanguageModelFiles(fromLanguage, toLanguage) {
     return this.sendQuery("Translations:GetLanguageModelFiles", {
       fromLanguage,
       toLanguage,
@@ -69,5 +165,31 @@ export class TranslationsChild extends JSWindowActorChild {
    */
   getSupportedLanguages() {
     return this.sendQuery("Translations:GetSupportedLanguages");
+  }
+
+  /**
+   * Construct and initialize the Translations Engine.
+   *
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   */
+  async createTranslationsEngine(
+    fromLanguage,
+    toLanguage,
+  ) {
+    const [bergamotWasmArrayBuffer, languageModelFiles] = await Promise.all([
+      this.#getBergamotWasmArrayBuffer(),
+      this.#getLanguageModelFiles(fromLanguage, toLanguage),
+    ]);
+
+    const engine = new TranslationsEngine(
+      fromLanguage,
+      toLanguage,
+      bergamotWasmArrayBuffer,
+      languageModelFiles,
+    );
+
+    await engine.isReady;
+    return engine;
   }
 }

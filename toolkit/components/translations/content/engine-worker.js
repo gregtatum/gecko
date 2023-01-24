@@ -23,7 +23,7 @@ importScripts(
 let _isLoggingEnabled = false;
 function log(...args) {
   if (_isLoggingEnabled) {
-    console.log("Translations [worker]", ...args);
+    console.log("Translations:", ...args);
   }
 }
 
@@ -82,6 +82,18 @@ async function initialize({ data }) {
       isLoggingEnabled,
     } = data;
 
+    if (!fromLanguage) {
+      throw new Error('Worker initialization missing "fromLanguage"');
+    }
+    if (!toLanguage) {
+      throw new Error('Worker initialization missing "toLanguage"');
+    }
+    if (!bergamotWasmArrayBuffer) {
+      throw new Error('"Worker initialization missing "bergamotWasmArrayBuffer"');
+    }
+    if (!languageModelFiles) {
+      throw new Error('"Worker initialization missing "languageModelFiles"');
+    }
     if (isLoggingEnabled) {
       // Respect the "browser.translations.logLevel" preference.
       _isLoggingEnabled = true;
@@ -89,15 +101,13 @@ async function initialize({ data }) {
 
     const bergamot = await BergamotUtils.initializeWasm(bergamotWasmArrayBuffer);
     new TranslationsEngineWorker(fromLanguage, toLanguage, bergamot, languageModelFiles);
+    postMessage({ type: "initialization-success" });
   } catch (error) {
     // TODO - Handle this error in the UI.
     console.error(error);
     postMessage({ type: "initialization-error", error: error?.message });
   }
 
-  postMessage({ type: "initialization-success" });
-
-  // Only listen to this one message.
   removeEventListener("message", initialize);
 }
 
@@ -365,7 +375,7 @@ class BergamotUtils {
         },
         onRuntimeInitialized: async () => {
           const duration = performance.now() - start;
-          log(`Bergamot wasm runtime initialized in ${duration / 1000} secs`);
+          log(`Bergamot wasm runtime initialized in ${duration / 1000} seconds.`);
           // Await at least one microtask so that the captured `bergamot` variable is
           // fully initialized.
           await Promise.resolve();
