@@ -4,8 +4,6 @@
 
 /**
  * @typedef {import("../translations").BergamotModule} BergamotModule
- * @typedef {import("../translations").TranslationMessage} TranslationMessage
- * @typedef {import("../translations").LanguageModelBlobs} LanguageModelBlobs
  * @typedef {import("../translations").AlignedMemory} AlignedMemory
  * @typedef {import("../translations").TranslationModel} TranslationModel
  * @typedef {import("../translations").EnginePhase} EnginePhase
@@ -13,11 +11,12 @@
  * @typedef {import("../translations").VectorString} VectorString
  * @typedef {import("../translations").VectorResponse} VectorResponse
  * @typedef {import("../translations").Vector} Vector
+ * @typedef {import("../translations").LanguageModelFiles} LanguageModelFiles
  */
 
 /* global loadEmscriptenGlueCode */
 importScripts(
-  "chrome://global/content/translations/bergamot-translator/worker.js"
+  "resource://gre/modules/translations/bergamot-translator.js"
 );
 
 // Respect the preference "browser.translations.logLevel".
@@ -78,8 +77,8 @@ async function initialize({ data }) {
     const {
       fromLanguage,
       toLanguage,
-      bergmotWasmArrayBuffer,
-      languageModels,
+      bergamotWasmArrayBuffer,
+      languageModelFiles,
       isLoggingEnabled,
     } = data;
 
@@ -88,8 +87,8 @@ async function initialize({ data }) {
       _isLoggingEnabled = true;
     }
 
-    const bergamot = await BergamotUtils.initializeWasm(bergmotWasmArrayBuffer);
-    new TranslationsEngineWorker(fromLanguage, toLanguage, bergamot, languageModels);
+    const bergamot = await BergamotUtils.initializeWasm(bergamotWasmArrayBuffer);
+    new TranslationsEngineWorker(fromLanguage, toLanguage, bergamot, languageModelFiles);
   } catch (error) {
     // TODO - Handle this error in the UI.
     console.error(error);
@@ -102,13 +101,23 @@ async function initialize({ data }) {
   removeEventListener("message", initialize);
 }
 
-// TODO - Add docs
+/**
+ * The TranslationsEngineWorker is created once for a language pair. The
+ * initialization process copies the ArrayBuffers for the language buffers from
+ * JS-managed ArrayBuffers, to aligned internal memory for the wasm heap.
+ *
+ * After this the ArrayBuffers are discarded nad GCed. This file should be managed
+ * from the TranslationsEngine class on the main thread.
+ *
+ * This class starts listening for messages only after the Bergamot engine has been
+ * fully initialized.
+ */
 class TranslationsEngineWorker {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {BergamotModule} bergamot
-   * @param {Record<ModelTypes, { buffer: ArrayBuffer, record: ModelRecord }[]} languageModelFiles
+   * @param {Array<LanguageModelFiles>} languageModelFiles
    */
   constructor(fromLanguage, toLanguage, bergamot, languageModelFiles) {
     /** @type {string} */
@@ -134,6 +143,9 @@ class TranslationsEngineWorker {
     addEventListener("message", this.onMessage.bind(this));
   }
 
+  /**
+   * Any message after the initialization message.
+   */
   onMessage({ data }) {
     if (data.type === "initialize") {
       throw new Error("The Translations engine must not be re-initialized.");
@@ -165,6 +177,8 @@ class TranslationsEngineWorker {
   }
 
   /**
+   * Run the translation models to perform a batch of message translations.
+   *
    * @param {string[]} messageBatch
    * @param {boolean} withQualityEstimation
    */
@@ -223,7 +237,7 @@ class BergamotUtils {
    * Construct a single translation model.
    *
    * @param {BergamotModule} bergamot
-   * @param {Record<ModelTypes, { buffer: ArrayBuffer, record: ModelRecord }} languageModelFiles
+   * @param {LanguageModelFiles} languageModelFiles
    * @return {TranslationModel}
    */
   static constructSingleTranslationModel(bergamot, languageModelFiles) {
@@ -302,11 +316,11 @@ class BergamotUtils {
    * to. This function copies over the model blobs into this memory space.
    *
    * @param {BergamotModule} bergamot
-   * @param {Record<ModelTypes, { buffer: ArrayBuffer, record: ModelRecord }} languageModelFiles
-   * @returns {Record<ModelTypes, AlignedMemory>}
+   * @param {LanguageModelFiles} languageModelFiles
+   * @returns {LanguageModelFilesAligned}
    */
   static allocateModelMemory(bergamot, languageModelFiles) {
-    /** @type {Record<ModelTypes, AlignedMemory} */
+    /** @type {LanguageModelFilesAligned} */
     const results = {};
 
     for (const [fileType, file] of Object.entries(languageModelFiles)) {
@@ -331,7 +345,7 @@ class BergamotUtils {
   }
 
   /**
-   * Initialize the bergamot translation engine. It is a wasm compiled version of the
+   * Initialize the Bergamot translation engine. It is a wasm compiled version of the
    * Marian translation software. The wasm is delivered remotely to cut down on binary size.
    *
    * https://github.com/mozilla/bergamot-translator/
@@ -352,8 +366,8 @@ class BergamotUtils {
         onRuntimeInitialized: async () => {
           const duration = performance.now() - start;
           log(`Bergamot wasm runtime initialized in ${duration / 1000} secs`);
-          // await at least one microtask so that the captured `bergamot` variable is
-          // fully isnitializzed.
+          // Await at least one microtask so that the captured `bergamot` variable is
+          // fully initialized.
           await Promise.resolve();
           resolve(bergamot);
         },

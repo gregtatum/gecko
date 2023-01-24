@@ -2,15 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
-
-const lazy = {};
-
-
-class AboutTranslationsParent extends JSWindowActorParent {
+/**
+ * This parent is blank because the Translations actor handles most of the features
+ * needed in AboutTranslations.
+ */
+export class AboutTranslationsParent extends JSWindowActorParent {
   constructor() {
     super();
   }

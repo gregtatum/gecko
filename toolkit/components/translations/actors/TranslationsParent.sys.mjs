@@ -35,31 +35,17 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 });
 
 /**
- * The client to interact with RemoteSettings.
+ * @typedef {import("../translations").ModelRecord} ModelRecord
+ * @typedef {import("../translations").RemoteSettingsClient} RemoteSettingsClient
+ * @typedef {import("../translations").LanguageModelFiles} LanguageModelFiles
+ * @typedef {import("../translations").WasmRecord} WasmRecord
+ */
+
+/**
+ * The translations parent is used to orchestrate translations in Firefox. It can
+ * download the wasm translation engines, and the machine learning language models.
  *
- * @typedef {Object} RemoteSettingsClient
- * @prop {Function} on
- * @prop {Function} get
- * @prop {any} attachments
- */
-
-/**
- * The JSON that is synced from Remote Settings for the translation models.
- * @typedef {Object} ModelRecord
- * @prop {string} name - The model name  e.g. "lex.50.50.deen.s2t.bin"
- * @prop {string} fromLang - e.g. "de"
- * @prop {string} toLang - e.g. "en"
- * @prop {number} version - e.g. 1
- * @prop {string} fileType - e.g. "lex"
- * @prop {string} attachment - e.g. Attachment
- * @prop {string} id - e.g. "0d4db293-a17c-4085-9bd8-e2e146c85000"
- * @prop {number} schema - e.g. 1673023100578
- * @prop {string} last_modified - e.g. 1673455932527
- */
-
-/**
- * TODO - The translations actor will eventually be used to handle in-page translations
- * See Bug 971044
+ * See Bug 971044 for more details of planned work.
  */
 export class TranslationsParent extends JSWindowActorParent {
   /**
@@ -78,30 +64,30 @@ export class TranslationsParent extends JSWindowActorParent {
 
   async receiveMessage({ name, data }) {
     switch (name) {
-      case "Translations:GetBergmotWasmArrayBuffer": {
+      case "Translations:GetBergamotWasmArrayBuffer": {
         return this.#getBergmotWasmArrayBuffer();
       }
-      case "Translations:GetTranslationModels": {
+      case "Translations:GetLanguageModelFiles": {
         const { fromLanguage, toLanguage } = data;
-        const buffers = await this.getLanguageModelBuffers(
+        const files = await this.getLanguageModelFiles(
           fromLanguage,
           toLanguage
         );
-        if (buffers) {
+        if (files) {
           // No pivoting is required.
-          return [buffers];
+          return [files];
         }
         // No matching model was found, try to pivot between English.
-        const [buffer1, buffer2] = await Promise.all([
-          this.getLanguageModelBuffers(fromLanguage, PIVOT_LANGUAGE),
-          this.getLanguageModelBuffers(PIVOT_LANGUAGE, toLanguage),
+        const [files1, files2] = await Promise.all([
+          this.getLanguageModelFiles(fromLanguage, PIVOT_LANGUAGE),
+          this.getLanguageModelFiles(PIVOT_LANGUAGE, toLanguage),
         ]);
-        if (!buffer1 || !buffer2) {
+        if (!files1 || !files2) {
           throw new Error(
             `No language models were found for ${fromLanguage} to ${toLanguage}`
           );
         }
-        return [buffer1, buffer2];
+        return [files1, files2];
       }
       case "Translations:GetSupportedLanguages": {
         return this.#getSupportedLanguages();
@@ -251,7 +237,7 @@ export class TranslationsParent extends JSWindowActorParent {
         await client.attachments.deleteDownloaded(oldRecord);
       }
 
-      // Do not thing for the created records.
+      // Do nothing for the created records.
     });
 
     this.#wasmRemoteClient = client;
@@ -274,7 +260,7 @@ export class TranslationsParent extends JSWindowActorParent {
     // Load the wasm binary from remote settings, if it hasn't been already.
     lazy.console.log(`Getting remote bergamot-translator wasm records.`);
 
-    /** @type {import("../components/translations/translations").WasmRecord[]} */
+    /** @type {WasmRecord[]} */
     const wasmRecords = await client.get({
       // Pull the records from the network so that we never get an empty list.
       syncIfEmpty: true,
@@ -303,7 +289,9 @@ export class TranslationsParent extends JSWindowActorParent {
     // Unlike the models, greedily download the wasm. It will pull it from a locale
     // cache on disk if it's already been downloaded. Do not retain a copy, as
     // this will be running in the parent process. It's not worth holding onto
-    // this much memory, so re-load it every time it is needed.
+    // this much memory, so reload it every time it is needed.
+
+    /** @type {{buffer: ArrayBuffer}} */
     const { buffer } = await client.attachments.download(wasmRecords[0]);
 
     const duration = Date.now() - start;
@@ -317,16 +305,16 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Gets the language model files in an array buffer by downloading attachments from
    * Remote Settings, or retrieving them from the local cache. Each translation
-   * requires multiple files, which are enumerated in the ModelTypes.
+   * requires multiple files.
    *
    * Results are only returned if the model is found.
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {boolean} withQualityEstimation
-   * @returns {null | Record<ModelTypes, { buffer: ArrayBuffer, record: ModelRecord }>}
+   * @returns {null | LanguageModelFiles}
    */
-  async getLanguageModelBuffers(
+  async getLanguageModelFiles(
     fromLanguage,
     toLanguage,
     withQualityEstimation = false
@@ -339,10 +327,8 @@ export class TranslationsParent extends JSWindowActorParent {
 
     const records = [...(await this.#getModelRecords()).values()];
 
-    /**
-     * @type {null | Record<ModelTypes, { buffer: ArrayBuffer, record: ModelRecord }>}
-     */
-    let results = null;
+    /** @type {LanguageModelFiles>} */
+    let results;
 
     // Use Promise.all to download (or retrieve from cache) the model files in parallel.
     await Promise.all(
@@ -364,10 +350,12 @@ export class TranslationsParent extends JSWindowActorParent {
         const start = Date.now();
 
         // Download or retrieve from the local cache:
-        const download = await client.attachments.download(record);
+
+        /** @type {{buffer: ArrayBuffer }} */
+        const { buffer } = await client.attachments.download(record);
 
         results[record.fileType] = {
-          buffer: download.buffer,
+          buffer: buffer,
           record,
         };
 

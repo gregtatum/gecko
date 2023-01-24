@@ -91,10 +91,10 @@ let JSWINDOWACTORS = {
 
   AboutTranslations: {
     parent: {
-      moduleURI: "resource:///gre/actors/AboutTranslationsParent.jsm",
+      esModuleURI: "resource://gre/actors/AboutTranslationsParent.sys.mjs",
     },
     child: {
-      moduleURI: "resource:///gre/actors/AboutTranslationsChild.jsm",
+      esModuleURI: "resource://gre/actors/AboutTranslationsChild.sys.mjs",
       events: {
         // Run the actor before any content of the page appears.
         DOMDocElementInserted: {},

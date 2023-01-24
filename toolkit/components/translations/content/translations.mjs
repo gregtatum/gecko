@@ -5,13 +5,8 @@
 import { createTranslationsEngine } from "chrome://global/content/translations/engine.mjs";
 
 /**
- * This comment block imports the types for use in JSDoc. The TypeScript language server
- * can provide in-editor hints for the types.
- *
- * @typedef {import("../translations").WasmRecord} WasmRecord
- * @typedef {import("../translations").ModelRecord} ModelRecord
- * @typedef {import("../translations").TranslationMessage} TranslationMessage
- * @typedef {import("../translations").ModelTypes} ModelTypes
+ * @typedef {import("./engine.mjs").createTranslationsEngine} createTranslationsEngine
+ * @typedef {import("./engine.mjs").TranslationsEngine} TranslationsEngine
  */
 
 // The following globals are injected via the AboutTranslationsChild actor.
@@ -19,18 +14,7 @@ import { createTranslationsEngine } from "chrome://global/content/translations/e
 // allow for the page to get access to additional privileged features.
 
 /* global AT_isEnabled, AT_getSupportedLanguages, AT_log, AT_getBergmotWasmArrayBuffer,
-   AT_getTranslationModels, AT_isLoggingEnabled, AT_getAppLocale, AT_logError */
-
-/**
- * While the feature is in development, hide the feature behind a pref. See the
- * "browser.translations.enable" pref in modules/libpref/init/all.js and Bug 971044
- * for the status of enabling this project.
- */
-if (AT_isEnabled()) {
-  // Expose the state to the global object to help with debugging.
-  window.translationsState = new TranslationsState();
-  document.body.style.visibility = "visible";
-}
+   AT_getLanguageModelFiles, AT_isLoggingEnabled, AT_getAppLocale, AT_logError */
 
 /**
  * The model and controller for initializing about:translations.
@@ -78,6 +62,7 @@ class TranslationsState {
   constructor() {
     this.supportedLanguages = AT_getSupportedLanguages();
     this.ui = new TranslationsUI(this);
+    this.ui.setup();
   }
 
   /**
@@ -134,8 +119,8 @@ class TranslationsState {
     this.engine = createTranslationsEngine(
       this.fromLanguage,
       this.toLanguage,
-      await AT_getBergmotWasmArrayBuffer(),
-      await AT_getTranslationModels(this.fromLanguage, this.toLanguage),
+      await AT_getBergamotWasmArrayBuffer(),
+      await AT_getLanguageModelFiles(this.fromLanguage, this.toLanguage),
       AT_isLoggingEnabled() ? AT_log : null
     );
 
@@ -194,9 +179,15 @@ class TranslationsUI {
    */
   constructor(state) {
     this.state = state;
+    this.translationTo.style.visibility = "visible";
+  }
+
+  /**
+   * Do the initial setup.
+   */
+  setup() {
     this.setupDropdowns();
     this.setupTextarea();
-    this.translationTo.style.visibility = "visible";
   }
 
   /**
@@ -302,4 +293,15 @@ class TranslationsUI {
       this.translationToBlank.style.visibility = "visible";
     }
   }
+}
+
+/**
+ * While the feature is in development, hide the feature behind a pref. See the
+ * "browser.translations.enable" pref in modules/libpref/init/all.js and Bug 971044
+ * for the status of enabling this project.
+ */
+if (AT_isEnabled()) {
+  // Expose the state to the global object to help with debugging.
+  window.translationsState = new TranslationsState();
+  document.body.style.visibility = "visible";
 }

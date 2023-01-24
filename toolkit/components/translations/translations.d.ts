@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This file contains the shared types for translations. The intended use is for
- * defining types to be used in JSDoc. They are used in a form that the TypeScript
+ * This file contains the shared types for the translations component. The intended use
+ * is for defining types to be used in JSDoc. They are used in a form that the TypeScript
  * language server can read them, and provide code hints.
  */
 
@@ -28,18 +28,17 @@ export interface Attachment {
  * The JSON that is synced from Remote Settings for the translation models.
  */
 export interface ModelRecord {
-  // The model name  e.g. "lex.50.50.deen.s2t.bin"
+  // The full model name, e.g. "lex.50.50.deen.s2t.bin"
   name: string;
-  // e.g. "de"
+  // The BCP 47 language tag, e.g. "de"
   fromLang: string;
-  // e.g. "en"
+  // The BCP 47 language tag, e.g. "en"
   toLang: string;
-  // e.g. 1
+  // The model record version number, used for handling future format changes. e.g. 1
   version: number;
-  // e.g. "lex"
-  fileType: string;
-  // e.g. Attachment
-  attachment: string;
+  //
+  fileType: string; // e.g. "lex"
+  attachment: Attachment;
   // e.g. "0d4db293-a17c-4085-9bd8-e2e146c85000"
   id: string;
   // e.g. 1673023100578
@@ -60,21 +59,6 @@ export interface WasmRecord {
   revision: string;
   // The license of the wasm, as a https://spdx.org/licenses/
   license: string;
-}
-
-/**
- * This message structure is passed back and forth with the worker.
- */
-export interface TranslationMessage {
-  messageID: number,
-  sourceParagraph: string,
-  sourceLanguage: string,
-  targetLanguage: string,
-  translatedParagraph?: string,
-  tabId?: any,
-  frameId?: any,
-  origin?: any,
-  type?: any,
 }
 
 /**
@@ -160,25 +144,43 @@ export class ResponseOptions {
 }
 
 
-export interface LanguageModelBlobs {
-  // The language pair, e.g. "enes" for "en" -> "es".
-  name: string;
-  withQualityEstimation: boolean;
-  blobs: Record<ModelTypes, Blob>;
-  precision: string;
+/**
+ * The client to interact with RemoteSettings.
+ */
+interface RemoteSettingsClient {
+  on: Function,
+  get: Function,
+  attachments: any,
 }
 
 /**
- * TODO(Docs) - Document or point to documentation for what all of these are and mean.
+ * A single file.
  */
-export type ModelTypes =
-  // This is the actual translation model.
-  | "model"
-  | "lex"
-  // This model determines a quality score for the results.
-  | "qualityModel"
-  // A vocab list that contains both the source and target vocab list.
-  | "vocab"
-  // The source and target vocab lists come as a pair.
-  | "srcvocab"
-  | "trgvocab";
+interface LanguageModelFile {
+  buffer: ArrayBuffer,
+  record: ModelRecord,
+}
+
+/**
+ * The files necessary to run the translations, these will be sent to the Bergamot
+ * translation engine.
+ */
+interface LanguageModelFiles {
+  // The machine learning language model.
+  model: LanguageModelFile,
+  // The lexicographic file that contains the dictionary of words.
+  lex: LanguageModelFile,
+  // A model that can generate a translation quality estimation.
+  qualityModel?: LanguageModelFile,
+
+  // Either there is a single vocab file:
+  vocab?: LanguageModelFile,
+
+  // Or two:
+  srcvocab?: LanguageModelFile,
+  trgvocab?: LanguageModelFile,
+};
+
+type LanguageModelFilesAligned = {
+  [K in keyof LanguageModelFiles]: AlignedMemory
+};

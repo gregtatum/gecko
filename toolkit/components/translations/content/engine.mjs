@@ -8,21 +8,21 @@
  * @param {string} fromLanguage
  * @param {string} toLanguage
  * @param {ArrayBuffer} bergmotWasmArrayBuffer
- * @param {Object} langaugeModels
+ * @param {Object} languageModelFiles
  * @param {[(...any) => void]} log - An optional logging function.
  */
 export async function createTranslationsEngine(
   fromLanguage,
   toLanguage,
   bergamotWasmArrayBuffer,
-  languageModels,
+  languageModelFiles,
   log
 ) {
   const engine = new TranslationsEngine(
     fromLanguage,
     toLanguage,
     bergamotWasmArrayBuffer,
-    languageModels,
+    languageModelFiles,
     log
   );
   await engine.isReady;
@@ -37,7 +37,7 @@ export async function createTranslationsEngine(
  * The actual work for the translations happens in a worker. This class manages
  * instantiating and messaging the server.
  */
-class TranslationsEngine {
+export class TranslationsEngine {
   #messageGeneration = 0;
 
   /**
@@ -45,15 +45,15 @@ class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @param {ArrayBuffer} bergmotWasmArrayBuffer
-   * @param {Object} langaugeModels
+   * @param {ArrayBuffer} bergamotWasmArrayBuffer
+   * @param {Object} languageModelFiles
    * @param {[(...any) => void]} log - An optional logging function.
    */
   constructor(
     fromLanguage,
     toLanguage,
-    bergmotWasmArrayBuffer,
-    languageModels,
+    bergamotWasmArrayBuffer,
+    languageModelFiles,
     log
   ) {
     /** @type {string} */
@@ -61,7 +61,7 @@ class TranslationsEngine {
     /** @type {string} */
     this.toLanguage = toLanguage;
     /** @type {Worker} */
-    this.worker = new Worker("chrome://global/content/translations/engine-worker.js");
+    this.worker = AT_getWorker();
     /** @type {(...any) => void} */
     this.log = log ?? (() => {});
 
@@ -82,8 +82,8 @@ class TranslationsEngine {
       type: "initialize",
       fromLanguage,
       toLanguage,
-      bergmotWasmArrayBuffer,
-      languageModels,
+      bergmotWasmArrayBuffer: bergamotWasmArrayBuffer,
+      languageModelFiles,
       isLoggingEnabled: Boolean(log),
     });
   }

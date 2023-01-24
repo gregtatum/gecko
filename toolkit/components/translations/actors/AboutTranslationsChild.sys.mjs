@@ -2,10 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = {};
 
@@ -16,17 +13,28 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   });
 });
 
-
-class AboutTranslationsChild extends JSWindowActorChild {
+/**
+ * The AboutTranslationsChild is responsible for coordinating what privileged APIs
+ * are exposed to the un-privileged scope of the about:translations page.
+ */
+export class AboutTranslationsChild extends JSWindowActorChild {
   actorCreated() {
     this.#exportFunctions();
+  }
+
+  handleEvent() {
+    // This is a required function.
   }
 
   /**
    * @returns {TranslationsChild}
    */
   #getTranslationsChild() {
-    return this.contentWindow.windowGlobalChild.getActor("Translations");
+    const child = this.contentWindow.windowGlobalChild.getActor("Translations");
+    if (!child) {
+      throw new Error("Unable to find the TranslationsChild");
+    }
+    return child;
   }
 
   /**
@@ -38,7 +46,6 @@ class AboutTranslationsChild extends JSWindowActorChild {
     );
   }
 
-
   /**
    * Export any of the child functions that start with "AT_" to the unprivileged content
    * page. This restricts the security capabilities of the the content page.
@@ -46,10 +53,19 @@ class AboutTranslationsChild extends JSWindowActorChild {
   #exportFunctions() {
     const window = this.contentWindow;
 
-    for (const [defineAs, fn] of Object.entries(ExportToContent)) {
-      if (defineAs.startsWith("AT_")) {
-        Cu.exportFunction(fn.bind(this), window, { defineAs });
-      }
+    const fns = [
+      "AT_isEnabled",
+      "AT_log",
+      "AT_logError",
+      "AT_isLoggingEnabled",
+      "AT_getAppLocale",
+      "AT_getSupportedLanguages",
+      "AT_getBergamotWasmArrayBuffer",
+      "AT_getLanguageModelFiles",
+      "AT_getWorker",
+    ];
+    for (const name of fns) {
+      Cu.exportFunction(this[name].bind(this), window, { defineAs: name });
     }
   }
 
@@ -80,7 +96,9 @@ class AboutTranslationsChild extends JSWindowActorChild {
    * Log messages if "browser.translations.logLevel" is set to "All".
    */
   AT_isLoggingEnabled(...args) {
-    return Services.prefs.getCharPref("browser.translations.logLevel") === "All";
+    return (
+      Services.prefs.getCharPref("browser.translations.logLevel") === "All"
+    );
   }
 
   /**
@@ -89,9 +107,10 @@ class AboutTranslationsChild extends JSWindowActorChild {
    * @return {Intl.Locale}
    */
   AT_getAppLocale() {
-    return new Services.intl.Locale(
-      Services.locale.appLocaleAsBCP47
-    )
+    return Cu.cloneInto(
+      {...(new Services.intl.Locale(Services.locale.appLocaleAsBCP47))},
+      this.contentWindow
+    );
   }
 
   /**
@@ -100,14 +119,22 @@ class AboutTranslationsChild extends JSWindowActorChild {
    * @returns {Promise<Array<{ langTag: string, displayName }>>}
    */
   AT_getSupportedLanguages() {
-    return this.#wrapPromise(this.#getTranslationsChild().getSupportedLanguages());
+    return this.#wrapPromise(
+      this.#getTranslationsChild()
+        .getSupportedLanguages()
+        .then(data => Cu.cloneInto(data, this.contentWindow))
+    );
   }
 
   /**
    * Wire this function to the TranslationsChild.
    */
   AT_getBergamotWasmArrayBuffer() {
-    return this.#wrapPromise(this.#getTranslationsChild().getBergamotWasmArrayBuffer());
+    return this.#wrapPromise(
+      this.#getTranslationsChild()
+        .getBergamotWasmArrayBuffer()
+        .then(data => Cu.cloneInto(data, this.contentWindow))
+    );
   }
 
   /**
@@ -116,7 +143,21 @@ class AboutTranslationsChild extends JSWindowActorChild {
    * @param {string} fromLanguage
    * @param {string} toLanguage
    */
-  AT_getTranslationModels(fromLanguage, toLanguage) {
-    return this.#wrapPromise(this.#getTranslationsChild().getTranslationModels(fromLanguage, toLanguage));
+  AT_getLanguageModelFiles(fromLanguage, toLanguage) {
+    return this.#wrapPromise(
+      this.#getTranslationsChild()
+        .getLanguageModelFiles(fromLanguage, toLanguage)
+        .then(data => Cu.cloneInto(data, this.contentWindow))
+    );
+  }
+
+  /**
+   * @returns {Worker}
+   */
+  AT_getWorker() {
+    return Cu.cloneInto(
+      new Worker("resource://gre/modules/translations/engine-worker.js"),
+      this.contentWindow
+    );
   }
 }
