@@ -7,6 +7,4 @@ JAR_MANIFESTS += ["jar.mn"]
 with Files("**"):
     BUG_COMPONENT = ("Firefox", "Translation")
 
-DIRS += [
-    "actors"
-]
+DIRS += ["actors"]

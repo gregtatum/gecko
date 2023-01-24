@@ -26,6 +26,8 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * instantiating and messaging the server.
  */
 export class TranslationsEngine {
+  /** @type {Worker} */
+  #worker;
   #messageGeneration = 0;
 
   /**
@@ -40,14 +42,15 @@ export class TranslationsEngine {
     fromLanguage,
     toLanguage,
     bergamotWasmArrayBuffer,
-    languageModelFiles,
+    languageModelFiles
   ) {
     /** @type {string} */
     this.fromLanguage = fromLanguage;
     /** @type {string} */
     this.toLanguage = toLanguage;
-    /** @type {Worker} */
-    this.worker = new Worker("chrome://global/content/translations/engine-worker.js");
+    this.#worker = new Worker(
+      "chrome://global/content/translations/engine-worker.js"
+    );
 
     /** @type {Promise<void>} */
     this.isReady = new Promise((resolve, reject) => {
@@ -58,19 +61,20 @@ export class TranslationsEngine {
         } else if (data.type === "initialization-failure") {
           reject(data.error);
         }
-        this.worker.removeEventListener("message", onMessage);
+        this.#worker.removeEventListener("message", onMessage);
       };
-      this.worker.addEventListener("message", onMessage);
+      this.#worker.addEventListener("message", onMessage);
     });
 
-    this.worker.postMessage({
+    this.#worker.postMessage({
       type: "initialize",
       fromLanguage,
       toLanguage,
       bergamotWasmArrayBuffer,
       languageModelFiles,
       messageGeneration: this.#messageGeneration++,
-      isLoggingEnabled: Services.prefs.getCharPref("browser.translations.logLevel") === "All",
+      isLoggingEnabled:
+        Services.prefs.getCharPref("browser.translations.logLevel") === "All",
     });
   }
 
@@ -95,17 +99,26 @@ export class TranslationsEngine {
         if (data.type === "translation-error") {
           reject(data.error);
         }
-        this.worker.removeEventListener("message", onMessage);
+        this.#worker.removeEventListener("message", onMessage);
       };
 
-      this.worker.addEventListener("message", onMessage);
+      this.#worker.addEventListener("message", onMessage);
 
-      this.worker.postMessage({
+      this.#worker.postMessage({
         type: "translation-request",
         messageBatch,
         generation,
       });
     });
+  }
+
+  /**
+   * The worker should be GCed just fine on its own, but go ahead and signal to
+   * the worker that it's no longer needed. This will immediately cancel any in-progress
+   * translations.
+   */
+  terminate() {
+    this.#worker.terminate();
   }
 }
 
@@ -161,6 +174,10 @@ export class TranslationsChild extends JSWindowActorChild {
   /**
    * Get the list of languages and their display names, sorted by their display names.
    *
+   * TODO - Not all languages have bi-directional translations, like Icelandic. These
+   * are listed as "Beta" in the addon. This list should be changed into a "from" and
+   * "to" list, and the logic enhanced in the dropdowns to only allow valid translations.
+   *
    * @returns {Promise<Array<{ langTag: string, displayName }>>}
    */
   getSupportedLanguages() {
@@ -173,10 +190,7 @@ export class TranslationsChild extends JSWindowActorChild {
    * @param {string} fromLanguage
    * @param {string} toLanguage
    */
-  async createTranslationsEngine(
-    fromLanguage,
-    toLanguage,
-  ) {
+  async createTranslationsEngine(fromLanguage, toLanguage) {
     const [bergamotWasmArrayBuffer, languageModelFiles] = await Promise.all([
       this.#getBergamotWasmArrayBuffer(),
       this.#getLanguageModelFiles(fromLanguage, toLanguage),
@@ -186,7 +200,7 @@ export class TranslationsChild extends JSWindowActorChild {
       fromLanguage,
       toLanguage,
       bergamotWasmArrayBuffer,
-      languageModelFiles,
+      languageModelFiles
     );
 
     await engine.isReady;

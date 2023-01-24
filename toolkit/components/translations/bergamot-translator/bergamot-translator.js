@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-function loadEmscriptenGlueCode(Module) {
+function loadBergamot(Module) {
   var BERGAMOT_VERSION_FULL = "v0.4.4+5ae1b1e";
   null;
 

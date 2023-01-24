@@ -201,8 +201,11 @@ export class TranslationsParent extends JSWindowActorParent {
       this.#modelRecords.set(modelRecord.id, modelRecord);
     }
 
-    const duration = (Date.now() - now) / 1000
-    lazy.console.log(`Remote language models loaded in ${duration} seconds.`, records);
+    const duration = (Date.now() - now) / 1000;
+    lazy.console.log(
+      `Remote language models loaded in ${duration} seconds.`,
+      records
+    );
 
     return this.#modelRecords;
   }
@@ -357,7 +360,7 @@ export class TranslationsParent extends JSWindowActorParent {
         const { buffer } = await client.attachments.download(record);
 
         results[record.fileType] = {
-          buffer: buffer,
+          buffer,
           record,
         };
 

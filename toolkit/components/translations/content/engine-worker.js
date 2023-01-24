@@ -3,21 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * @typedef {import("../translations").BergamotModule} BergamotModule
- * @typedef {import("../translations").AlignedMemory} AlignedMemory
- * @typedef {import("../translations").TranslationModel} TranslationModel
- * @typedef {import("../translations").EnginePhase} EnginePhase
- * @typedef {import("../translations").BlockingService} BlockingService
- * @typedef {import("../translations").VectorString} VectorString
- * @typedef {import("../translations").VectorResponse} VectorResponse
- * @typedef {import("../translations").Vector} Vector
+ * @typedef {import("../translations").Bergamot} Bergamot
  * @typedef {import("../translations").LanguageModelFiles} LanguageModelFiles
  */
 
-/* global loadEmscriptenGlueCode */
-importScripts(
-  "chrome://global/content/translations/bergamot-translator.js"
-);
+/* global loadBergamot, importScripts */
+importScripts("chrome://global/content/translations/bergamot-translator.js");
 
 // Respect the preference "browser.translations.logLevel".
 let _isLoggingEnabled = false;
@@ -26,23 +17,6 @@ function log(...args) {
     console.log("Translations:", ...args);
   }
 }
-
-/**
- * The pivot language is used to pivot between two different language translations
- * when there is not a language between. In this case "en" is common between the
- * various supported models.
- *
- * For instance given the following two models:
- *   "fr" -> "en"
- *   "en" -> "it"
- *
- * You can accomplish:
- *   "fr" -> "it"
- *
- * By doing:
- *   "fr" -> "en" -> "it"
- */
-const PIVOT_LANGUAGE = "en";
 
 //
 /**
@@ -89,18 +63,28 @@ async function initialize({ data }) {
       throw new Error('Worker initialization missing "toLanguage"');
     }
     if (!bergamotWasmArrayBuffer) {
-      throw new Error('"Worker initialization missing "bergamotWasmArrayBuffer"');
+      throw new Error(
+        '"Worker initialization missing "bergamotWasmArrayBuffer"'
+      );
     }
     if (!languageModelFiles) {
       throw new Error('"Worker initialization missing "languageModelFiles"');
     }
+
     if (isLoggingEnabled) {
       // Respect the "browser.translations.logLevel" preference.
       _isLoggingEnabled = true;
     }
 
-    const bergamot = await BergamotUtils.initializeWasm(bergamotWasmArrayBuffer);
-    new TranslationsEngineWorker(fromLanguage, toLanguage, bergamot, languageModelFiles);
+    const bergamot = await BergamotUtils.initializeWasm(
+      bergamotWasmArrayBuffer
+    );
+    new TranslationsEngineWorker(
+      fromLanguage,
+      toLanguage,
+      bergamot,
+      languageModelFiles
+    );
     postMessage({ type: "initialization-success" });
   } catch (error) {
     // TODO - Handle this error in the UI.
@@ -126,7 +110,7 @@ class TranslationsEngineWorker {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @param {BergamotModule} bergamot
+   * @param {Bergamot} bergamot
    * @param {Array<LanguageModelFiles>} languageModelFiles
    */
   constructor(fromLanguage, toLanguage, bergamot, languageModelFiles) {
@@ -134,9 +118,9 @@ class TranslationsEngineWorker {
     this.fromLanguage = fromLanguage;
     /** @type {string} */
     this.toLanguage = toLanguage;
-    /** @type {BergamotModule} */
+    /** @type {Bergamot} */
     this.bergamot = bergamot;
-    /** @type {TranslationModel[]} */
+    /** @type {Bergamot["TranslationModel"][]} */
     this.languageModels = languageModelFiles.map(languageModelFiles =>
       BergamotUtils.constructSingleTranslationModel(
         bergamot,
@@ -144,7 +128,7 @@ class TranslationsEngineWorker {
       )
     );
 
-    /** @type {BlockingService} */
+    /** @type {Bergamot["BlockingService"]} */
     this.translationService = new bergamot.BlockingService({
       // Caching is disabled (see https://github.com/mozilla/firefox-translations/issues/288)
       cacheSize: 0,
@@ -204,7 +188,7 @@ class TranslationsEngineWorker {
         return [];
       }
 
-      /** @type {VectorResponse} */
+      /** @type {Bergamot["VectorResponse"]} */
       let responses;
 
       if (this.languageModels.length === 1) {
@@ -246,9 +230,9 @@ class BergamotUtils {
   /**
    * Construct a single translation model.
    *
-   * @param {BergamotModule} bergamot
+   * @param {Bergamot} bergamot
    * @param {LanguageModelFiles} languageModelFiles
-   * @return {TranslationModel}
+   * @return {Bergamot["TranslationModel"]}
    */
   static constructSingleTranslationModel(bergamot, languageModelFiles) {
     log(`Constructing translation model.`);
@@ -325,7 +309,7 @@ class BergamotUtils {
    * The models must be placed in aligned memory that the Bergamot wasm module has access
    * to. This function copies over the model blobs into this memory space.
    *
-   * @param {BergamotModule} bergamot
+   * @param {Bergamot} bergamot
    * @param {LanguageModelFiles} languageModelFiles
    * @returns {LanguageModelFilesAligned}
    */
@@ -361,21 +345,24 @@ class BergamotUtils {
    * https://github.com/mozilla/bergamot-translator/
    *
    * @param {ArrayBuffer} wasmBinary
-   * @returns {Promise<BergamotModule>}
+   * @returns {Promise<Bergamot>}
    */
   static initializeWasm(wasmBinary) {
     return new Promise((resolve, reject) => {
       /** @type {number} */
       let start = performance.now();
 
-      const bergamot = loadEmscriptenGlueCode({
+      /** @type {Bergamot} */
+      const bergamot = loadBergamot({
         preRun: [],
         onAbort() {
           reject(new Error("Error loading Bergamot wasm module."));
         },
         onRuntimeInitialized: async () => {
           const duration = performance.now() - start;
-          log(`Bergamot wasm runtime initialized in ${duration / 1000} seconds.`);
+          log(
+            `Bergamot wasm runtime initialized in ${duration / 1000} seconds.`
+          );
           // Await at least one microtask so that the captured `bergamot` variable is
           // fully initialized.
           await Promise.resolve();
@@ -389,7 +376,7 @@ class BergamotUtils {
   /**
    * Maps the Bergamot Vector to a JS array
    *
-   * @param {Vector} vector
+   * @param {Bergamot["Vector"]} vector
    * @param {Function} fn
    */
   static mapVector(vector, fn) {
@@ -421,7 +408,7 @@ class BergamotUtils {
 
   /**
    * JS objects need to be translated into wasm objects to configure the translation engine.
-   * @param {BergamotModule} bergamot
+   * @param {Bergamot} bergamot
    * @param {string[]} messageBatch
    * @param {boolean} withQualityEstimation
    */
@@ -441,7 +428,7 @@ class BergamotUtils {
       options.push_back({
         qualityScores: withQualityEstimation,
         alignment: true,
-        html: message.isHTML,
+        html: false,
       });
     }
     return { messages, options };

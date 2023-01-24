@@ -108,7 +108,7 @@ class TranslationsState {
 
     this.engine = AT_createTranslationsEngine(
       this.fromLanguage,
-      this.toLanguage,
+      this.toLanguage
     );
 
     try {

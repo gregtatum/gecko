@@ -22,7 +22,6 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * are exposed to the un-privileged scope of the about:translations page.
  */
 export class AboutTranslationsChild extends JSWindowActorChild {
-
   /** @type {TranslationsEngine | null} */
   engine = null;
 
@@ -124,12 +123,16 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    * @returns {Promise<void>}
    */
   AT_createTranslationsEngine(fromLanguage, toLanguage) {
+    if (this.engine) {
+      this.engine.terminate();
+      this.engine = null;
+    }
     return this.#wrapPromise(
       this.#getTranslationsChild()
-      .createTranslationsEngine(fromLanguage, toLanguage)
-      .then(engine => {
-        this.engine = engine;
-      })
+        .createTranslationsEngine(fromLanguage, toLanguage)
+        .then(engine => {
+          this.engine = engine;
+        })
     );
   }
 
@@ -139,11 +142,14 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    */
   AT_translate(messageBatch) {
     if (!this.engine) {
-      throw new this.contentWindow.Error("The translations engine was not created.");
+      throw new this.contentWindow.Error(
+        "The translations engine was not created."
+      );
     }
     return this.#wrapPromise(
-      this.engine.translate(messageBatch)
-      .then(translations => Cu.cloneInto(translations, this.contentWindow))
+      this.engine
+        .translate(messageBatch)
+        .then(translations => Cu.cloneInto(translations, this.contentWindow))
     );
   }
 }

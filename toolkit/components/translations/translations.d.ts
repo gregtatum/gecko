@@ -62,90 +62,117 @@ export interface WasmRecord {
 }
 
 /**
- * The module interface returned from the Bergamot wasm library.
+ * The following are the types that are provided by the Bergamot wasm library.
  *
- * https://github.com/mozilla/bergamot-translator/blob/main/wasm/bindings/service_bindings.cpp
+ * See: https://github.com/mozilla/bergamot-translator/tree/main/wasm/bindings
  */
-export interface BergamotModule {
-  BlockingService: typeof BlockingService;
-  AlignedMemoryList: typeof AlignedMemoryList;
-  TranslationModel: typeof TranslationModel;
-  AlignedMemory: typeof AlignedMemory;
-  VectorResponseOptions: typeof VectorResponseOptions;
-  VectorString: typeof VectorString;
-}
-
-export class Vector<T> {
-  size(): number;
-  get(index: number): T;
-  push_back(item: T);
-}
-
-export class VectorResponse extends Vector<Response> {}
-export class VectorString extends Vector<string> {}
-export class VectorResponseOptions extends Vector<ResponseOptions> {}
-export class AlignedMemoryList extends Vector<AlignedMemory> {}
-
-/**
- * A blocking (e.g. non-threaded) translation service, via Bergamot.
- */
-export class BlockingService {
+export namespace Bergamot {
   /**
-   * Translate multiple text-blogs in a single blocking API call.
+   * The main module that is returned from bergamot-translator.js.
    */
-  translate(
-    translationModel,
-    vectorSourceText: VectorString,
-    vectorResponseOptions: VectorResponseOptions
-  ): VectorResponse;
+  export interface ModuleExport {
+    BlockingService: typeof BlockingService;
+    AlignedMemoryList: typeof AlignedMemoryList;
+    TranslationModel: typeof TranslationModel;
+    AlignedMemory: typeof AlignedMemory;
+    VectorResponseOptions: typeof VectorResponseOptions;
+    VectorString: typeof VectorString;
+  }
 
-  translateViaPivoting(
-    first: TranslationModel,
-    second: TranslationModel,
-    vectorSourceText: VectorString,
-    vectorResponseOptions: VectorResponseOptions
-  ): VectorResponse;
-}
+  /**
+   * This class represents a C++ std::vector. The implementations will extend from it.
+   */
+  export class Vector<T> {
+    size(): number;
+    get(index: number): T;
+    push_back(item: T);
+  }
 
-/**
- * The actual translation model.
- */
-export class TranslationModel {
+  export class VectorResponse extends Vector<Response> {}
+  export class VectorString extends Vector<string> {}
+  export class VectorResponseOptions extends Vector<ResponseOptions> {}
+  export class AlignedMemoryList extends Vector<AlignedMemory> {}
 
-}
+  /**
+   * A blocking (e.g. non-threaded) translation service, via Bergamot.
+   */
+  export class BlockingService {
+    /**
+     * Translate multiple messages in a single synchronous API call using a single model.
+     */
+    translate(
+      translationModel,
+      vectorSourceText: VectorString,
+      vectorResponseOptions: VectorResponseOptions
+    ): VectorResponse;
 
-/**
- * The models need to be placed in the wasm memory space. This object represents
- * aligned memory that was allocated on the wasm side of things. The memory contents
- * can be set via the getByteArrayView method and the Uint8Array.prototype.set method.
- */
-export class AlignedMemory {
-  constructor(size: number, alignment: number);
-  size(): number;
-  getByteArrayView(): Uint8Array;
-}
+    /**
+     * Translate by pivoting between two models
+     *
+     * For example to translate "fr" to "es", pivot using "en":
+     *   "fr" to "en"
+     *   "en" to "es"
+     *
+     * See https://github.com/mozilla/bergamot-translator/blob/5ae1b1ebb3fa9a3eabed8a64ca6798154bd486eb/src/translator/service.h#L80
+     */
+    translateViaPivoting(
+      first: TranslationModel,
+      second: TranslationModel,
+      vectorSourceText: VectorString,
+      vectorResponseOptions: VectorResponseOptions
+    ): VectorResponse;
+  }
 
-/**
- * This definition isn't complete, but just contains the methods that are being
- * used in the worker.
- *
- * See https://github.com/mozilla/bergamot-translator/blob/main/src/translator/response.h
- */
-export class Response {
-  getOriginalText(): string;
-  getTranslatedText(): string;
-}
+  /**
+   * The actual translation model, which is passed into the `BlockingService` methods.
+   */
+  export class TranslationModel {}
 
-/**
- *
- */
-export class ResponseOptions {
-
+  /**
+   * The models need to be placed in the wasm memory space. This object represents
+   * aligned memory that was allocated on the wasm side of things. The memory contents
+   * can be set via the getByteArrayView method and the Uint8Array.prototype.set method.
+   */
+  export class AlignedMemory {
+    constructor(size: number, alignment: number);
+    size(): number;
+    getByteArrayView(): Uint8Array;
+  }
+  
+  /**
+   * The response from the translation. This definition isn't complete, but just
+   * contains a subset of the available methods.
+   *
+   * See https://github.com/mozilla/bergamot-translator/blob/main/src/translator/response.h
+   */
+  export class Response {
+    getOriginalText(): string;
+    getTranslatedText(): string;
+  }
+  
+  /**
+   * The options to configure a translation response.
+   *
+   * See https://github.com/mozilla/bergamot-translator/blob/main/src/translator/response_options.h
+   */
+  export class ResponseOptions {
+    // Include the quality estimations.
+    qualityScores: boolean;
+    // Include the alignments.
+    alignment: boolean;
+    // Remove HTML tags from text and insert it back into the output.
+    html: boolean;
+    // Whether to include sentenceMappings or not. Alignments require
+    // sentenceMappings and are available irrespective of this option if
+    // `alignment=true`.
+    sentenceMappings: boolean
+  }
 }
 
 
 /**
  * The client to interact with RemoteSettings.
+ * See services/settings/RemoteSettingsClient.jsm
  */
 interface RemoteSettingsClient {
   on: Function,
@@ -154,7 +181,7 @@ interface RemoteSettingsClient {
 }
 
 /**
- * A single file.
+ * A single language model file.
  */
 interface LanguageModelFile {
   buffer: ArrayBuffer,
@@ -168,19 +195,23 @@ interface LanguageModelFile {
 interface LanguageModelFiles {
   // The machine learning language model.
   model: LanguageModelFile,
-  // The lexicographic file that contains the dictionary of words.
+  // The lexical shortlist that limits possible output of the decoder and makes
+  // inference faster.
   lex: LanguageModelFile,
   // A model that can generate a translation quality estimation.
   qualityModel?: LanguageModelFile,
 
-  // Either there is a single vocab file:
+  // There is either a single vocab file:
   vocab?: LanguageModelFile,
 
-  // Or two:
+  // Or there are two:
   srcvocab?: LanguageModelFile,
   trgvocab?: LanguageModelFile,
 };
 
+/**
+ * This is the type that is generated when the models are loaded into wasm aligned memory.
+ */
 type LanguageModelFilesAligned = {
   [K in keyof LanguageModelFiles]: AlignedMemory
 };
