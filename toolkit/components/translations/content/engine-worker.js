@@ -16,7 +16,7 @@
 
 /* global loadEmscriptenGlueCode */
 importScripts(
-  "resource://gre/modules/translations/bergamot-translator.js"
+  "chrome://global/content/translations/bergamot-translator.js"
 );
 
 // Respect the preference "browser.translations.logLevel".

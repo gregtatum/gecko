@@ -47,7 +47,7 @@ export class TranslationsEngine {
     /** @type {string} */
     this.toLanguage = toLanguage;
     /** @type {Worker} */
-    this.worker = new Worker("resource://gre/modules/translations/engine-worker.js");
+    this.worker = new Worker("chrome://global/content/translations/engine-worker.js");
 
     /** @type {Promise<void>} */
     this.isReady = new Promise((resolve, reject) => {

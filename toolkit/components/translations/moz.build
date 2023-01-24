@@ -10,8 +10,3 @@ with Files("**"):
 DIRS += [
     "actors"
 ]
-
-EXTRA_JS_MODULES.translations = [
-    "bergamot-translator/bergamot-translator.js",
-    "content/engine-worker.js",
-]
