@@ -5,6 +5,12 @@
 toolkit.jar:
     content/global/translations/bergamot-translator.js (bergamot-translator/bergamot-translator.js)
     content/global/translations/engine-worker.js       (content/engine-worker.js)
+    content/global/translations/language-id-worker.js  (content/language-id-worker.js)
     content/global/translations/translations.html      (content/translations.html)
     content/global/translations/translations.css       (content/translations.css)
     content/global/translations/translations.mjs       (content/translations.mjs)
+
+    content/global/translations/fasttext.js            (fasttext/fasttext.js)
+    content/global/translations/fasttextexport.js      (fasttext/fasttextexport.js)
+    content/global/translations/fasttext_wasm.js       (fasttext/fasttext_wasm.js)
+    content/global/translations/fasttext_wasm.wasm     (fasttext/fasttext_wasm.wasm)

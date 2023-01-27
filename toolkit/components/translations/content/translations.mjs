@@ -6,6 +6,7 @@
 // translations.mjs is running in an unprivileged context, and these injected functions
 // allow for the page to get access to additional privileged features.
 
+/* global loadEmscriptenGlueCode, serializeError, importScripts */
 /* global AT_isEnabled, AT_getSupportedLanguages, AT_log,
    AT_getAppLocale, AT_logError, AT_destroyEngine,
    AT_createTranslationsEngine, AT_translate */
