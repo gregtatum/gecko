@@ -215,3 +215,13 @@ interface LanguageModelFiles {
 type LanguageModelFilesAligned = {
   [K in keyof LanguageModelFiles]: AlignedMemory
 };
+
+/**
+ * These are the files that are downloaded from Remote Settings that are necessary
+ * to start the translations engine. These may not be available if running in tests,
+ * and so the engine will be mocked.
+ */
+interface EnginePayload {
+  bergamotWasmArrayBuffer: ArrayBuffer,
+  languageModelFiles: LanguageModelFiles[]
+}
