@@ -15,6 +15,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 
 /**
  * @typedef {import("../translations").LanguageModelFiles} LanguageModelFiles
+ * @typedef {import("../translations").EnginePayload} EnginePayload
  */
 
 /**
@@ -37,15 +38,9 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @param {ArrayBuffer} bergamotWasmArrayBuffer
-   * @param {LanguageModelFiles[]} languageModelFiles
+   * @param {EnginePayload} enginePayload
    */
-  constructor(
-    fromLanguage,
-    toLanguage,
-    bergamotWasmArrayBuffer,
-    languageModelFiles
-  ) {
+  constructor(fromLanguage, toLanguage, enginePayload) {
     /** @type {string} */
     this.fromLanguage = fromLanguage;
     /** @type {string} */
@@ -72,8 +67,7 @@ export class TranslationsEngine {
       type: "initialize",
       fromLanguage,
       toLanguage,
-      bergamotWasmArrayBuffer,
-      languageModelFiles,
+      enginePayload,
       messageId: this.#messageId++,
       isLoggingEnabled:
         Services.prefs.getCharPref("browser.translations.logLevel") === "All",
@@ -141,9 +135,20 @@ export class TranslationsChild extends JSWindowActorChild {
   #bergamotWasmArrayBuffer = null;
 
   /**
+   * The translations engine could be mocked for tests, since the wasm and the language
+   * models must be downloaded from Remote Settings.
+   */
+  #isEngineMocked = false;
+
+  /**
    * @returns {Promise<ArrayBuffer>}
    */
   async #getBergamotWasmArrayBuffer() {
+    if (this.#isEngineMocked) {
+      throw new Error(
+        "The engine is mocked, the Bergamot wasm is not available."
+      );
+    }
     let arrayBuffer = this.#bergamotWasmArrayBuffer;
     if (!arrayBuffer) {
       arrayBuffer = await this.sendQuery(
@@ -160,6 +165,11 @@ export class TranslationsChild extends JSWindowActorChild {
    * @returns {Promise<LanguageModelFiles[]>}
    */
   async #getLanguageModelFiles(fromLanguage, toLanguage) {
+    if (this.#isEngineMocked) {
+      throw new Error(
+        "The engine is mocked, there are no language model files available."
+      );
+    }
     return this.sendQuery("Translations:GetLanguageModelFiles", {
       fromLanguage,
       toLanguage,
@@ -172,6 +182,21 @@ export class TranslationsChild extends JSWindowActorChild {
   handleEvent(event) {
     // TODO
     lazy.console.log("TranslationsChild observed a pageshow event.");
+  }
+
+  /**
+   * Receive a message from the parent.
+   *
+   * @param {{ name: string, data: any }} message
+   */
+  receiveMessage(message) {
+    switch (message.name) {
+      case "Translations:IsMocked":
+        this.#isEngineMocked = message.data;
+        break;
+      default:
+        lazy.console.warn("Unknown message.");
+    }
   }
 
   /**
@@ -189,22 +214,39 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   /**
+   * The engine is not avialable in tests.
+   *
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   * @returns {null | EnginePayload}
+   */
+  async #getEnginePayload(fromLanguage, toLanguage) {
+    if (this.#isEngineMocked) {
+      return null;
+    }
+    const [bergamotWasmArrayBuffer, languageModelFiles] = await Promise.all([
+      this.#getBergamotWasmArrayBuffer(),
+      this.#getLanguageModelFiles(fromLanguage, toLanguage),
+    ]);
+    return { bergamotWasmArrayBuffer, languageModelFiles };
+  }
+
+  /**
    * Construct and initialize the Translations Engine.
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
    */
   async createTranslationsEngine(fromLanguage, toLanguage) {
-    const [bergamotWasmArrayBuffer, languageModelFiles] = await Promise.all([
-      this.#getBergamotWasmArrayBuffer(),
-      this.#getLanguageModelFiles(fromLanguage, toLanguage),
-    ]);
+    const enginePayload = await this.#getEnginePayload(
+      fromLanguage,
+      toLanguage
+    );
 
     const engine = new TranslationsEngine(
       fromLanguage,
       toLanguage,
-      bergamotWasmArrayBuffer,
-      languageModelFiles
+      enginePayload
     );
 
     await engine.isReady;
