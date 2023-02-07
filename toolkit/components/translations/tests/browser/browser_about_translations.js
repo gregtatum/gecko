@@ -9,22 +9,23 @@
  */
 add_task(async function test_about_translations_enabled() {
   await openAboutTranslations({
-    runInPage: async ({ selectors }) => {
-      const { document, window } = content;
-
-      function checkElementIsVisble(name) {
-        const element = document.querySelector(selectors[name]);
-        ok(Boolean(element), `Element ${name} was found.`);
-        const { visibility } = window.getComputedStyle(element);
-        is(visibility, "visible", `Element ${name} was visible.`);
-      }
-
-      checkElementIsVisble("pageHeader");
-      checkElementIsVisble("fromLanguageSelect");
-      checkElementIsVisble("toLanguageSelect");
-      checkElementIsVisble("translationTextarea");
-      checkElementIsVisble("translationResult");
-      checkElementIsVisble("translationResultBlank");
+    runInPage: async ({ contentUtilsPath }) => {
+      /** @type {import("./content-utils.mjs")} */
+      const {
+        selectElements,
+        checkElementIsVisible,
+      } = ChromeUtils.importESModule(contentUtilsPath);
+      const els = selectElements(content);
+      checkElementIsVisible(els.pageHeader, "pageHeader");
+      checkElementIsVisible(els.fromSelect, "fromSelect");
+      checkElementIsVisible(els.toSelect, "toSelect");
+      checkElementIsVisible(els.translationTextarea, "translationTextarea");
+      checkElementIsVisible(els.translationResult, "translationResult");
+      checkElementIsVisible(
+        els.translationResultBlank,
+        "translationResultBlank"
+      );
+      ok(true);
     },
   });
 });
@@ -36,22 +37,24 @@ add_task(async function test_about_translations_disabled() {
   await openAboutTranslations({
     disabled: true,
 
-    runInPage: async ({ selectors }) => {
-      const { document, window } = content;
+    runInPage: async ({ contentUtilsPath }) => {
+      /** @type {import("./content-utils.mjs")} */
+      const {
+        selectElements,
+        checkElementIsInvisible,
+      } = ChromeUtils.importESModule(contentUtilsPath);
 
-      function checkElementIsInvisible(name) {
-        const element = document.querySelector(selectors[name]);
-        ok(Boolean(element), `Element ${name} was found.`);
-        const { visibility } = window.getComputedStyle(element);
-        is(visibility, "hidden", `Element ${name} was invisible.`);
-      }
+      const els = selectElements(content);
 
-      checkElementIsInvisible("pageHeader");
-      checkElementIsInvisible("fromLanguageSelect");
-      checkElementIsInvisible("toLanguageSelect");
-      checkElementIsInvisible("translationTextarea");
-      checkElementIsInvisible("translationResult");
-      checkElementIsInvisible("translationResultBlank");
+      checkElementIsInvisible(els.pageHeader, "pageHeader");
+      checkElementIsInvisible(els.fromSelect, "fromSelect");
+      checkElementIsInvisible(els.toSelect, "toSelect");
+      checkElementIsInvisible(els.translationTextarea, "translationTextarea");
+      checkElementIsInvisible(els.translationResult, "translationResult");
+      checkElementIsInvisible(
+        els.translationResultBlank,
+        "translationResultBlank"
+      );
     },
   });
 });
@@ -74,42 +77,13 @@ add_task(async function test_about_translations_dropdowns() {
       // This is not a bi-directional translation.
       { fromLang: "is", toLang: "en" },
     ],
-    runInPage: async ({ selectors }) => {
-      const { document } = content;
+    runInPage: async ({ contentUtilsPath }) => {
+      /** @type {import("./content-utils.mjs")} */
+      const { selectElements, assertOptions } = ChromeUtils.importESModule(
+        contentUtilsPath
+      );
 
-      /**
-       * Some languages can be marked as hidden in the dropbdown. This function
-       * asserts the configuration of the options.
-       *
-       * @param {object} args
-       * @param {string} args.message
-       * @param {HTMLSelectElement} args.select
-       * @param {string[]} args.availableOptions
-       * @param {string} args.selectedValue
-       */
-      function assertOptions({
-        message,
-        select,
-        availableOptions,
-        selectedValue,
-      }) {
-        const options = [...select.options]
-          .filter(option => !option.hidden)
-          .map(option => option.value);
-
-        info(message);
-        Assert.deepEqual(
-          options,
-          availableOptions,
-          "The available options match."
-        );
-        is(selectedValue, select.value, "The selected value matches.");
-      }
-
-      /** @type {HTMLSelectElement} */
-      const fromSelect = document.querySelector(selectors.fromLanguageSelect);
-      /** @type {HTMLSelectElement} */
-      const toSelect = document.querySelector(selectors.toLanguageSelect);
+      const { fromSelect, toSelect } = selectElements(content);
 
       assertOptions({
         message: "From languages have English already selected.",
@@ -160,57 +134,35 @@ add_task(async function test_about_translations_translations() {
       // This is not a bi-directional translation.
       { fromLang: "is", toLang: "en" },
     ],
-    runInPage: async ({ selectors }) => {
-      const { document } = content;
+    runInPage: async ({ contentUtilsPath }) => {
+      /** @type {import("./content-utils.mjs")} */
+      const {
+        selectElements,
+        assertTranslationResult,
+        inputValue,
+      } = ChromeUtils.importESModule(contentUtilsPath);
 
-      /** @type {HTMLSelectElement} */
-      const fromSelect = document.querySelector(selectors.fromLanguageSelect);
-      /** @type {HTMLSelectElement} */
-      const toSelect = document.querySelector(selectors.toLanguageSelect);
-      /** @type {HTMLTextAreaElement} */
-      const translationTextarea = document.querySelector(
-        selectors.translationTextarea
-      );
-      /** @type {HTMLDivElement} */
-      const translationResult = document.querySelector(
-        selectors.translationResult
-      );
+      const {
+        fromSelect,
+        toSelect,
+        translationTextarea,
+        translationResult,
+      } = selectElements(content);
 
-      async function assertTranslationResult(translation) {
-        try {
-          await ContentTaskUtils.waitForCondition(
-            () => translation === translationResult.innerText,
-            `Waiting for: "${translation}"`
-          );
-        } catch (error) {
-          // The result wasn't found, but the assertion below will report the error.
-          console.error(error);
-        }
-
-        is(
-          translation,
-          translationResult.innerText,
-          "The text runs through the mocked translations engine."
-        );
-      }
-
-      toSelect.value = "fr";
-      toSelect.dispatchEvent(new Event("input"));
-      translationTextarea.value = "Text to translate.";
-      translationTextarea.dispatchEvent(new Event("input"));
+      inputValue(toSelect, "fr");
+      inputValue(translationTextarea, "Text to translate.");
 
       await assertTranslationResult(
+        translationResult,
         'Ｔｅｘｔ ｔｏ ｔｒａｎｓｌａｔｅ. ［"ｅｎ" ｔｏ "ｆｒ"］'
       );
 
-      fromSelect.value = "is";
-      fromSelect.dispatchEvent(new Event("input"));
-      toSelect.value = "en";
-      toSelect.dispatchEvent(new Event("input"));
-      translationTextarea.value = "This is the second translation.";
-      translationTextarea.dispatchEvent(new Event("input"));
+      inputValue(fromSelect, "is");
+      inputValue(toSelect, "en");
+      inputValue(translationTextarea, "This is the second translation.");
 
       await assertTranslationResult(
+        translationResult,
         'Ｔｈｉｓ ｉｓ ｔｈｅ ｓｅｃｏｎｄ ｔｒａｎｓｌａｔｉｏｎ. ［"ｉｓ" ｔｏ "ｅｎ"］'
       );
     },
@@ -224,28 +176,23 @@ add_task(async function test_about_translations_language_directions() {
       { fromLang: "en", toLang: "ar" },
       { fromLang: "ar", toLang: "en" },
     ],
-    runInPage: async ({ selectors }) => {
-      const { document, window } = content;
-
-      /** @type {HTMLSelectElement} */
-      const fromSelect = document.querySelector(selectors.fromLanguageSelect);
-      /** @type {HTMLSelectElement} */
-      const toSelect = document.querySelector(selectors.toLanguageSelect);
-      /** @type {HTMLTextAreaElement} */
-      const translationTextarea = document.querySelector(
-        selectors.translationTextarea
-      );
-      /** @type {HTMLDivElement} */
-      const translationResult = document.querySelector(
-        selectors.translationResult
+    runInPage: async ({ contentUtilsPath }) => {
+      /** @type {import("./content-utils.mjs")} */
+      const { selectElements, inputValue } = ChromeUtils.importESModule(
+        contentUtilsPath
       );
 
-      fromSelect.value = "en";
-      fromSelect.dispatchEvent(new Event("input"));
-      toSelect.value = "ar";
-      toSelect.dispatchEvent(new Event("input"));
-      translationTextarea.value = "This text starts as LTR.";
-      translationTextarea.dispatchEvent(new Event("input"));
+      const {
+        fromSelect,
+        toSelect,
+        translationTextarea,
+        translationResult,
+        window,
+      } = selectElements(content);
+
+      inputValue(fromSelect, "en");
+      inputValue(toSelect, "ar");
+      inputValue(translationTextarea, "This text starts as LTR.");
 
       is(
         window.getComputedStyle(translationTextarea).direction,
@@ -258,12 +205,9 @@ add_task(async function test_about_translations_language_directions() {
         "The Arabic results are RTL"
       );
 
-      fromSelect.value = "ar";
-      fromSelect.dispatchEvent(new Event("input"));
-      toSelect.value = "en";
-      toSelect.dispatchEvent(new Event("input"));
-      translationTextarea.value = "This text starts as RTL.";
-      translationTextarea.dispatchEvent(new Event("input"));
+      inputValue(fromSelect, "ar");
+      inputValue(toSelect, "en");
+      inputValue(translationTextarea, "This text starts as RTL.");
 
       is(
         window.getComputedStyle(translationTextarea).direction,

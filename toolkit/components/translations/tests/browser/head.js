@@ -74,7 +74,12 @@ async function openAboutTranslations({
 
   await ContentTask.spawn(
     tab.linkedBrowser,
-    { dataForContent, selectors },
+    {
+      dataForContent,
+      selectors,
+      contentUtilsPath:
+        "chrome://mochitests/content/browser/toolkit/components/translations/tests/browser/content-utils.mjs",
+    },
     runInPage
   );
 
