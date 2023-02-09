@@ -200,9 +200,8 @@ add_task(async function test_about_translations_translations() {
       translationTextarea.value = "Text to translate.";
       translationTextarea.dispatchEvent(new Event("input"));
 
-      await assertTranslationResult(
-        'Ｔｅｘｔ ｔｏ ｔｒａｎｓｌａｔｅ. ［"ｅｎ" ｔｏ "ｆｒ"］'
-      );
+      // The mocked translations make the text uppercase and reports the models used.
+      await assertTranslationResult("TEXT TO TRANSLATE. [en to fr]");
 
       fromSelect.value = "is";
       fromSelect.dispatchEvent(new Event("input"));
@@ -212,7 +211,7 @@ add_task(async function test_about_translations_translations() {
       translationTextarea.dispatchEvent(new Event("input"));
 
       await assertTranslationResult(
-        'Ｔｈｉｓ ｉｓ ｔｈｅ ｓｅｃｏｎｄ ｔｒａｎｓｌａｔｉｏｎ. ［"ｉｓ" ｔｏ "ｅｎ"］'
+        "THIS IS THE SECOND TRANSLATION. [is to en]"
       );
     },
   });
@@ -335,7 +334,7 @@ add_task(async function test_about_translations_debounce() {
       setInput(translationTextarea, "T");
 
       info("Get the translations into a stable translationed state");
-      await assertTranslationResult('Ｔ ［"ｅｎ" ｔｏ "ｆｒ"］');
+      await assertTranslationResult("T [en to fr]");
 
       info("Reset and pause the debounce state.");
       Cu.waiveXrays(window).DEBOUNCE_DELAY = Infinity;
@@ -351,7 +350,7 @@ add_task(async function test_about_translations_debounce() {
       Cu.waiveXrays(window).DEBOUNCE_DELAY = 1;
       setInput(translationTextarea, "Text");
 
-      await assertTranslationResult('Ｔｅｘｔ ［"ｅｎ" ｔｏ "ｆｒ"］');
+      await assertTranslationResult("TEXT [en to fr]");
       is(Cu.waiveXrays(window).DEBOUNCE_RUN_COUNT, 1, "Debounce ran once.");
     },
   });

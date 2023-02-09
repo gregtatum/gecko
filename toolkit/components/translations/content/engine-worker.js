@@ -457,44 +457,15 @@ class MockedEngine {
   }
 
   /**
-   * Run the translation models to perform a batch of message translations.
+   * Create a fake translation of the text.
    *
    * @param {string[]} messageBatch
    * @returns {string}
    */
   translate(messageBatch) {
-    // Create a fake translation of the text.
-    return messageBatch.map(message => {
-      return MockedEngine.toFullWidthLatin(
-        `${message} ["${this.fromLanguage}" to "${this.toLanguage}"]`
-      );
-    });
-  }
-
-  /**
-   * Transform text into full width latin form. This is a purely visual transformation
-   * of text for testing.
-   *
-   * @param {string} value
-   * @returns {string}
-   */
-  static toFullWidthLatin(value) {
-    const CODEPOINT_0 = "0".codePointAt(0);
-    // Includes "C0 Controls and Basic Latin" and "C1 Controls and Latin-1 Supplement"
-    const LATIN_BLOCK_END = 0x100;
-    // The "Halfwidth and Fullwidth Forms" unicode block is U+FF00 – U+FFEF.
-    // https://en.wikipedia.org/wiki/Halfwidth_and_Fullwidth_Forms_(Unicode_block)
-    const FULL_WIDTH_LATIN_OFFSET = 0xff00 - 0x20;
-
-    let result = "";
-    for (let i = 0; i < value.length; i++) {
-      let codeUnit = value[i].codePointAt(0);
-      if (codeUnit > CODEPOINT_0 && codeUnit < LATIN_BLOCK_END) {
-        // Transform it into a full width latin.
-        codeUnit = codeUnit + FULL_WIDTH_LATIN_OFFSET;
-      }
-      result += String.fromCodePoint(codeUnit);
-    }
-    return result;
+    return messageBatch.map(
+      message =>
+        `${message.toUpperCase()} [${this.fromLanguage} to ${this.toLanguage}]`
+    );
   }
 }
