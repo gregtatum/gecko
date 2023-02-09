@@ -117,7 +117,7 @@ TranslationDocument.prototype = {
    *
    * @param item     A TranslationItem object
    *
-   * @returns        A string representation of the TranslationItem.
+   * @returns {string} A string representation of the TranslationItem.
    */
   generateTextForItem(item) {
     if (item.original) {

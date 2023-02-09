@@ -4,7 +4,7 @@
 
 "use strict";
 
-var EXPORTED_SYMBOLS = ["BingTranslator"];
+var EXPORTED_SYMBOLS = ["BergamotTranslator"];
 
 const { PromiseUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/PromiseUtils.sys.mjs"
@@ -39,11 +39,12 @@ const MAX_REQUESTS = 15;
  * @returns {Promise}          A promise that will resolve when the translation
  *                             task is finished.
  */
-var BingTranslator = function(
+var BergamotTranslator = function(
   translationDocument,
   sourceLanguage,
   targetLanguage
 ) {
+  /** @type {TranslationDocument} */
   this.translationDocument = translationDocument;
   this.sourceLanguage = sourceLanguage;
   this.targetLanguage = targetLanguage;
@@ -53,7 +54,7 @@ var BingTranslator = function(
   this._translatedCharacterCount = 0;
 };
 
-BingTranslator.prototype = {
+BergamotTranslator.prototype = {
   /**
    * Performs the translation, splitting the document into several chunks
    * respecting the data limits of the API.
@@ -80,15 +81,22 @@ BingTranslator.prototype = {
 
         // Create a real request to the server, and put it on the
         // pending requests list.
-        let bingRequest = new BergamotRequest(
+        let translationRequest = requestTranslation(
           request.data,
           this.sourceLanguage,
           this.targetLanguage
         );
         this._pendingRequests++;
-        bingRequest
-          .fireRequest()
-          .then(this._chunkCompleted.bind(this), this._chunkFailed.bind(this));
+        debugger;
+
+        try {
+          const roots = request.data.map(([root]) => root);
+          const translations = await translationRequest;
+          console.log(`!!! translations`, translations);
+          this._chunkCompleted(roots, translations);
+        } catch (error) {
+          this._chunkFailed(error);
+        }
 
         currentIndex = request.lastIndex;
         if (request.finished) {
@@ -115,13 +123,16 @@ BingTranslator.prototype = {
    * function to resolve the promise returned by the public `translate()`
    * method when there's no pending request left.
    *
-   * @param   request   The BingRequest sent to the server.
+   * @param {TranslationItem[]} roots
+   * @param {string[]} translations
    */
-  _chunkCompleted(bingRequest) {
-    if (this._parseChunkResult(bingRequest)) {
+  _chunkCompleted(roots, translations) {
+    if (this._parseChunkResult(roots, translations)) {
       this._partialSuccess = true;
-      // Count the number of characters successfully translated.
-      this._translatedCharacterCount += bingRequest.characterCount;
+      for (const translation of translations) {
+        // Count the number of characters successfully translated.
+        this._translatedCharacterCount += translation.length;
+      }
     }
 
     this._checkIfFinished();
@@ -186,45 +197,30 @@ BingTranslator.prototype = {
    * are the <TranslatedText> nodes, which contains the resulting
    * items that were sent to be translated.
    *
-   * @param   request      The request sent to the server.
+   * @param {TranslationItem[]} roots
+   * @param {string[]} translations
    * @returns boolean      True if parsing of this chunk was successful.
    */
-  _parseChunkResult(bingRequest) {
-    let results;
-    try {
-      let doc = bingRequest.networkRequest.responseXML;
-      results = doc.querySelectorAll("TranslatedText");
-    } catch (e) {
-      return false;
+  _parseChunkResult(roots, translations) {
+    if (roots.length !== translations.length) {
+      throw new Error(
+        "There was a mismatch in the roots and results for translations."
+      );
     }
 
-    let len = results.length;
-    if (len != bingRequest.translationData.length) {
-      // This should never happen, but if the service returns a different number
-      // of items (from the number of items submitted), we can't use this chunk
-      // because all items would be paired incorrectly.
-      return false;
-    }
-
-    let error = false;
-    for (let i = 0; i < len; i++) {
+    let success = true;
+    for (let i = 0; i < translations.length; i++) {
       try {
-        let result = results[i].firstChild.nodeValue;
-        let root = bingRequest.translationData[i][0];
+        let translation = translations[i];
+        let root = roots[0];
 
-        if (root.isSimpleRoot) {
-          // Workaround for Bing's service problem in which "&" chars in
-          // plain-text TranslationItems are double-escaped.
-          result = result.replace(/&amp;/g, "&");
-        }
-
-        root.parseResult(result);
+        root.parseResult(translation);
       } catch (e) {
-        error = true;
+        success = false;
       }
     }
 
-    return !error;
+    return success;
   },
 
   /**
@@ -233,11 +229,18 @@ BingTranslator.prototype = {
    *
    * @param startIndex What is the index, in the roots list, that the
    *                   chunk should start.
+   * @returns {{
+   *   data: Array<[TranslationItem, string]>,
+   *   finished: boolean,
+   *   lastIndex: number,
+   * }}
    */
   _generateNextTranslationRequest(startIndex) {
     let currentDataSize = 0;
     let currentChunks = 0;
+    /** @type {Array<[TranslationItem, string]>} */
     let output = [];
+    /** @type {TranslationItem[]} */
     let rootsList = this.translationDocument.roots;
 
     for (let i = startIndex; i < rootsList.length; i++) {
@@ -277,92 +280,24 @@ BingTranslator.prototype = {
 };
 
 /**
- * Represents a request (for 1 chunk) sent off to Bing's service.
- *
- * @params translationData  The data to be used for this translation,
- *                          generated by the generateNextTranslationRequest...
- *                          function.
- * @param sourceLanguage    The source language of the document.
- * @param targetLanguage    The target language for the translation.
- *
+ * @param {Array<[TranslationItem, string]>} translationData
+ * @param {string} sourceLanguage
+ * @param {string} targetLanguage
+ * @returns {Promise<string[]>}
  */
-function BergamotRequest(translationData, sourceLanguage, targetLanguage) {
-  this.translationData = translationData;
-  this.sourceLanguage = sourceLanguage;
-  this.targetLanguage = targetLanguage;
-  this.characterCount = 0;
+async function requestTranslation(
+  translationData,
+  sourceLanguage,
+  targetLanguage
+) {
+  console.log(`!!! requestTranslation`, {
+    translationData,
+    sourceLanguage,
+    targetLanguage,
+  });
+
+  return translationData.map(([, text]) => text.toUpperCase());
 }
-
-BergamotRequest.prototype = {
-  /**
-   * Initiates the request
-   */
-  fireRequest() {
-    return (async () => {
-      // Prepare authentication.
-      let token = await BingTokenManager.getToken();
-      let auth = "Bearer " + token;
-
-      // Prepare URL.
-      let url = getUrlParam(
-        "https://api.microsofttranslator.com/v2/Http.svc/TranslateArray",
-        "browser.translation.bing.translateArrayURL"
-      );
-
-      // Prepare request headers.
-      let headers = [
-        ["Content-type", "text/xml"],
-        ["Authorization", auth],
-      ];
-
-      // Prepare the request body.
-      let requestString =
-        "<TranslateArrayRequest>" +
-        "<AppId/>" +
-        "<From>" +
-        this.sourceLanguage +
-        "</From>" +
-        "<Options>" +
-        '<ContentType xmlns="http://schemas.datacontract.org/2004/07/Microsoft.MT.Web.Service.V2">text/html</ContentType>' +
-        '<ReservedFlags xmlns="http://schemas.datacontract.org/2004/07/Microsoft.MT.Web.Service.V2" />' +
-        "</Options>" +
-        '<Texts xmlns:s="http://schemas.microsoft.com/2003/10/Serialization/Arrays">';
-
-      for (let [, text] of this.translationData) {
-        requestString += "<s:string>" + text + "</s:string>";
-        this.characterCount += text.length;
-      }
-
-      requestString +=
-        "</Texts>" +
-        "<To>" +
-        this.targetLanguage +
-        "</To>" +
-        "</TranslateArrayRequest>";
-
-      // Set up request options.
-      return new Promise((resolve, reject) => {
-        let options = {
-          onLoad: (responseText, xhr) => {
-            resolve(this);
-          },
-          onError(e, responseText, xhr) {
-            reject(xhr);
-          },
-          postData: requestString,
-          headers,
-        };
-
-        // Fire the request.
-        let request = httpRequest(url, options);
-
-        // Override the response MIME type.
-        request.overrideMimeType("text/xml");
-        this.networkRequest = request;
-      });
-    })();
-  },
-};
 
 /**
  * Authentication Token manager for the API
