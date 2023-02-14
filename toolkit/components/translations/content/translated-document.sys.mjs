@@ -835,8 +835,9 @@ function updateElement(translatedDocument, element) {
     /** @type {Array<Text>} */
     const liveTextNodes = [];
 
-    // Remove all the nodes from the dst, and categorize them by text node or element.
-    for (const node of liveTree.childNodes) {
+    // Remove all the nodes from the liveTree, and categorize them by
+    // Text node or Element node.
+    for (const node of [...liveTree.childNodes]) {
       node.remove();
 
       if (node.nodeType === Node.ELEMENT_NODE) {
@@ -931,7 +932,8 @@ function updateElement(translatedDocument, element) {
           ) {
             removeTextNodes(liveElement);
           }
-        } else if (isNodeTextEmpty(liveElement)) {
+        } else if (!isNodeTextEmpty(liveElement)) {
+          // There are still text nodes to find and update, recursively merge.
           merge(liveElement, translatedNode);
         }
 
