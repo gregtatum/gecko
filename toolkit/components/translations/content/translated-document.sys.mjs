@@ -18,7 +18,8 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 });
 
 /**
- * @type {import("../translations").NodeVisibility} NodeVisibility
+ * @typedef {import("../translations").NodeVisibility} NodeVisibility
+ * @typedef {(message: string) => Promise<string>} TranslationFunction
  */
 
 const UPDATE_INTERVAL = 500;
@@ -128,9 +129,6 @@ export class TranslatedDocument {
    */
   translationsCounter = 0;
 
-  /** @type {boolean} */
-  started = false;
-
   /** @type {string} */
   fromLanguage;
 
@@ -150,20 +148,9 @@ export class TranslatedDocument {
   queuedNodes = new Map();
 
   /**
-   * The text contents of these Nodes have been sent for translation, and the results
-   * are pending. Lookup nodes by their `id`.
-   *
-   * @type {Map<number, Node>}
+   * The count of how many translations have been sent to the translations engine.
    */
-  pendingTranslationsById = new Map();
-
-  /**
-   * The text contents of these Nodes have been sent for translation, and the results
-   * are pending. Lookup the `id` by the `Node`.
-   *
-   * @type {Map<Node, number>}
-   */
-  pendingTranslationsByNode = new Map();
+  pendingTranslationsCount = 0;
 
   /**
    * The list of nodes that need updating with the translated HTML.
@@ -190,28 +177,13 @@ export class TranslatedDocument {
   // Report words in the viewport only for the initially loaded content.
   initialWordsInViewportReported = false;
 
-  observer = new MutationObserver(mutationsList => {
-    for (const mutation of mutationsList) {
-      switch (mutation.type) {
-        case "childList":
-          for (const node of mutation.addedNodes) {
-            this.restartTreeWalker(node);
-          }
-          break;
-        case "characterData":
-          this.restartTreeWalker(mutation.target);
-          break;
-        default:
-          break;
-      }
-    }
-  });
-
   /**
    * @param {Document} document
    * @param {string} fromLanguage The two letter BCP 47 language tag.
+   * @param {TranslationFunction} translateHTML
+   * @param {TranslationFunction} translateText
    */
-  constructor(document, fromLanguage) {
+  constructor(document, fromLanguage, translateHTML, translateText) {
     // The language of the page. If elements are found that do not match this language,
     // then they are skipped.
     if (fromLanguage.length !== 2) {
@@ -219,10 +191,17 @@ export class TranslatedDocument {
         "Expected the language to be a valid 2 letter BCP 47 language tag."
       );
     }
+    /** @type {string} */
     this.fromLanguage = fromLanguage;
 
+    /** @type {TranslationFunction} */
+    this.translateHTML = translateHTML;
+
+    /** @type {TranslationFunction} */
+    this.translateText = translateText;
+
     /** @type {DOMParser} */
-    this.domParser = document.ownerGlobal.DOMParser();
+    this.domParser = new document.ownerGlobal.DOMParser();
 
     /*
      * Construct the excluded node selector.
@@ -245,6 +224,23 @@ export class TranslatedDocument {
       false
     );
 
+    this.observer = new document.ownerGlobal.MutationObserver(mutationsList => {
+      for (const mutation of mutationsList) {
+        switch (mutation.type) {
+          case "childList":
+            for (const node of mutation.addedNodes) {
+              this.restartTreeWalker(node);
+            }
+            break;
+          case "characterData":
+            this.restartTreeWalker(mutation.target);
+            break;
+          default:
+            break;
+        }
+      }
+    });
+
     if (this.debug) {
       addDebugStylesheet(document);
     }
@@ -253,17 +249,10 @@ export class TranslatedDocument {
   /**
    * Add a new element to start translating.
    *
-   * @param {Node} node
+   * @param {Element} node
    */
-  addElement(node) {
-    if (!this.started) {
-      // TODO - Do I need this? addElement seems to be able to be called before
-      // this class has started. I think this check can be removed, and maybe
-      // the started function removed as well.
-      throw new Error("Expected to have already started.");
-    }
-
-    if (node !== Node.ELEMENT_NODE) {
+  addRootElement(node) {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
       // This node is not an element, do not add it.
       return;
     }
@@ -359,11 +348,6 @@ export class TranslatedDocument {
    */
   restartTreeWalker(root) {
     // Remove the previous translation attempt.
-    const id = this.pendingTranslationsByNode.get(root);
-    if (id) {
-      this.pendingTranslationsByNode.delete(root);
-      this.pendingTranslationsById.delete(id);
-    }
     this.processedNodes.delete(root);
 
     // Restart the walker.
@@ -456,7 +440,7 @@ export class TranslatedDocument {
       }
     };
 
-    if (isNodeQueued(node, this.queudeNodes)) {
+    if (isNodeQueued(node, this.queuedNodes)) {
       // This node or its parent was already queued, reject it.
       return NodeFilter.FILTER_REJECT;
     }
@@ -467,7 +451,7 @@ export class TranslatedDocument {
     }
 
     if (node.textContent.trim().length === 0) {
-      // Skip over subtrees that don"t have text.
+      // Skip over subtrees that don't have text.
       debugMark("rejected empty-text-content");
       return NodeFilter.FILTER_REJECT;
     }
@@ -553,7 +537,7 @@ export class TranslatedDocument {
     const whitespace = /\s+/;
     let wordCount = 0;
     for (const [node, message] of this.queuedNodes) {
-      if (message.priority === 1) {
+      if (message.visibility === "in-viewport") {
         wordCount += node.textContent.trim().split(whitespace).length;
       }
     }
@@ -564,7 +548,7 @@ export class TranslatedDocument {
    * @param {number} id
    * @param {Node} node
    */
-  submitTranslation(id, node) {
+  async submitTranslation(id, node) {
     // Give each element an id that gets passed through the translation so it can be
     // reunited later on.
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -573,20 +557,32 @@ export class TranslatedDocument {
       });
     }
 
-    const text =
-      node.nodeType === Node.ELEMENT_NODE ? node.innerHTML : node.textContent;
+    let text, translate;
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      text = node.innerHTML;
+      translate = this.translateHTML;
+    } else {
+      text = node.textContent;
+      translate = this.translateText;
+    }
 
     if (text.trim().length === 0) {
       return;
     }
 
-    // Keep reference to this node for once we receive a translation response.
-    this.pendingTranslationsById.set(id, node);
-    this.pendingTranslationsByNode.set(node, id);
-
     // Mark this node as not to be translated again unless the contents are changed
     // (which the observer will pick up on)
     this.processedNodes.add(node);
+
+    this.pendingTranslationsCount++;
+    try {
+      const [translatedHTML] = await translate(text);
+      this.pendingTranslationsCount--;
+      this.scheduleCompletedTranslation(node, translatedHTML);
+    } catch (error) {
+      this.pendingTranslationsCount--;
+      lazy.console.error("Translation failed", error);
+    }
   }
 
   startMutationObserver() {
@@ -601,15 +597,6 @@ export class TranslatedDocument {
 
   stopMutationObserver() {
     this.observer.disconnect();
-  }
-
-  mediatorNotification(translationMessage) {
-    /*
-     * notification received from the mediator with our request.
-     * the only possible notification can be a translation response,
-     * so let's schedule the update of the original node with its new content
-     */
-    this.enqueueElement(translationMessage);
   }
 
   /**
@@ -630,7 +617,7 @@ export class TranslatedDocument {
         }
         case Node.ELEMENT_NODE: {
           const translatedDocument = this.domParser.parseFromString(
-            translatedHTML,
+            `<div>${translatedHTML}</div>`,
             "text/html"
           );
           updateElement(translatedDocument, node);
@@ -648,27 +635,15 @@ export class TranslatedDocument {
 
   /**
    * Queue an element to be updated with a translation.
-   * @param {{attrId: [string], translatedParagraph: string}} translation
+   *
+   * @param {Node} node
+   * @param {string} translatedHTML
    */
-  scheduleCompletedTranslation(translation) {
-    const [id] = translation.attrId;
-    const translatedHTML = translation.translatedParagraph;
-
-    // Look up node by message id. This can fail.
-    // TODO - Why can it fail?
-    const node = this.pendingTranslationsById.get(id);
-    if (!node) {
-      lazy.console.debug(`Message ${id} is not found in pendingTranslations`);
-      return;
-    }
-
-    this.pendingTranslationsById.delete(id);
-    this.pendingTranslationsByNode.delete(node);
-
+  scheduleCompletedTranslation(node, translatedHTML) {
     // Add the nodes to be populated with the next translation update.
     this.nodesWithTranslatedHTML.add({ node, translatedHTML });
 
-    if (this.pendingTranslationsByNode.size === 0) {
+    if (this.pendingTranslationsCount === 0) {
       // No translations are pending, update the elements.
       this.updateNodesWithTranslations();
     } else if (!this.updateTimeout) {
@@ -845,7 +820,7 @@ function updateElement(translatedDocument, element) {
    */
   const clonedNodes = new Set();
 
-  merge(element, translatedDocument.body);
+  merge(element, translatedDocument.body.firstChild);
 
   /**
    * Merge the live tree with the translated tree by re-using elements from the live tree.
@@ -861,8 +836,8 @@ function updateElement(translatedDocument, element) {
     const liveTextNodes = [];
 
     // Remove all the nodes from the dst, and categorize them by text node or element.
-    for (const childNode of liveTree.childNodes) {
-      const node = childNode.remove();
+    for (const node of liveTree.childNodes) {
+      node.remove();
 
       if (node.nodeType === Node.ELEMENT_NODE) {
         liveElementsById.set(node.dataset.xBergamotId, node);
@@ -879,7 +854,6 @@ function updateElement(translatedDocument, element) {
       translatedIndex++
     ) {
       const translatedNode = translatedNodes[translatedIndex];
-      const translationId = translatedNode.dataset.xBergamotId;
 
       if (translatedNode.nodeType === Node.TEXT_NODE) {
         // Copy the translated text to the original Text node and re-append it.
@@ -893,6 +867,7 @@ function updateElement(translatedDocument, element) {
 
         liveTree.appendChild(liveTextNode);
       } else if (translatedNode.nodeType === Node.ELEMENT_NODE) {
+        const translationId = translatedNode.dataset.xBergamotId;
         // Element nodes try to use the already existing DOM nodes.
 
         // Find the element in the live tree that matches the one in the translated tree.
@@ -1105,13 +1080,12 @@ function containsExcludedNode(node, excludedNodeSelector) {
  * @returns {boolean}
  */
 function isNodeQueued(node, queuedNodes) {
-  const document = node.ownerDocument;
   if (queuedNodes.has(node)) {
     return true;
   }
 
-  // if the immediate parent is the body we just allow it
-  if (node.parentNode === document.body) {
+  // If the immediate parent is the body, it is allowed.
+  if (node.parentNode === node.ownerDocument.body) {
     return false;
   }
 
@@ -1179,7 +1153,7 @@ function hasPresumedInlineContent(node) {
   for (let child of node.childNodes) {
     switch (child.nodeType) {
       case Node.TEXT_NODE:
-        if (isNodeTextEmpty(child)) {
+        if (!isNodeTextEmpty(child)) {
           inlineElements += 1;
         }
         break;
