@@ -8,7 +8,7 @@
 
 /* global AT_getSupportedLanguages, AT_log, AT_getScriptDirection,
    AT_getAppLocale, AT_logError, AT_destroyEngine,
-   AT_createTranslationsEngine, AT_translate */
+   AT_createTranslationsEngine, AT_translateText */
 
 // Allow tests to override this value so that they can run faster.
 // This is the delay in milliseconds.
@@ -114,7 +114,7 @@ class TranslationsState {
 
       const start = performance.now();
 
-      this.translationRequest = AT_translate([messageToTranslate]);
+      this.translationRequest = AT_translateText([messageToTranslate]);
       const [translation] = await this.translationRequest;
 
       // The measure events will show up in the Firefox Profiler.
