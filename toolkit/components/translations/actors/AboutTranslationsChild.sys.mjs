@@ -101,7 +101,7 @@ export class AboutTranslationsChild extends JSWindowActorChild {
       "AT_getAppLocale",
       "AT_getSupportedLanguages",
       "AT_createTranslationsEngine",
-      "AT_translate",
+      "AT_translateText",
       "AT_destroyEngine",
       "AT_getScriptDirection",
     ];
@@ -173,7 +173,7 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    * @param {string[]} messageBatch
    * @returns {Promise<string[]>}
    */
-  AT_translate(messageBatch) {
+  AT_translateText(messageBatch) {
     if (!this.engine) {
       throw new this.contentWindow.Error(
         "The translations engine was not created."
@@ -181,7 +181,7 @@ export class AboutTranslationsChild extends JSWindowActorChild {
     }
     return this.#convertToContentPromise(
       this.engine
-        .translate(messageBatch)
+        .translateText(messageBatch)
         .then(translations => Cu.cloneInto(translations, this.contentWindow))
     );
   }
