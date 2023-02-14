@@ -41,6 +41,7 @@ const MODEL_FILE_ALIGNMENTS = {
 addEventListener("message", handleInitializationMessage);
 
 async function handleInitializationMessage({ data }) {
+  const startTime = performance.now();
   if (data.type !== "initialize") {
     console.error(
       "The TranslationEngine worker received a message before it was initialized."
@@ -78,6 +79,12 @@ async function handleInitializationMessage({ data }) {
       // The engine is testing mode, and no Bergamot wasm is available.
       engine = new MockedEngine(fromLanguage, toLanguage);
     }
+
+    ChromeUtils.addProfilerMarker(
+      "Translations",
+      { startTime },
+      "Translations engine loaded."
+    );
 
     handleMessages(engine);
     postMessage({ type: "initialization-success" });
@@ -435,9 +442,10 @@ class BergamotUtils {
   ) {
     const messages = new bergamot.VectorString();
     const options = new bergamot.VectorResponseOptions();
-    for (const message of messageBatch) {
+    for (let message of messageBatch) {
+      message = message.trim();
       // Empty paragraphs break the translation.
-      if (message.trim() === "") {
+      if (message === "") {
         continue;
       }
 
