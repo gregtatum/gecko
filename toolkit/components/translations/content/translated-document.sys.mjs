@@ -203,19 +203,21 @@ export class TranslatedDocument {
     /** @type {DOMParser} */
     this.domParser = new document.ownerGlobal.DOMParser();
 
-    /*
+    /**
      * Construct the excluded node selector.
 
      * Note: [lang]:not([lang...]) is too strict as it also matches slightly
      * different language code. In that case the tree walker will drill down
      * and still accept the element in isExcludedNode. Just not as part of
      * a block.
+     * @type {string}
      */
     this.excludedNodeSelector = [
       `[lang]:not([lang|="${this.fromLanguage}"])`,
       `[translate=no]`,
       `.notranslate`,
-      `[contenteditable]`,
+      `[contenteditable="true"]`,
+      `[contenteditable=""]`,
       [...EXCLUDED_TAGS].join(","),
     ].join(",");
 
@@ -389,7 +391,7 @@ export class TranslatedDocument {
       return true;
     }
 
-    if (node.contenteditable) {
+    if (node.isContentEditable) {
       // This field is editable, and so exclude it similar to the way that form input
       // fields are excluded.
       return true;

@@ -12,8 +12,11 @@ const { TranslatedDocument } = ChromeUtils.importESModule(
 
 /**
  * @param {string} html
+ * @param {{
+ *  fakeTranslator?: (message: string) => Promise<string>
+ * }} [options]
  */
-async function createDoc(html) {
+async function createDoc(html, options) {
   await SpecialPowers.pushPrefEnv({
     set: [
       ["browser.translations.enable", true],
@@ -48,8 +51,8 @@ async function createDoc(html) {
   const translated = new TranslatedDocument(
     document,
     "en",
-    fakeTranslator,
-    fakeTranslator
+    options?.fakeTranslator ?? fakeTranslator,
+    options?.fakeTranslator ?? fakeTranslator
   );
 
   /**
@@ -77,20 +80,20 @@ async function createDoc(html) {
     }
   }
 
+  function translate() {
+    info("Running translation.");
+    translated.addRootElement(document.body);
+  }
+
   function cleanup() {
     SpecialPowers.popPrefEnv();
   }
 
-  return { document, translated, htmlMatches, cleanup };
+  return { translate, htmlMatches, cleanup };
 }
 
 add_task(async function test_translated_div_element() {
-  const {
-    document,
-    translated,
-    htmlMatches,
-    cleanup,
-  } = await createDoc(/* html */ `
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
     <div>
       This is a simple translation.
     </div>
@@ -105,8 +108,7 @@ add_task(async function test_translated_div_element() {
     `
   );
 
-  info("Adding document with a single div to the TranslatedDocument.");
-  translated.addRootElement(document.body);
+  translate();
 
   await htmlMatches(
     "A single element with a single text node is translated into uppercase.",
@@ -121,12 +123,11 @@ add_task(async function test_translated_div_element() {
 });
 
 add_task(async function test_translated_textnode() {
-  const { document, translated, htmlMatches, cleanup } = await createDoc(
+  const { translate, htmlMatches, cleanup } = await createDoc(
     "This is a simple text translation."
   );
 
-  info("Adding document with just a Text node to the TranslatedDocument.");
-  translated.addRootElement(document.body);
+  translate();
 
   await htmlMatches(
     "A Text node at the root is translated into all caps",
@@ -136,13 +137,8 @@ add_task(async function test_translated_textnode() {
   cleanup();
 });
 
-add_task(async function test_translated_textnode() {
-  const {
-    document,
-    translated,
-    htmlMatches,
-    cleanup,
-  } = await createDoc(/* html */ `
+add_task(async function test_translated_nested_elements() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
     <div class="menu-main-menu-container">
       <ul class="menu-list">
         <li class="menu-item menu-item-top-level">
@@ -158,8 +154,7 @@ add_task(async function test_translated_textnode() {
     </div>
   `);
 
-  info("Adding document to the TranslatedDocument.");
-  translated.addRootElement(document.body);
+  translate();
 
   await htmlMatches(
     "The nested elements are translated into all caps.",
@@ -185,15 +180,467 @@ add_task(async function test_translated_textnode() {
   cleanup();
 });
 
-// Test re-ordered translation results.
-// Test lang mismatches.
-// Test translate=no
-// Test notranslation
-// Test contenteditable
+/**
+ * Only translate elements with a matching "from" language.
+ */
+add_task(async function test_translated_language() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div>
+      <div>
+        No lang property
+      </div>
+      <div lang="en">
+        Language matches
+      </div>
+      <div lang="fr">
+        Language mismatch is ignored.
+      </div>
+      <div lang="en-US">
+        Language match with region.
+      </div>
+      <div lang="fr">
+        <div>
+          Language mismatch with
+        </div>
+        <div>
+          nested elements.
+        </div>
+      </div>
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Language matching of elements behaves as expected.",
+    /* html */ `
+    <div>
+      <div x-bergamot-translated="">
+        NO LANG PROPERTY
+      </div>
+      <div x-bergamot-translated="" lang="en">
+        LANGUAGE MATCHES
+      </div>
+      <div lang="fr">
+        Language mismatch is ignored.
+      </div>
+      <div x-bergamot-translated="" lang="en-US">
+        LANGUAGE MATCH WITH REGION.
+      </div>
+      <div lang="fr">
+        <div>
+          Language mismatch with
+        </div>
+        <div>
+          nested elements.
+        </div>
+      </div>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test elements that have been marked as ignored.
+ */
+add_task(async function test_ignored_translations() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div translate="yes">
+      This is translated.
+    </div>
+    <div translate="no">
+      This is not translated.
+    </div>
+    <div class="notranslate">
+      This is not translated.
+    </div>
+    <div class="class-before notranslate class-after">
+      This is not translated.
+    </div>
+    <div contenteditable>
+      This is not translated.
+    </div>
+    <div contenteditable="true">
+      This is not translated.
+    </div>
+    <div contenteditable="false">
+      This is translated.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Language matching of elements behaves as expected.",
+    /* html */ `
+    <div translate="yes" x-bergamot-translated="">
+      THIS IS TRANSLATED.
+    </div>
+    <div translate="no">
+      This is not translated.
+    </div>
+    <div class="notranslate">
+      This is not translated.
+    </div>
+    <div class="class-before notranslate class-after">
+      This is not translated.
+    </div>
+    <div contenteditable="">
+      This is not translated.
+    </div>
+    <div contenteditable="true">
+      This is not translated.
+    </div>
+    <div x-bergamot-translated="" contenteditable="false">
+      THIS IS TRANSLATED.
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_comments() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <!-- Comments don't make it to the DOM -->
+    <div>
+      <!-- These will be ignored in the translation. -->
+      This is translated.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Comments do not affect things.",
+    /* html */ `
+    <div x-bergamot-translated="">
+      THIS IS TRANSLATED.
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test the batching behavior on what is sent in for a translation.
+ */
+add_task(async function test_translation_batching() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <div>
+        This is a simple section.
+      </div>
+      <div>
+        <span>This entire</span> section continues in a <b>batch</b>.
+      </div>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Batching",
+    /* html */ `
+    <div x-bergamot-translated="">
+      aaaa aa a aaaaaa aaaaaaa.
+    </div>
+    <div x-bergamot-translated="">
+      <span data-x-bergamot-id="0">
+        bbbb bbbbbb
+      </span>
+      bbbbbbb bbbbbbbbb bb b
+      <b data-x-bergamot-id="1">
+        bbbbb
+      </b>
+      .
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test what happens when there are many inline elements.
+ */
+add_task(async function test_many_inlines() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <div>
+        <span>
+          This is a
+        </span>
+        <span>
+          much longer
+        </span>
+        <span>
+          section that includes
+        </span>
+        <span>
+          many span elements
+        </span>
+        <span>
+          to test what happens
+        </span>
+        <span>
+          in cases like this.
+        </span>
+      </div>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Batching",
+    /* html */ `
+    <div x-bergamot-translated="">
+      <span data-x-bergamot-id="0">
+        aaaa aa a
+      </span>
+      <span data-x-bergamot-id="1">
+        aaaa aaaaaa
+      </span>
+      <span data-x-bergamot-id="2">
+        aaaaaaa aaaa aaaaaaaa
+      </span>
+      <span data-x-bergamot-id="3">
+        aaaa aaaa aaaaaaaa
+      </span>
+      <span data-x-bergamot-id="4">
+        aa aaaa aaaa aaaaaaa
+      </span>
+      <span data-x-bergamot-id="5">
+        aa aaaaa aaaa aaaa.
+      </span>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test what happens when there are many inline elements.
+ */
+add_task(async function test_many_inlines() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <div>
+        <div>
+          This is a
+        </div>
+        <div>
+          much longer
+        </div>
+        <div>
+          section that includes
+        </div>
+        <div>
+          many div elements
+        </div>
+        <div>
+          to test what happens
+        </div>
+        <div>
+          in cases like this.
+        </div>
+      </div>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Batching",
+    /* html */ `
+    <div>
+      <div x-bergamot-translated="">
+        aaaa aa a
+      </div>
+      <div x-bergamot-translated="">
+        bbbb bbbbbb
+      </div>
+      <div x-bergamot-translated="">
+        ccccccc cccc cccccccc
+      </div>
+      <div x-bergamot-translated="">
+        dddd ddd dddddddd
+      </div>
+      <div x-bergamot-translated="">
+        ee eeee eeee eeeeeee
+      </div>
+      <div x-bergamot-translated="">
+        ff fffff ffff ffff.
+      </div>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test the "presumed" inline content behavior.
+ */
+add_task(async function test_presumed_inlines1() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <div>
+        Text node
+        <div>Block element</div>
+      </div>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Mixing a text node with otherwise block elements will send it all in as one batch.",
+    /* html */ `
+    <div x-bergamot-translated="">
+      aaaa aaaa
+      <div data-x-bergamot-id="0">
+        aaaaa aaaaaaa
+      </div>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test what happens when there are many inline elements.
+ */
+add_task(async function test_presumed_inlines2() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <div>
+        Text node
+        <span>Inline</span>
+        <div>Block Element</div>
+      </div>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Conflicting inline and block elements will be sent in together if there are more inlines",
+    /* html */ `
+    <div x-bergamot-translated="">
+      aaaa aaaa
+      <span data-x-bergamot-id="0">
+        aaaaaa
+      </span>
+      <div data-x-bergamot-id="1">
+        aaaaa aaaaaaa
+      </div>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_presumed_inlines3() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <div>
+        Text node
+        <span>Inline</span>
+        <div>Block Element</div>
+        <div>Block Element</div>
+        <div>Block Element</div>
+      </span>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Conflicting inlines will be sent in as separate blocks if there are more block elements",
+    /* html */ `
+    <div>
+      Text node
+      <span x-bergamot-translated="">
+        aaaaaa
+      </span>
+      <div x-bergamot-translated="">
+        bbbbb bbbbbbb
+      </div>
+      <div x-bergamot-translated="">
+        ccccc ccccccc
+      </div>
+      <div x-bergamot-translated="">
+        ddddd ddddddd
+      </div>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_chunking_large_text() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <pre>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque fermentum est ante, ut porttitor enim molestie et. Nam mattis ullamcorper justo a ultrices. Ut ac sodales lorem. Sed feugiat ultricies lacus. Proin dapibus sit amet nunc a ullamcorper. Donec leo purus, convallis quis urna non, semper pulvinar augue. Nulla placerat turpis arcu, sit amet imperdiet sapien tincidunt ut. Donec sit amet luctus lorem, sed consectetur lectus. Pellentesque est nisi, feugiat et ipsum quis, vestibulum blandit nulla.
+
+        Proin accumsan sapien ut nibh mattis tincidunt. Donec facilisis nibh sodales, mattis risus et, malesuada lorem. Nam suscipit lacinia venenatis. Praesent ac consectetur ante. Vestibulum pulvinar ut massa in viverra. Nunc tincidunt tortor nunc. Vivamus sit amet hendrerit mi. Aliquam posuere velit non ante facilisis euismod. In ullamcorper, lacus vel hendrerit tincidunt, dui justo iaculis nulla, sit amet tincidunt nisl magna et urna. Sed varius tincidunt ligula. Interdum et malesuada fames ac ante ipsum primis in faucibus. Nam sed gravida ligula. Donec tincidunt arcu eros, ac maximus magna auctor eu. Vivamus suscipit neque velit, in ullamcorper elit pulvinar et. Morbi auctor tempor risus, imperdiet placerat velit gravida vel. Duis ultricies accumsan libero quis molestie.
+
+        Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Etiam nec arcu dapibus enim vulputate vulputate aliquet a libero. Nam hendrerit pulvinar libero, eget posuere quam porta eu. Pellentesque dignissim justo eu leo accumsan, sit amet suscipit ante gravida. Vivamus eu faucibus orci. Quisque sagittis tortor eget orci venenatis porttitor. Quisque mollis ipsum a dignissim dignissim.
+
+        Aenean sagittis nisi lectus, non lacinia orci dapibus viverra. Donec diam lorem, tincidunt sed massa vel, vulputate tincidunt metus. In quam felis, egestas et faucibus faucibus, vestibulum quis tortor. Morbi odio mi, suscipit vitae leo in, consequat interdum augue. Quisque purus velit, dictum ac ante eget, volutpat dapibus ante. Suspendisse quis augue vitae velit elementum dictum nec aliquet nisl. Maecenas vestibulum quam augue, eu maximus urna blandit eu. Donec nunc risus, elementum id ligula nec, ultrices venenatis libero. Suspendisse ullamcorper ex ante, malesuada pulvinar sem placerat vel.
+
+        In hac habitasse platea dictumst. Duis vulputate tellus arcu, at posuere ligula viverra luctus. Fusce ultrices malesuada neque vitae vehicula. Aliquam blandit nisi sed nibh facilisis, non varius turpis venenatis. Vestibulum ut velit laoreet, sagittis leo ac, pharetra ex. Aenean mollis risus sed nibh auctor, et feugiat neque iaculis. Fusce fermentum libero metus, at consectetur massa euismod sed. Mauris ut metus sit amet leo porttitor mollis. Vivamus tincidunt lorem non purus suscipit sollicitudin. Maecenas ut tristique elit. Ut eu volutpat turpis. Suspendisse nec tristique augue. Nullam faucibus egestas volutpat. Sed tempor eros et mi ultrices, nec feugiat eros egestas.
+      </pre>
+    `,
+    { fakeTranslator: createBatchFakeTranslator() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Large chunks of text can be still sent in for translation in one big pass, " +
+      "this could be slow bad behavior for the user.",
+    /* html */ `
+    <pre x-bergamot-translated="">
+        aaaaa aaaaa aaaaa aaa aaaa, aaaaaaaaaaa aaaaaaaaaa aaaa. aaaaaaa aaaaaaaaa aaa aaaa, aa aaaaaaaaa aaaa aaaaaaaa aa. aaa aaaaaa aaaaaaaaaaa aaaaa a aaaaaaaa. aa aa aaaaaaa aaaaa. aaa aaaaaaa aaaaaaaaa aaaaa. aaaaa aaaaaaa aaa aaaa aaaa a aaaaaaaaaaa. aaaaa aaa aaaaa, aaaaaaaaa aaaa aaaa aaa, aaaaaa aaaaaaaa aaaaa. aaaaa aaaaaaaa aaaaaa aaaa, aaa aaaa aaaaaaaaa aaaaaa aaaaaaaaa aa. aaaaa aaa aaaa aaaaaa aaaaa, aaa aaaaaaaaaaa aaaaaa. aaaaaaaaaaaa aaa aaaa, aaaaaaa aa aaaaa aaaa, aaaaaaaaaa aaaaaaa aaaaa.
+
+        aaaaa aaaaaaaa aaaaaa aa aaaa aaaaaa aaaaaaaaa. aaaaa aaaaaaaaa aaaa aaaaaaa, aaaaaa aaaaa aa, aaaaaaaaa aaaaa. aaa aaaaaaaa aaaaaaa aaaaaaaaa. aaaaaaaa aa aaaaaaaaaaa aaaa. aaaaaaaaaa aaaaaaaa aa aaaaa aa aaaaaaa. aaaa aaaaaaaaa aaaaaa aaaa. aaaaaaa aaa aaaa aaaaaaaaa aa. aaaaaaa aaaaaaa aaaaa aaa aaaa aaaaaaaaa aaaaaaa. aa aaaaaaaaaaa, aaaaa aaa aaaaaaaaa aaaaaaaaa, aaa aaaaa aaaaaaa aaaaa, aaa aaaa aaaaaaaaa aaaa aaaaa aa aaaa. aaa aaaaaa aaaaaaaaa aaaaaa. aaaaaaaa aa aaaaaaaaa aaaaa aa aaaa aaaaa aaaaaa aa aaaaaaaa. aaa aaa aaaaaaa aaaaaa. aaaaa aaaaaaaaa aaaa aaaa, aa aaaaaaa aaaaa aaaaaa aa. aaaaaaa aaaaaaaa aaaaa aaaaa, aa aaaaaaaaaaa aaaa aaaaaaaa aa. aaaaa aaaaaa aaaaaa aaaaa, aaaaaaaaa aaaaaaaa aaaaa aaaaaaa aaa. aaaa aaaaaaaaa aaaaaaaa aaaaaa aaaa aaaaaaaa.
+
+        aaaaaaaaaa aaaa aaaaa aaaaaa aa aaaaaaaa aaaa aaaaaa aa aaaaaaaa aaaaaaa aaaaaaa aaaaa; aaaaa aaa aaaa aaaaaaa aaaa aaaaaaaaa aaaaaaaaa aaaaaaa a aaaaaa. aaa aaaaaaaaa aaaaaaaa aaaaaa, aaaa aaaaaaa aaaa aaaaa aa. aaaaaaaaaaaa aaaaaaaaa aaaaa aa aaa aaaaaaaa, aaa aaaa aaaaaaaa aaaa aaaaaaa. aaaaaaa aa aaaaaaaa aaaa. aaaaaaa aaaaaaaa aaaaaa aaaa aaaa aaaaaaaaa aaaaaaaaa. aaaaaaa aaaaaa aaaaa a aaaaaaaaa aaaaaaaaa.
+
+        aaaaaa aaaaaaaa aaaa aaaaaa, aaa aaaaaaa aaaa aaaaaaa aaaaaaa. aaaaa aaaa aaaaa, aaaaaaaaa aaa aaaaa aaa, aaaaaaaaa aaaaaaaaa aaaaa. aa aaaa aaaaa, aaaaaaa aa aaaaaaaa aaaaaaaa, aaaaaaaaaa aaaa aaaaaa. aaaaa aaaa aa, aaaaaaaa aaaaa aaa aa, aaaaaaaaa aaaaaaaa aaaaa. aaaaaaa aaaaa aaaaa, aaaaaa aa aaaa aaaa, aaaaaaaa aaaaaaa aaaa. aaaaaaaaaaa aaaa aaaaa aaaaa aaaaa aaaaaaaaa aaaaaa aaa aaaaaaa aaaa. aaaaaaaa aaaaaaaaaa aaaa aaaaa, aa aaaaaaa aaaa aaaaaaa aa. aaaaa aaaa aaaaa, aaaaaaaaa aa aaaaaa aaa, aaaaaaaa aaaaaaaaa aaaaaa. aaaaaaaaaaa aaaaaaaaaaa aa aaaa, aaaaaaaaa aaaaaaaa aaa aaaaaaaa aaa.
+
+        aa aaa aaaaaaaaa aaaaaa aaaaaaaa. aaaa aaaaaaaaa aaaaaa aaaa, aa aaaaaaa aaaaaa aaaaaaa aaaaaa. aaaaa aaaaaaaa aaaaaaaaa aaaaa aaaaa aaaaaaaa. aaaaaaa aaaaaaa aaaa aaa aaaa aaaaaaaaa, aaa aaaaaa aaaaaa aaaaaaaaa. aaaaaaaaaa aa aaaaa aaaaaaa, aaaaaaaa aaa aa, aaaaaaaa aa. aaaaaa aaaaaa aaaaa aaa aaaa aaaaaa, aa aaaaaaa aaaaa aaaaaaa. aaaaa aaaaaaaaa aaaaaa aaaaa, aa aaaaaaaaaaa aaaaa aaaaaaa aaa. aaaaaa aa aaaaa aaa aaaa aaa aaaaaaaaa aaaaaa. aaaaaaa aaaaaaaaa aaaaa aaa aaaaa aaaaaaaa aaaaaaaaaaaa. aaaaaaaa aa aaaaaaaaa aaaa. aa aa aaaaaaaa aaaaaa. aaaaaaaaaaa aaa aaaaaaaaa aaaaa. aaaaaa aaaaaaaa aaaaaaa aaaaaaaa. aaa aaaaaa aaaa aa aa aaaaaaaa, aaa aaaaaaa aaaa aaaaaaa.
+    </pre>
+    `
+  );
+
+  cleanup();
+});
+
 // Test subtrees with no text
 // Test behavior of presumed inline
 // Test the xBergamotId behavior
 // Test mutation behavior
+// Test translating title
+// Test html comments
+// Test re-ordered translation results.
 
 /**
  * Naively prettify's html based on the opening and closing tags. This is not robust
@@ -264,4 +711,44 @@ function naivelyPrettify(html) {
   }
 
   return result.trim();
+}
+
+/**
+ * This fake translator reports on the batching of calls by replacing the text
+ * with a letter. Each call of the function moves the letter forward alphabetically.
+ *
+ * So consecutive calls would transform things like:
+ *   "First translation" -> "aaaa aaaaaaaaa"
+ *   "Second translation" -> "bbbbb bbbbbbbbb"
+ *   "Third translation" -> "cccc ccccccccc"
+ *
+ * This can visually show what the translation batching behavior looks like.
+ */
+function createBatchFakeTranslator() {
+  let letter = "a";
+  /**
+   * @param {string} message
+   */
+  return async function fakeTranslator(message) {
+    /**
+     * @param {Node} node
+     */
+    function transformNode(node) {
+      if (typeof node.nodeValue === "string") {
+        node.nodeValue = node.nodeValue.replace(/\w/g, letter);
+      }
+      for (const childNode of node.childNodes) {
+        transformNode(childNode);
+      }
+    }
+
+    const parser = new DOMParser();
+    const translatedDoc = parser.parseFromString(message, "text/html");
+    transformNode(translatedDoc.body);
+
+    // "Increment" the letter.
+    letter = String.fromCodePoint(letter.codePointAt(0) + 1);
+
+    return [translatedDoc.body.innerHTML];
+  };
 }
