@@ -48,7 +48,7 @@ async function createDoc(html, options) {
     return [translatedDoc.body.innerHTML];
   }
 
-  const translated = new TranslatedDocument(
+  const translatedDocument = new TranslatedDocument(
     document,
     "en",
     options?.fakeTranslator ?? fakeTranslator,
@@ -82,14 +82,14 @@ async function createDoc(html, options) {
 
   function translate() {
     info("Running translation.");
-    translated.addRootElement(document.body);
+    translatedDocument.addRootElement(document.body);
   }
 
   function cleanup() {
     SpecialPowers.popPrefEnv();
   }
 
-  return { translate, htmlMatches, cleanup };
+  return { translate, htmlMatches, cleanup, translatedDocument, document };
 }
 
 add_task(async function test_translated_div_element() {
@@ -133,6 +133,64 @@ add_task(async function test_translated_textnode() {
     "A Text node at the root is translated into all caps",
     "THIS IS A SIMPLE TEXT TRANSLATION."
   );
+
+  cleanup();
+});
+
+add_task(async function test_no_text_trees() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div>
+      <div></div>
+      <span></span>
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Trees with no text are not affected",
+    /* html */ `
+      <div>
+        <div></div>
+        <span></span>
+      </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_no_text_trees() {
+  const { translate, htmlMatches, cleanup } = await createDoc("");
+  translate();
+  await htmlMatches("No text is still no text", "");
+  cleanup();
+});
+
+add_task(async function test_translated_title() {
+  const { cleanup, document, translatedDocument } = await createDoc(/* html */ `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>This is an actual full page.</title>
+    </head>
+    <body>
+
+    </body>
+    </html>
+  `);
+
+  info("The title element is the only <head> element that is used as a root.");
+  translatedDocument.addRootElement(document.getElementsByTagName("title")[0]);
+
+  const translatedTitle = "THIS IS AN ACTUAL FULL PAGE.";
+  try {
+    await BrowserTestUtils.waitForCondition(
+      () => document.title === translatedTitle
+    );
+  } catch (error) {}
+  is(document.title, translatedTitle, "The title was changed.");
 
   cleanup();
 });
@@ -296,6 +354,48 @@ add_task(async function test_ignored_translations() {
     <div x-bergamot-translated="" contenteditable="false">
       THIS IS TRANSLATED.
     </div>
+    `
+  );
+
+  cleanup();
+});
+
+/**
+ * Test excluded tags.
+ */
+add_task(async function test_excluded_tags() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div>
+      This is translated.
+    </div>
+    <code>
+      This is ignored
+    </code>
+    <script>
+      This is ignored
+    </script>
+    <textarea>
+      This is ignored
+    </textarea>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "EXCLUDED_TAGS are not translated",
+    /* html */ `
+    <div x-bergamot-translated="">
+      THIS IS TRANSLATED.
+    </div>
+    <code>
+      This is ignored
+    </code>
+    <script>
+      This is ignored
+    </script>
+    <textarea>
+      This is ignored
+    </textarea>
     `
   );
 
@@ -569,6 +669,8 @@ add_task(async function test_presumed_inlines3() {
 
   translate();
 
+  // TODO - There is a bug in the implementation, see the untranslated "Text node" below.
+  // this was in the original implementation.
   await htmlMatches(
     "Conflicting inlines will be sent in as separate blocks if there are more block elements",
     /* html */ `
@@ -634,121 +736,127 @@ add_task(async function test_chunking_large_text() {
   cleanup();
 });
 
-// Test subtrees with no text
-// Test behavior of presumed inline
-// Test the xBergamotId behavior
-// Test mutation behavior
-// Test translating title
-// Test html comments
-// Test re-ordered translation results.
+add_task(async function test_reordering() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      <span>
+        B - This was first.
+      </span>
+      <span>
+        A - This was second.
+      </span>
+      <span>
+        C - This was third.
+      </span>
+    `,
+    { fakeTranslator: reorderingTranslator }
+  );
 
-/**
- * Naively prettify's html based on the opening and closing tags. This is not robust
- * for general usage, but should be adequate for these tests.
- * @param {string} html
- * @returns {string}
- */
-function naivelyPrettify(html) {
-  let result = "";
-  let indent = 0;
+  translate();
 
-  function addText(actualEndIndex) {
-    const text = html.slice(startIndex, actualEndIndex).trim();
-    if (text) {
-      for (let i = 0; i < indent; i++) {
-        result += "  ";
-      }
-      result += text + "\n";
-    }
-    startIndex = actualEndIndex;
-  }
+  await htmlMatches(
+    "Nodes can be re-ordered by the translator",
+    /* html */ `
+      <span data-x-bergamot-id="1">
+        A - THIS WAS SECOND.
+      </span>
+      <span data-x-bergamot-id="0">
+        B - THIS WAS FIRST.
+      </span>
+      <span data-x-bergamot-id="2">
+        C - THIS WAS THIRD.
+      </span>
+    `
+  );
 
-  let startIndex = 0;
-  let endIndex = 0;
-  for (; endIndex < html.length; endIndex++) {
-    if (
-      html[endIndex] === " " ||
-      html[endIndex] === "\t" ||
-      html[endIndex] === "n"
-    ) {
-      // Skip whitespace.
-      // "   <div>foobar</div>"
-      //  ^^^
-      startIndex = endIndex;
-      continue;
-    }
+  cleanup();
+});
 
-    // Find all of the text.
-    // "<div>foobar</div>"
-    //       ^^^^^^
-    while (endIndex < html.length && html[endIndex] !== "<") {
-      endIndex++;
-    }
+add_task(async function test_reordering2() {
+  const { translate, htmlMatches, cleanup } = await createDoc(
+    /* html */ `
+      B - This was first.
+      <span>
+        A - This was second.
+      </span>
+      C - This was third.
+    `,
+    { fakeTranslator: reorderingTranslator }
+  );
 
-    addText(endIndex);
+  translate();
 
-    if (html[endIndex] === "<") {
-      if (html[endIndex + 1] === "/") {
-        // "<div>foobar</div>"
-        //             ^
-        while (endIndex < html.length && html[endIndex] !== ">") {
-          endIndex++;
-        }
-        indent--;
-        addText(endIndex + 1);
-      } else {
-        // "<div>foobar</div>"
-        //  ^
-        while (endIndex < html.length && html[endIndex] !== ">") {
-          endIndex++;
-        }
-        // "<div>foobar</div>"
-        //      ^
-        addText(endIndex + 1);
-        indent++;
-      }
-    }
-  }
+  // Note: ${"      "} is used below to ensure that the whitespace is not stripped from
+  // the test.
+  await htmlMatches(
+    "Text nodes can be re-ordered.",
+    /* html */ `
+      <span data-x-bergamot-id="0">
+        A - THIS WAS SECOND.
+      </span>
+      B - THIS WAS FIRST.
+${"      "}
+      C - THIS WAS THIRD.
+    `
+  );
 
-  return result.trim();
-}
+  cleanup();
+});
 
-/**
- * This fake translator reports on the batching of calls by replacing the text
- * with a letter. Each call of the function moves the letter forward alphabetically.
- *
- * So consecutive calls would transform things like:
- *   "First translation" -> "aaaa aaaaaaaaa"
- *   "Second translation" -> "bbbbb bbbbbbbbb"
- *   "Third translation" -> "cccc ccccccccc"
- *
- * This can visually show what the translation batching behavior looks like.
- */
-function createBatchFakeTranslator() {
-  let letter = "a";
-  /**
-   * @param {string} message
-   */
-  return async function fakeTranslator(message) {
-    /**
-     * @param {Node} node
-     */
-    function transformNode(node) {
-      if (typeof node.nodeValue === "string") {
-        node.nodeValue = node.nodeValue.replace(/\w/g, letter);
-      }
-      for (const childNode of node.childNodes) {
-        transformNode(childNode);
-      }
-    }
+add_task(async function test_mutations() {
+  const {
+    translate,
+    htmlMatches,
+    cleanup,
+    document,
+  } = await createDoc(/* html */ `
+    <div>
+      This is a simple translation.
+    </div>
+  `);
 
-    const parser = new DOMParser();
-    const translatedDoc = parser.parseFromString(message, "text/html");
-    transformNode(translatedDoc.body);
+  translate();
 
-    // "Increment" the letter.
-    letter = String.fromCodePoint(letter.codePointAt(0) + 1);
+  await htmlMatches(
+    "It translates.",
+    /* html */ `
+      <div x-bergamot-translated="">
+        THIS IS A SIMPLE TRANSLATION.
+      </div>
+    `
+  );
 
-    return [translatedDoc.body.innerHTML];
-  };
-}
+  info('Trigger the "childList" mutation.');
+  const div = document.createElement("div");
+  div.innerText = "This is an added node.";
+  document.body.appendChild(div);
+
+  await htmlMatches(
+    "The added node gets translated.",
+    /* html */ `
+      <div x-bergamot-translated="">
+        THIS IS A SIMPLE TRANSLATION.
+      </div>
+      <div x-bergamot-translated="">
+        THIS IS AN ADDED NODE.
+      </div>
+    `
+  );
+
+  info('Trigger the "characterData" mutation.');
+  document.querySelector("div").firstChild.nodeValue =
+    "This is a changed node.";
+
+  await htmlMatches(
+    "The changed node gets translated",
+    /* html */ `
+      <div x-bergamot-translated="">
+        THIS IS A CHANGED NODE.
+      </div>
+      <div x-bergamot-translated="">
+        THIS IS AN ADDED NODE.
+      </div>
+    `
+  );
+  cleanup();
+});
