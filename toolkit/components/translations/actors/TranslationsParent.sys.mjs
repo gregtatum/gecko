@@ -287,7 +287,7 @@ export class TranslationsParent extends JSWindowActorParent {
       // slow/safe thing of always verifying the signature.
       verifySignature: true,
       // Only get the bergamot-translator record.
-      filter: { name: "bergamot-translator" },
+      filters: { name: "bergamot-translator" },
     });
 
     if (wasmRecords.length === 0) {

@@ -171,9 +171,10 @@ export class AboutTranslationsChild extends JSWindowActorChild {
 
   /**
    * @param {string[]} messageBatch
+   * @param {number} innerWindowId
    * @returns {Promise<string[]>}
    */
-  AT_translateText(messageBatch) {
+  AT_translateText(messageBatch, innerWindowId) {
     if (!this.engine) {
       throw new this.contentWindow.Error(
         "The translations engine was not created."
@@ -181,7 +182,7 @@ export class AboutTranslationsChild extends JSWindowActorChild {
     }
     return this.#convertToContentPromise(
       this.engine
-        .translateText(messageBatch)
+        .translateText(messageBatch, innerWindowId)
         .then(translations => Cu.cloneInto(translations, this.contentWindow))
     );
   }

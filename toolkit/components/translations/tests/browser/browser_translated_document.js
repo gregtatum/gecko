@@ -51,6 +51,7 @@ async function createDoc(html, options) {
   const translatedDocument = new TranslatedDocument(
     document,
     "en",
+    0, // This is a fake innerWindowID
     options?.fakeTranslator ?? fakeTranslator,
     options?.fakeTranslator ?? fakeTranslator
   );
