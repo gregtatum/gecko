@@ -81,7 +81,7 @@ async function handleInitializationMessage({ data }) {
     }
 
     ChromeUtils.addProfilerMarker(
-      "Translations",
+      "TranslationsWorker",
       { startTime },
       "Translations engine loaded."
     );
@@ -103,7 +103,7 @@ async function handleInitializationMessage({ data }) {
  * @param {Engine | MockedEngine} engine
  */
 function handleMessages(engine) {
-  addEventListener("message", ({ data }) => {
+  addEventListener("message", async ({ data }) => {
     try {
       if (data.type === "initialize") {
         throw new Error("The Translations engine must not be re-initialized.");
@@ -113,14 +113,19 @@ function handleMessages(engine) {
       switch (data.type) {
         case "translation-request": {
           const { messageBatch, messageId, isHTML } = data;
+
           try {
-            const translations = engine.translate(messageBatch, isHTML);
+            // Translate the message and return them.
             postMessage({
               type: "translation-response",
-              translations,
+              translations: await engine.translate(messageBatch, isHTML),
               messageId,
             });
           } catch (error) {
+            if (error?.message === "TranslationsDiscarded") {
+              // Ignore discarded translations.
+              return;
+            }
             console.error(error);
             let message = "An error occurred in the engine worker.";
             if (typeof error?.message === "string") {
@@ -136,6 +141,27 @@ function handleMessages(engine) {
               messageId,
             });
           }
+          break;
+        }
+        case "discard-translation-queue": {
+          ChromeUtils.addProfilerMarker(
+            "TranslationsWorker",
+            null,
+            "!!! Translations discarded before"
+          );
+
+          await engine.discardTranslations();
+
+          ChromeUtils.addProfilerMarker(
+            "TranslationsWorker",
+            null,
+            "!!! Translations discarded after"
+          );
+
+          // Signal to the "message" listeners in the main thread to stop listening.
+          postMessage({
+            type: "translations-discarded",
+          });
           break;
         }
         default:
@@ -189,14 +215,89 @@ class Engine {
   }
 
   /**
-   * Run the translation models to perform a batch of message translations.
+   * This promise chain acts as a translation queue. Translations are actually
+   * synchronous, but this makes the event loop able to process things like incoming
+   * messages by awaiting this promise.
+   *
+   * This promise is never rejected.
+   */
+  translationPromiseChain = Promise.resolve();
+  #discardTranslations = false;
+
+  /**
+   * Signal to any outstanding translations that they should be discarded.
+   */
+  async discardTranslations() {
+    this.#discardTranslations = true;
+    let translationPromiseChain;
+    do {
+      translationPromiseChain = this.translationPromiseChain;
+      await translationPromiseChain;
+    } while (translationPromiseChain !== this.translationPromiseChain);
+    this.#discardTranslations = false;
+  }
+
+  /**
+   * Run the translation models to perform a batch of message translations. The
+   * promise is rejected when the sync version of this function throws an error.
+   * This function creates an async interface over the synchronous translation
+   * mechanism. This allows other microtasks such as message handling to still work
+   * even though the translations are CPU-intensive.
+   *
+   * @param {string[]} messageBatch
+   * @param {boolean} isHTML
+   * @param {boolean} withQualityEstimation
+   * @returns {Promise<string[]>}
+   */
+  translate(messageBatch, isHTML, withQualityEstimation = false) {
+    if (this.#discardTranslations) {
+      return Promise.reject(new Error("TranslationsDiscarded"));
+    }
+
+    const timeout = this.translationPromiseChain.then(() => {
+      return new Promise(resolve => {
+        // Creating a timeout of 0 will ensure all promise microtasks will run to
+        // completion. This allows any postMessage handlers to sneak in between the
+        // CPU-blocking synchronous translation calls.
+        setTimeout(resolve, 0);
+      });
+    });
+
+    const translation = timeout.then(
+      () =>
+        new Promise((resolve, reject) => {
+          try {
+            if (this.#discardTranslations) {
+              reject(new Error("TranslationsDiscarded"));
+              return;
+            }
+            resolve(
+              this.#syncTranslate(messageBatch, isHTML, withQualityEstimation)
+            );
+          } catch (error) {
+            reject(error);
+          }
+        })
+    );
+
+    // Chain the translations together into a big promise chain that is never rejected.
+    this.translationPromiseChain = translation.catch(() => {});
+
+    // Return the Promise that can be rejected.
+    return translation;
+  }
+
+  /**
+   * Run the translation models to perform a batch of message translations. This
+   * blocks the worker thread until it is completed.
    *
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
    * @param {boolean} withQualityEstimation
    * @returns {string[]}
    */
-  translate(messageBatch, isHTML, withQualityEstimation = false) {
+  #syncTranslate(messageBatch, isHTML, withQualityEstimation = false) {
+    const startTime = performance.now();
     let response;
     const { messages, options } = BergamotUtils.getTranslationArgs(
       this.bergamot,
@@ -232,9 +333,23 @@ class Engine {
       }
 
       // Extract JavaScript values out of the vector.
-      return BergamotUtils.mapVector(responses, response =>
+      const translations = BergamotUtils.mapVector(responses, response =>
         response.getTranslatedText()
       );
+
+      // Report on the time it took to do these translations.
+      let length = 0;
+      for (const message of messageBatch) {
+        length += message.length;
+      }
+      const rate = (length / (performance.now() - startTime)) * 1000;
+      ChromeUtils.addProfilerMarker(
+        "TranslationsWorker",
+        { startTime },
+        `Translated ${length} code units at a rate of ${rate} per second.`
+      );
+
+      return translations;
     } finally {
       // Free up any memory that was allocated. This will always run.
       messages?.delete();
@@ -498,4 +613,21 @@ class MockedEngine {
         `${message.toUpperCase()} [${this.fromLanguage} to ${this.toLanguage}]`
     );
   }
+}
+
+/**
+ * All all outstanding promises to settle.
+ */
+function nextTick() {
+  const startTime = performance.now();
+  return new Promise(resolve => {
+    setTimeout(() => {
+      ChromeUtils.addProfilerMarker(
+        "TranslationsWorker",
+        { startTime },
+        "!!! next tick"
+      );
+      resolve();
+    }, 500);
+  });
 }
