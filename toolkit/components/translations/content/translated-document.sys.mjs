@@ -610,7 +610,7 @@ export class TranslatedDocument {
     }
     const message = wordCount + " words are in the viewport.";
     lazy.console.log(message);
-    ChromeUtils.addProfilerMarker("Translation", null, message);
+    ChromeUtils.addProfilerMarker("Translations", null, message);
   }
 
   /**
