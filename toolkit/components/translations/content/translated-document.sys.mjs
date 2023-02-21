@@ -22,7 +22,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * @typedef {(message: string) => Promise<string>} TranslationFunction
  */
 
-const UPDATE_INTERVAL = 500;
+const UPDATE_INTERVAL = 0;
 
 /**
  * These tags are excluded from translation.

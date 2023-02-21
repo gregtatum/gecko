@@ -2,9 +2,20 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/**
+ * @type {{
+ *   TranslatedDocument: typeof import("../content/translated-document.sys.mjs").TranslatedDocument
+ *   console: typeof console
+ * }}
+ */
 const lazy = {};
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+
+ChromeUtils.defineESModuleGetters(lazy, {
+  TranslatedDocument:
+    "chrome://global/content/translations/translated-document.sys.mjs",
+});
 
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
@@ -148,6 +159,14 @@ export class TranslationsEngine {
  * See the TranslationsParent for documentation.
  */
 export class TranslationsChild extends JSWindowActorChild {
+  constructor() {
+    super();
+    ChromeUtils.addProfilerMarker(
+      "Translations",
+      null,
+      "TranslationsChild constructor"
+    );
+  }
   /**
    * The data for the Bergamot translation engine is downloaded from Remote Settings
    * and cached to disk. It is retained here in child process in case the translation
@@ -205,8 +224,108 @@ export class TranslationsChild extends JSWindowActorChild {
    * @param {{ type: string }} event
    */
   handleEvent(event) {
-    // TODO
-    lazy.console.log("TranslationsChild observed a pageshow event.");
+    ChromeUtils.addProfilerMarker("Translations", null, "Event: " + event.type);
+    if (event.type === "DOMContentLoaded") {
+      this.maybeTranslateDocument();
+    }
+  }
+
+  async maybeTranslateDocument() {
+    ChromeUtils.addProfilerMarker("Translations", null, "start");
+    const translationsStart = this.docShell.now();
+    let appLangTag = new Intl.Locale(Services.locale.appLocaleAsBCP47).language;
+    let docLangTag;
+
+    const { innerWindowId } = this.contentWindow.windowGlobalChild;
+
+    try {
+      const docLocale = new Intl.Locale(this.document.documentElement.lang);
+      docLangTag = docLocale.language;
+    } catch (error) {}
+
+    if (!docLangTag) {
+      const message = "No valid language detected.";
+      ChromeUtils.addProfilerMarker("Translations", { innerWindowId }, message);
+      lazy.console.log(message, this.contentWindow.location.href);
+      return;
+    }
+
+    if (appLangTag === docLangTag) {
+      const message =
+        "The app and document languages match, so not translating.";
+      ChromeUtils.addProfilerMarker("Translations", { innerWindowId }, message);
+      lazy.console.log(message, this.contentWindow.location.href);
+      return;
+    }
+
+    // TODO - This is wrong for non-bidirectional translation pairs.
+    const supportedLanguages = await this.getSupportedLanguages();
+    if (
+      !supportedLanguages.some(({ langTag }) => langTag === appLangTag) ||
+      !supportedLanguages.some(({ langTag }) => langTag === docLangTag)
+    ) {
+      const message = `Translating from "${docLangTag}" to "${appLangTag}" is not supported.`;
+      ChromeUtils.addProfilerMarker("Translations", { innerWindowId }, message);
+      lazy.console.log(message, supportedLanguages);
+      return;
+    }
+
+    let engine;
+    try {
+      const startTime = this.docShell.now();
+
+      lazy.console.log(
+        `Loading the translations engine for "${docLangTag}" to "${appLangTag}"`,
+        this.contentWindow.location.href
+      );
+
+      engine = await this.createTranslationsEngine(docLangTag, appLangTag);
+
+      ChromeUtils.addProfilerMarker(
+        "Translations",
+        { innerWindowId, startTime },
+        "Translation engine loaded"
+      );
+    } catch (error) {
+      lazy.console.error(
+        "Failed to load the translations engine",
+        error,
+        this.contentWindow.location.href
+      );
+      return;
+    }
+
+    const translatedDoc = new lazy.TranslatedDocument(
+      this.document,
+      "en",
+      html => engine.translateHTML([html]),
+      text => engine.translateText([text]),
+      () => this.docShell.now()
+    );
+
+    lazy.console.log(
+      "Beginning to translate.",
+      this.contentWindow.location.href
+    );
+
+    translatedDoc.addRootElement(this.document.body);
+    translatedDoc.addRootElement(this.document.querySelector("title"));
+
+    {
+      const startTime = this.docShell.now();
+      translatedDoc.viewportTranslated.then(() => {
+        ChromeUtils.addProfilerMarker(
+          "Translations",
+          { innerWindowId, startTime },
+          "Viewport translations"
+        );
+        ChromeUtils.addProfilerMarker(
+          "Translations",
+          { innerWindowId, startTime: translationsStart },
+          "Time to first translation"
+        );
+      });
+    }
   }
 
   /**
