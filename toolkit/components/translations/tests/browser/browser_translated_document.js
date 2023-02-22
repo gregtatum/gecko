@@ -51,6 +51,7 @@ async function createDoc(html, options) {
   const translatedDocument = new TranslatedDocument(
     document,
     "en",
+    "12345",
     options?.fakeTranslator ?? fakeTranslator,
     options?.fakeTranslator ?? fakeTranslator
   );

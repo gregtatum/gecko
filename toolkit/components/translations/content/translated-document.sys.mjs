@@ -200,11 +200,18 @@ export class TranslatedDocument {
   /**
    * @param {Document} document
    * @param {string} fromLanguage
+   * @param {string} innerWindowId
    *  The two letter BCP 47 language tag.
    * @param {TranslationFunction} translateHTML
    * @param {TranslationFunction} translateText
    */
-  constructor(document, fromLanguage, translateHTML, translateText) {
+  constructor(
+    document,
+    fromLanguage,
+    innerWindowId,
+    translateHTML,
+    translateText
+  ) {
     // The language of the page. If elements are found that do not match this language,
     // then they are skipped.
     if (fromLanguage.length !== 2) {
@@ -220,6 +227,9 @@ export class TranslatedDocument {
 
     /** @type {TranslationFunction} */
     this.translateText = translateText;
+
+    /** @type {string} */
+    this.innerWindowId = innerWindowId;
 
     /** @type {DOMParser} */
     this.domParser = new document.ownerGlobal.DOMParser();
@@ -307,7 +317,7 @@ export class TranslatedDocument {
    *
    * @param {Node} root
    */
-  startTreeWalker(root) {
+  startTreeWalker(root, reportWordsInViewport = false) {
     // TODO - This looks like it can be removed.
     /*
      * if the parent itself is rejected, we don't translate any children.
@@ -396,6 +406,10 @@ export class TranslatedDocument {
       // Text nodes are never excluded.
       return false;
     }
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      // Only elements and and text nodes should be considered.
+      return true;
+    }
 
     if (EXCLUDED_TAGS.has(node.nodeName.toLowerCase())) {
       // This is an excluded tag.
@@ -407,6 +421,9 @@ export class TranslatedDocument {
       return true;
     }
 
+    if (!node?.getAttribute) {
+      lazy.console.log("!!! node with no getAttribute", node);
+    }
     if (node.getAttribute("translate") === "no") {
       // This element has a translate="no" attribute.
       // https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/translate
@@ -567,7 +584,7 @@ export class TranslatedDocument {
 
     ChromeUtils.addProfilerMarker(
       "Translations",
-      null,
+      { innerWindowId: this.innerWindowId },
       `Translate ${this.queuedNodes.size} nodes.\n\n` +
         `In viewport: ${inViewportCounts}\n` +
         `Out of viewport: ${outOfViewportCounts}\n` +
@@ -610,7 +627,11 @@ export class TranslatedDocument {
     }
     const message = wordCount + " words are in the viewport.";
     lazy.console.log(message);
-    ChromeUtils.addProfilerMarker("Translations", null, message);
+    ChromeUtils.addProfilerMarker(
+      "Translations",
+      { innerWindowId: this.innerWindowId },
+      message
+    );
   }
 
   /**
@@ -655,7 +676,15 @@ export class TranslatedDocument {
   }
 
   startMutationObserver() {
+    if (Cu.isDeadWrapper(this.observer)) {
+      // This observer is no longer alive.
+      return;
+    }
     for (const node of this.rootNodes) {
+      if (Cu.isDeadWrapper(node)) {
+        // This node is no longer alive.
+        continue;
+      }
       this.observer.observe(node, {
         characterData: true,
         childList: true,
@@ -665,17 +694,32 @@ export class TranslatedDocument {
   }
 
   stopMutationObserver() {
-    this.observer.disconnect();
+    // Was the window already destroyed?
+    if (!Cu.isDeadWrapper(this.observer)) {
+      this.observer.disconnect();
+    }
   }
 
   /**
    * This is called every `UPDATE_INTERVAL` ms with translations for nodes.
+   *
+   * This function is called asynchronously, so nodes may already be dead. Before
+   * accessing a node make sure and run `Cu.isDeadWrapper` to check that it is alive.
    */
   updateNodesWithTranslations() {
     // Stop the mutations so that the updates won't trigger observations.
     this.stopMutationObserver();
 
     for (const { node, translatedHTML } of this.nodesWithTranslatedHTML) {
+      if (Cu.isDeadWrapper(node)) {
+        // The node is no longer alive.
+        ChromeUtils.addProfilerMarker(
+          "Translations",
+          { innerWindowId: this.innerWindowId },
+          "Node is no long alive."
+        );
+        continue;
+      }
       switch (node.nodeType) {
         case Node.TEXT_NODE: {
           if (translatedHTML.trim().length !== 0) {
