@@ -50,7 +50,13 @@ async function handleInitializationMessage({ data }) {
   }
 
   try {
-    const { fromLanguage, toLanguage, enginePayload, isLoggingEnabled } = data;
+    const {
+      fromLanguage,
+      toLanguage,
+      enginePayload,
+      isLoggingEnabled,
+      innerWindowId,
+    } = data;
 
     if (!fromLanguage) {
       throw new Error('Worker initialization missing "fromLanguage"');
@@ -73,7 +79,8 @@ async function handleInitializationMessage({ data }) {
         fromLanguage,
         toLanguage,
         bergamot,
-        languageModelFiles
+        languageModelFiles,
+        innerWindowId
       );
     } else {
       // The engine is testing mode, and no Bergamot wasm is available.
@@ -82,7 +89,7 @@ async function handleInitializationMessage({ data }) {
 
     ChromeUtils.addProfilerMarker(
       "TranslationsWorker",
-      { startTime },
+      { startTime, innerWindowId },
       "Translations engine loaded."
     );
 
@@ -103,17 +110,21 @@ async function handleInitializationMessage({ data }) {
  * @param {Engine | MockedEngine} engine
  */
 function handleMessages(engine) {
+  let discardPromise;
   addEventListener("message", async ({ data }) => {
     try {
       if (data.type === "initialize") {
         throw new Error("The Translations engine must not be re-initialized.");
       }
-      log("Received message", data);
+      // log("Received message", data);
 
       switch (data.type) {
         case "translation-request": {
           const { messageBatch, messageId, isHTML } = data;
-
+          if (discardPromise) {
+            // Wait for messages to be discarded if there are any.
+            await discardPromise;
+          }
           try {
             // Translate the message and return them.
             postMessage({
@@ -122,10 +133,6 @@ function handleMessages(engine) {
               messageId,
             });
           } catch (error) {
-            if (error?.message === "TranslationsDiscarded") {
-              // Ignore discarded translations.
-              return;
-            }
             console.error(error);
             let message = "An error occurred in the engine worker.";
             if (typeof error?.message === "string") {
@@ -146,15 +153,17 @@ function handleMessages(engine) {
         case "discard-translation-queue": {
           ChromeUtils.addProfilerMarker(
             "TranslationsWorker",
-            null,
+            { innerWindowId: engine.innerWindowId },
             "!!! Translations discarded before"
           );
 
-          await engine.discardTranslations();
+          discardPromise = engine.discardTranslations();
+          await discardPromise;
+          discardPromise = null;
 
           ChromeUtils.addProfilerMarker(
             "TranslationsWorker",
-            null,
+            { innerWindowId: engine.innerWindowId },
             "!!! Translations discarded after"
           );
 
@@ -162,6 +171,10 @@ function handleMessages(engine) {
           postMessage({
             type: "translations-discarded",
           });
+          break;
+        }
+        case "set-inner-window-id": {
+          engine.innerWindowId = data.innerWindowId;
           break;
         }
         default:
@@ -191,8 +204,15 @@ class Engine {
    * @param {string} toLanguage
    * @param {Bergamot} bergamot
    * @param {Array<LanguageModelFiles>} languageModelFiles
+   * @param {string} innerWindowId
    */
-  constructor(fromLanguage, toLanguage, bergamot, languageModelFiles) {
+  constructor(
+    fromLanguage,
+    toLanguage,
+    bergamot,
+    languageModelFiles,
+    innerWindowId
+  ) {
     /** @type {string} */
     this.fromLanguage = fromLanguage;
     /** @type {string} */
@@ -206,6 +226,8 @@ class Engine {
         languageModelFiles
       )
     );
+    /** @type {string} */
+    this.innerWindowId = innerWindowId;
 
     /** @type {Bergamot["BlockingService"]} */
     this.translationService = new bergamot.BlockingService({
@@ -215,27 +237,9 @@ class Engine {
   }
 
   /**
-   * This promise chain acts as a translation queue. Translations are actually
-   * synchronous, but this makes the event loop able to process things like incoming
-   * messages by awaiting this promise.
-   *
-   * This promise is never rejected.
+   * Contains the queue of synchronous translations work.
    */
-  translationPromiseChain = Promise.resolve();
-  #discardTranslations = false;
-
-  /**
-   * Signal to any outstanding translations that they should be discarded.
-   */
-  async discardTranslations() {
-    this.#discardTranslations = true;
-    let translationPromiseChain;
-    do {
-      translationPromiseChain = this.translationPromiseChain;
-      await translationPromiseChain;
-    } while (translationPromiseChain !== this.translationPromiseChain);
-    this.#discardTranslations = false;
-  }
+  #workQueue = new WorkQueue();
 
   /**
    * Run the translation models to perform a batch of message translations. The
@@ -250,41 +254,16 @@ class Engine {
    * @returns {Promise<string[]>}
    */
   translate(messageBatch, isHTML, withQualityEstimation = false) {
-    if (this.#discardTranslations) {
-      return Promise.reject(new Error("TranslationsDiscarded"));
-    }
-
-    const timeout = this.translationPromiseChain.then(() => {
-      return new Promise(resolve => {
-        // Creating a timeout of 0 will ensure all promise microtasks will run to
-        // completion. This allows any postMessage handlers to sneak in between the
-        // CPU-blocking synchronous translation calls.
-        setTimeout(resolve, 0);
-      });
-    });
-
-    const translation = timeout.then(
-      () =>
-        new Promise((resolve, reject) => {
-          try {
-            if (this.#discardTranslations) {
-              reject(new Error("TranslationsDiscarded"));
-              return;
-            }
-            resolve(
-              this.#syncTranslate(messageBatch, isHTML, withQualityEstimation)
-            );
-          } catch (error) {
-            reject(error);
-          }
-        })
+    return this.#workQueue.runTask(() =>
+      this.#syncTranslate(messageBatch, isHTML, withQualityEstimation)
     );
+  }
 
-    // Chain the translations together into a big promise chain that is never rejected.
-    this.translationPromiseChain = translation.catch(() => {});
-
-    // Return the Promise that can be rejected.
-    return translation;
+  /**
+   * Cancels any in-progress translations.
+   */
+  discardTranslations() {
+    this.#workQueue.cancelWork();
   }
 
   /**
@@ -342,11 +321,10 @@ class Engine {
       for (const message of messageBatch) {
         length += message.length;
       }
-      const rate = (length / (performance.now() - startTime)) * 1000;
       ChromeUtils.addProfilerMarker(
         "TranslationsWorker",
-        { startTime },
-        `Translated ${length} code units at a rate of ${rate} per second.`
+        { startTime, innerWindowId: this.innerWindowId },
+        `Translated ${length} code units.`
       );
 
       return translations;
@@ -385,7 +363,7 @@ class BergamotUtils {
     // Transform the bytes to mb, like "10.2mb"
     const getMemory = memory => `${Math.floor(memory.size() / 100_000) / 10}mb`;
 
-    let memoryLog = `Model memory sizes in wasm heap:`;
+    let memoryLog = `Model memory sizes in wasm heap ${Math.random()}:`;
     memoryLog += `\n  Model: ${getMemory(model)}`;
     memoryLog += `\n  Shortlist: ${getMemory(lex)}`;
 
@@ -616,18 +594,106 @@ class MockedEngine {
 }
 
 /**
- * All all outstanding promises to settle.
+ * This class takes tasks that may block the thread's event loop, and has them yield
+ * after a time budget via setTimeout calls to allow other code to execute.
  */
-function nextTick() {
-  const startTime = performance.now();
-  return new Promise(resolve => {
-    setTimeout(() => {
+class WorkQueue {
+  #TIME_BUDGET = 100; // ms
+  #RUN_IMMEDIATELY_COUNT = 20;
+
+  /** @type {Array<{task: Function, resolve: Function}>} */
+  #tasks = [];
+  #isRunning = false;
+  #isWorkCancelled = false;
+  #runImmediately = this.#RUN_IMMEDIATELY_COUNT;
+
+  /**
+   * Run the task and return the result.
+   *
+   * @template {T}
+   * @param {() => T} task
+   * @returns {Promise<T>}
+   */
+  runTask(task) {
+    if (this.#runImmediately > 0) {
+      // Run the first N translations immediately, most likely these are the user-visible
+      // translations on the page, as they are sent in first. The setTimeout of 0 can
+      // still delay the translations noticeably.
+      this.#runImmediately--;
+      return Promise.resolve(task());
+    }
+    return new Promise(resolve => {
+      this.#tasks.push({ task, resolve });
+      this.#run();
+    });
+  }
+
+  /**
+   * The internal run function.
+   */
+  async #run() {
+    if (this.#isRunning) {
+      // The work queue is already running.
+      return;
+    }
+
+    this.#isRunning = true;
+
+    // Measure the timeout
+    let lastTimeout = null;
+
+    let tasksInBatch = 0;
+    function addProfilerMarker() {
       ChromeUtils.addProfilerMarker(
-        "TranslationsWorker",
-        { startTime },
-        "!!! next tick"
+        "TranslationsWorker WorkQueue",
+        { startTime: lastTimeout },
+        `WorkQueue processed ${tasksInBatch} tasks`
       );
-      resolve();
-    }, 500);
-  });
+    }
+
+    while (this.#tasks.length !== 0) {
+      if (this.#isWorkCancelled) {
+        // The work was already cancelled.
+        break;
+      }
+      const now = performance.now();
+
+      if (lastTimeout === null) {
+        lastTimeout = now;
+        // Allow other work to get on the queue.
+        await new Promise(resolve => setTimeout(resolve, 0));
+      } else if (now - lastTimeout > this.#TIME_BUDGET) {
+        // Perform a timeout with no effective wait. This clears the current
+        // promise queue from the event loop.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        addProfilerMarker();
+        lastTimeout = performance.now();
+      }
+
+      // Check this between every `await`.
+      if (this.#isWorkCancelled) {
+        break;
+      }
+
+      tasksInBatch++;
+      const { task, resolve } = this.#tasks.shift();
+      const result = await task();
+
+      // Check this between every `await`.
+      if (this.#isWorkCancelled) {
+        break;
+      }
+      // The work is done, resolve the original task.
+      resolve(result);
+    }
+    addProfilerMarker();
+    this.isRunning = false;
+  }
+
+  async cancelWork() {
+    this.#isWorkCancelled = true;
+    this.#tasks = [];
+    await new Promise(resolve => setTimeout(resolve, 0));
+    this.#isWorkCancelled = false;
+  }
 }
