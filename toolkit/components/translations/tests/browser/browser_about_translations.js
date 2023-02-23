@@ -203,6 +203,10 @@ add_task(async function test_about_translations_translations() {
       // The mocked translations make the text uppercase and reports the models used.
       await assertTranslationResult("TEXT TO TRANSLATE. [en to fr]");
 
+      // Blank out the "to" select so it doesn't try to translate between is to fr.
+      toSelect.value = "";
+      toSelect.dispatchEvent(new Event("input"));
+
       fromSelect.value = "is";
       fromSelect.dispatchEvent(new Event("input"));
       toSelect.value = "en";
@@ -259,6 +263,8 @@ add_task(async function test_about_translations_language_directions() {
         "The Arabic results are RTL"
       );
 
+      toSelect.value = "";
+      toSelect.dispatchEvent(new Event("input"));
       fromSelect.value = "ar";
       fromSelect.dispatchEvent(new Event("input"));
       toSelect.value = "en";
