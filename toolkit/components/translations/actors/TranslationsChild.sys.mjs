@@ -144,7 +144,8 @@ export class TranslationsEngine {
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {EnginePayload} enginePayload
-   * @param {string} innerWindowId
+   * @param {number} innerWindowId - This only used for creating profiler markers in
+   *   the initial creation of the engine.
    */
   constructor(fromLanguage, toLanguage, enginePayload, innerWindowId) {
     /** @type {string} */
@@ -185,20 +186,22 @@ export class TranslationsEngine {
    * Translate text without any HTML.
    *
    * @param {string[]} messageBatch
+   * @param {number} innerWindowId
    * @returns {Promise<string[]>}
    */
-  translateText(messageBatch) {
-    return this.#translate(messageBatch, false);
+  translateText(messageBatch, innerWindowId) {
+    return this.#translate(messageBatch, false, innerWindowId);
   }
 
   /**
    * Translate valid HTML. Note that this method throws if invalid markup is provided.
    *
    * @param {string[]} messageBatch
+   * @param {number} innerWindowId
    * @returns {Promise<string[]>}
    */
-  translateHTML(messageBatch) {
-    return this.#translate(messageBatch, true);
+  translateHTML(messageBatch, innerWindowId) {
+    return this.#translate(messageBatch, true, innerWindowId);
   }
 
   /**
@@ -207,25 +210,28 @@ export class TranslationsEngine {
    *
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
+   * @param {number} innerWindowId
    * @returns {Promise<string[]>}
    */
-  #translate(messageBatch, isHTML) {
+  #translate(messageBatch, isHTML, innerWindowId) {
     const messageId = this.#messageId++;
     // lazy.console.log("Translating", messageBatch);
     if (
-      messageBatch.some(message => message.toLowerCase().includes("condena"))
+      messageBatch.some(message => message.toLowerCase().includes("google"))
     ) {
-      lazy.console.log("!!! Sending message", messageId, messageBatch);
+      lazy.console.log("!!! Sending message", messageId, innerWindowId);
     }
 
     return new Promise((resolve, reject) => {
       const onMessage = ({ data }) => {
-        if (data.type === "translations-discarded") {
-          // lazy.console.log("Discarding translations", data);
+        if (
+          data.type === "translations-discarded" &&
+          data.innerWindowId === innerWindowId
+        ) {
+          // The page was unloaded, and we no longer need to listen for a response.
           this.#worker.removeEventListener("message", onMessage);
           return;
         }
-        lazy.console.log("All messages", data.messageId);
         if (data.messageId !== messageId) {
           // Multiple translation requests can be sent before a response is received.
           // Ensure that the response received here is the correct one.
@@ -233,7 +239,7 @@ export class TranslationsEngine {
         }
         if (
           data.translations.some(message =>
-            message.toLowerCase().includes("condemnation")
+            message.toLowerCase().includes("google")
           )
         ) {
           lazy.console.log("!!! Received message", data);
@@ -255,6 +261,7 @@ export class TranslationsEngine {
         isHTML,
         messageBatch,
         messageId,
+        innerWindowId,
       });
     });
   }
@@ -270,8 +277,9 @@ export class TranslationsEngine {
 
   /**
    * Stop processing the translation queue. All message
+   * @param {number} innerWindowId
    */
-  discardTranslationQueue() {
+  discardTranslationQueue(innerWindowId) {
     ChromeUtils.addProfilerMarker(
       "TranslationsChild",
       null,
@@ -279,6 +287,7 @@ export class TranslationsEngine {
     );
     this.#worker.postMessage({
       type: "discard-translation-queue",
+      innerWindowId,
     });
   }
 
@@ -288,14 +297,6 @@ export class TranslationsEngine {
    */
   getLanguagePair() {
     return this.fromLanguage + this.toLanguage;
-  }
-
-  /**
-   * @param {string} innerWindowId
-   */
-  setInnerWindowId(innerWindowId) {
-    this.innerWindowId = innerWindowId;
-    this.#worker.postMessage({ type: "set-inner-window-id", innerWindowId });
   }
 }
 
@@ -475,11 +476,6 @@ export class TranslationsChild extends JSWindowActorChild {
 
       // Start loading the engine if it doesn't exist.
       this.#getEngine();
-
-      // If getting the engine from a cache, update the inner window id.
-      this.#getEngine(true).then(engine =>
-        engine?.setInnerWindowId(this.innerWindowId)
-      );
     } catch (error) {
       lazy.console.error(
         "Failed to load the translations engine",
@@ -493,8 +489,14 @@ export class TranslationsChild extends JSWindowActorChild {
       this.document,
       "en",
       this.innerWindowId,
-      html => this.#getEngine().then(engine => engine.translateHTML([html])),
-      text => this.#getEngine().then(engine => engine.translateText([text])),
+      html =>
+        this.#getEngine().then(engine =>
+          engine.translateHTML([html], this.innerWindowId)
+        ),
+      text =>
+        this.#getEngine().then(engine =>
+          engine.translateText([text], this.innerWindowId)
+        ),
       () => this.docShell.now()
     );
 
@@ -503,8 +505,8 @@ export class TranslationsChild extends JSWindowActorChild {
       this.contentWindow.location.href
     );
 
-    this.translatedDoc.addRootElement(this.document.querySelector("title"));
     this.translatedDoc.addRootElement(this.document.body);
+    this.translatedDoc.addRootElement(this.document.querySelector("title"));
 
     {
       const startTime = this.docShell.now();
@@ -614,7 +616,7 @@ export class TranslationsChild extends JSWindowActorChild {
     );
     if (engine) {
       // The worker will continue to translate the queue unless it is manually discarded.
-      engine.discardTranslationQueue();
+      engine.discardTranslationQueue(this.innerWindowId);
 
       // Keep it alive long enough for another page load.
       engineCache.keepAlive(engine.fromLanguage, engine.toLanguage);

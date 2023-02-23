@@ -200,7 +200,7 @@ export class TranslatedDocument {
   /**
    * @param {Document} document
    * @param {string} fromLanguage
-   * @param {string} innerWindowId
+   * @param {number} innerWindowId
    *  The two letter BCP 47 language tag.
    * @param {TranslationFunction} translateHTML
    * @param {TranslationFunction} translateText
@@ -228,7 +228,7 @@ export class TranslatedDocument {
     /** @type {TranslationFunction} */
     this.translateText = translateText;
 
-    /** @type {string} */
+    /** @type {number} */
     this.innerWindowId = innerWindowId;
 
     /** @type {DOMParser} */
@@ -582,6 +582,7 @@ export class TranslatedDocument {
       }
     }
 
+    console.log(`!!! TranslatedDocumet innerWindowId`, this.innerWindowId);
     ChromeUtils.addProfilerMarker(
       "Translations",
       { innerWindowId: this.innerWindowId },
