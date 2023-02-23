@@ -79,8 +79,7 @@ async function handleInitializationMessage({ data }) {
         fromLanguage,
         toLanguage,
         bergamot,
-        languageModelFiles,
-        innerWindowId
+        languageModelFiles
       );
     } else {
       // The engine is testing mode, and no Bergamot wasm is available.
@@ -120,7 +119,7 @@ function handleMessages(engine) {
 
       switch (data.type) {
         case "translation-request": {
-          const { messageBatch, messageId, isHTML } = data;
+          const { messageBatch, messageId, isHTML, innerWindowId } = data;
           if (discardPromise) {
             // Wait for messages to be discarded if there are any.
             await discardPromise;
@@ -129,7 +128,11 @@ function handleMessages(engine) {
             // Translate the message and return them.
             postMessage({
               type: "translation-response",
-              translations: await engine.translate(messageBatch, isHTML),
+              translations: await engine.translate(
+                messageBatch,
+                isHTML,
+                innerWindowId
+              ),
               messageId,
             });
           } catch (error) {
@@ -146,6 +149,7 @@ function handleMessages(engine) {
               type: "translation-error",
               error: { message, stack },
               messageId,
+              innerWindowId,
             });
           }
           break;
@@ -153,28 +157,18 @@ function handleMessages(engine) {
         case "discard-translation-queue": {
           ChromeUtils.addProfilerMarker(
             "TranslationsWorker",
-            { innerWindowId: engine.innerWindowId },
-            "!!! Translations discarded before"
+            { innerWindowId: data.innerWindowId },
+            "Translations discard requested"
           );
 
           discardPromise = engine.discardTranslations();
           await discardPromise;
           discardPromise = null;
 
-          ChromeUtils.addProfilerMarker(
-            "TranslationsWorker",
-            { innerWindowId: engine.innerWindowId },
-            "!!! Translations discarded after"
-          );
-
           // Signal to the "message" listeners in the main thread to stop listening.
           postMessage({
             type: "translations-discarded",
           });
-          break;
-        }
-        case "set-inner-window-id": {
-          engine.innerWindowId = data.innerWindowId;
           break;
         }
         default:
@@ -204,15 +198,8 @@ class Engine {
    * @param {string} toLanguage
    * @param {Bergamot} bergamot
    * @param {Array<LanguageModelFiles>} languageModelFiles
-   * @param {string} innerWindowId
    */
-  constructor(
-    fromLanguage,
-    toLanguage,
-    bergamot,
-    languageModelFiles,
-    innerWindowId
-  ) {
+  constructor(fromLanguage, toLanguage, bergamot, languageModelFiles) {
     /** @type {string} */
     this.fromLanguage = fromLanguage;
     /** @type {string} */
@@ -226,8 +213,6 @@ class Engine {
         languageModelFiles
       )
     );
-    /** @type {string} */
-    this.innerWindowId = innerWindowId;
 
     /** @type {Bergamot["BlockingService"]} */
     this.translationService = new bergamot.BlockingService({
@@ -235,11 +220,6 @@ class Engine {
       cacheSize: 0,
     });
   }
-
-  /**
-   * Contains the queue of synchronous translations work.
-   */
-  #workQueue = new WorkQueue();
 
   /**
    * Run the translation models to perform a batch of message translations. The
@@ -250,20 +230,62 @@ class Engine {
    *
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
+   * @param {number} innerWindowId - This is required
+   *
    * @param {boolean} withQualityEstimation
    * @returns {Promise<string[]>}
    */
-  translate(messageBatch, isHTML, withQualityEstimation = false) {
-    return this.#workQueue.runTask(() =>
-      this.#syncTranslate(messageBatch, isHTML, withQualityEstimation)
+  translate(
+    messageBatch,
+    isHTML,
+    innerWindowId,
+    withQualityEstimation = false
+  ) {
+    return this.#getWorkQueue(innerWindowId).runTask(() =>
+      this.#syncTranslate(
+        messageBatch,
+        isHTML,
+        innerWindowId,
+        withQualityEstimation
+      )
     );
   }
 
   /**
-   * Cancels any in-progress translations.
+   * Map each innerWindowId to its own WorkQueue. This makes it easy to shut down
+   * an entire queue of work when the page is unloaded.
+   *
+   * @type {Map<number, WorkQueue>}
    */
-  discardTranslations() {
-    this.#workQueue.cancelWork();
+  #workQueues = new Map();
+
+  /**
+   * Get or create a `WorkQueue` that is unique to an `innerWindowId`.
+   *
+   * @param {number} innerWindowId
+   * @returns {WorkQueue}
+   */
+  #getWorkQueue(innerWindowId) {
+    let workQueue = this.#workQueues.get(innerWindowId);
+    if (workQueue) {
+      return workQueue;
+    }
+    workQueue = new WorkQueue(innerWindowId);
+    this.#workQueues.set(innerWindowId, workQueue);
+    return workQueue;
+  }
+
+  /**
+   * Cancels any in-progress translations by removing the work queue.
+   *
+   * @param {number} innerWindowId
+   */
+  discardTranslations(innerWindowId) {
+    let workQueue = this.#workQueues.get(innerWindowId);
+    if (workQueue) {
+      workQueue.cancelWork();
+      this.#workQueues.delete(innerWindowId);
+    }
   }
 
   /**
@@ -272,10 +294,16 @@ class Engine {
    *
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
+   * @param {number} innerWindowId
    * @param {boolean} withQualityEstimation
    * @returns {string[]}
    */
-  #syncTranslate(messageBatch, isHTML, withQualityEstimation = false) {
+  #syncTranslate(
+    messageBatch,
+    isHTML,
+    innerWindowId,
+    withQualityEstimation = false
+  ) {
     const startTime = performance.now();
     let response;
     const { messages, options } = BergamotUtils.getTranslationArgs(
@@ -323,7 +351,7 @@ class Engine {
       }
       ChromeUtils.addProfilerMarker(
         "TranslationsWorker",
-        { startTime, innerWindowId: this.innerWindowId },
+        { startTime, innerWindowId },
         `Translated ${length} code units.`
       );
 
@@ -608,6 +636,13 @@ class WorkQueue {
   #runImmediately = this.#RUN_IMMEDIATELY_COUNT;
 
   /**
+   * @param {number} innerWindowId
+   */
+  constructor(innerWindowId) {
+    this.innerWindowId = innerWindowId;
+  }
+
+  /**
    * Run the task and return the result.
    *
    * @template {T}
@@ -646,7 +681,7 @@ class WorkQueue {
     function addProfilerMarker() {
       ChromeUtils.addProfilerMarker(
         "TranslationsWorker WorkQueue",
-        { startTime: lastTimeout },
+        { startTime: lastTimeout, innerWindowId: this.innerWindowId },
         `WorkQueue processed ${tasksInBatch} tasks`
       );
     }
