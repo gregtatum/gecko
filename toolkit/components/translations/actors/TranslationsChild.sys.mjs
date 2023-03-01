@@ -17,6 +17,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
  * @typedef {import("../translations").LanguageTranslationModelFiles} LanguageTranslationModelFiles
  * @typedef {import("../translations").TranslationsEnginePayload} TranslationsEnginePayload
  * @typedef {import("../translations").LanguageIdEnginePayload} LanguageIdEnginePayload
+ * @typedef {import("../translations").LanguageIdEngineMockedPayload} LanguageIdEngineMockedPayload
  */
 
 export class LanguageIdEngine {
@@ -311,9 +312,19 @@ export class TranslationsChild extends JSWindowActorChild {
   /**
    * Retrieve the payload for creating a LanguageIdEngine.
    *
-   * @returns {LanguageIdEnginePayload}
+   * @returns {LanguageIdEnginePayload | LanguageIdEngineMockedPayload}
    */
   async #getLanguageIdEnginePayload() {
+    // If the TranslationsParent has a mocked payload defined for testing purposes,
+    // then we will return the mocked payload, otherwise we will attempt to retrieve
+    // the full payload from Remote Settings.
+    const mockedPayload = await this.sendQuery(
+      "Translations:GetLanguageIdEngineMockedPayload"
+    );
+    if (mockedPayload) {
+      return mockedPayload;
+    }
+
     const [wasmBuffer, modelBuffer] = await Promise.all([
       this.#getLanguageIdWasmArrayBuffer(),
       this.#getLanguageIdModelArrayBuffer(),
