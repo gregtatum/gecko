@@ -34,6 +34,8 @@ async function openAboutTranslations({
   dataForContent,
   disabled,
   runInPage,
+  confidence,
+  languageLabel,
   languagePairs,
 }) {
   await SpecialPowers.pushPrefEnv({
@@ -67,6 +69,9 @@ async function openAboutTranslations({
   if (languagePairs) {
     TranslationsParent.mockLanguagePairs(languagePairs);
   }
+  if (languageLabel && confidence) {
+    TranslationsParent.mockLanguageIdentification(languageLabel, confidence);
+  }
 
   // Now load the about:translations page, since the actor could be mocked.
   BrowserTestUtils.loadURIString(tab.linkedBrowser, "about:translations");
@@ -80,6 +85,9 @@ async function openAboutTranslations({
 
   if (languagePairs) {
     TranslationsParent.mockLanguagePairs(null);
+  }
+  if (languageLabel && confidence) {
+    TranslationsParent.mockLanguageIdentification(null, null);
   }
   BrowserTestUtils.removeTab(tab);
   await SpecialPowers.popPrefEnv();
