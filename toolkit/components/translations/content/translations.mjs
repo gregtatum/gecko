@@ -7,9 +7,8 @@
 // allow for the page to get access to additional privileged features.
 
 /* global AT_getSupportedLanguages, AT_log, AT_getScriptDirection,
-   AT_getAppLocale, AT_logError, AT_destroyTranslationsEngine,
-   AT_createTranslationsEngine, AT_createLanguageIdEngine, 
-   AT_translate, AT_identifyLanguage */
+   AT_logError, AT_destroyTranslationsEngine, AT_createTranslationsEngine, 
+   AT_createLanguageIdEngine, AT_translate, AT_identifyLanguage */
 
 // Allow tests to override this value so that they can run faster.
 // This is the delay in milliseconds.
@@ -67,13 +66,17 @@ class TranslationsState {
   translationsEngine = null;
 
   constructor() {
+    AT_createLanguageIdEngine();
     this.supportedLanguages = AT_getSupportedLanguages();
     this.ui = new TranslationsUI(this);
     this.ui.setup();
   }
 
   /**
-   * Identifies the human language in which the message is written and logs the result.
+   * Identifies the human language in which the message is written and returns
+   * the two-letter language label of the language it is determined to be.
+   *
+   * e.g. "en" for English.
    *
    * @param {string} message
    */
@@ -82,9 +85,10 @@ class TranslationsState {
     const { languageLabel, confidence } = await AT_identifyLanguage(message);
     const duration = performance.now() - start;
     AT_log(
-      `[ ${languageLabel.slice(-2)}(${(confidence * 100).toFixed(2)}%) ]`,
+      `[ ${languageLabel}(${(confidence * 100).toFixed(2)}%) ]`,
       `Source language identified in ${duration / 1000} seconds`
     );
+    return languageLabel;
   }
 
   /**
@@ -206,13 +210,48 @@ class TranslationsState {
   }
 
   /**
+   * Updates the fromLanguage to match the detected language only if the
+   * about-translations-detect option is selected in the language-from dropdown.
+   *
+   * If the new fromLanguage is different than the previous fromLanguage this
+   * may update the UI to display the new language and may rebuild the translations
+   * worker if there is a valid selected target language.
+   */
+  async maybeUpdateDetectedLanguage() {
+    if (!this.ui.detectOptionIsSelected() || this.messageToTranslate === "") {
+      // If we are not detecting languages or if the message has been cleared
+      // we should ensure that the UI is not displaying a detected language
+      // and there is no need to run any language detection.
+      this.ui.setDetectOptionTextContent("");
+      return;
+    }
+
+    const [languageLabel, supportedLanguages] = await Promise.all([
+      this.identifyLanguage(this.messageToTranslate),
+      this.supportedLanguages,
+    ]);
+
+    // Only update the language if the detected language matches
+    // one of our supported languages.
+    const entry = supportedLanguages.find(({ langTag }) => {
+      return langTag === languageLabel;
+    });
+    if (entry) {
+      const { displayName } = entry;
+      await this.setFromLanguage(languageLabel);
+      this.ui.setDetectOptionTextContent(displayName);
+    }
+  }
+
+  /**
    * @param {string} lang
    */
-  setFromLanguage(lang) {
+  async setFromLanguage(lang) {
     if (lang !== this.fromLanguage) {
       this.fromLanguage = lang;
-      this.maybeRebuildWorker();
+      return this.maybeRebuildWorker();
     }
+    return Promise.resolve();
   }
 
   /**
@@ -230,9 +269,10 @@ class TranslationsState {
    */
   setMessageToTranslate(message) {
     if (message !== this.messageToTranslate) {
-      this.identifyLanguage(message);
       this.messageToTranslate = message;
-      this.maybeRequestTranslation();
+      this.maybeUpdateDetectedLanguage().then(
+        this.maybeRequestTranslation.bind(this)
+      );
     }
   }
 }
@@ -241,6 +281,13 @@ class TranslationsState {
  *
  */
 class TranslationsUI {
+  /**
+   * The index of the about-translations-detect option in the
+   * language-from dropdown. This will always be the zero-index
+   * entry, listed before all of the other languages.
+   */
+  static #DETECT_LANGUAGE_INDEX = 0;
+
   /** @type {HTMLSelectElement} */
   languageFrom = document.getElementById("language-from");
   /** @type {HTMLSelectElement} */
@@ -255,11 +302,20 @@ class TranslationsUI {
   state;
 
   /**
+   * The original state of the text content for the detect option in the
+   * from-language dropdown.
+   *
+   * @type {string}
+   */
+  #detectOptionBaseText = "";
+
+  /**
    * @param {TranslationsState} state
    */
   constructor(state) {
     this.state = state;
     this.translationTo.style.visibility = "visible";
+    this.#detectOptionBaseText = this.languageFrom.textContent;
   }
 
   /**
@@ -268,10 +324,6 @@ class TranslationsUI {
   setup() {
     this.setupDropdowns();
     this.setupTextarea();
-    const start = performance.now();
-    AT_createLanguageIdEngine();
-    const duration = performance.now() - start;
-    AT_log(`Created LanguageIdEngine in ${duration / 1000} seconds`);
   }
 
   /**
@@ -291,15 +343,6 @@ class TranslationsUI {
       option.value = langTag;
       option.text = displayName;
       this.languageFrom.add(option);
-    }
-
-    // Set the translate "from" to the app locale, if it is in the list.
-    const appLocale = new Intl.Locale(AT_getAppLocale());
-    for (const option of this.languageFrom.options) {
-      if (option.value === appLocale.language) {
-        this.languageFrom.value = option.value;
-        break;
-      }
     }
 
     // Enable the controls.
@@ -326,6 +369,31 @@ class TranslationsUI {
       this.state.setToLanguage(this.languageTo.value);
       this.updateOnLanguageChange();
     });
+  }
+
+  /**
+   * Returns true if about-translations-detect is the currently
+   * selected option in the language-from dropdown, otherwise false.
+   *
+   * @returns {boolean}
+   */
+  detectOptionIsSelected() {
+    return (
+      this.languageFrom.selectedIndex === TranslationsUI.#DETECT_LANGUAGE_INDEX
+    );
+  }
+
+  /**
+   * Sets the textContent of the about-translations-detect option in the
+   * language-from dropdown to include the detected language's display name.
+   *
+   * @param {string} displayName
+   */
+  setDetectOptionTextContent(displayName) {
+    const displayText = !displayName ? "" : ` (${displayName})`;
+    this.languageFrom.options[
+      TranslationsUI.#DETECT_LANGUAGE_INDEX
+    ].textContent = `${this.#detectOptionBaseText}${displayText}`;
   }
 
   /**
@@ -363,6 +431,7 @@ class TranslationsUI {
         option.hidden = true;
       }
     }
+    this.state.maybeUpdateDetectedLanguage();
   }
 
   /**

@@ -10,6 +10,7 @@ about-translations-title = Translations
 about-translations-header = { -translations-brand-name }
 about-translations-results-placeholder = Translation
 # Text displayed on language dropdowns when no language is selected yet
+about-translations-detect = Detect language
 about-translations-select = Select language
 about-translations-textarea =
   .placeholder = Add text to translate
