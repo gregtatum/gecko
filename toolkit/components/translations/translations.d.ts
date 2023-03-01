@@ -225,3 +225,13 @@ interface TranslationsEnginePayload {
   bergamotWasmArrayBuffer: ArrayBuffer,
   languageModelFiles: LanguageModelFiles[]
 }
+
+/**
+ * These are the files that are downloaded from Remote Settings that are necessary
+ * to start the language-identification engine. These may not be available if running
+ * in tests.
+ */
+interface LanguageIdEnginePayload {
+  wasmBuffer: ArrayBuffer,
+  modelBuffer: ArrayBuffer,
+}

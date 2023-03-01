@@ -16,6 +16,7 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 /**
  * @typedef {import("../translations").LanguageTranslationModelFiles} LanguageTranslationModelFiles
  * @typedef {import("../translations").TranslationsEnginePayload} TranslationsEnginePayload
+ * @typedef {import("../translations").LanguageIdEnginePayload} LanguageIdEnginePayload
  */
 
 export class LanguageIdEngine {
@@ -28,10 +29,13 @@ export class LanguageIdEngine {
   /**
    * Construct and initialize the language-id worker.
    *
-   * @param {ArrayBuffer} wasmArrayBuffer
-   * @param {ArrayBuffer} languageIdModel
+   * @param {Object} data
+   * @property {string} data.type - The message type, expects "initialize".
+   * @property {ArrayBuffer} data.wasmBuffer - The buffer containing the wasm binary.
+   * @property {ArrayBuffer} data.modelBuffer - The buffer containing the language-id model binary.
+   * @property {boolean} data.isLoggingEnabled
    */
-  constructor(wasmBuffer, modelBuffer) {
+  constructor(data) {
     this.#languageIdWorker = new Worker(
       "chrome://global/content/translations/language-id-engine-worker.js"
     );
@@ -48,13 +52,7 @@ export class LanguageIdEngine {
       this.#languageIdWorker.addEventListener("message", onMessage);
     });
 
-    this.#languageIdWorker.postMessage({
-      type: "initialize",
-      wasmBuffer,
-      modelBuffer,
-      isLoggingEnabled:
-        Services.prefs.getCharPref("browser.translations.logLevel") === "All",
-    });
+    this.#languageIdWorker.postMessage(data);
   }
 
   /**
@@ -311,16 +309,16 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   /**
-   * Construct and initialize the LanguageId Engine.
+   * Retrieve the payload for creating a LanguageIdEngine.
+   *
+   * @returns {LanguageIdEnginePayload}
    */
-  async createLanguageIdEngine() {
-    const [wasmBuffer, languageIdModelArrayBuffer] = await Promise.all([
+  async #getLanguageIdEnginePayload() {
+    const [wasmBuffer, modelBuffer] = await Promise.all([
       this.#getLanguageIdWasmArrayBuffer(),
       this.#getLanguageIdModelArrayBuffer(),
     ]);
-    const engine = new LanguageIdEngine(wasmBuffer, languageIdModelArrayBuffer);
-    await engine.isReady;
-    return engine;
+    return { wasmBuffer, modelBuffer };
   }
 
   /**
@@ -339,6 +337,22 @@ export class TranslationsChild extends JSWindowActorChild {
       this.#getLanguageTranslationModelFiles(fromLanguage, toLanguage),
     ]);
     return { bergamotWasmArrayBuffer, languageModelFiles };
+  }
+
+  /**
+   * Construct and initialize the LanguageIdEngine.
+   *
+   * @returns {LanguageIdEngine}
+   */
+  async createLanguageIdEngine() {
+    const data = await this.#getLanguageIdEnginePayload();
+    data.type = "initialize";
+    data.isLoggingEnabled =
+      Services.prefs.getCharPref("browser.translations.logLevel") === "All";
+
+    const engine = new LanguageIdEngine(data);
+    await engine.isReady;
+    return engine;
   }
 
   /**
