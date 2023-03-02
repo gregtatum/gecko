@@ -15,11 +15,7 @@ const { TranslationsParent } = ChromeUtils.importESModule(
  *
  * @param {object} options
  *
- * @param {T} options.dataForContent
- * The data must support structural cloning and will be passed into the
- * content process.
- *
- * @param {(args: { dataForContent: T, selectors: Record<string, string> }) => Promise<void>} options.runInPage
+ * @param {(args: ReturnType<typeof aboutTranslationsContentUtils>) => Promise<void>} options.runInPage
  * This function must not capture any values, as it will be cloned in the content process.
  * Any required data should be passed in using the "dataForContent" parameter. The
  * "selectors" property contains any useful selectors for the content.
@@ -31,7 +27,6 @@ const { TranslationsParent } = ChromeUtils.importESModule(
  * The translation languages pairs to mock for the test.
  */
 async function openAboutTranslations({
-  dataForContent,
   disabled,
   runInPage,
   confidence,
@@ -45,18 +40,6 @@ async function openAboutTranslations({
       ["browser.translations.logLevel", "All"],
     ],
   });
-
-  /**
-   * Collect any relevant selectors for the page here.
-   */
-  const selectors = {
-    pageHeader: '[data-l10n-id="about-translations-header"]',
-    fromLanguageSelect: "select#language-from",
-    toLanguageSelect: "select#language-to",
-    translationTextarea: "textarea#translation-from",
-    translationResult: "#translation-to",
-    translationResultBlank: "#translation-to-blank",
-  };
 
   // Start the tab at about:blank.
   let tab = await BrowserTestUtils.openNewForegroundTab(
@@ -79,8 +62,17 @@ async function openAboutTranslations({
 
   await ContentTask.spawn(
     tab.linkedBrowser,
-    { dataForContent, selectors },
-    runInPage
+    null,
+    // The content page is sent the text for a function. In order to inject the content
+    // utils into the page, we need to do our own text manipulation.
+    new Function(`
+      // Set up the utils, and pass in any arguments needed.
+      const utils = (${aboutTranslationsContentUtils.toString()})(content, ContentTaskUtils);
+
+      // Finally run the test script that is run in the page, and return the result
+      // so that it is properly awaited.
+      return (${runInPage.toString()})(utils);
+    `)
   );
 
   if (languagePairs) {
@@ -91,4 +83,53 @@ async function openAboutTranslations({
   }
   BrowserTestUtils.removeTab(tab);
   await SpecialPowers.popPrefEnv();
+}
+
+/**
+ * This function's text is copied and injected into the content script. Place all utils
+ * that should go into content scripts here.
+ */
+function aboutTranslationsContentUtils(content, ContentTaskUtils) {
+  const { window, document } = content;
+  /**
+   * Collect any relevant selectors for the page here.
+   */
+  const selectors = {
+    pageHeader: '[data-l10n-id="about-translations-header"]',
+    fromLanguageSelect: "select#language-from",
+    toLanguageSelect: "select#language-to",
+    translationTextarea: "textarea#translation-from",
+    translationResult: "#translation-to",
+    translationResultBlank: "#translation-to-blank",
+  };
+
+  return {
+    selectors,
+
+    pageIsReady() {
+      return ContentTaskUtils.waitForCondition(() => {
+        const element = document.querySelector(
+          selectors.translationResultBlank
+        );
+        const { visibility } = window.getComputedStyle(element);
+        return visibility === "visible";
+      }, `Waiting for placeholder text to be visible."`);
+    },
+
+    /**
+     * @param {bool} expectVisible - Is the element expected to be visible?
+     * @param {name} name - What is a friendly name for the element?
+     */
+    checkElementIsVisible(expectVisible, name) {
+      const expected = expectVisible ? "visible" : "hidden";
+      const element = document.querySelector(selectors[name]);
+      ok(Boolean(element), `Element ${name} was found.`);
+      const { visibility } = window.getComputedStyle(element);
+      is(
+        visibility,
+        expected,
+        `Element ${name} was not ${expected} but should be.`
+      );
+    },
+  };
 }

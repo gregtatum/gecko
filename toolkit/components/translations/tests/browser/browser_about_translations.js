@@ -9,28 +9,8 @@
  */
 add_task(async function test_about_translations_enabled() {
   await openAboutTranslations({
-    runInPage: async ({ selectors }) => {
-      const { document, window } = content;
-
-      await ContentTaskUtils.waitForCondition(() => {
-        const element = document.querySelector(
-          selectors.translationResultBlank
-        );
-        const { visibility } = window.getComputedStyle(element);
-        return visibility === "visible";
-      }, `Waiting for placeholder text to be visible."`);
-
-      function checkElementIsVisible(expectVisible, name) {
-        const expected = expectVisible ? "visible" : "hidden";
-        const element = document.querySelector(selectors[name]);
-        ok(Boolean(element), `Element ${name} was found.`);
-        const { visibility } = window.getComputedStyle(element);
-        is(
-          visibility,
-          expected,
-          `Element ${name} was not ${expected} but should be.`
-        );
-      }
+    runInPage: async ({ checkElementIsVisible, pageIsReady }) => {
+      await pageIsReady();
 
       checkElementIsVisible(true, "pageHeader");
       checkElementIsVisible(true, "fromLanguageSelect");
