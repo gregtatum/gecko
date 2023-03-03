@@ -42,8 +42,8 @@ export class LanguageIdEngine {
   /**
    * Construct and initialize the language-id worker.
    *
-   * @param {ArrayBuffer} wasmArrayBuffer
-   * @param {ArrayBuffer} languageIdModel
+   * @param {ArrayBuffer} wasmBuffer
+   * @param {ArrayBuffer} modelBuffer
    */
   constructor(wasmBuffer, modelBuffer) {
     this.#languageIdWorker = new Worker(
@@ -62,13 +62,20 @@ export class LanguageIdEngine {
       this.#languageIdWorker.addEventListener("message", onMessage);
     });
 
-    this.#languageIdWorker.postMessage({
-      type: "initialize",
-      wasmBuffer,
-      modelBuffer,
-      isLoggingEnabled:
-        Services.prefs.getCharPref("browser.translations.logLevel") === "All",
-    });
+    // Make sure the ArrayBuffers are transferred, not cloned.
+    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+    const transferables = [wasmBuffer, modelBuffer];
+
+    this.#languageIdWorker.postMessage(
+      {
+        type: "initialize",
+        wasmBuffer,
+        modelBuffer,
+        isLoggingEnabled:
+          Services.prefs.getCharPref("browser.translations.logLevel") === "All",
+      },
+      transferables
+    );
   }
 
   /**
@@ -226,7 +233,8 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @param {TranslationsEnginePayload} enginePayload
+   * @param {TranslationsEnginePayload} [enginePayload] - If there is no engine payload
+   *   then the engine will be mocked. This allows this class to be used in tests.
    * @param {number} innerWindowId - This only used for creating profiler markers in
    *   the initial creation of the engine.
    */
@@ -253,16 +261,31 @@ export class TranslationsEngine {
       this.#translationsWorker.addEventListener("message", onMessage);
     });
 
-    this.#translationsWorker.postMessage({
-      type: "initialize",
-      fromLanguage,
-      toLanguage,
-      enginePayload,
-      innerWindowId,
-      messageId: this.#messageId++,
-      isLoggingEnabled:
-        Services.prefs.getCharPref("browser.translations.logLevel") === "All",
-    });
+    // Make sure the ArrayBuffers are transferred, not cloned.
+    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+    const transferables = [];
+    if (enginePayload) {
+      transferables.push(enginePayload.bergamotWasmArrayBuffer);
+      for (const files of enginePayload.languageModelFiles) {
+        for (const { buffer } of Object.values(files)) {
+          transferables.push(buffer);
+        }
+      }
+    }
+
+    this.#translationsWorker.postMessage(
+      {
+        type: "initialize",
+        fromLanguage,
+        toLanguage,
+        enginePayload,
+        innerWindowId,
+        messageId: this.#messageId++,
+        isLoggingEnabled:
+          Services.prefs.getCharPref("browser.translations.logLevel") === "All",
+      },
+      transferables
+    );
   }
 
   /**
