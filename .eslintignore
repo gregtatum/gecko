@@ -218,9 +218,6 @@ toolkit/components/reader/JSDOMParser.js
 # Uses preprocessing
 toolkit/components/reader/Readerable.jsm
 
-# Generated & special files in cld2
-toolkit/components/translation/cld2/
-
 # Uses preprocessing
 toolkit/mozapps/update/tests/data/xpcshellConstantsPP.js
 toolkit/modules/AppConstants.sys.mjs
