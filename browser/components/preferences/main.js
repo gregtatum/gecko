@@ -97,7 +97,6 @@ Preferences.addAll([
   { id: "font.language.group", type: "wstring" },
 
   // Languages
-  { id: "browser.translation.detectLanguage", type: "bool" },
   { id: "intl.regional_prefs.use_os_locales", type: "bool" },
 
   // General tab
@@ -433,16 +432,6 @@ var gMainPane = {
     );
     setEventListener("chooseLanguage", "command", gMainPane.showLanguages);
     setEventListener(
-      "translationAttributionImage",
-      "click",
-      gMainPane.openTranslationProviderAttribution
-    );
-    setEventListener(
-      "translateButton",
-      "command",
-      gMainPane.showTranslationExceptions
-    );
-    setEventListener(
       "fxtranslateButton",
       "command",
       gMainPane.showTranslationExceptions
@@ -488,20 +477,6 @@ var gMainPane = {
     this._rebuildFonts();
 
     this.updateOnScreenKeyboardVisibility();
-
-    // Show translation preferences if we may:
-    const translationsPrefName = "browser.translation.ui.show";
-    if (Services.prefs.getBoolPref(translationsPrefName)) {
-      let row = document.getElementById("translationBox");
-      row.removeAttribute("hidden");
-      // Showing attribution only for Bing Translator.
-      var { Translation } = ChromeUtils.import(
-        "resource:///modules/translation/TranslationParent.jsm"
-      );
-      if (Translation.translationEngine == "Bing") {
-        document.getElementById("bingAttribution").removeAttribute("hidden");
-      }
-    }
 
     // Firefox Translations settings panel
     const fxtranslationsDisabledPrefName = "extensions.translations.disabled";
@@ -724,14 +699,6 @@ var gMainPane = {
     Preferences.addSyncFromPrefListener(
       document.getElementById("defaultFont"),
       element => FontBuilder.readFontSelection(element)
-    );
-    Preferences.addSyncFromPrefListener(
-      document.getElementById("translate"),
-      () =>
-        this.updateButtons(
-          "translateButton",
-          "browser.translation.detectLanguage"
-        )
     );
     Preferences.addSyncFromPrefListener(
       document.getElementById("checkSpelling"),
@@ -1464,13 +1431,6 @@ var gMainPane = {
     gSubDialog.open(
       "chrome://browser/content/preferences/dialogs/translation.xhtml"
     );
-  },
-
-  openTranslationProviderAttribution() {
-    var { Translation } = ChromeUtils.import(
-      "resource:///modules/translation/TranslationParent.jsm"
-    );
-    Translation.openProviderAttribution();
   },
 
   /**

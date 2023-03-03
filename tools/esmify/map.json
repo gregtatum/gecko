@@ -538,16 +538,6 @@
     "browser/components/syncedtabs/TabListView.js",
   "resource:///modules/syncedtabs/util.js":
     "browser/components/syncedtabs/util.js",
-  "resource:///modules/translation/BingTranslator.jsm":
-    "browser/components/translation/BingTranslator.jsm",
-  "resource:///modules/translation/TranslationChild.jsm":
-    "browser/components/translation/TranslationChild.jsm",
-  "resource:///modules/translation/TranslationDocument.jsm":
-    "browser/components/translation/TranslationDocument.jsm",
-  "resource:///modules/translation/TranslationParent.jsm":
-    "browser/components/translation/TranslationParent.jsm",
-  "resource:///modules/translation/YandexTranslator.jsm":
-    "browser/components/translation/YandexTranslator.jsm",
   "resource:///modules/webrtcUI.jsm": "browser/modules/webrtcUI.jsm",
   "resource://activity-stream/aboutwelcome/lib/AboutWelcomeDefaults.jsm":
     "browser/components/newtab/aboutwelcome/lib/AboutWelcomeDefaults.jsm",

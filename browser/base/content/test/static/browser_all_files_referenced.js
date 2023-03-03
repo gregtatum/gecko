@@ -212,11 +212,6 @@ var whitelist = [
   { file: "resource://pdf.js/web/debugger.js" },
   { file: "resource://pdf.js/web/debugger.css" },
 
-  // resource://app/modules/translation/TranslationContentHandler.jsm
-  { file: "resource://app/modules/translation/BingTranslator.jsm" },
-  { file: "resource://app/modules/translation/GoogleTranslator.jsm" },
-  { file: "resource://app/modules/translation/YandexTranslator.jsm" },
-
   // Starting from here, files in the whitelist are bugs that need fixing.
   // Bug 1339424 (wontfix?)
   {

@@ -5,6 +5,11 @@
 
 "use strict";
 
+/**
+ * This file is used to manage the preferences in the Firefox Translations addon, not
+ * in the feature built into the browser.
+ */
+
 const kPermissionType = "translate";
 const kLanguagesPref = "browser.translation.neverForLanguages";
 
