@@ -73,7 +73,11 @@ export class LanguageIdEngine {
       this.#languageIdWorker.addEventListener("message", onMessage);
     });
 
-    this.#languageIdWorker.postMessage(data);
+    // Make sure the ArrayBuffers are transferred, not cloned.
+    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+    const transferables = [data.wasmBuffer, data.modelBuffer];
+
+    this.#languageIdWorker.postMessage(data, transferables);
   }
 
   /**
@@ -233,7 +237,8 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @param {TranslationsEnginePayload} enginePayload
+   * @param {TranslationsEnginePayload} [enginePayload] - If there is no engine payload
+   *   then the engine will be mocked. This allows this class to be used in tests.
    * @param {number} innerWindowId - This only used for creating profiler markers in
    *   the initial creation of the engine.
    */
@@ -260,15 +265,30 @@ export class TranslationsEngine {
       this.#translationsWorker.addEventListener("message", onMessage);
     });
 
-    this.#translationsWorker.postMessage({
-      type: "initialize",
-      fromLanguage,
-      toLanguage,
-      enginePayload,
-      innerWindowId,
-      messageId: this.#messageId++,
-      logLevel: Services.prefs.getCharPref("browser.translations.logLevel"),
-    });
+    // Make sure the ArrayBuffers are transferred, not cloned.
+    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+    const transferables = [];
+    if (enginePayload) {
+      transferables.push(enginePayload.bergamotWasmArrayBuffer);
+      for (const files of enginePayload.languageModelFiles) {
+        for (const { buffer } of Object.values(files)) {
+          transferables.push(buffer);
+        }
+      }
+    }
+
+    this.#translationsWorker.postMessage(
+      {
+        type: "initialize",
+        fromLanguage,
+        toLanguage,
+        enginePayload,
+        innerWindowId,
+        messageId: this.#messageId++,
+        logLevel: Services.prefs.getCharPref("browser.translations.logLevel"),
+      },
+      transferables
+    );
   }
 
   /**
