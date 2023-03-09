@@ -69,6 +69,9 @@ export class TranslationsParent extends JSWindowActorParent {
   /** @type {RemoteSettingsClient | null} */
   #translationsWasmRemoteClient = null;
 
+  /** @type {boolean | null} */
+  #isWasmSimdSupported = null;
+
   /**
    * The translation engine can be mocked for testing.
    *
@@ -80,6 +83,29 @@ export class TranslationsParent extends JSWindowActorParent {
     if (TranslationsParent.#mockedLanguagePairs) {
       this.sendAsyncMessage("Translations:IsMocked", true);
     }
+  }
+
+  #getIsWasmSimdSupported() {
+    if (this.#isWasmSimdSupported === null) {
+      try {
+        this.#isWasmSimdSupported = true;
+        new WebAssembly.Module(
+          new Uint8Array(
+            // prettier-ignore
+            [
+              0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x01, 0x60,
+              0x00, 0x01, 0x7b, 0x03, 0x02, 0x01, 0x00, 0x0a, 0x16, 0x01, 0x14, 0x00,
+              0xfd, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b
+            ]
+          )
+        );
+      } catch (error) {
+        this.#isWasmSimdSupported = false;
+      }
+    }
+
+    return this.#isWasmSimdSupported;
   }
 
   async receiveMessage({ name, data }) {
