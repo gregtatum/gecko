@@ -262,8 +262,7 @@ export class TranslationsEngine {
       enginePayload,
       innerWindowId,
       messageId: this.#messageId++,
-      isLoggingEnabled:
-        Services.prefs.getCharPref("browser.translations.logLevel") === "All",
+      logLevel: Services.prefs.getCharPref("browser.translations.logLevel"),
     });
   }
 
