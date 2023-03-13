@@ -3,14 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :root {
-  /* Provide defaults for when this page is viewed in "toolkit". */
-  background-color: var(--in-content-page-background, #fff);
-  color: var(--in-content-page-color, #15141a);
-
-  /* Provide backup values for some of the variables used in "browser" so that the styles
-     look nice by default in "toolkit". */
-  --AT-box-background: var(--in-content-box-background, #fff);
-  --AT-box-border-color: var(--in-content-box-border-color, #9e9ea0);
+  /* "browser" and "geckoview" have slightly different variable names. Match them up here
+     by providing fallback values. The "browser" styles are first, and then the
+     "geckoview" styles are the fallbacks. */
+  --AT-box-background: var(--in-content-box-background, transparent);
+  --AT-box-border-color: var(--in-content-box-border-color, var(--border-color));
 
   /* Variables used in the page layout */
   --AT-page-margin: 20px;
