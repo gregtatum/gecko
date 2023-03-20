@@ -661,6 +661,11 @@ reader-view-enter-button =
 reader-view-close-button =
     .aria-label = Close Reader View
 
+# A label shown above the "Firefox Translations" button in the url bar.
+urlbar-translations-button =
+    .aria-label = { -translations-brand-name }
+    .tooltiptext = { -translations-brand-name }
+
 ## Full Screen and Pointer Lock UI
 
 # Please ensure that the domain stays in the `<span data-l10n-name="domain">` markup.
