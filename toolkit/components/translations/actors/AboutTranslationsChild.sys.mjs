@@ -89,6 +89,9 @@ export class AboutTranslationsChild extends JSWindowActorChild {
         // Create an error in the content window, if the content window is still around.
         if (this.contentWindow) {
           let message = "An error occured in the AboutTranslations actor.";
+          if (typeof error === "string") {
+            message = error;
+          }
           if (typeof error?.message === "string") {
             message = error.message;
           }
@@ -232,8 +235,10 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    */
   AT_identifyLanguage(message) {
     if (!this.languageIdEngine) {
-      return this.#convertToContentPromise(
-        Promise.reject("The language identification was not created.")
+      return this.contentWindow.Promise.reject(
+        new this.contentWindow.Error(
+          "The language identification was not created."
+        )
       );
     }
     return this.#convertToContentPromise(
