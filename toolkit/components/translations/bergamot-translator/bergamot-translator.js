@@ -341,7 +341,13 @@ function loadBergamot(Module) {
 
   var buffer, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAP32, HEAPU32, HEAPF32, HEAPF64;
 
+  function getBufferSize(buf) {
+    const mb = buf.byteLength / 1_000_000;
+    return `${Math.floor(mb * 100) / 100}MB`;
+  }
+
   function updateGlobalBufferAndViews(buf) {
+    log(`Growing wasm buffer to ${getBufferSize(buf)}.`);
     buffer = buf;
     Module["HEAP8"] = HEAP8 = new Int8Array(buf);
     Module["HEAP16"] = HEAP16 = new Int16Array(buf);
@@ -367,6 +373,7 @@ function loadBergamot(Module) {
   if (wasmMemory) {
     buffer = wasmMemory.buffer;
   }
+  log(`The initial wasm buffer size is: ${getBufferSize(buffer)}.`);
 
   INITIAL_MEMORY = buffer.byteLength;
 
@@ -3434,7 +3441,7 @@ function loadBergamot(Module) {
         return fallbackGemm(GEMM_TO_FALLBACK_FUNCTIONS_MAP);
       }
     }
-    console.log(`Using optimized gemm (${OPTIMIZED_GEMM}) implementation`);
+    log(`Using optimized gemm (${OPTIMIZED_GEMM}) implementation`);
     return optimizedGemmModuleExports;
   }
 
@@ -3448,7 +3455,7 @@ function loadBergamot(Module) {
       fallbackGemmModuleExports[key] = (...a) =>
         Module[FALLBACK_GEMM][gemmToFallbackFunctionsMap[key]](...a);
     }
-    console.log(`Using fallback gemm implementation`);
+    log(`Using fallback gemm implementation`);
     return fallbackGemmModuleExports;
   }
 
