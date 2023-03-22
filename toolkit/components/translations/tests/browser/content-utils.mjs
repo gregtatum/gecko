@@ -43,10 +43,11 @@ export function selectElements({ document, window }) {
  * @param {string} name
  */
 export function checkElementIsVisible(element, name) {
-  const window = element.ownerGlobal.defaultView;
-  window.ok(Boolean(element), `Element ${name} was found.`);
+  const window = element.ownerGlobal;
+  const { ok, is } = Cu.waiveXrays(window);
+  ok(Boolean(element), `Element ${name} was found.`);
   const { visibility } = window.getComputedStyle(element);
-  window.is(visibility, "visible", `Element ${name} was visible.`);
+  is(visibility, "visible", `Element ${name} was visible.`);
 }
 
 /**
@@ -56,10 +57,11 @@ export function checkElementIsVisible(element, name) {
  * @param {string} name
  */
 export function checkElementIsInvisible(element, name) {
-  const window = element.ownerGlobal.defaultView;
-  window.ok(Boolean(element), `Element ${name} was found.`);
+  const window = element.ownerGlobal;
+  const { ok, is } = Cu.waiveXrays(window);
+  ok(Boolean(element), `Element ${name} was found.`);
   const { visibility } = window.getComputedStyle(element);
-  window.is(visibility, "hidden", `Element ${name} was invisible.`);
+  is(visibility, "hidden", `Element ${name} was invisible.`);
 }
 
 /**

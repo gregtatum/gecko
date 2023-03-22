@@ -3,6 +3,7 @@
 
 "use strict";
 
+requestLongerTimeout(50);
 /**
  * Checks that the page renders without issue, and that the expected elements
  * are there.
@@ -10,35 +11,34 @@
 add_task(async function test_about_translations_enabled() {
   await openAboutTranslations({
     runInPage: async ({ contentUtilsPath }) => {
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      debugger;
-      // /** @type {import("./content-utils.mjs")} */
-      // const {
-      //   selectElements,
-      //   checkElementIsVisible,
-      // } = ChromeUtils.importESModule(contentUtilsPath);
+      /** @type {import("./content-utils.mjs")} */
+      const {
+        selectElements,
+        checkElementIsVisible,
+      } = ChromeUtils.importESModule(contentUtilsPath);
 
-      // const els = selectElements(content);
+      const { window } = content;
+      let els = selectElements(content);
 
-      // await ContentTaskUtils.waitForCondition(
-      //   () =>
-      //     window.getComputedStyle(els.translationResult).visibility ===
-      //       "hidden" &&
-      //     window.getComputedStyle(els.translationResultBlank).visibility ===
-      //       "visible",
-      //   `Waiting for placeholder text to be visible."`
-      // );
+      await ContentTaskUtils.waitForCondition(
+        () =>
+          window.getComputedStyle(els.translationResult).visibility ===
+            "hidden" &&
+          window.getComputedStyle(els.translationResultBlank).visibility ===
+            "visible",
+        `Waiting for placeholder text to be visible."`
+      );
 
-      // checkElementIsVisible(els.pageHeader, "pageHeader");
-      // checkElementIsVisible(els.fromSelect, "fromSelect");
-      // checkElementIsVisible(els.toSelect, "toSelect");
-      // checkElementIsVisible(els.translationTextarea, "translationTextarea");
-      // checkElementIsVisible(els.translationResult, "translationResult");
-      // checkElementIsVisible(
-      //   els.translationResultBlank,
-      //   "translationResultBlank"
-      // );
-      // ok(true);
+      checkElementIsVisible(els.pageHeader, "pageHeader");
+      checkElementIsVisible(els.fromSelect, "fromSelect");
+      checkElementIsVisible(els.toSelect, "toSelect");
+      checkElementIsVisible(els.translationTextarea, "translationTextarea");
+      checkElementIsVisible(els.translationResult, "translationResult");
+      checkElementIsVisible(
+        els.translationResultBlank,
+        "translationResultBlank"
+      );
+      ok(true);
     },
   });
 });

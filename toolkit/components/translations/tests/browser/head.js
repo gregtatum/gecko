@@ -95,7 +95,6 @@ async function openAboutTranslations({
 
   await ContentTask.spawn(
     tab.linkedBrowser,
-    { dataForContent, selectors },
     {
       dataForContent,
       selectors,
