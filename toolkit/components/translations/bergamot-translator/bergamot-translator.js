@@ -347,7 +347,13 @@ function loadBergamot(Module) {
   }
 
   function updateGlobalBufferAndViews(buf) {
-    log(`Growing wasm buffer to ${getBufferSize(buf)}.`);
+    const description = `Growing wasm buffer to ${getBufferSize(buf)}.`;
+    log(description);
+    createMarker({
+      name: "TranslationWorker (heap)",
+      description
+    });
+
     buffer = buf;
     Module["HEAP8"] = HEAP8 = new Int8Array(buf);
     Module["HEAP16"] = HEAP16 = new Int16Array(buf);

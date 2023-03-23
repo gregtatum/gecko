@@ -26,6 +26,22 @@ function trace(...args) {
   }
 }
 
+/**
+ * Add a marker to the Firefox Profiler.
+ * @param {Object} data
+ * @param {string} data.description
+ * @param {string} [data.name]
+ * @param {number} [data.startTime]
+ * @param {number} [data.innerWindowId]
+ */
+function createMarker({ description, startTime, innerWindowId, name }) {
+  ChromeUtils.addProfilerMarker(
+    name ?? "TranslationsWorker",
+    { startTime, innerWindowId },
+    description
+  );
+}
+
 // Throw Promise rejection errors so that they are visible in the console.
 self.addEventListener("unhandledrejection", event => {
   throw event.reason;
@@ -98,11 +114,11 @@ async function handleInitializationMessage({ data }) {
       engine = new MockedEngine(fromLanguage, toLanguage);
     }
 
-    ChromeUtils.addProfilerMarker(
-      "TranslationsWorker",
-      { startTime, innerWindowId },
-      "Translations engine loaded."
-    );
+    createMarker({
+      description: "Translations engine loaded.",
+      startTime,
+      innerWindowId,
+    });
 
     handleMessages(engine);
     postMessage({ type: "initialization-success" });
@@ -181,11 +197,10 @@ function handleMessages(engine) {
           break;
         }
         case "discard-translation-queue": {
-          ChromeUtils.addProfilerMarker(
-            "TranslationsWorker",
-            { innerWindowId: data.innerWindowId },
-            "Translations discard requested"
-          );
+          createMarker({
+            description: "Translations discard requested",
+            innerWindowId: data.innerWindowId,
+          });
 
           discardPromise = engine.discardTranslations();
           await discardPromise;
