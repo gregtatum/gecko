@@ -92,6 +92,7 @@ var BrowserPageActions = {
   placeAllActionsInUrlbar() {
     let urlbarActions = PageActions.actionsInUrlbar(window);
     for (let action of urlbarActions) {
+      console.log(`!!! this.placeActionInUrlbar(action);`, action);
       this.placeActionInUrlbar(action);
     }
     this._updateMainButtonAttributes();
