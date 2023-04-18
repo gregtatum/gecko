@@ -236,6 +236,29 @@ export class Database {
     return entry ? entry.attachment : null;
   }
 
+  async hasAttachment(attachmentId) {
+    let count = 0;
+    try {
+      await executeIDB(
+        "attachments",
+        store => {
+          const keyRange = IDBKeyRange.only([this.identifier, attachmentId]);
+          store.count(keyRange).onsuccess = e => {
+            count = e.target.result;
+          };
+        },
+        { mode: "readonly" }
+      );
+    } catch (e) {
+      throw new lazy.IDBHelpers.IndexedDBError(
+        e,
+        "hasAttachment()",
+        this.identifier
+      );
+    }
+    return count > 0;
+  }
+
   async saveAttachment(attachmentId, attachment) {
     try {
       await executeIDB(

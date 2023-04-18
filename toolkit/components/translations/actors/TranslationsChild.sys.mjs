@@ -548,7 +548,7 @@ export class TranslationsChild extends JSWindowActorChild {
     switch (event.type) {
       case "DOMContentLoaded":
         this.innerWindowId = this.contentWindow.windowGlobalChild.innerWindowId;
-        this.maybeOfferTranslation();
+        this.maybeOfferTranslation().catch(error => lazy.console.error(error));
         break;
       case "pagehide":
         lazy.console.log(
@@ -853,6 +853,48 @@ export class TranslationsChild extends JSWindowActorChild {
    */
   getSupportedLanguages() {
     return this.sendQuery("Translations:GetSupportedLanguages");
+  }
+
+  /**
+   * @param {string} language The BCP 47 language tag.
+   */
+  hasLanguageFiles(language) {
+    return this.sendQuery("Translations:HasLanguageFiles", {
+      language,
+    });
+  }
+
+  /**
+   * @param {string} language The BCP 47 language tag.
+   */
+  deleteLanguageFiles(language) {
+    return this.sendQuery("Translations:DeleteLanguageFiles", {
+      language,
+    });
+  }
+
+  /**
+   * @param {string} language The BCP 47 language tag.
+   */
+  downloadLanguageFiles(language) {
+    return this.sendQuery("Translations:DownloadLanguageFiles", {
+      language,
+    });
+  }
+
+  /**
+   * Download all files from Remote Settings.
+   */
+  downloadAllFiles() {
+    return this.sendQuery("Translations:DownloadAllFiles");
+  }
+
+  /**
+   * Delete all language files.
+   * @returns {Promise<string[]>} Returns a list of deleted record ids.
+   */
+  deleteAllLanguageFiles() {
+    return this.sendQuery("Translations:DeleteAllLanguageFiles");
   }
 
   /**

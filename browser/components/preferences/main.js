@@ -327,6 +327,8 @@ var gMainPane = {
     // listener for future menu changes.
     gMainPane.initDefaultZoomValues();
 
+    gMainPane.initTranslations();
+
     if (
       Services.prefs.getBoolPref(
         "media.videocontrols.picture-in-picture.enabled"
@@ -980,6 +982,394 @@ var gMainPane = {
     checkbox.checked = !win.ZoomManager.useFullZoom;
 
     document.getElementById("zoomBox").hidden = false;
+  },
+
+  /**
+   * Initialize the translations view.
+   */
+  async initTranslations() {
+    if (!Services.prefs.getBoolPref("browser.translations.enabled", true)) {
+      return;
+    }
+
+    /**
+     * Which phase a language download is in.
+     *
+     * @typedef {"downloaded" | "loading" | "uninstalled"} DownloadPhase
+     */
+
+    // Synchronously show the group, since the initialization process is async.
+    document.getElementById("translationsGroup").hidden = false;
+
+    class TranslationsState {
+      /**
+       * The fully initialized state.
+       *
+       * @param {TranslationsActor} translationsActor
+       * @param {Object} supportedLanguages
+       * @param {Array<{ langTag: string, displayName: string}} languageList
+       * @param {Map<string, DownloadPhase>} downloadPhases
+       */
+      constructor(
+        translationsActor,
+        supportedLanguages,
+        languageList,
+        downloadPhases
+      ) {
+        this.translationsActor = translationsActor;
+        this.supportedLanguages = supportedLanguages;
+        this.languageList = languageList;
+        this.downloadPhases = downloadPhases;
+      }
+
+      /**
+       * Handles all of the async initialization logic.
+       */
+      static async create() {
+        const translationsActor = window.windowGlobalChild.getActor(
+          "Translations"
+        );
+        const supportedLanguages = await translationsActor.getSupportedLanguages();
+        const languageList = TranslationsState.getLanguageList(
+          supportedLanguages
+        );
+        const downloadPhases = await TranslationsState.createDownloadPhases(
+          translationsActor,
+          languageList
+        );
+
+        return new TranslationsState(
+          translationsActor,
+          supportedLanguages,
+          languageList,
+          downloadPhases
+        );
+      }
+
+      /**
+       * Create a unique list of languages, sorted by the display name.
+       *
+       * @param {Object} supportedLanguages
+       * @returns {Array<{ langTag: string, displayName: string}}
+       */
+      static getLanguageList(supportedLanguages) {
+        const displayNames = new Map();
+        for (const languages of [
+          supportedLanguages.fromLanguages,
+          supportedLanguages.toLanguages,
+        ]) {
+          for (const { langTag, displayName } of languages) {
+            displayNames.set(langTag, displayName);
+          }
+        }
+
+        let appLangTag = new Intl.Locale(Services.locale.appLocaleAsBCP47)
+          .language;
+
+        // Don't offer to download the app's language.
+        displayNames.delete(appLangTag);
+
+        // Sort the list of languages by the display names.
+        return [...displayNames.entries()]
+          .map(([langTag, displayName]) => ({
+            langTag,
+            displayName,
+          }))
+          .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      }
+
+      /**
+       * Create the state that determines if a language has been downloaded yet.
+       *
+       * @param {TranslationsChild} translationsActor
+       * @param {Array<{ langTag: string, displayName: string}} languageList.
+       * @returns {Map<string, DownloadPhase>} Map the language tag to whether it is downloaded.
+       */
+      static async createDownloadPhases(translationsActor, languageList) {
+        const downloadPhases = new Map();
+        for (const { langTag } of languageList) {
+          downloadPhases.set(
+            langTag,
+            (await translationsActor.hasLanguageFiles(langTag))
+              ? "downloaded"
+              : "uninstalled"
+          );
+        }
+        return downloadPhases;
+      }
+    }
+
+    class View {
+      /** @type {Map<string, XULButton>} */
+      deleteButtons = new Map();
+      /** @type {Map<string, XULButton>} */
+      downloadButtons = new Map();
+
+      /**
+       * @param {TranslationsState} state
+       */
+      constructor(state) {
+        this.state = state;
+        this.elements = {
+          installList: document.getElementById(
+            "translations-manage-install-list"
+          ),
+          installAll: document.getElementById(
+            "translations-manage-install-all"
+          ),
+          deleteAll: document.getElementById("translations-manage-delete-all"),
+        };
+        this.setup();
+      }
+
+      setup() {
+        this.buildLanguageList();
+
+        this.elements.installAll.addEventListener(
+          "command",
+          this.handleInstallAll
+        );
+        this.elements.deleteAll.addEventListener(
+          "command",
+          this.handleDeleteAll
+        );
+      }
+
+      handleInstallAll = async () => {
+        this.disableButtons(true);
+        try {
+          await this.state.translationsActor.downloadAllFiles();
+          this.markAllDownloadPhases("downloaded");
+        } catch (error) {
+          // TODO - Handle errors.
+          console.error(error);
+          await this.reloadDownloadPhases();
+          this.updateAllButtons();
+        }
+        this.disableButtons(false);
+      };
+
+      handleDeleteAll = async () => {
+        this.disableButtons(true);
+        try {
+          await this.state.translationsActor.deleteAllLanguageFiles();
+          this.markAllDownloadPhases("uninstalled");
+        } catch (error) {
+          // This information is invalidated with the error and must be reloaded.
+          await this.reloadDownloadPhases();
+          console.error(error);
+        }
+        this.disableButtons(false);
+      };
+
+      /**
+       * @param {string} langTag
+       * @returns {Function}
+       */
+      getDownloadButtonHandler(langTag) {
+        return () => {
+          console.log(`!!! downloadButtonHandler`);
+          this.updateDownloadPhase(langTag, "loading");
+          this.state.translationsActor.downloadLanguageFiles(langTag).then(
+            () => {
+              console.log(`!!! downloadButtonHandler success`);
+              this.updateDownloadPhase(langTag, "downloaded");
+            },
+            error => {
+              // TODO - Error UI.
+              console.log(`!!! downloadButtonHandler failure`);
+              console.error(error);
+              this.updateDownloadPhase(langTag, "uninstalled");
+            }
+          );
+        };
+      }
+
+      /**
+       * @param {string} langTag
+       * @returns {Function}
+       */
+      getDeleteButtonHandler(langTag) {
+        return () => {
+          this.updateDownloadPhase(langTag, "loading");
+          this.state.translationsActor.deleteLanguageFiles(langTag).then(
+            () => {
+              this.updateDownloadPhase(langTag, "uninstalled");
+            },
+            // TODO - Error UI.
+            async error => {
+              console.error(error);
+              // This information is invalidated with the error and must be reloaded.
+              await this.reloadDownloadPhases();
+            }
+          );
+        };
+      }
+
+      buildLanguageList() {
+        const listFragment = document.createDocumentFragment();
+
+        for (const { langTag, displayName } of this.state.languageList) {
+          const hboxRow = document.createXULElement("hbox");
+          hboxRow.classList.add("translations-manage-language");
+
+          const languageLabel = document.createXULElement("label");
+          languageLabel.textContent = displayName; // The display name is already localized.
+
+          const downloadButton = document.createXULElement("button");
+          const deleteButton = document.createXULElement("button");
+
+          downloadButton.addEventListener(
+            "command",
+            this.getDownloadButtonHandler(langTag)
+          );
+          deleteButton.addEventListener(
+            "command",
+            this.getDeleteButtonHandler(langTag)
+          );
+
+          downloadButton.setAttribute(
+            "data-l10n-id",
+            "translations-manage-download-button"
+          );
+          deleteButton.setAttribute(
+            "data-l10n-id",
+            "translations-manage-delete-button"
+          );
+
+          downloadButton.hidden = true;
+          deleteButton.hidden = true;
+
+          this.deleteButtons.set(langTag, deleteButton);
+          this.downloadButtons.set(langTag, downloadButton);
+
+          hboxRow.appendChild(languageLabel);
+          hboxRow.appendChild(downloadButton);
+          hboxRow.appendChild(deleteButton);
+          listFragment.appendChild(hboxRow);
+        }
+        this.updateAllButtons();
+        this.elements.installList.appendChild(listFragment);
+      }
+
+      /**
+       * Update the DownloadPhase for a single langTag.
+       * @param {string} langTag
+       * @param {DownloadPhase} downloadPhase
+       */
+      updateDownloadPhase(langTag, downloadPhase) {
+        this.state.downloadPhases.set(langTag, downloadPhase);
+        this.updateButton(langTag, downloadPhase);
+        this.updateHeaderButtons();
+      }
+
+      /**
+       * Recreates the download map when the state is invalidated.
+       */
+      async reloadDownloadPhases() {
+        this.state.downloadPhases = await TranslationsState.createDownloadPhases(
+          this.translationsActor,
+          this.languageList
+        );
+        this.updateAllButtons();
+      }
+
+      /**
+       * Set all the downloads.
+       * @param {DownloadPhase} downloadPhase
+       */
+      markAllDownloadPhases(downloadPhase) {
+        const { downloadPhases } = this.state;
+        for (const key of downloadPhases.keys()) {
+          downloadPhases.set(key, downloadPhase);
+        }
+        this.updateAllButtons();
+      }
+
+      /**
+       * If all languages are downloaded, or no languages are downloaded then
+       * the visibility of the buttons need to change.
+       */
+      updateHeaderButtons() {
+        let allDownloaded = true;
+        let allUninstalled = true;
+        for (const downloadPhase of this.state.downloadPhases.values()) {
+          if (downloadPhase === "loading") {
+            // Don't count loading towards this calculation.
+            continue;
+          }
+          if (downloadPhase !== "downloaded" && allDownloaded) {
+            allDownloaded = false;
+          }
+          if (downloadPhase !== "uninstalled" && allUninstalled) {
+            allUninstalled = false;
+          }
+        }
+
+        if (allDownloaded) {
+          this.elements.installAll.hidden = true;
+          this.elements.deleteAll.hidden = false;
+        } else if (allUninstalled) {
+          this.elements.installAll.hidden = false;
+          this.elements.deleteAll.hidden = true;
+        } else {
+          this.elements.installAll.hidden = false;
+          this.elements.deleteAll.hidden = false;
+        }
+      }
+
+      /**
+       * Update the buttons according to their download state.
+       */
+      updateAllButtons() {
+        this.updateHeaderButtons();
+        for (const [langTag, downloadPhase] of this.state.downloadPhases) {
+          this.updateButton(langTag, downloadPhase);
+        }
+      }
+
+      /**
+       * @param {string} langTag
+       * @param {DownloadPhase} downloadPhase
+       */
+      updateButton(langTag, downloadPhase) {
+        const downloadButton = this.downloadButtons.get(langTag);
+        const deleteButton = this.deleteButtons.get(langTag);
+        switch (downloadPhase) {
+          case "downloaded":
+            downloadButton.hidden = true;
+            deleteButton.hidden = false;
+            downloadButton.removeAttribute("disabled");
+            break;
+          case "uninstalled":
+            downloadButton.hidden = false;
+            deleteButton.hidden = true;
+            downloadButton.removeAttribute("disabled");
+            break;
+          case "loading":
+            downloadButton.hidden = false;
+            deleteButton.hidden = true;
+            downloadButton.setAttribute("disabled", true);
+            break;
+        }
+      }
+
+      /**
+       * @param {boolean} isDisabled
+       */
+      disableButtons(isDisabled) {
+        this.elements.installAll.disabled = isDisabled;
+        this.elements.deleteAll.disabled = isDisabled;
+        for (const button of this.downloadButtons.values()) {
+          button.disabled = isDisabled;
+        }
+        for (const button of this.deleteButtons.values()) {
+          button.disabled = isDisabled;
+        }
+      }
+    }
+
+    new View(await TranslationsState.create());
   },
 
   initPrimaryBrowserLanguageUI() {

@@ -1449,6 +1449,25 @@ richlistitem .text-link:hover {
   margin-top: 0.4em;
 }
 
+#translations-manage-install-list {
+  height: 200px;
+  overflow: scroll;
+  background-color: var(--in-content-box-background);
+  border: 1px solid var(--in-content-box-border-color);
+  border-radius: 4px;
+  resize: vertical;
+  padding: 8px;
+}
+
+.translations-manage-language {
+	align-items: center;
+}
+
+.translations-manage-language label {
+	flex: 1;
+	margin: 0 15px;
+}
+
 /* Platform-specific tweaks & overrides */
 
 @media (-moz-platform: macos) {
