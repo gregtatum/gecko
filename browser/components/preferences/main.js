@@ -1038,6 +1038,12 @@ var gMainPane = {
           languageList
         );
 
+        if (supportedLanguages.languagePairs.length === 0) {
+          throw new Error(
+            "The supported languages list was empty. RemoteSettings may not be available at the moment."
+          );
+        }
+
         return new TranslationsState(
           translationsActor,
           supportedLanguages,
@@ -1099,7 +1105,7 @@ var gMainPane = {
       }
     }
 
-    class View {
+    class TranslationsView {
       /** @type {Map<string, XULButton>} */
       deleteButtons = new Map();
       /** @type {Map<string, XULButton>} */
@@ -1118,6 +1124,7 @@ var gMainPane = {
             "translations-manage-install-all"
           ),
           deleteAll: document.getElementById("translations-manage-delete-all"),
+          error: document.getElementById("translations-manage-error"),
         };
         this.setup();
       }
@@ -1136,13 +1143,19 @@ var gMainPane = {
       }
 
       handleInstallAll = async () => {
+        this.hideError();
         this.disableButtons(true);
         try {
+          if (Math.random() > 0.5) {
+            throw new Error("Artificial error.");
+          }
           await this.state.translationsActor.downloadAllFiles();
           this.markAllDownloadPhases("downloaded");
         } catch (error) {
-          // TODO - Handle errors.
-          console.error(error);
+          TranslationsView.showError(
+            "translations-manage-error-install-all",
+            error
+          );
           await this.reloadDownloadPhases();
           this.updateAllButtons();
         }
@@ -1150,12 +1163,17 @@ var gMainPane = {
       };
 
       handleDeleteAll = async () => {
+        this.hideError();
         this.disableButtons(true);
         try {
+          if (Math.random() > 0.5) {
+            throw new Error("Artificial error.");
+          }
           await this.state.translationsActor.deleteAllLanguageFiles();
           this.markAllDownloadPhases("uninstalled");
         } catch (error) {
-          // This information is invalidated with the error and must be reloaded.
+          TranslationsView.showError("translations-manage-error-delete", error);
+          // The download phases are invalidated with the error and must be reloaded.
           await this.reloadDownloadPhases();
           console.error(error);
         }
@@ -1167,21 +1185,22 @@ var gMainPane = {
        * @returns {Function}
        */
       getDownloadButtonHandler(langTag) {
-        return () => {
-          console.log(`!!! downloadButtonHandler`);
+        return async () => {
+          this.hideError();
           this.updateDownloadPhase(langTag, "loading");
-          this.state.translationsActor.downloadLanguageFiles(langTag).then(
-            () => {
-              console.log(`!!! downloadButtonHandler success`);
-              this.updateDownloadPhase(langTag, "downloaded");
-            },
-            error => {
-              // TODO - Error UI.
-              console.log(`!!! downloadButtonHandler failure`);
-              console.error(error);
-              this.updateDownloadPhase(langTag, "uninstalled");
+          try {
+            if (Math.random() > 0.5) {
+              throw new Error("Artificial error.");
             }
-          );
+            await this.state.translationsActor.downloadLanguageFiles(langTag);
+            this.updateDownloadPhase(langTag, "downloaded");
+          } catch (error) {
+            TranslationsView.showError(
+              "translations-manage-error-delete",
+              error
+            );
+            this.updateDownloadPhase(langTag, "uninstalled");
+          }
         };
       }
 
@@ -1190,19 +1209,23 @@ var gMainPane = {
        * @returns {Function}
        */
       getDeleteButtonHandler(langTag) {
-        return () => {
+        return async () => {
+          this.hideError();
           this.updateDownloadPhase(langTag, "loading");
-          this.state.translationsActor.deleteLanguageFiles(langTag).then(
-            () => {
-              this.updateDownloadPhase(langTag, "uninstalled");
-            },
-            // TODO - Error UI.
-            async error => {
-              console.error(error);
-              // This information is invalidated with the error and must be reloaded.
-              await this.reloadDownloadPhases();
+          try {
+            if (Math.random() > 0.5) {
+              throw new Error("Artificial error.");
             }
-          );
+            await this.state.translationsActor.deleteLanguageFiles(langTag);
+            this.updateDownloadPhase(langTag, "uninstalled");
+          } catch (error) {
+            TranslationsView.showError(
+              "translations-manage-error-delete",
+              error
+            );
+            // The download phases are invalidated with the error and must be reloaded.
+            await this.reloadDownloadPhases();
+          }
         };
       }
 
@@ -1250,6 +1273,7 @@ var gMainPane = {
         }
         this.updateAllButtons();
         this.elements.installList.appendChild(listFragment);
+        this.elements.installList.hidden = false;
       }
 
       /**
@@ -1268,9 +1292,10 @@ var gMainPane = {
        */
       async reloadDownloadPhases() {
         this.state.downloadPhases = await TranslationsState.createDownloadPhases(
-          this.translationsActor,
-          this.languageList
+          this.state.translationsActor,
+          this.state.languageList
         );
+        console.log(`!!! Retrieved download phases`);
         this.updateAllButtons();
       }
 
@@ -1367,9 +1392,38 @@ var gMainPane = {
           button.disabled = isDisabled;
         }
       }
+
+      /**
+       * This method is static in case an error happens during the creation of the
+       * TranslationsState.
+       *
+       * @param {string} l10nId
+       * @param {Error} error
+       */
+      static showError(l10nId, error) {
+        console.error(error);
+        const errorMessage = document.getElementById(
+          "translations-manage-error"
+        );
+        errorMessage.hidden = false;
+        errorMessage.setAttribute("data-l10n-id", l10nId);
+      }
+
+      hideError() {
+        this.elements.error.hidden = true;
+      }
     }
 
-    new View(await TranslationsState.create());
+    TranslationsState.create().then(
+      state => {
+        new TranslationsView(state);
+      },
+      error => {
+        // This error can happen when a user is not connected to the internet, or
+        // RemoteSettings is down for some reason.
+        TranslationsView.showError("translations-manage-error-list", error);
+      }
+    );
   },
 
   initPrimaryBrowserLanguageUI() {

@@ -390,17 +390,19 @@
 <!-- Translations -->
 <groupbox id="translationsGroup" data-category="paneGeneral" hidden="true">
   <label><html:h2 data-l10n-id="translations-manage-header"/></label>
+  <description data-l10n-id="translations-manage-description"/>
   <vbox>
-    <hbox class="translations-manage-language">
-      <label data-l10n-id="translations-manage-all-language"></label>
-      <button id="translations-manage-install-all"
-              data-l10n-id="translations-manage-download-button"></button>
-      <button id="translations-manage-delete-all"
-              data-l10n-id="translations-manage-delete-button"></button>
-    </hbox>
-    <html:div id="translations-manage-install-list">
+    <html:div id="translations-manage-install-list" hidden="true">
+      <hbox class="translations-manage-language">
+        <label data-l10n-id="translations-manage-all-language"></label>
+        <button id="translations-manage-install-all"
+                data-l10n-id="translations-manage-download-button"></button>
+        <button id="translations-manage-delete-all"
+                data-l10n-id="translations-manage-delete-button"></button>
+      </hbox>
       <!-- The downloadable languages will be listed here. -->
     </html:div>
+    <description id="translations-manage-error" hidden="true"></description>
   </vbox>
 </groupbox>
 

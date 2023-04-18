@@ -335,7 +335,8 @@ translate-exceptions =
 
 ## Firefox Translations language management.
 
-translations-manage-header = Manage Translation Languages
+translations-manage-header = Translations
+translations-manage-description = Download languages for offline translations.
 translations-manage-all-language = All languages
 translations-manage-uninstall = Uninstall
 translations-manage-installing = Installing
@@ -347,6 +348,9 @@ translations-manage-download-button = Download
     .aria-label = Download
 translations-manage-delete-button = Delete
     .aria-label = Delete
+translations-manage-error-install = There was problem downloading the language files, try it again?
+translations-manage-error-delete = There was an error deleting the language files, try it again?
+translations-manage-error-list = Failed to get the list of available translations languages. Refresh the page to try again.
 
 ##
 
