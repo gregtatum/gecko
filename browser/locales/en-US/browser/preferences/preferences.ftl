@@ -333,6 +333,27 @@ translate-exceptions =
     .label = Exceptions…
     .accesskey = x
 
+## Firefox Translations language management.
+
+translations-manage-header = Translations
+translations-manage-description = Download languages for offline translations.
+translations-manage-all-language = All languages
+translations-manage-uninstall = Uninstall
+translations-manage-installing = Installing
+# $fromLanguage (string) - The language to translate from.
+# $toLanguage (string) - The language to translate to.
+translations-manage-language-pair = { $fromLanguage } to { $toLanguage }
+# This is a button that is a download icon.
+translations-manage-download-button = Download
+    .aria-label = Download
+translations-manage-delete-button = Delete
+    .aria-label = Delete
+translations-manage-error-download = There was problem downloading the language files, try it again?
+translations-manage-error-delete = There was an error deleting the language files, try it again?
+translations-manage-error-list = Failed to get the list of available translations languages. Refresh the page to try again.
+
+##
+
 # Variables:
 #    $localeName (string) - Localized name of the locale to be used.
 use-system-locale =

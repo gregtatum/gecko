@@ -271,6 +271,7 @@ async function reorderingTranslator(message) {
  */
 async function setupActorTest({
   languagePairs,
+  client,
   prefs,
   detectedLanguageConfidence,
   detectedLanguageLabel,
@@ -285,7 +286,10 @@ async function setupActorTest({
   });
 
   if (languagePairs) {
-    TranslationsParent.mockLanguagePairs(languagePairs);
+    const translationModels = await createTranslationModelsRemoteClient(
+      languagePairs
+    );
+    TranslationsParent.translationModelsRemoteClient = translationModels.client;
   }
 
   if (detectedLanguageLabel && detectedLanguageConfidence) {
@@ -295,12 +299,19 @@ async function setupActorTest({
     );
   }
 
+  if (client) {
+    TranslationsParent.mockRemoteSettingsClient(client);
+  }
+
+  /** @type {import("../../actors/TranslationsParent.sys.mjs").TranslationsParent} */
+  const actor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
+    "Translations"
+  );
+
   return {
-    actor: gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
-      "Translations"
-    ),
+    actor,
     cleanup() {
-      TranslationsParent.mockLanguagePairs(null);
+      TranslationsParent.translationModelsRemoteClient = null;
       TranslationsParent.mockLanguageIdentification(null, null);
       return SpecialPowers.popPrefEnv();
     },
@@ -403,4 +414,295 @@ async function loadTestPageAndRun(options) {
   const { cleanup, runInPage } = await loadTestPage(options);
   await runInPage(options.runInPage);
   await cleanup();
+}
+
+/**
+ * @param {RemoteSettingsClient} client
+ */
+function createAttachmentMock(client) {
+  const pendingDownloads = [];
+  client.attachments.download = record =>
+    new Promise((resolve, reject) => {
+      pendingDownloads.push({ record, resolve, reject });
+    });
+
+  function waitForDownloads() {
+    return TestUtils.waitForCondition(
+      () => !!pendingDownloads.length,
+      "Waiting for a pending download to be added"
+    );
+  }
+
+  function resolvePendingDownloads() {
+    info("Resolving downloads");
+    return downloadHandler(download =>
+      download.resolve({ buffer: new ArrayBuffer() })
+    );
+  }
+
+  function rejectPendingDownloads() {
+    info("Rejecting downloads");
+    return downloadHandler(download => download.reject());
+  }
+
+  async function downloadHandler(action) {
+    await waitForDownloads();
+    const names = [];
+    while (true) {
+      // Wait a tick, as downloads are added asynchronously. This will continue checking
+      // for downloads at the start of the next event loop.
+      await null;
+      let download = pendingDownloads.shift();
+      if (!download) {
+        break;
+      }
+      action(download);
+      names.push(download.record.name);
+    }
+    return names.sort((a, b) => a.localeCompare(b));
+  }
+
+  async function assertNoNewDownloads() {
+    await new Promise(resolve => setTimeout(resolve, 0));
+    is(
+      pendingDownloads.length,
+      0,
+      `No downloads happened for "${client.collectionName}"`
+    );
+  }
+
+  return {
+    client,
+    pendingDownloads,
+    resolvePendingDownloads,
+    rejectPendingDownloads,
+    assertNoNewDownloads,
+  };
+}
+
+/**
+ * Creates a local RemoteSettingsClient for use within tests.
+ *
+ * @param {Object[]} langPairs
+ * @returns {RemoteSettingsClient}
+ */
+async function createTranslationModelsRemoteClient(langPairs) {
+  const records = [];
+  for (const { fromLang, toLang } of langPairs) {
+    const lang = fromLang + toLang;
+    const models = [
+      { fileType: "model", name: `model.${lang}.intgemm.alphas.bin` },
+      { fileType: "lex", name: `lex.50.50.${lang}.s2t.bin` },
+      { fileType: "qualityModel", name: `qualityModel.${lang}.bin` },
+      { fileType: "vocab", name: `vocab.${lang}.spm` },
+    ];
+
+    for (const { fileType, name } of models) {
+      records.push({
+        id: crypto.randomUUID(),
+        name,
+        fromLang,
+        toLang,
+        fileType,
+        version: "1.0",
+        last_modified: Date.now(),
+        schema: Date.now(),
+      });
+    }
+  }
+
+  const { RemoteSettings } = ChromeUtils.import(
+    "resource://services-settings/remote-settings.js"
+  );
+  const client = RemoteSettings("test-translation-models");
+  const metadata = {};
+  await client.db.clear();
+  await client.db.importChanges(metadata, Date.now(), records);
+
+  return createAttachmentMock(client);
+}
+
+/**
+ * Creates a local RemoteSettingsClient for use within tests.
+ *
+ * @returns {RemoteSettingsClient}
+ */
+async function createTranslationsWasmRemoteClient() {
+  const records = ["bergamot-translator", "fasttext-wasm"].map(name => ({
+    id: crypto.randomUUID(),
+    name,
+    version: "1.0",
+    last_modified: Date.now(),
+    schema: Date.now(),
+  }));
+
+  const { RemoteSettings } = ChromeUtils.import(
+    "resource://services-settings/remote-settings.js"
+  );
+  const client = RemoteSettings("test-translations-wasm");
+  const metadata = {};
+  await client.db.clear();
+  await client.db.importChanges(metadata, Date.now(), records);
+
+  return createAttachmentMock(client);
+}
+
+/**
+ * Creates a local RemoteSettingsClient for use within tests.
+ *
+ * @returns {RemoteSettingsClient}
+ */
+async function createLanguageIdModelsRemoteClient() {
+  const records = [
+    {
+      id: crypto.randomUUID(),
+      name: "lid.176.ftz",
+      version: "1.0",
+      last_modified: Date.now(),
+      schema: Date.now(),
+    },
+  ];
+
+  const { RemoteSettings } = ChromeUtils.import(
+    "resource://services-settings/remote-settings.js"
+  );
+  const client = RemoteSettings("test-language-id-models");
+  const metadata = {};
+  await client.db.clear();
+  await client.db.importChanges(metadata, Date.now(), records);
+
+  return createAttachmentMock(client);
+}
+
+async function selectAboutPreferencesElements() {
+  const doc = gBrowser.selectedBrowser.contentDocument;
+
+  const rows = await TestUtils.waitForCondition(() => {
+    const elements = doc.querySelectorAll(".translations-manage-language");
+    if (elements.length !== 3) {
+      return false;
+    }
+    return elements;
+  }, "Waiting for manage language rows.");
+
+  const [downloadAllRow, frenchRow, spanishRow] = rows;
+
+  const downloadAllLabel = downloadAllRow.querySelector("label");
+  const downloadAll = downloadAllRow.querySelector(
+    "#translations-manage-install-all"
+  );
+  const deleteAll = downloadAllRow.querySelector(
+    "#translations-manage-delete-all"
+  );
+  const frenchLabel = frenchRow.querySelector("label");
+  const frenchDownload = frenchRow.querySelector(
+    `[data-l10n-id="translations-manage-download-button"]`
+  );
+  const frenchDelete = frenchRow.querySelector(
+    `[data-l10n-id="translations-manage-delete-button"]`
+  );
+  const spanishLabel = spanishRow.querySelector("label");
+  const spanishDownload = spanishRow.querySelector(
+    `[data-l10n-id="translations-manage-download-button"]`
+  );
+  const spanishDelete = spanishRow.querySelector(
+    `[data-l10n-id="translations-manage-delete-button"]`
+  );
+
+  return {
+    downloadAllLabel,
+    downloadAll,
+    deleteAll,
+    frenchLabel,
+    frenchDownload,
+    frenchDelete,
+    spanishLabel,
+    spanishDownload,
+    spanishDelete,
+  };
+}
+
+function click(button, message) {
+  info(message);
+  if (button.hidden) {
+    throw new Error("The button was hidden when trying to click it.");
+  }
+  button.click();
+}
+
+async function assertVisibility({ message, visible, hidden }) {
+  info(message);
+  try {
+    // First wait for the condition to be met.
+    await TestUtils.waitForCondition(() => {
+      for (const element of Object.values(visible)) {
+        if (element.hidden) {
+          return false;
+        }
+      }
+      for (const element of Object.values(hidden)) {
+        if (!element.hidden) {
+          return false;
+        }
+      }
+      return true;
+    });
+  } catch (error) {
+    // Ignore, this will get caught below.
+  }
+  // Now report the conditions.
+  for (const [name, element] of Object.entries(visible)) {
+    ok(!element.hidden, `${name} is visible.`);
+  }
+  for (const [name, element] of Object.entries(hidden)) {
+    ok(element.hidden, `${name} is hidden.`);
+  }
+}
+
+async function setupAboutPreferences(languagePairs) {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      // Enabled by default.
+      ["browser.translations.enable", true],
+      ["browser.translations.logLevel", "All"],
+    ],
+  });
+  const tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    BLANK_PAGE,
+    true // waitForLoad
+  );
+
+  const remoteClients = {
+    translationModels: await createTranslationModelsRemoteClient(languagePairs),
+    translationsWasm: await createTranslationsWasmRemoteClient(),
+    languageIdModels: await createLanguageIdModelsRemoteClient(),
+  };
+
+  TranslationsParent.translationModelsRemoteClient =
+    remoteClients.translationModels.client;
+  TranslationsParent.translationsWasmRemoteClient =
+    remoteClients.translationsWasm.client;
+  TranslationsParent.languageIdModelsRemoteClient =
+    remoteClients.languageIdModels.client;
+
+  BrowserTestUtils.loadURIString(tab.linkedBrowser, "about:preferences");
+  await BrowserTestUtils.browserLoaded(tab.linkedBrowser);
+
+  const elements = await selectAboutPreferencesElements();
+
+  async function cleanup() {
+    gBrowser.removeCurrentTab();
+    TranslationsParent.translationModelsRemoteClient = null;
+    TranslationsParent.translationsWasmRemoteClient = null;
+    TranslationsParent.languageIdModelsRemoteClient = null;
+
+    await SpecialPowers.popPrefEnv();
+  }
+
+  return {
+    cleanup,
+    remoteClients,
+    elements,
+  };
 }
