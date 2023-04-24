@@ -21,6 +21,16 @@
         <html:h1 id="translations-panel-main-header-label">
           <html:span data-l10n-id="translations-panel-dual-header"></html:span>
         </html:h1>
+        <toolbarbutton id="translations-panel-settings" class="panel-info-button"
+                       data-l10n-id="translations-panel-settings-button"
+                       closemenu="none"
+                       oncommand="TranslationsPanel.openSettingsPopup()">
+          <image/>
+        </toolbarbutton>
+        <menupopup id="translations-panel-settings-popup">
+          <menuitem data-l10n-id="translations-panel-settings-manage-languages"
+                    oncommand="TranslationsPanel.openManageLanguages()"/>
+        </menupopup>
       </hbox>
 
       <toolbarseparator/>

@@ -107,6 +107,18 @@ var TranslationsPanel = new (class {
             "translations-panel-restore-label"
           ));
         },
+        get settingsPopup() {
+          delete this.settingsPopup;
+          return (this.settingsPopup = document.getElementById(
+            "translations-panel-settings-popup"
+          ));
+        },
+        get settingsButton() {
+          delete this.settingsButton;
+          return (this.settingsButton = document.getElementById(
+            "translations-panel-settings"
+          ));
+        },
       };
     }
 
@@ -303,6 +315,22 @@ var TranslationsPanel = new (class {
       document.getElementById("translations-panel-from").value,
       document.getElementById("translations-panel-to").value
     );
+  }
+
+  /**
+   * A handler for opening the settings context menu.
+   */
+  openSettingsPopup() {
+    this.elements.settingsPopup.openPopup(this.elements.settingsButton);
+  }
+
+  /**
+   * Redirect the user to about:preferences
+   */
+  openManageLanguages() {
+    const window =
+      gBrowser.selectedBrowser.browsingContext.top.embedderElement.ownerGlobal;
+    window.openTrustedLinkIn("about:preferences#general-translations", "tab");
   }
 
   /**

@@ -14,3 +14,8 @@
   max-width: 300px;
   min-width: 200px;
 }
+
+#translations-panel-settings.panel-info-button > image {
+  /* Override the panel-info-button with a gear icon. */
+  list-style-image: url(chrome://global/skin/icons/settings.svg);
+}

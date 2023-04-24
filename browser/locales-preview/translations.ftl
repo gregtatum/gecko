@@ -4,7 +4,14 @@
 
 # The button for "Firefox Translations" in the url bar.
 urlbar-translations-button =
-    .tooltiptext = { -translations-brand-name }
+  .tooltiptext = { -translations-brand-name }
+
+translations-panel-settings-button =
+  .aria-label = Manage { -translations-brand-name } settings
+
+## Options in the Firefox Translations settings.
+
+translations-panel-settings-manage-languages = Manage languages
 
 ## The translation panel appears from the url bar, and this view is the "dual" translate
 ## view that lets you choose a source language and target language for translation
