@@ -10,8 +10,38 @@
        noautofocus="true"
        aria-labelledby="translations-panel-main-header-label"
        orient="vertical">
-
   <panelmultiview id="translations-panel-multiview">
+    <!-- Restore page -->
+    <panelview id="translations-panel-view-restore"
+               class="PanelUI-subView"
+               role="document"
+               showheader="true">
+      <hbox class="panel-header">
+        <html:h1 id="translations-panel-main-header-label">
+          <html:span data-l10n-id="translations-panel-restore-header"></html:span>
+        </html:h1>
+        <!-- The "toolbarbutton#translations-panel-settings" gets cloned here. -->
+      </hbox>
+
+      <toolbarseparator/>
+
+      <vbox class="translations-panel-content">
+        <label id="translations-panel-restore-label"
+               data-l10n-id="translations-panel-restore-label"
+               data-l10n-args='{"fromLanguage": "", "toLanguage": ""}'>
+        </label>
+      </vbox>
+
+      <hbox class="panel-footer">
+        <button default="true"
+                class="subviewbutton panel-subview-footer-button"
+                oncommand="TranslationsPanel.onRestore(event);"
+                data-l10n-id="translations-panel-restore-button"
+                tabindex="0">
+        </button>
+      </hbox>
+    </panelview>
+
     <!-- Dual language selection view -->
     <panelview id="translations-panel-view-dual"
                class="PanelUI-subView"
@@ -21,16 +51,18 @@
         <html:h1 id="translations-panel-main-header-label">
           <html:span data-l10n-id="translations-panel-dual-header"></html:span>
         </html:h1>
+        <!-- The "toolbarbutton#translations-panel-settings" will get cloned into other
+             .panel-header elements. -->
         <toolbarbutton id="translations-panel-settings" class="panel-info-button"
                        data-l10n-id="translations-panel-settings-button"
                        closemenu="none"
-                       oncommand="TranslationsPanel.openSettingsPopup()">
+                       oncommand="TranslationsPanel.openSettingsPopup(this)">
           <image/>
+          <menupopup id="translations-panel-settings-popup">
+            <menuitem data-l10n-id="translations-panel-settings-manage-languages"
+                      oncommand="TranslationsPanel.openManageLanguages()"/>
+          </menupopup>
         </toolbarbutton>
-        <menupopup id="translations-panel-settings-popup">
-          <menuitem data-l10n-id="translations-panel-settings-manage-languages"
-                    oncommand="TranslationsPanel.openManageLanguages()"/>
-        </menupopup>
       </hbox>
 
       <toolbarseparator/>
@@ -78,6 +110,7 @@
         <html:h1 id="translations-panel-main-header-label">
           <html:span data-l10n-id="translations-panel-restore-header"></html:span>
         </html:h1>
+        <!-- The "toolbarbutton#translations-panel-settings" gets cloned here. -->
       </hbox>
 
       <toolbarseparator/>

@@ -51,9 +51,21 @@ var TranslationsPanel = new (class {
       const panel = wrapper.content.firstElementChild;
       wrapper.replaceWith(wrapper.content);
 
+      const settingsButton = document.getElementById(
+        "translations-panel-settings"
+      );
+      // Clone the settings toolbarbutton across all the views.
+      for (const header of panel.querySelectorAll(".panel-header")) {
+        if (header.contains(settingsButton)) {
+          continue;
+        }
+        header.appendChild(settingsButton.cloneNode(true));
+      }
+
       // Lazily select the elements.
       this.#lazyElements = {
         panel,
+        settingsButton,
 
         get button() {
           delete this.button;
@@ -111,12 +123,6 @@ var TranslationsPanel = new (class {
           delete this.settingsPopup;
           return (this.settingsPopup = document.getElementById(
             "translations-panel-settings-popup"
-          ));
-        },
-        get settingsButton() {
-          delete this.settingsButton;
-          return (this.settingsButton = document.getElementById(
-            "translations-panel-settings"
           ));
         },
       };
@@ -320,8 +326,9 @@ var TranslationsPanel = new (class {
   /**
    * A handler for opening the settings context menu.
    */
-  openSettingsPopup() {
-    this.elements.settingsPopup.openPopup(this.elements.settingsButton);
+  openSettingsPopup(button) {
+    const popup = button.querySelector("menupopup");
+    popup.openPopup(button);
   }
 
   /**
