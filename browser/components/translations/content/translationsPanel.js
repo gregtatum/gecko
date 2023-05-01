@@ -17,6 +17,21 @@ var TranslationsPanel = new (class {
   #console;
 
   /**
+   * The automatically determined document lang tag.
+   *
+   * @type {null | string}
+   */
+  #docLangTag = null;
+
+  /**
+   * The language tags that are used for translating. This is looked up by the default
+   * view and used again for the dual view.
+   *
+   * @type {null | { appLangTag: string, docLangTag: string }}
+   */
+  #langTagsForTranslation = null;
+
+  /**
    * Lazily get a console instance.
    *
    * @returns {Console}
@@ -71,16 +86,22 @@ var TranslationsPanel = new (class {
           delete this.button;
           return (this.button = document.getElementById("translations-button"));
         },
-        get fromMenuPopup() {
-          delete this.fromMenuPopup;
-          return (this.fromMenuPopup = document.getElementById(
-            "translations-panel-from-menupopup"
+        get dualFromMenuPopup() {
+          delete this.dualFromMenuPopup;
+          return (this.dualFromMenuPopup = document.getElementById(
+            "translations-panel-dual-from-menupopup"
           ));
         },
-        get toMenuPopup() {
-          delete this.toMenuPopup;
-          return (this.toMenuPopup = document.getElementById(
-            "translations-panel-to-menupopup"
+        get dualToMenuPopup() {
+          delete this.dualToMenuPopup;
+          return (this.dualToMenuPopup = document.getElementById(
+            "translations-panel-dual-to-menupopup"
+          ));
+        },
+        get defaultToMenuPopup() {
+          delete this.defaultToMenuPopup;
+          return (this.defaultToMenuPopup = document.getElementById(
+            "translations-panel-default-to-menupopup"
           ));
         },
         get multiview() {
@@ -95,22 +116,40 @@ var TranslationsPanel = new (class {
             "translations-panel-view-dual"
           ));
         },
+        get defaultView() {
+          delete this.defaultView;
+          return (this.defaultView = document.getElementById(
+            "translations-panel-view-default"
+          ));
+        },
         get restoreView() {
           delete this.restoreView;
           return (this.restoreView = document.getElementById(
             "translations-panel-view-restore"
           ));
         },
-        get fromMenuList() {
-          delete this.fromMenuList;
-          return (this.fromMenuList = document.getElementById(
-            "translations-panel-from"
+        get dualFromMenuList() {
+          delete this.dualFromMenuList;
+          return (this.dualFromMenuList = document.getElementById(
+            "translations-panel-dual-from"
           ));
         },
-        get toMenuList() {
-          delete this.toMenuList;
-          return (this.toMenuList = document.getElementById(
-            "translations-panel-to"
+        get dualToMenuList() {
+          delete this.dualToMenuList;
+          return (this.dualToMenuList = document.getElementById(
+            "translations-panel-dual-to"
+          ));
+        },
+        get defaultToMenuList() {
+          delete this.defaultToMenuList;
+          return (this.defaultToMenuList = document.getElementById(
+            "translations-panel-default-to"
+          ));
+        },
+        get defaultDescription() {
+          delete this.defaultDescription;
+          return (this.defaultDescription = document.getElementById(
+            "translations-panel-default-description"
           ));
         },
         get restoreLabel() {
@@ -198,7 +237,7 @@ var TranslationsPanel = new (class {
         } else {
           fromMenuItem.setAttribute("label", displayName);
         }
-        this.elements.fromMenuPopup.appendChild(fromMenuItem);
+        this.elements.dualFromMenuPopup.appendChild(fromMenuItem);
       }
       for (const { langTag, isBeta, displayName } of toLanguages) {
         const toMenuItem = document.createXULElement("menuitem");
@@ -212,12 +251,36 @@ var TranslationsPanel = new (class {
         } else {
           toMenuItem.setAttribute("label", displayName);
         }
-        this.elements.toMenuPopup.appendChild(toMenuItem);
+        this.elements.defaultToMenuPopup.appendChild(
+          toMenuItem.cloneNode(true)
+        );
+        this.elements.dualToMenuPopup.appendChild(toMenuItem);
       }
       this.#langListsPhase = "initialized";
     } catch (error) {
       this.console.error(error);
       this.#langListsPhase = "error";
+    }
+  }
+
+  /**
+   * Switch to the dual language view of choosing a source and target language.
+   */
+  setDualView() {
+    const { dualFromMenuList, dualToMenuList, multiview } = this.elements;
+
+    multiview.showSubView("translations-panel-view-dual");
+
+    // Remove any old selected values synchronously before asking for new ones.
+    dualFromMenuList.value = "";
+    dualToMenuList.value = "";
+
+    if (this.#langTagsForTranslation) {
+      const { docLangTag, appLangTag } = this.#langTagsForTranslation;
+      dualFromMenuList.value = docLangTag;
+      dualToMenuList.value = appLangTag;
+    } else {
+      this.console.error("No language tags for translation were found.");
     }
   }
 
@@ -228,16 +291,17 @@ var TranslationsPanel = new (class {
    *
    * @param {Promise<void>} langListBuilt
    */
-  async #setDualView(langListBuilt) {
+  async #showDefaultView() {
+    await this.#ensureLangListsBuilt();
     const actor = this.#getTranslationsActor();
 
-    const { fromMenuList, toMenuList, multiview } = this.elements;
+    const { defaultToMenuList, defaultDescription, multiview } = this.elements;
 
-    multiview.setAttribute("mainViewId", "translations-panel-view-dual");
+    multiview.setAttribute("mainViewId", "translations-panel-view-default");
+    this.#hideChangeSource(false);
 
     // Remove any old selected values synchronously before asking for new ones.
-    fromMenuList.value = "";
-    toMenuList.value = "";
+    defaultToMenuList.value = "";
 
     // TODO(Bug 1825801) - There is a race condition, we may download the languages, and
     // later trigger the subview to be shown after opening the popup again. We need to
@@ -250,14 +314,40 @@ var TranslationsPanel = new (class {
 
     /** @type {null | { appLangTag: string, docLangTag: string }} */
     const langTags = await actor.getLangTagsForTranslation();
-    await langListBuilt;
+    this.#langTagsForTranslation = langTags;
 
     if (langTags) {
+      const displayNames = new Services.intl.DisplayNames(undefined, {
+        type: "language",
+      });
+
       const { docLangTag, appLangTag } = langTags;
-      fromMenuList.value = docLangTag;
-      toMenuList.value = appLangTag;
+      defaultToMenuList.value = appLangTag;
+      this.#docLangTag = docLangTag;
+
+      document.l10n.setAttributes(
+        defaultDescription,
+        defaultDescription.getAttribute("data-l10n-id"),
+        { pageLanguage: displayNames.of(docLangTag) }
+      );
     } else {
+      this.#docLangTag = null;
       this.console.error("No language tags for translation were found.");
+    }
+  }
+
+  /**
+   * The change source menuitem should only be shown when the page isn't translated.
+   */
+  #hideChangeSource(hidden) {
+    const elements = this.elements.multiview.querySelectorAll(
+      ".translations-panel-change-source"
+    );
+    if (!elements.length) {
+      throw new Error("Unable to find the change source menuitems.");
+    }
+    for (const changeSource of elements) {
+      changeSource.hidden = hidden;
     }
   }
 
@@ -266,10 +356,11 @@ var TranslationsPanel = new (class {
    *
    * @param {TranslationPair} translationPair
    */
-  #setRestoreView({ fromLanguage, toLanguage }) {
+  #showRestoreView({ fromLanguage, toLanguage }) {
     const { multiview, restoreLabel } = this.elements;
 
     multiview.setAttribute("mainViewId", "translations-panel-view-restore");
+    this.#hideChangeSource(true);
 
     const displayNames = new Services.intl.DisplayNames(undefined, {
       type: "language",
@@ -289,7 +380,7 @@ var TranslationsPanel = new (class {
    *
    * @param {Event} event
    */
-  open(event) {
+  async open(event) {
     const { panel, button } = this.elements;
 
     const {
@@ -297,9 +388,9 @@ var TranslationsPanel = new (class {
     } = this.#getTranslationsActor().languageState;
 
     if (requestedTranslationPair) {
-      this.#setRestoreView(requestedTranslationPair);
+      this.#showRestoreView(requestedTranslationPair);
     } else {
-      this.#setDualView(this.#ensureLangListsBuilt()).catch(error => {
+      this.#showDefaultView().catch(error => {
         this.console.error(error);
       });
     }
@@ -311,16 +402,30 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * Handle the translation button being clicked.
+   * Handle the translation button being clicked on the default view.
    */
-  async onTranslate() {
+  async onDefaultTranslate() {
+    PanelMultiView.hidePopup(this.elements.panel);
+
+    const actor = this.#getTranslationsActor();
+    actor.translate(this.#docLangTag, this.elements.defaultToMenuList.value);
+  }
+
+  /**
+   * Handle the translation button being clicked when there are two language options.
+   */
+  async onDualTranslate() {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
     actor.translate(
-      document.getElementById("translations-panel-from").value,
-      document.getElementById("translations-panel-to").value
+      this.elements.dualFromMenuList.value,
+      this.elements.dualToMenuList.value
     );
+  }
+
+  onCancel() {
+    PanelMultiView.hidePopup(this.elements.panel);
   }
 
   /**

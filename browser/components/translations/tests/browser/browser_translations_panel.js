@@ -196,11 +196,11 @@ add_task(async function test_translations_panel_switch_language() {
     await popupshown;
   }
 
-  const fromSelect = document.getElementById("translations-panel-from");
+  const fromSelect = document.getElementById("translations-panel-dual-from");
   fromSelect.value = "en";
   fromSelect.dispatchEvent(new Event("input"));
 
-  const toSelect = document.getElementById("translations-panel-to");
+  const toSelect = document.getElementById("translations-panel-dual-to");
   toSelect.value = "fr";
   toSelect.dispatchEvent(new Event("input"));
 
@@ -266,8 +266,8 @@ add_task(async function test_translations_panel_display_beta_languages() {
     }
   }
 
-  const fromSelect = document.getElementById("translations-panel-from");
-  const toSelect = document.getElementById("translations-panel-to");
+  const fromSelect = document.getElementById("translations-panel-dual-from");
+  const toSelect = document.getElementById("translations-panel-dual-to");
 
   assertBetaDisplay(fromSelect);
   assertBetaDisplay(toSelect);
