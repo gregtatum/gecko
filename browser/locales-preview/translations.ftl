@@ -23,6 +23,10 @@ translations-panel-default-translate-to-label = Translate to
 translations-panel-default-translate-button = Translate
 translations-panel-default-translate-cancel = Not now
 
+translations-panel-error-translating = There was a problem translating. Please try again.
+translations-panel-error-load-languages = Couldn’t load languages
+translations-panel-error-load-languages-hint = Check your internet connection and try again.
+
 ## The translation panel appears from the url bar, and this view is the "dual" translate
 ## view that lets you choose a source language and target language for translation
 

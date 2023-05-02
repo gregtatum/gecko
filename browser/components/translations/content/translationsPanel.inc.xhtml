@@ -13,7 +13,7 @@
   <panelmultiview id="translations-panel-multiview">
     <!-- Default page -->
     <panelview id="translations-panel-view-default"
-               class="PanelUI-subView"
+               class="PanelUI-subView translations-panel-view"
                role="document"
                showheader="true">
       <hbox class="panel-header">
@@ -30,7 +30,7 @@
           <menupopup id="translations-panel-settings-popup">
             <menuitem data-l10n-id="translations-panel-settings-change-source-language"
                       class="translations-panel-change-source"
-                      oncommand="TranslationsPanel.setDualView()"/>
+                      oncommand="TranslationsPanel.showDualView()"/>
             <menuitem data-l10n-id="translations-panel-settings-manage-languages"
                       oncommand="TranslationsPanel.openManageLanguages()"/>
           </menupopup>
@@ -55,7 +55,12 @@
       </vbox>
 
       <hbox class="panel-footer">
+        <hbox id="translations-panel-error">
+          <image class="translations-panel-error-icon" />
+          <description id="translations-panel-error-message"></description>
+        </hbox>
         <button class="subviewbutton panel-subview-footer-button"
+                id="translations-panel-not-now"
                 oncommand="TranslationsPanel.onCancel(event);"
                 data-l10n-id="translations-panel-default-translate-cancel"
                 tabindex="0">
@@ -71,7 +76,7 @@
 
     <!-- Dual language selection view -->
     <panelview id="translations-panel-view-dual"
-               class="PanelUI-subView"
+               class="PanelUI-subView translations-panel-view"
                role="document"
                data-l10n-id="translations-panel-dual-header">
       <vbox class="translations-panel-content">
@@ -110,7 +115,7 @@
 
     <!-- Restore page -->
     <panelview id="translations-panel-view-restore"
-               class="PanelUI-subView"
+               class="PanelUI-subView translations-panel-view"
                role="document"
                showheader="true">
       <hbox class="panel-header">

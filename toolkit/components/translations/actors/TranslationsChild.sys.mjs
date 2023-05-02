@@ -175,7 +175,17 @@ class TranslationsEngineCache {
       // A new engine needs to be created.
       enginePromise = actor.createTranslationsEngine(fromLanguage, toLanguage);
 
-      this.#engines[fromLanguage + toLanguage] = enginePromise;
+      // TODO - This should use the language pair key.
+      const key = fromLanguage + toLanguage;
+      this.#engines[key] = enginePromise;
+
+      // Remove the engine if it fails to initialize.
+      enginePromise.catch(() => {
+        lazy.console.log(
+          `The engine failed to load for translating "${fromLanguage}" to "${toLanguage}". Removing it from the cache.`
+        );
+        this.#engines[key] = null;
+      });
 
       const engine = await enginePromise;
 
@@ -764,6 +774,9 @@ export class TranslationsChild extends JSWindowActorChild {
         error,
         this.contentWindow.location.href
       );
+      this.sendAsyncMessage("Translations:FullPageTranslationFailed", {
+        reason: "engine-load-failure",
+      });
       return;
     }
 
@@ -772,7 +785,9 @@ export class TranslationsChild extends JSWindowActorChild {
     try {
       await this.#getTranslationsEngine();
     } catch (error) {
-      this.sendAsyncMessage("Translations:FullPageTranslationFailed");
+      this.sendAsyncMessage("Translations:FullPageTranslationFailed", {
+        reason: "engine-load-failure",
+      });
       return;
     }
 
@@ -992,6 +1007,7 @@ export class TranslationsChild extends JSWindowActorChild {
    * @returns {TranslationsEngine | null}
    */
   async createTranslationsEngine(fromLanguage, toLanguage) {
+    console.log(`!!! createTranslationsEngine`);
     const startTime = this.docShell.now();
 
     const enginePayload = await this.#getTranslationsEnginePayload(

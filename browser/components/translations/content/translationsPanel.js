@@ -81,90 +81,41 @@ var TranslationsPanel = new (class {
       this.#lazyElements = {
         panel,
         settingsButton,
-
-        get button() {
-          delete this.button;
-          return (this.button = document.getElementById("translations-button"));
-        },
-        get dualFromMenuPopup() {
-          delete this.dualFromMenuPopup;
-          return (this.dualFromMenuPopup = document.getElementById(
-            "translations-panel-dual-from-menupopup"
-          ));
-        },
-        get dualToMenuPopup() {
-          delete this.dualToMenuPopup;
-          return (this.dualToMenuPopup = document.getElementById(
-            "translations-panel-dual-to-menupopup"
-          ));
-        },
-        get defaultToMenuPopup() {
-          delete this.defaultToMenuPopup;
-          return (this.defaultToMenuPopup = document.getElementById(
-            "translations-panel-default-to-menupopup"
-          ));
-        },
-        get multiview() {
-          delete this.multiview;
-          return (this.multiview = document.getElementById(
-            "translations-panel-multiview"
-          ));
-        },
-        get dualView() {
-          delete this.dualView;
-          return (this.dualView = document.getElementById(
-            "translations-panel-view-dual"
-          ));
-        },
-        get defaultView() {
-          delete this.defaultView;
-          return (this.defaultView = document.getElementById(
-            "translations-panel-view-default"
-          ));
-        },
-        get restoreView() {
-          delete this.restoreView;
-          return (this.restoreView = document.getElementById(
-            "translations-panel-view-restore"
-          ));
-        },
-        get dualFromMenuList() {
-          delete this.dualFromMenuList;
-          return (this.dualFromMenuList = document.getElementById(
-            "translations-panel-dual-from"
-          ));
-        },
-        get dualToMenuList() {
-          delete this.dualToMenuList;
-          return (this.dualToMenuList = document.getElementById(
-            "translations-panel-dual-to"
-          ));
-        },
-        get defaultToMenuList() {
-          delete this.defaultToMenuList;
-          return (this.defaultToMenuList = document.getElementById(
-            "translations-panel-default-to"
-          ));
-        },
-        get defaultDescription() {
-          delete this.defaultDescription;
-          return (this.defaultDescription = document.getElementById(
-            "translations-panel-default-description"
-          ));
-        },
-        get restoreLabel() {
-          delete this.restoreLabel;
-          return (this.restoreLabel = document.getElementById(
-            "translations-panel-restore-label"
-          ));
-        },
-        get settingsPopup() {
-          delete this.settingsPopup;
-          return (this.settingsPopup = document.getElementById(
-            "translations-panel-settings-popup"
-          ));
-        },
       };
+
+      const lazilyGetById = (name, id) => {
+        let element;
+        Object.defineProperty(this.#lazyElements, name, {
+          get: () => element ?? (element = document.getElementById(id)),
+        });
+      };
+
+      lazilyGetById("button", "translations-button");
+      lazilyGetById("dualToMenuPopup", "translations-panel-dual-to-menupopup");
+      lazilyGetById("multiview", "translations-panel-multiview");
+      lazilyGetById("dualView", "translations-panel-view-dual");
+      lazilyGetById("defaultView", "translations-panel-view-default");
+      lazilyGetById("restoreView", "translations-panel-view-restore");
+      lazilyGetById("dualFromMenuList", "translations-panel-dual-from");
+      lazilyGetById("dualToMenuList", "translations-panel-dual-to");
+      lazilyGetById("defaultToMenuList", "translations-panel-default-to");
+      lazilyGetById("restoreLabel", "translations-panel-restore-label");
+      lazilyGetById("settingsPopup", "translations-panel-settings-popup");
+      lazilyGetById("error", "translations-panel-error");
+      lazilyGetById("errorMessage", "translations-panel-error-message");
+      lazilyGetById("notNow", "translations-panel-not-now");
+      lazilyGetById(
+        "dualFromMenuPopup",
+        "translations-panel-dual-from-menupopup"
+      );
+      lazilyGetById(
+        "defaultToMenuPopup",
+        "translations-panel-default-to-menupopup"
+      );
+      lazilyGetById(
+        "defaultDescription",
+        "translations-panel-default-description"
+      );
     }
 
     return this.#lazyElements;
@@ -266,7 +217,7 @@ var TranslationsPanel = new (class {
   /**
    * Switch to the dual language view of choosing a source and target language.
    */
-  setDualView() {
+  showDualView() {
     const { dualFromMenuList, dualToMenuList, multiview } = this.elements;
 
     multiview.showSubView("translations-panel-view-dual");
@@ -390,7 +341,7 @@ var TranslationsPanel = new (class {
     if (requestedTranslationPair) {
       this.#showRestoreView(requestedTranslationPair);
     } else {
-      this.#showDefaultView().catch(error => {
+      await this.#showDefaultView().catch(error => {
         this.console.error(error);
       });
     }
@@ -463,8 +414,12 @@ var TranslationsPanel = new (class {
   handleEvent = event => {
     switch (event.type) {
       case "TranslationsParent:LanguageState":
-        const { detectedLanguages, requestedTranslationPair } = event.detail;
-        const { button } = this.elements;
+        const {
+          detectedLanguages,
+          requestedTranslationPair,
+          error,
+        } = event.detail;
+        const { panel, button } = this.elements;
 
         if (detectedLanguages) {
           button.hidden = false;
@@ -476,6 +431,29 @@ var TranslationsPanel = new (class {
         } else {
           button.removeAttribute("translationsactive");
           button.hidden = true;
+        }
+
+        switch (error) {
+          case null:
+            this.elements.error.hidden = true;
+            this.elements.notNow.hidden = false;
+            break;
+          case "engine-load-failure":
+            this.elements.error.hidden = false;
+            this.elements.notNow.hidden = true;
+            document.l10n.setAttributes(
+              this.elements.errorMessage,
+              "translations-panel-error-translating"
+            );
+
+            // Re-open the menu on an error.
+            PanelMultiView.openPopup(panel, button, {
+              position: "bottomright topright",
+            }).catch(panelError => this.console.error(panelError));
+
+            break;
+          default:
+            console.error("Unknown translation error", error);
         }
         break;
     }

@@ -6,15 +6,50 @@
   font: menu;
 }
 
+.translations-panel panelview {
+  width: 400px;
+}
+
+.translations-panel .panel-footer {
+  align-items: start;
+}
+
 .translations-panel-content {
   display: flex;
   flex-direction: column;
   padding: 10px;
-  gap: 9px;
-  width: 400px;
+}
+
+.translations-panel-content label:first-child {
+  margin-block-start: 4px;
+}
+
+.translations-panel-content label {
+  margin-block: 18px 2px;
 }
 
 #translations-panel-settings.panel-info-button > image {
   /* Override the panel-info-button with a gear icon. */
   list-style-image: url(chrome://global/skin/icons/settings.svg);
+}
+
+#translations-panel-main-header-label {
+  /* Center the label by taking into account the width of the icon. */
+  margin-inline-start: 24px;
+}
+
+#translations-panel-error {
+  color: #e22850;
+}
+
+.translations-panel-error-icon {
+  -moz-context-properties: fill;
+  fill: currentColor;
+  list-style-image: url(chrome://global/skin/icons/error.svg);
+}
+
+@media (prefers-color-scheme: dark) {
+  #translations-panel-error {
+    color: #ff9aa2;
+  }
 }
