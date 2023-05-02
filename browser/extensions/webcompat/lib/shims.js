@@ -18,19 +18,36 @@ const platformPromise = browser.runtime.getPlatformInfo().then(info => {
   return info.os === "android" ? "android" : "desktop";
 });
 
-let debug = async function() {
-  if ((await releaseBranchPromise) !== "release_or_beta") {
-    console.debug.apply(this, arguments);
+const LOGGING_PREF = "logging";
+
+/**
+ * Enable or disable logging via the pref "extensions.webcompat.logging". By default
+ * the logging is only enabled on Nightly.
+ *
+ * @returns {Promise<boolean>}
+ */
+async function isLoggingEnabled() {
+  let value = await browser.aboutConfigPrefs.getPref(LOGGING_PREF);
+  if (value === undefined) {
+    value = (await releaseBranchPromise) !== "release_or_beta";
+    browser.aboutConfigPrefs.setPref(LOGGING_PREF, value);
+  }
+  return value;
+}
+
+let debug = async function(...args) {
+  if (await isLoggingEnabled()) {
+    console.debug("Shims:", ...args);
   }
 };
-let error = async function() {
-  if ((await releaseBranchPromise) !== "release_or_beta") {
-    console.error.apply(this, arguments);
+let error = async function(...args) {
+  if (await isLoggingEnabled()) {
+    console.error.apply("Shims:", ...args);
   }
 };
-let warn = async function() {
-  if ((await releaseBranchPromise) !== "release_or_beta") {
-    console.warn.apply(this, arguments);
+let warn = async function(...args) {
+  if (await isLoggingEnabled()) {
+    console.warn.apply("Shims:", ...args);
   }
 };
 
