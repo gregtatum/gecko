@@ -98,6 +98,21 @@ export class TranslationsParent extends JSWindowActorParent {
 
   actorCreated() {
     this.languageState = new TranslationsLanguageState(this);
+
+    if (TranslationsParent.#translateOnPageReload) {
+      // The actor was recreated after a page reload, start the translation.
+      const {
+        fromLanguage,
+        toLanguage,
+      } = TranslationsParent.#translateOnPageReload;
+      TranslationsParent.#translateOnPageReload = null;
+
+      lazy.console.log(
+        `Translating on a page reload from "${fromLanguage}" to "${toLanguage}".`
+      );
+
+      this.translate(fromLanguage, toLanguage);
+    }
   }
 
   /**
@@ -174,6 +189,13 @@ export class TranslationsParent extends JSWindowActorParent {
    * @type {null | Promise<boolean>}
    */
   static #isTranslationsEngineSupported = null;
+
+  /**
+   * When reloading the page, store the translation pair that needs translating.
+   *
+   * @type {null | TranslationPair}
+   */
+  static #translateOnPageReload = null;
 
   // On a fast connection, 10 concurrent downloads were measured to be the fastest when
   // downloading all of the language files.
@@ -1245,11 +1267,21 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} toLanguage
    */
   translate(fromLanguage, toLanguage) {
-    this.languageState.requestedTranslationPair = { fromLanguage, toLanguage };
-    this.sendAsyncMessage("Translations:TranslatePage", {
-      fromLanguage,
-      toLanguage,
-    });
+    if (this.languageState.requestedTranslationPair) {
+      // This page has alreayd been translated, restore it and translate it
+      // again once the actor has been recreated.
+      TranslationsParent.#translateOnPageReload = { fromLanguage, toLanguage };
+      this.restorePage();
+    } else {
+      this.languageState.requestedTranslationPair = {
+        fromLanguage,
+        toLanguage,
+      };
+      this.sendAsyncMessage("Translations:TranslatePage", {
+        fromLanguage,
+        toLanguage,
+      });
+    }
   }
 
   /**
@@ -1451,10 +1483,8 @@ class TranslationsLanguageState {
   set locationChangeId(locationChangeId) {
     this.#locationChangeId = locationChangeId;
 
-    // Empty out the other values, which are now invalidated.
+    // When the location changes remove the previous error.
     this.#error = null;
-    this.#detectedLanguages = null;
-    this.#requestedTranslationPair = null;
 
     this.dispatch();
   }

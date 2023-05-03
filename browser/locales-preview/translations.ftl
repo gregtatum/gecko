@@ -4,7 +4,7 @@
 
 # The button for "Firefox Translations" in the url bar.
 urlbar-translations-button =
-  .tooltiptext = { -translations-brand-name }
+  .tooltiptext = Translate this page
 
 translations-panel-settings-button =
   .aria-label = Manage { -translations-brand-name } settings
@@ -32,8 +32,9 @@ translations-panel-error-load-languages-hint = Check your internet connection an
 
 translations-panel-dual-header =
   .title = Translate this page?
-translations-panel-dual-from-label = Choose the current page language
-translations-panel-dual-to-label = Choose the language to translate into
+translations-panel-dual-from-label = Translate from
+translations-panel-dual-to-label = Translate to
+translations-panel-dual-cancel-button = Cancel
 
 # Text displayed on a language dropdown when the language is in beta
 # Variables:
@@ -42,13 +43,17 @@ translations-panel-displayname-beta =
   .label = { $language } BETA
 
 ## The translation panel appears from the url bar, and this view is the "restore" view
-## that lets a user restore a page to the original language.
+## that lets a user restore a page to the original language, or translate into another
+## language.
 
-translations-panel-restore-header = Change the language?
 # $fromLanguage (string) - The original language of the document.
 # $toLanguage (string) - The target language of the translation.
-translations-panel-restore-label = The page is being translated from { $fromLanguage } to { $toLanguage }.
-translations-panel-restore-button = Restore the page
+translations-panel-revisit-header = The page is translated from { $fromLanguage } to { $toLanguage }
+translations-panel-revisit-label = Want to try another language?
+translations-panel-revisit-select =
+  .label = Choose a language
+translations-panel-revisit-restore-button = Show original
+translations-panel-revisit-translate-button = Translate
 
 ## Firefox Translations language management in about:preferences.
 

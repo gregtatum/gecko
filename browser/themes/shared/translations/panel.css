@@ -10,6 +10,20 @@
   width: 400px;
 }
 
+/* This header differs from the normal .panel-header ones as it's left aligned. The
+   margin-inline-start property mirrors the margin on the <description> elements. */
+.translations-panel-view .panel-header {
+  justify-content: center;
+  text-align: initial;
+  margin: 5px;
+  margin-block-end: 0;
+}
+
+/* The toolbarseparator is automatically added for subviews, which we don't want. */
+.translations-panel-view .panel-header + toolbarseparator {
+  display: none;
+}
+
 .translations-panel .panel-footer {
   align-items: start;
 }
@@ -20,6 +34,10 @@
   padding: 10px;
 }
 
+.translations-panel-view-dual toolbarseparator {
+  display: none;
+}
+
 .translations-panel-content label:first-child {
   margin-block-start: 4px;
 }
@@ -28,14 +46,16 @@
   margin-block: 18px 2px;
 }
 
+/* The default styling is to dim the default, but here override it so that it still uses
+   the primary color. */
+.translations-panel-view .panel-footer > button[default][disabled="true"] {
+  color: var(--button-primary-color);
+  background-color: var(--button-primary-bgcolor);
+}
+
 #translations-panel-settings.panel-info-button > image {
   /* Override the panel-info-button with a gear icon. */
   list-style-image: url(chrome://global/skin/icons/settings.svg);
-}
-
-#translations-panel-main-header-label {
-  /* Center the label by taking into account the width of the icon. */
-  margin-inline-start: 24px;
 }
 
 #translations-panel-error {

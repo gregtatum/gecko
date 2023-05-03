@@ -81,41 +81,46 @@ var TranslationsPanel = new (class {
       this.#lazyElements = {
         panel,
         settingsButton,
+        // The rest of the elements are set by the getter below.
       };
 
-      const lazilyGetById = (name, id) => {
+      /**
+       * Define a getter on #lazyElements that gets the element by an id.
+       */
+      const getter = (name, id) => {
         let element;
         Object.defineProperty(this.#lazyElements, name, {
-          get: () => element ?? (element = document.getElementById(id)),
+          get: () => {
+            if (!element) {
+              element = document.getElementById(id);
+            }
+            if (!element) {
+              throw new Error(`Could not find "${name}" at "#${id}".`);
+            }
+            return element;
+          },
         });
       };
 
-      lazilyGetById("button", "translations-button");
-      lazilyGetById("dualToMenuPopup", "translations-panel-dual-to-menupopup");
-      lazilyGetById("multiview", "translations-panel-multiview");
-      lazilyGetById("dualView", "translations-panel-view-dual");
-      lazilyGetById("defaultView", "translations-panel-view-default");
-      lazilyGetById("restoreView", "translations-panel-view-restore");
-      lazilyGetById("dualFromMenuList", "translations-panel-dual-from");
-      lazilyGetById("dualToMenuList", "translations-panel-dual-to");
-      lazilyGetById("defaultToMenuList", "translations-panel-default-to");
-      lazilyGetById("restoreLabel", "translations-panel-restore-label");
-      lazilyGetById("settingsPopup", "translations-panel-settings-popup");
-      lazilyGetById("error", "translations-panel-error");
-      lazilyGetById("errorMessage", "translations-panel-error-message");
-      lazilyGetById("notNow", "translations-panel-not-now");
-      lazilyGetById(
-        "dualFromMenuPopup",
-        "translations-panel-dual-from-menupopup"
-      );
-      lazilyGetById(
-        "defaultToMenuPopup",
-        "translations-panel-default-to-menupopup"
-      );
-      lazilyGetById(
-        "defaultDescription",
-        "translations-panel-default-description"
-      );
+      getter("button", "translations-button");
+      getter("defaultDescription", "translations-panel-default-description");
+      getter("defaultToMenuList", "translations-panel-default-to");
+      getter("defaultToMenuPopup", "translations-panel-default-to-menupopup");
+      getter("defaultView", "translations-panel-view-default");
+      getter("dualFromMenuList", "translations-panel-dual-from");
+      getter("dualFromMenuPopup", "translations-panel-dual-from-menupopup");
+      getter("dualToMenuPopup", "translations-panel-dual-to-menupopup");
+      getter("dualToMenuList", "translations-panel-dual-to");
+      getter("dualView", "translations-panel-view-dual");
+      getter("error", "translations-panel-error");
+      getter("errorMessage", "translations-panel-error-message");
+      getter("multiview", "translations-panel-multiview");
+      getter("notNow", "translations-panel-not-now");
+      getter("revisitHeader", "translations-panel-revisit-header");
+      getter("revisitView", "translations-panel-view-revisit");
+      getter("revisitMenuList", "translations-panel-revisit-to");
+      getter("revisitTranslate", "translations-panel-revisit-translate");
+      getter("settingsPopup", "translations-panel-settings-popup");
     }
 
     return this.#lazyElements;
@@ -163,6 +168,7 @@ var TranslationsPanel = new (class {
       default:
         this.console.error("Unknown langList phase", this.#langListsPhase);
     }
+
     try {
       /** @type {SupportedLanguages} */
       const {
@@ -176,37 +182,48 @@ var TranslationsPanel = new (class {
         throw new Error("No translation languages were retrieved.");
       }
 
-      for (const { langTag, isBeta, displayName } of fromLanguages) {
-        const fromMenuItem = document.createXULElement("menuitem");
-        fromMenuItem.setAttribute("value", langTag);
-        if (isBeta) {
-          document.l10n.setAttributes(
-            fromMenuItem,
-            "translations-panel-displayname-beta",
-            { language: displayName }
-          );
-        } else {
-          fromMenuItem.setAttribute("label", displayName);
+      const { panel } = this.elements;
+      const fromPopups = panel.querySelectorAll(
+        ".translations-panel-language-menupopup-from"
+      );
+      const toPopups = panel.querySelectorAll(
+        ".translations-panel-language-menupopup-to"
+      );
+
+      for (const popup of fromPopups) {
+        for (const { langTag, isBeta, displayName } of fromLanguages) {
+          const fromMenuItem = document.createXULElement("menuitem");
+          fromMenuItem.setAttribute("value", langTag);
+          if (isBeta) {
+            document.l10n.setAttributes(
+              fromMenuItem,
+              "translations-panel-displayname-beta",
+              { language: displayName }
+            );
+          } else {
+            fromMenuItem.setAttribute("label", displayName);
+          }
+          popup.appendChild(fromMenuItem);
         }
-        this.elements.dualFromMenuPopup.appendChild(fromMenuItem);
       }
-      for (const { langTag, isBeta, displayName } of toLanguages) {
-        const toMenuItem = document.createXULElement("menuitem");
-        toMenuItem.setAttribute("value", langTag);
-        if (isBeta) {
-          document.l10n.setAttributes(
-            toMenuItem,
-            "translations-panel-displayname-beta",
-            { language: displayName }
-          );
-        } else {
-          toMenuItem.setAttribute("label", displayName);
+
+      for (const popup of toPopups) {
+        for (const { langTag, isBeta, displayName } of toLanguages) {
+          const toMenuItem = document.createXULElement("menuitem");
+          toMenuItem.setAttribute("value", langTag);
+          if (isBeta) {
+            document.l10n.setAttributes(
+              toMenuItem,
+              "translations-panel-displayname-beta",
+              { language: displayName }
+            );
+          } else {
+            toMenuItem.setAttribute("label", displayName);
+          }
+          popup.appendChild(toMenuItem);
         }
-        this.elements.defaultToMenuPopup.appendChild(
-          toMenuItem.cloneNode(true)
-        );
-        this.elements.dualToMenuPopup.appendChild(toMenuItem);
       }
+
       this.#langListsPhase = "initialized";
     } catch (error) {
       this.console.error(error);
@@ -218,21 +235,20 @@ var TranslationsPanel = new (class {
    * Switch to the dual language view of choosing a source and target language.
    */
   showDualView() {
-    const { dualFromMenuList, dualToMenuList, multiview } = this.elements;
+    const {
+      dualFromMenuList,
+      dualToMenuList,
+      multiview,
+      defaultToMenuList,
+    } = this.elements;
 
     multiview.showSubView("translations-panel-view-dual");
 
     // Remove any old selected values synchronously before asking for new ones.
     dualFromMenuList.value = "";
-    dualToMenuList.value = "";
+    dualToMenuList.value = defaultToMenuList.value;
 
-    if (this.#langTagsForTranslation) {
-      const { docLangTag, appLangTag } = this.#langTagsForTranslation;
-      dualFromMenuList.value = docLangTag;
-      dualToMenuList.value = appLangTag;
-    } else {
-      this.console.error("No language tags for translation were found.");
-    }
+    dualFromMenuList.focus();
   }
 
   /**
@@ -249,7 +265,6 @@ var TranslationsPanel = new (class {
     const { defaultToMenuList, defaultDescription, multiview } = this.elements;
 
     multiview.setAttribute("mainViewId", "translations-panel-view-default");
-    this.#hideChangeSource(false);
 
     // Remove any old selected values synchronously before asking for new ones.
     defaultToMenuList.value = "";
@@ -288,42 +303,43 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * The change source menuitem should only be shown when the page isn't translated.
-   */
-  #hideChangeSource(hidden) {
-    const elements = this.elements.multiview.querySelectorAll(
-      ".translations-panel-change-source"
-    );
-    if (!elements.length) {
-      throw new Error("Unable to find the change source menuitems.");
-    }
-    for (const changeSource of elements) {
-      changeSource.hidden = hidden;
-    }
-  }
-
-  /**
    * Configures the panel for the user to reset the page after it has been translated.
    *
    * @param {TranslationPair} translationPair
    */
-  #showRestoreView({ fromLanguage, toLanguage }) {
-    const { multiview, restoreLabel } = this.elements;
+  #showRevisitView({ fromLanguage, toLanguage }) {
+    const {
+      multiview,
+      revisitHeader,
+      revisitMenuList,
+      revisitTranslate,
+    } = this.elements;
 
-    multiview.setAttribute("mainViewId", "translations-panel-view-restore");
-    this.#hideChangeSource(true);
+    revisitMenuList.value = "";
+    revisitTranslate.disabled = true;
+    multiview.setAttribute("mainViewId", "translations-panel-view-revisit");
 
     const displayNames = new Services.intl.DisplayNames(undefined, {
       type: "language",
     });
 
-    restoreLabel.setAttribute(
-      "data-l10n-args",
-      JSON.stringify({
+    for (const menuitem of revisitMenuList.querySelectorAll("menuitem")) {
+      menuitem.disabled = menuitem.value === toLanguage;
+    }
+
+    document.l10n.setAttributes(
+      revisitHeader,
+      "translations-panel-revisit-header",
+      {
         fromLanguage: displayNames.of(fromLanguage),
         toLanguage: displayNames.of(toLanguage),
-      })
+      }
     );
+  }
+
+  onChangeRevisitTo() {
+    const { revisitTranslate, revisitMenuList } = this.elements;
+    revisitTranslate.disabled = !revisitMenuList.value;
   }
 
   /**
@@ -339,7 +355,7 @@ var TranslationsPanel = new (class {
     } = this.#getTranslationsActor().languageState;
 
     if (requestedTranslationPair) {
-      this.#showRestoreView(requestedTranslationPair);
+      this.#showRevisitView(requestedTranslationPair);
     } else {
       await this.#showDefaultView().catch(error => {
         this.console.error(error);
@@ -373,6 +389,17 @@ var TranslationsPanel = new (class {
       this.elements.dualFromMenuList.value,
       this.elements.dualToMenuList.value
     );
+  }
+
+  /**
+   * Handle the translation button being clicked when the page has already been
+   * translated.
+   */
+  async onRevisitTranslate() {
+    PanelMultiView.hidePopup(this.elements.panel);
+
+    const actor = this.#getTranslationsActor();
+    actor.translate(this.#docLangTag, this.elements.revisitMenuList.value);
   }
 
   onCancel() {
