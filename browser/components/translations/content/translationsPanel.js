@@ -104,6 +104,9 @@ var TranslationsPanel = new (class {
 
       getter("button", "translations-button");
       getter("defaultDescription", "translations-panel-default-description");
+      getter("defaultHeaderSpan", "translations-panel-default-header-span");
+      getter("defaultHeaderImage", "translations-panel-default-header-image");
+      getter("defaultLabel", "translations-panel-default-label");
       getter("defaultToMenuList", "translations-panel-default-to");
       getter("defaultToMenuPopup", "translations-panel-default-to-menupopup");
       getter("defaultView", "translations-panel-view-default");
@@ -255,14 +258,19 @@ var TranslationsPanel = new (class {
    * Builds the <menulist> of languages for both the "from" and "to". This can be
    * called every time the popup is shown, as it will retry when there is an error
    * (such as a network error) or be a noop if it's already initialized.
-   *
-   * @param {Promise<void>} langListBuilt
    */
   async #showDefaultView() {
     await this.#ensureLangListsBuilt();
     const actor = this.#getTranslationsActor();
 
-    const { defaultToMenuList, defaultDescription, multiview } = this.elements;
+    const {
+      defaultToMenuList,
+      defaultDescription,
+      defaultHeaderSpan,
+      defaultHeaderImage,
+      defaultLabel,
+      multiview,
+    } = this.elements;
 
     multiview.setAttribute("mainViewId", "translations-panel-view-default");
 
@@ -278,27 +286,62 @@ var TranslationsPanel = new (class {
     // but should be handled for the MVP. We might want design direction here, as we need
     // a subview for when the language list is still being retrieved.
 
+    const firstRunShownPref = "browser.translations.panel.firstRunShown";
+
     /** @type {null | { appLangTag: string, docLangTag: string }} */
     const langTags = await actor.getLangTagsForTranslation();
     this.#langTagsForTranslation = langTags;
 
     if (langTags) {
-      const displayNames = new Services.intl.DisplayNames(undefined, {
-        type: "language",
-      });
-
       const { docLangTag, appLangTag } = langTags;
       defaultToMenuList.value = appLangTag;
       this.#docLangTag = docLangTag;
+    } else {
+      // TODO(Bug 1829687): Handle the case when we don't have the document langauge tag
+      // which can only be triggered when the panel is shown manually. Currently
+      // this will never be shown.
+      this.#docLangTag = "en";
+      this.console.error("No language tags for translation were found.");
+    }
 
+    if (Services.prefs.getBoolPref(firstRunShownPref, false)) {
+      // Show the default view.
+      const displayNames = new Services.intl.DisplayNames(undefined, {
+        type: "language",
+      });
       document.l10n.setAttributes(
         defaultDescription,
-        defaultDescription.getAttribute("data-l10n-id"),
-        { pageLanguage: displayNames.of(docLangTag) }
+        "translations-panel-default-description",
+        {
+          pageLanguage: displayNames.of(this.#docLangTag),
+        }
       );
+      document.l10n.setAttributes(
+        defaultHeaderSpan,
+        "translations-panel-default-header"
+      );
+      document.l10n.setAttributes(
+        defaultLabel,
+        "translations-panel-default-translate-to-label"
+      );
+      defaultHeaderImage.hidden = true;
     } else {
-      this.#docLangTag = null;
-      this.console.error("No language tags for translation were found.");
+      // Show the "first run" intro view.
+      Services.prefs.setBoolPref(firstRunShownPref, true);
+      // Show the intro text.
+      document.l10n.setAttributes(
+        defaultHeaderSpan,
+        "translations-panel-intro-header"
+      );
+      document.l10n.setAttributes(
+        defaultDescription,
+        "translations-panel-intro-description"
+      );
+      document.l10n.setAttributes(
+        defaultLabel,
+        "translations-panel-intro-translate-to-label"
+      );
+      defaultHeaderImage.hidden = false;
     }
   }
 

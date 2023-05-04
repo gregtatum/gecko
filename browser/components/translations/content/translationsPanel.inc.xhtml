@@ -17,8 +17,9 @@
                role="document"
                showheader="true">
       <hbox class="panel-header">
-        <html:h1 id="translations-panel-main-header-label">
-          <html:span data-l10n-id="translations-panel-default-header"></html:span>
+        <image id="translations-panel-default-header-image" />
+        <html:h1>
+          <html:span id="translations-panel-default-header-span"></html:span>
         </html:h1>
         <!-- The "toolbarbutton#translations-panel-settings" will get cloned into other
              .panel-header elements. -->
@@ -38,9 +39,8 @@
       </hbox>
 
       <vbox class="translations-panel-content">
-        <description id="translations-panel-default-description"
-                     data-l10n-id="translations-panel-default-description"></description>
-        <label data-l10n-id="translations-panel-default-translate-to-label"></label>
+        <description id="translations-panel-default-description"></description>
+        <label id="translations-panel-default-label"></label>
         <menulist id="translations-panel-default-to"
                   flex="1"
                   value="detect"
