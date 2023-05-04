@@ -601,6 +601,26 @@ always better to scan for a variable:
   Testing against whole values is brittle and will break when we insert Unicode
   bidirectionality marks into the result string or adapt the output in other ways.
 
+Locales Preview
+===============
+
+When developing a new feature that is only in Nightly it is useful to use the
+:code:`locales-preview` folders. This allows for quicker iterations on changing and
+tweaking strings while a feature is in heavy development. For instance, a developer
+could write their own strings before the content team has had a chance to write the
+specific UI text, and not worry that the development-only strings will be translated.
+
+In order to use a preview locale, create a file in either :code:`browser/locales-preview`
+or in :code:`toolkit/locales-preview` depending on where the feature is being used.
+This signals that the file should not be translated by localizers. While the feature is
+in Nightly, and using a locales preview, the strings can be changed freely without
+changing the l10n id.
+
+When the feature is ready, the file can be moved to a non-preview directory such as
+:code:`browser/locales`. At this point the normal rule of changing the l10n id when
+the string changes must be respected, as localizers can begin translating the strings.
+It's important to never ship a feature while the FTL file is still a preview.
+
 
 Manually Testing UI with Pseudolocalization
 ===========================================
