@@ -136,15 +136,19 @@ function maybeGetByL10nId(l10nId, doc = document) {
  * checks that the viewId of the popup is PanelUI-profiler
  *
  * @param {"popupshown" | "popuphidden"} eventName
+ * @param {Function} callback
  * @returns {Promise<void>}
  */
-async function waitForTranslationsPopupEvent(eventName) {
+async function waitForTranslationsPopupEvent(eventName, callback) {
   const panel = document.getElementById("translations-panel");
   if (!panel) {
     throw new Error("Unable to find the translations panel element.");
   }
+  const promise = BrowserTestUtils.waitForEvent(panel, eventName);
+  callback();
   info("Waiting for the translations panel popup to be shown");
-  await BrowserTestUtils.waitForEvent(panel, eventName);
+  await promise;
+  // Wait a single tick on the event loop.
   await new Promise(resolve => setTimeout(resolve, 0));
 }
 
