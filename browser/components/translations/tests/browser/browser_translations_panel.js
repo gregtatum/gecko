@@ -122,7 +122,7 @@ add_task(async function test_translations_panel() {
 
   {
     const translateButton = getByL10nId(
-      "translations-panel-dual-translate-button"
+      "translations-panel-default-translate-button"
     );
 
     const popuphidden = waitForTranslationsPopupEvent("popuphidden");
@@ -149,7 +149,9 @@ add_task(async function test_translations_panel() {
   }
 
   {
-    const restoreButton = getByL10nId("translations-panel-restore-button");
+    const restoreButton = getByL10nId(
+      "translations-panel-revisit-restore-button"
+    );
     const popuphidden = waitForTranslationsPopupEvent("popuphidden");
     click(restoreButton, "Start translating by clicking the translate button.");
     await popuphidden;
@@ -196,17 +198,29 @@ add_task(async function test_translations_panel_switch_language() {
     await popupshown;
   }
 
-  const fromSelect = document.getElementById("translations-panel-dual-from");
+  const gearIcon = getByL10nId("translations-panel-settings-button");
+  click(gearIcon, "Open the preferences menu");
+
+  const changeSource = getByL10nId(
+    "translations-panel-settings-change-source-language"
+  );
+  info("Switch to choose language view");
+  changeSource.doCommand();
+  await waitForViewShown();
+
+  info('Switch from language to "en"');
+  const fromSelect = getById("translations-panel-dual-from");
   fromSelect.value = "en";
   fromSelect.dispatchEvent(new Event("input"));
 
-  const toSelect = document.getElementById("translations-panel-dual-to");
+  info('Switch to language to "fr"');
+  const toSelect = getById("translations-panel-dual-to");
   toSelect.value = "fr";
   toSelect.dispatchEvent(new Event("input"));
 
   {
     const translateButton = getByL10nId(
-      "translations-panel-dual-translate-button"
+      "translations-panel-default-translate-button"
     );
 
     const popuphidden = waitForTranslationsPopupEvent("popuphidden");
