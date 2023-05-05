@@ -155,13 +155,17 @@ async function waitForTranslationsPopupEvent(eventName, callback) {
 /**
  * When switching between between views in the popup panel, wait for the view to
  * be fully shown.
+ *
+ * @param {Function} callback
  */
-async function waitForViewShown() {
+async function waitForViewShown(callback) {
   const panel = document.getElementById("translations-panel");
   if (!panel) {
     throw new Error("Unable to find the translations panel element.");
   }
+  const promise = BrowserTestUtils.waitForEvent(panel, "ViewShown");
+  callback();
   info("Waiting for the translations panel view to be shown");
-  await BrowserTestUtils.waitForEvent(panel, "ViewShown");
+  await promise;
   await new Promise(resolve => setTimeout(resolve, 0));
 }
