@@ -24,12 +24,9 @@ var TranslationsPanel = new (class {
   #docLangTag = null;
 
   /**
-   * The language tags that are used for translating. This is looked up by the default
-   * view and used again for the dual view.
-   *
-   * @type {null | { appLangTag: string, docLangTag: string }}
+   * Keep track if the panel has been shown yet this session.
    */
-  #langTagsForTranslation = null;
+  #wasPanelShown = false;
 
   /**
    * Lazily get a console instance.
@@ -104,26 +101,17 @@ var TranslationsPanel = new (class {
 
       getter("button", "translations-button");
       getter("defaultDescription", "translations-panel-default-description");
-      getter("defaultHeaderSpan", "translations-panel-default-header-span");
-      getter("defaultHeaderImage", "translations-panel-default-header-image");
-      getter("defaultLabel", "translations-panel-default-label");
       getter("defaultToMenuList", "translations-panel-default-to");
-      getter("defaultToMenuPopup", "translations-panel-default-to-menupopup");
-      getter("defaultView", "translations-panel-view-default");
       getter("dualFromMenuList", "translations-panel-dual-from");
-      getter("dualFromMenuPopup", "translations-panel-dual-from-menupopup");
-      getter("dualToMenuPopup", "translations-panel-dual-to-menupopup");
       getter("dualToMenuList", "translations-panel-dual-to");
-      getter("dualView", "translations-panel-view-dual");
+      getter("dualTranslate", "translations-panel-dual-translate");
       getter("error", "translations-panel-error");
       getter("errorMessage", "translations-panel-error-message");
       getter("multiview", "translations-panel-multiview");
       getter("notNow", "translations-panel-not-now");
       getter("revisitHeader", "translations-panel-revisit-header");
-      getter("revisitView", "translations-panel-view-revisit");
       getter("revisitMenuList", "translations-panel-revisit-to");
       getter("revisitTranslate", "translations-panel-revisit-translate");
-      getter("settingsPopup", "translations-panel-settings-popup");
     }
 
     return this.#lazyElements;
@@ -239,19 +227,30 @@ var TranslationsPanel = new (class {
    */
   showDualView() {
     const {
+      dualTranslate,
       dualFromMenuList,
       dualToMenuList,
       multiview,
       defaultToMenuList,
+      panel,
     } = this.elements;
-
-    multiview.showSubView("translations-panel-view-dual");
 
     // Remove any old selected values synchronously before asking for new ones.
     dualFromMenuList.value = "";
     dualToMenuList.value = defaultToMenuList.value;
+    // Disable this button since the user must choose a new "from" language.
+    dualTranslate.disabled = true;
 
-    dualFromMenuList.focus();
+    multiview.showSubView("translations-panel-view-dual");
+
+    // Focus the "from" language, as it is the only field not set.
+    panel.addEventListener(
+      "ViewShown",
+      () => {
+        dualFromMenuList.focus();
+      },
+      { once: true }
+    );
   }
 
   /**
@@ -263,14 +262,7 @@ var TranslationsPanel = new (class {
     await this.#ensureLangListsBuilt();
     const actor = this.#getTranslationsActor();
 
-    const {
-      defaultToMenuList,
-      defaultDescription,
-      defaultHeaderSpan,
-      defaultHeaderImage,
-      defaultLabel,
-      multiview,
-    } = this.elements;
+    const { defaultToMenuList, defaultDescription, multiview } = this.elements;
 
     multiview.setAttribute("mainViewId", "translations-panel-view-default");
 
@@ -286,11 +278,8 @@ var TranslationsPanel = new (class {
     // but should be handled for the MVP. We might want design direction here, as we need
     // a subview for when the language list is still being retrieved.
 
-    const firstRunShownPref = "browser.translations.panel.firstRunShown";
-
     /** @type {null | { appLangTag: string, docLangTag: string }} */
     const langTags = await actor.getLangTagsForTranslation();
-    this.#langTagsForTranslation = langTags;
 
     if (langTags) {
       const { docLangTag, appLangTag } = langTags;
@@ -304,44 +293,28 @@ var TranslationsPanel = new (class {
       this.console.error("No language tags for translation were found.");
     }
 
-    if (Services.prefs.getBoolPref(firstRunShownPref, false)) {
-      // Show the default view.
-      const displayNames = new Services.intl.DisplayNames(undefined, {
-        type: "language",
-      });
-      document.l10n.setAttributes(
-        defaultDescription,
-        "translations-panel-default-description",
-        {
-          pageLanguage: displayNames.of(this.#docLangTag),
-        }
-      );
-      document.l10n.setAttributes(
-        defaultHeaderSpan,
-        "translations-panel-default-header"
-      );
-      document.l10n.setAttributes(
-        defaultLabel,
-        "translations-panel-default-translate-to-label"
-      );
-      defaultHeaderImage.hidden = true;
-    } else {
-      // Show the "first run" intro view.
-      Services.prefs.setBoolPref(firstRunShownPref, true);
-      // Show the intro text.
-      document.l10n.setAttributes(
-        defaultHeaderSpan,
-        "translations-panel-intro-header"
-      );
-      document.l10n.setAttributes(
-        defaultDescription,
-        "translations-panel-intro-description"
-      );
-      document.l10n.setAttributes(
-        defaultLabel,
-        "translations-panel-intro-translate-to-label"
-      );
-      defaultHeaderImage.hidden = false;
+    // Show the default view.
+    const displayNames = new Services.intl.DisplayNames(undefined, {
+      type: "language",
+    });
+    document.l10n.setAttributes(
+      defaultDescription,
+      "translations-panel-default-description",
+      {
+        pageLanguage: displayNames.of(this.#docLangTag),
+      }
+    );
+
+    if (!this.#wasPanelShown) {
+      // Note if a profile has used translations before, we may want to include additional
+      // messaging for first time users.
+      this.#wasPanelShown = true;
+      Services.prefs.setBoolPref("browser.translations.panel.wasShown", true);
+    }
+
+    for (const menuitem of defaultToMenuList.querySelectorAll("menuitem")) {
+      // It is not valid to translate into the original doc language.
+      menuitem.disabled = menuitem.value === this.#docLangTag;
     }
   }
 
@@ -380,9 +353,26 @@ var TranslationsPanel = new (class {
     );
   }
 
+  /**
+   * Handle the disable logic for when the menulist is changed for the "Translate to"
+   * on the "revisit" subview.
+   */
   onChangeRevisitTo() {
     const { revisitTranslate, revisitMenuList } = this.elements;
     revisitTranslate.disabled = !revisitMenuList.value;
+  }
+
+  /**
+   * When changing the "dual" view's language, handle cases where the translate button
+   * should be disabled.
+   */
+  onChangeDualLanguages() {
+    const { dualTranslate, dualToMenuList, dualFromMenuList } = this.elements;
+    dualTranslate.disabled =
+      // The translation languages are the same, don't allow this translation.
+      dualToMenuList.value === dualFromMenuList.value ||
+      // No "from" language was provided.
+      !dualFromMenuList.value;
   }
 
   /**

@@ -34,6 +34,8 @@
   padding: 10px;
 }
 
+/* This separator is added automatically by the multiview's showSubView, but it
+   is not needed for this design. */
 .translations-panel-view-dual toolbarseparator {
   display: none;
 }
@@ -66,17 +68,6 @@
   -moz-context-properties: fill;
   fill: currentColor;
   list-style-image: url(chrome://global/skin/icons/error.svg);
-}
-
-#translations-panel-default-header-image {
-  -moz-context-properties: fill;
-  fill: #fff;
-  list-style-image: url(chrome://browser/skin/translations-logo.svg);
-  width: 20px;
-  height: 20px;
-  background-color: #0090ED;
-  border-radius: 2px;
-  margin-inline-end: 5px;
 }
 
 @media (prefers-color-scheme: dark) {

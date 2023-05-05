@@ -211,12 +211,12 @@ add_task(async function test_translations_panel_switch_language() {
   info('Switch from language to "en"');
   const fromSelect = getById("translations-panel-dual-from");
   fromSelect.value = "en";
-  fromSelect.dispatchEvent(new Event("input"));
+  fromSelect.dispatchEvent(new Event("command"));
 
   info('Switch to language to "fr"');
   const toSelect = getById("translations-panel-dual-to");
   toSelect.value = "fr";
-  toSelect.dispatchEvent(new Event("input"));
+  toSelect.dispatchEvent(new Event("command"));
 
   {
     const translateButton = getByL10nId(
