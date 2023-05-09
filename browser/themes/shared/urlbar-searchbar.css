@@ -594,13 +594,49 @@
 
 /* Translations button */
 
-#translations-button > .urlbar-icon {
-  list-style-image: url(chrome://browser/skin/translations.svg);
+@media (prefers-reduced-motion: no-preference) {
+  #translations-button-circle-arrows {
+    animation: syncRotate 1.2s linear infinite;
+  }
 }
 
-#translations-button[translationsactive] > .urlbar-icon {
+#translations-button-icon {
+  list-style-image: url(chrome://browser/skin/translations.svg);
+  /* The translation icon's right letter is 1px too long, so account for that here.
+     Don't use margin-inline-end as this is adjusting the art of the icon. */
+  margin-right: -1px;
+}
+
+#translations-button[translationsactive] > #translations-button-icon {
   fill: var(--toolbarbutton-icon-fill-attention);
   fill-opacity: 1;
+}
+
+#translations-button-circle-arrows {
+  height: 16px;
+  width: 16px;
+  list-style-image: url("chrome://browser/skin/sync.svg");
+  fill: var(--toolbarbutton-icon-fill-attention);
+  fill-opacity: 1;
+  margin-inline: 1px;
+}
+
+#translations-button-locale {
+  background-color: var(--toolbarbutton-icon-fill-attention);
+  color: var(--toolbar-field-background-color);
+  border-radius: 4px;
+  font-size: 11px;
+  height: 20px;
+  min-width: 20px;
+  text-align: center;
+  padding-top: 3px;
+  box-sizing: border-box;
+  margin-inline: 2px -2px;
+  margin-block: -2px;
+}
+
+#translations-button[translationsactive="true"] {
+  width: auto;
 }
 
 /* Zoom button */

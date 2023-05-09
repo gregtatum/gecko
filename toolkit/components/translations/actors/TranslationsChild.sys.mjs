@@ -829,6 +829,8 @@ export class TranslationsChild extends JSWindowActorChild {
       this.contentWindow.location.href
     );
 
+    this.sendAsyncMessage("Translations:EngineIsReady");
+
     this.translatedDoc.addRootElement(this.document.querySelector("title"));
     this.translatedDoc.addRootElement(
       this.document.body,
