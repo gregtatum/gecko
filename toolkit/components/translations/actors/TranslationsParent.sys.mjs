@@ -308,6 +308,10 @@ export class TranslationsParent extends JSWindowActorParent {
       case "Translations:GetLanguagePairs": {
         return this.getLanguagePairs();
       }
+      case "Translations:EngineIsReady":
+        this.isEngineReady = true;
+        this.languageState.isEngineReady = true;
+        break;
       case "Translations:MaybeAutoTranslate": {
         if (!lazy.autoTranslatePagePref) {
           return false;
@@ -1405,6 +1409,8 @@ class TranslationsLanguageState {
   /** @type {null | TranslationErrors} */
   #error = null;
 
+  #isEngineReady = false;
+
   /**
    * Dispatch anytime the language details change, so that any UI can react to it.
    */
@@ -1426,6 +1432,7 @@ class TranslationsLanguageState {
           detectedLanguages: this.#detectedLanguages,
           requestedTranslationPair: this.#requestedTranslationPair,
           error: this.#error,
+          isEngineReady: this.#isEngineReady,
         },
       })
     );
@@ -1444,6 +1451,7 @@ class TranslationsLanguageState {
 
   set requestedTranslationPair(requestedTranslationPair) {
     this.#error = null;
+    this.#isEngineReady = false;
     this.#requestedTranslationPair = requestedTranslationPair;
     this.dispatch();
   }
@@ -1494,6 +1502,19 @@ class TranslationsLanguageState {
     this.#error = error;
     // Setting an error invalidates the requested translation pair.
     this.#requestedTranslationPair = null;
+    this.#isEngineReady = false;
+    this.dispatch();
+  }
+
+  /**
+   * The last error that occured during translation.
+   */
+  get isEngineReady() {
+    return this.#isEngineReady;
+  }
+
+  set isEngineReady(isEngineReady) {
+    this.#isEngineReady = isEngineReady;
     this.dispatch();
   }
 }
