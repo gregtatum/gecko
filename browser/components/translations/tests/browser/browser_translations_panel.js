@@ -26,21 +26,33 @@ add_task(async function test_button_visible_navigation() {
   });
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    {
+      button: true,
+      circleArrows: false,
+      locale: false,
+    },
     "The button should be visible since the page can be translated from Spanish."
   );
 
   navigate(englishPageUrl, "Navigate to an English page.");
 
   await assertTranslationsButton(
-    button => button.hidden,
+    {
+      button: false,
+      circleArrows: false,
+      locale: false,
+    },
     "The button should be invisible since the page is in English."
   );
 
   navigate(spanishPageUrl, "Navigate back to a Spanish page.");
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    {
+      button: true,
+      circleArrows: false,
+      locale: false,
+    },
     "The button should be visible again since the page is in Spanish."
   );
 
@@ -59,7 +71,7 @@ add_task(async function test_button_visible() {
   });
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    { button: true },
     "The button should be visible since the page can be translated from Spanish."
   );
 
@@ -69,21 +81,21 @@ add_task(async function test_button_visible() {
   );
 
   await assertTranslationsButton(
-    button => button.hidden,
+    { button: false },
     "The button should be invisible since the tab is in English."
   );
 
   await switchTab(spanishTab);
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    { button: true },
     "The button should be visible again since the page is in Spanish."
   );
 
   await switchTab(englishTab);
 
   await assertTranslationsButton(
-    button => button.hidden,
+    { button: false },
     "Don't show for english pages"
   );
 
@@ -95,13 +107,13 @@ add_task(async function test_button_visible() {
  * Tests a basic panel open, translation, and restoration to the original language.
  */
 add_task(async function test_translations_panel() {
-  const { cleanup, runInPage } = await loadTestPage({
+  const { cleanup, resolveDownloads, runInPage } = await loadTestPage({
     page: spanishPageUrl,
     languagePairs,
   });
 
   const button = await assertTranslationsButton(
-    b => !b.hidden,
+    { button: true },
     "The button is available."
   );
 
@@ -124,6 +136,8 @@ add_task(async function test_translations_panel() {
       "Start translating by clicking the translate button."
     );
   });
+
+  await resolveDownloads();
 
   await runInPage(async TranslationsTest => {
     const { getH1 } = TranslationsTest.getSelectors();
@@ -167,7 +181,7 @@ add_task(async function test_translations_panel() {
   });
 
   const button = await assertTranslationsButton(
-    b => !b.hidden,
+    { button: true },
     "The button is available."
   );
 
@@ -238,7 +252,7 @@ add_task(async function test_translations_panel_switch_language() {
   });
 
   const button = await assertTranslationsButton(
-    b => !b.hidden,
+    { button: true },
     "The button is available."
   );
 
@@ -327,7 +341,7 @@ add_task(async function test_translations_panel_cancel() {
   });
 
   const button = await assertTranslationsButton(
-    b => !b.hidden,
+    { button: true },
     "The button is available."
   );
 
@@ -401,7 +415,7 @@ add_task(async function test_translations_panel_manage_languages() {
   });
 
   const button = await assertTranslationsButton(
-    b => !b.hidden,
+    { button: true },
     "The button is available."
   );
 

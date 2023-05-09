@@ -336,10 +336,15 @@ async function loadTestPage({
     true // waitForLoad
   );
 
-  // Before loading the page, handle any mocking of the actor.
-  if (languagePairs) {
-    TranslationsParent.mockLanguagePairs(languagePairs);
-  }
+  const remoteClients = {
+    translationModels: await createTranslationModelsRemoteClient(languagePairs),
+    translationsWasm: await createTranslationsWasmRemoteClient(),
+  };
+
+  TranslationsParent.translationModelsRemoteClient =
+    remoteClients.translationModels.client;
+  TranslationsParent.translationsWasmRemoteClient =
+    remoteClients.translationsWasm.client;
 
   if (detectedLangTag && detectedLanguageConfidence) {
     TranslationsParent.mockLanguageIdentification(
@@ -353,18 +358,21 @@ async function loadTestPage({
 
   return {
     tab,
+    remoteClients,
+
+    resolveDownloads() {
+      return Promise.all([
+        remoteClients.translationModels.resolvePendingDownloads(100),
+        remoteClients.translationsWasm.resolvePendingDownloads(100),
+      ]);
+    },
 
     /**
      * @returns {Promise<void>}
      */
     cleanup() {
-      if (languagePairs) {
-        TranslationsParent.mockLanguagePairs(null);
-      }
-
-      if (detectedLangTag && detectedLanguageConfidence) {
-        TranslationsParent.mockLanguageIdentification(null, null);
-      }
+      TranslationsParent.translationModelsRemoteClient = null;
+      TranslationsParent.translationsWasmRemoteClient = null;
 
       BrowserTestUtils.removeTab(tab);
       return SpecialPowers.popPrefEnv();
