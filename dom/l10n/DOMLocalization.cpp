@@ -139,19 +139,27 @@ void DOMLocalization::ResumeObserving() { mMutations->ResumeObserving(); }
 void DOMLocalization::SetAttributes(
     JSContext* aCx, Element& aElement, const nsAString& aId,
     const Optional<JS::Handle<JSObject*>>& aArgs, ErrorResult& aRv) {
+  bool shouldClearArgs = true;
+
   if (aArgs.WasPassed() && aArgs.Value()) {
     nsAutoString data;
     JS::Rooted<JS::Value> val(aCx, JS::ObjectValue(*aArgs.Value()));
-    if (!nsContentUtils::StringifyJSON(aCx, val, data,
-                                       UndefinedIsNullStringLiteral)) {
-      aRv.NoteJSContextException(aCx);
-      return;
+    if (!val.isNullOrUndefined()) {
+      shouldClearArgs = false;
+      if (!nsContentUtils::StringifyJSON(aCx, val, data,
+                                         UndefinedIsNullStringLiteral)) {
+        aRv.NoteJSContextException(aCx);
+        return;
+      }
+      if (!aElement.AttrValueIs(kNameSpaceID_None, nsGkAtoms::datal10nargs,
+                                data, eCaseMatters)) {
+        aElement.SetAttr(kNameSpaceID_None, nsGkAtoms::datal10nargs, data,
+                         true);
+      }
     }
-    if (!aElement.AttrValueIs(kNameSpaceID_None, nsGkAtoms::datal10nargs, data,
-                              eCaseMatters)) {
-      aElement.SetAttr(kNameSpaceID_None, nsGkAtoms::datal10nargs, data, true);
-    }
-  } else {
+  }
+
+  if (shouldClearArgs) {
     aElement.UnsetAttr(kNameSpaceID_None, nsGkAtoms::datal10nargs, true);
   }
 
@@ -178,19 +186,27 @@ void DOMLocalization::GetAttributes(Element& aElement, L10nIdArgs& aResult,
 void DOMLocalization::SetArgs(JSContext* aCx, Element& aElement,
                               const Optional<JS::Handle<JSObject*>>& aArgs,
                               ErrorResult& aRv) {
+  bool shouldClearArgs = true;
+
   if (aArgs.WasPassed() && aArgs.Value()) {
     nsAutoString data;
     JS::Rooted<JS::Value> val(aCx, JS::ObjectValue(*aArgs.Value()));
-    if (!nsContentUtils::StringifyJSON(aCx, val, data,
-                                       UndefinedIsNullStringLiteral)) {
-      aRv.NoteJSContextException(aCx);
-      return;
+    if (!val.isNullOrUndefined()) {
+      shouldClearArgs = false;
+      if (!nsContentUtils::StringifyJSON(aCx, val, data,
+                                         UndefinedIsNullStringLiteral)) {
+        aRv.NoteJSContextException(aCx);
+        return;
+      }
+      if (!aElement.AttrValueIs(kNameSpaceID_None, nsGkAtoms::datal10nargs,
+                                data, eCaseMatters)) {
+        aElement.SetAttr(kNameSpaceID_None, nsGkAtoms::datal10nargs, data,
+                         true);
+      }
     }
-    if (!aElement.AttrValueIs(kNameSpaceID_None, nsGkAtoms::datal10nargs, data,
-                              eCaseMatters)) {
-      aElement.SetAttr(kNameSpaceID_None, nsGkAtoms::datal10nargs, data, true);
-    }
-  } else {
+  }
+
+  if (shouldClearArgs) {
     aElement.UnsetAttr(kNameSpaceID_None, nsGkAtoms::datal10nargs, true);
   }
 }

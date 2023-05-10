@@ -45,6 +45,16 @@
       "The data-l10n-args can be set by setAttributes."
     );
 
+    domLoc.setAttributes(p1, "title2", {userName: "John"});
+    ok(p1.getAttribute("data-l10n-args"), "Args are re-added.");
+    domLoc.setAttributes(p1, "title2", null);
+    ok(!p1.getAttribute("data-l10n-args"), "setAttributes args are removed with null.");
+
+    domLoc.setAttributes(p1, "title2", {userName: "John"});
+    ok(p1.getAttribute("data-l10n-args"), "Args are re-added.");
+    domLoc.setAttributes(p1, "title2", undefined);
+    ok(!p1.getAttribute("data-l10n-args"), "setAttributes args are removed with undefined.");
+
     domLoc.setArgs(p1, {userName: "Jane"});
     is(
       p1.getAttribute("data-l10n-id"),
@@ -68,6 +78,17 @@
       null,
       "The data-l10n-args be unset by setArgs."
     );
+
+    domLoc.setArgs(p1, {userName: "Jane"});
+    ok(p1.getAttribute("data-l10n-args"), "Args are re-added.");
+    domLoc.setArgs(p1, null);
+    ok(!p1.getAttribute("data-l10n-args"), "setArgs args are removed with null.");
+
+    domLoc.setArgs(p1, {userName: "Jane"});
+    ok(p1.getAttribute("data-l10n-args"), "Args are re-added.");
+    domLoc.setArgs(p1, undefined);
+    ok(!p1.getAttribute("data-l10n-args"), "setArgs args are removed with undefined.");
+
 
     SimpleTest.finish();
   };
