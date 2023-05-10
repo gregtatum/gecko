@@ -131,6 +131,16 @@ var TranslationsPanel = new (class {
     return actor;
   }
 
+  async #getDocLangTag() {
+    if (!this.#docLangTag) {
+      const {
+        docLangTag,
+      } = await this.#getTranslationsActor().getLangTagsForTranslation();
+      this.#docLangTag = docLangTag;
+    }
+    return this.#docLangTag;
+  }
+
   /**
    * @type {"initialized" | "error" | "uninitialized"}
    */
@@ -318,6 +328,83 @@ var TranslationsPanel = new (class {
     }
   }
 
+  async #updateSettingsMenuSiteCheckboxStates() {
+    const { panel } = this.elements;
+    const neverTranslateSiteMenuItems = panel.querySelectorAll(
+      ".never-translate-site-menuitem"
+    );
+    const neverTranslateSite = await this.#getTranslationsActor().shouldNeverTranslateSite();
+
+    for (const menuitem of neverTranslateSiteMenuItems) {
+      menuitem.setAttribute("checked", neverTranslateSite ? "true" : "false");
+    }
+  }
+
+  async #updateSettingsMenuLanguageCheckboxStates() {
+    const docLangTag = await this.#getDocLangTag();
+
+    const alwaysTranslateLanguage = TranslationsParent.shouldAlwaysTranslateLanguage(
+      docLangTag
+    );
+    const neverTranslateLanguage = TranslationsParent.shouldNeverTranslateLanguage(
+      docLangTag
+    );
+
+    const { panel } = this.elements;
+    const alwaysTranslateMenuItems = panel.querySelectorAll(
+      ".always-translate-language-menuitem"
+    );
+    const neverTranslateMenuItems = panel.querySelectorAll(
+      ".never-translate-language-menuitem"
+    );
+
+    for (const menuitem of alwaysTranslateMenuItems) {
+      menuitem.setAttribute(
+        "checked",
+        alwaysTranslateLanguage ? "true" : "false"
+      );
+    }
+    for (const menuitem of neverTranslateMenuItems) {
+      menuitem.setAttribute(
+        "checked",
+        neverTranslateLanguage ? "true" : "false"
+      );
+    }
+  }
+
+  async #populateSettingsMenuItems() {
+    const docLangTag = await this.#getDocLangTag();
+    const displayNames = new Services.intl.DisplayNames(undefined, {
+      type: "language",
+    });
+    const docLangDisplayName = displayNames.of(docLangTag);
+
+    const { panel } = this.elements;
+
+    const alwaysTranslateMenuItems = panel.querySelectorAll(
+      ".always-translate-language-menuitem"
+    );
+    const neverTranslateMenuItems = panel.querySelectorAll(
+      ".never-translate-language-menuitem"
+    );
+
+    for (const menuitem of alwaysTranslateMenuItems) {
+      document.l10n.setArgs(menuitem, {
+        language: docLangDisplayName,
+      });
+    }
+    for (const menuitem of neverTranslateMenuItems) {
+      document.l10n.setArgs(menuitem, {
+        language: docLangDisplayName,
+      });
+    }
+
+    await Promise.all([
+      this.#updateSettingsMenuSiteCheckboxStates(),
+      this.#updateSettingsMenuLanguageCheckboxStates(),
+    ]);
+  }
+
   /**
    * Configures the panel for the user to reset the page after it has been translated.
    *
@@ -399,6 +486,7 @@ var TranslationsPanel = new (class {
       });
     }
 
+    this.#populateSettingsMenuItems();
     PanelMultiView.openPopup(panel, button, {
       position: "bottomright topright",
       triggerEvent: event,
@@ -412,7 +500,8 @@ var TranslationsPanel = new (class {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
-    actor.translate(this.#docLangTag, this.elements.defaultToMenuList.value);
+    const docLangTag = await this.#getDocLangTag();
+    actor.translate(docLangTag, this.elements.defaultToMenuList.value);
   }
 
   /**
@@ -436,7 +525,8 @@ var TranslationsPanel = new (class {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
-    actor.translate(this.#docLangTag, this.elements.revisitMenuList.value);
+    const docLangTag = await this.#getDocLangTag();
+    actor.translate(docLangTag, this.elements.revisitMenuList.value);
   }
 
   onCancel() {
@@ -460,14 +550,31 @@ var TranslationsPanel = new (class {
     window.openTrustedLinkIn("about:preferences#general-translations", "tab");
   }
 
+  async onAlwaysTranslateLanguage() {
+    const docLangTag = await this.#getDocLangTag();
+    TranslationsParent.toggleAlwaysTranslateLanguagePref(docLangTag);
+    await this.#updateSettingsMenuLanguageCheckboxStates();
+  }
+
+  async onNeverTranslateLanguage() {
+    const docLangTag = await this.#getDocLangTag();
+    TranslationsParent.toggleNeverTranslateLanguagePref(docLangTag);
+    await this.#updateSettingsMenuLanguageCheckboxStates();
+  }
+
+  async onNeverTranslateSite() {
+    await this.#getTranslationsActor().toggleNeverTranslateSitePermissions();
+    await this.#updateSettingsMenuSiteCheckboxStates();
+  }
+
   /**
    * Handle the restore button being clicked.
    */
-  onRestore() {
+  async onRestore() {
     const { panel } = this.elements;
     PanelMultiView.hidePopup(panel);
-
-    this.#getTranslationsActor().restorePage();
+    const docLangTag = await this.#getDocLangTag();
+    this.#getTranslationsActor().restorePage(docLangTag);
   }
 
   /**
@@ -475,7 +582,7 @@ var TranslationsPanel = new (class {
    *
    * @param {CustomEvent} event
    */
-  handleEvent = event => {
+  handleEvent = async event => {
     switch (event.type) {
       case "TranslationsParent:LanguageState":
         const {
@@ -483,9 +590,17 @@ var TranslationsPanel = new (class {
           requestedTranslationPair,
           error,
         } = event.detail;
+        const docLangTag = detectedLanguages?.docLangTag;
         const { panel, button } = this.elements;
 
-        if (detectedLanguages) {
+        if (
+          // Valid languages were detected
+          detectedLanguages &&
+          // The docLangTag is not present in the never-translate list
+          !TranslationsParent.shouldNeverTranslateLanguage(docLangTag) &&
+          // The site not present in the never-translate list
+          !(await this.#getTranslationsActor().shouldNeverTranslateSite())
+        ) {
           button.hidden = false;
           if (requestedTranslationPair) {
             button.setAttribute("translationsactive", true);

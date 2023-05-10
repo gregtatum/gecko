@@ -389,7 +389,15 @@
   <!-- Translations -->
   <vbox id="translationsGroup" hidden="true" data-subcategory="translations">
     <label><html:h2 data-l10n-id="translations-manage-header"/></label>
-    <description data-l10n-id="translations-manage-description"/>
+    <hbox id="translations-manage-preferences" align="center" hidden="true">
+      <description flex="1" data-l10n-id="translations-manage-preferences"/>
+      <button id="translations-manage-preferences-button"
+              is="highlightable-button"
+              class="accessory-button"
+              align="right"
+              data-l10n-id="translations-manage-preferences-button"/>
+    </hbox>
+    <description flex="1" data-l10n-id="translations-manage-description"/>
     <vbox>
       <html:div id="translations-manage-install-list" hidden="true">
         <hbox class="translations-manage-language">

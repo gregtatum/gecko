@@ -3813,6 +3813,10 @@ pref("browser.translations.simulateUnsupportedEngine", false);
 pref("browser.translations.chaos.errors", false);
 pref("browser.translations.chaos.timeoutMS", 0);
 
+pref("browser.translations.neverTranslateLanguages", "");
+pref("browser.translations.alwaysTranslateLanguages", "");
+
+
 // When a user cancels this number of authentication dialogs coming from
 // a single web page in a row, all following authentication dialogs will
 // be blocked (automatically canceled) for that page. The counter resets

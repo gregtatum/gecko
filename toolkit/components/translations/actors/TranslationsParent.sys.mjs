@@ -19,6 +19,11 @@
  */
 const PIVOT_LANGUAGE = "en";
 
+const kTranslationsPermission = "translate";
+const kAlwaysTranslateLangsPref =
+  "browser.translations.alwaysTranslateLanguages";
+const kNeverTranslateLangsPref = "browser.translations.neverTranslateLanguages";
+
 const lazy = {};
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
@@ -45,6 +50,24 @@ XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "autoTranslatePagePref",
   "browser.translations.autoTranslate"
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "alwaysTranslateLangTags",
+  kAlwaysTranslateLangsPref,
+  /* aDefaultValue */ [],
+  /* onUpdate */ null,
+  /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "neverTranslateLangTags",
+  kNeverTranslateLangsPref,
+  /* aDefaultValue */ [],
+  /* onUpdate */ null,
+  /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -316,7 +339,12 @@ export class TranslationsParent extends JSWindowActorParent {
         return this.getLanguagePairs();
       }
       case "Translations:MaybeAutoTranslate": {
-        if (!lazy.autoTranslatePagePref) {
+        if (
+          // The user has not marked this language as always translate.
+          !TranslationsParent.shouldAlwaysTranslateLanguage(data.docLangTag) &&
+          // The pref to always auto-translate is off.
+          !lazy.autoTranslatePagePref
+        ) {
           return false;
         }
 
@@ -335,6 +363,12 @@ export class TranslationsParent extends JSWindowActorParent {
 
         // The page can be auto-translated
         return true;
+      }
+      case "Translations:MaybeNeverTranslate": {
+        return (
+          this.shouldNeverTranslateSite() ||
+          TranslationsParent.shouldNeverTranslateLanguage(data.docLangTag)
+        );
       }
       case "Translations:ReportDetectedLangTags": {
         this.languageState.detectedLanguages = data.langTags;
@@ -1286,7 +1320,7 @@ export class TranslationsParent extends JSWindowActorParent {
       // This page has already been translated, restore it and translate it
       // again once the actor has been recreated.
       TranslationsParent.#translateOnPageReload = { fromLanguage, toLanguage };
-      this.restorePage();
+      this.restorePage(fromLanguage);
     } else {
       this.languageState.requestedTranslationPair = {
         fromLanguage,
@@ -1301,9 +1335,14 @@ export class TranslationsParent extends JSWindowActorParent {
 
   /**
    * Restore the page to the original language by doing a hard reload.
+   *
+   * @param {string} docLangTag The document's language tag
    */
-  restorePage() {
-    if (lazy.autoTranslatePagePref) {
+  restorePage(docLangTag) {
+    if (
+      lazy.autoTranslatePagePref ||
+      TranslationsParent.shouldAlwaysTranslateLanguage(docLangTag)
+    ) {
       // Skip auto-translate for one page load.
       TranslationsParent.#isPageRestoredForAutoTranslate = true;
     }
@@ -1346,6 +1385,88 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   getLangTagsForTranslation() {
     return this.sendQuery("Translations:GetLangTagsForTranslation");
+  }
+
+  getContentWindowPrincipal() {
+    return this.sendQuery("Translations:GetContentWindowPrincipal");
+  }
+
+  static shouldAlwaysTranslateLanguage(langTag) {
+    return lazy.alwaysTranslateLangTags.includes(langTag);
+  }
+
+  static shouldNeverTranslateLanguage(langTag) {
+    return lazy.neverTranslateLangTags.includes(langTag);
+  }
+
+  async shouldNeverTranslateSite() {
+    const principal = await this.getContentWindowPrincipal();
+    const perms = Services.perms;
+    const permission = perms.getPermissionObject(
+      principal,
+      kTranslationsPermission,
+      /* exactHost */ false
+    );
+    return permission?.capability === perms.DENY_ACTION;
+  }
+
+  static #removeLangTagFromPref(langTag, prefName) {
+    const langTags =
+      prefName === kAlwaysTranslateLangsPref
+        ? lazy.alwaysTranslateLangTags
+        : lazy.neverTranslateLangTags;
+    const newLangTags = langTags.filter(tag => tag !== langTag);
+    Services.prefs.setCharPref(
+      prefName,
+      newLangTags.length === 1 ? newLangTags[0] : newLangTags.join(",")
+    );
+  }
+
+  static #addLangTagToPref(langTag, prefName) {
+    const langTags =
+      prefName === kAlwaysTranslateLangsPref
+        ? lazy.alwaysTranslateLangTags
+        : lazy.neverTranslateLangTags;
+    if (!langTags.includes(langTag)) {
+      langTags.push(langTag);
+    }
+    Services.prefs.setCharPref(
+      prefName,
+      langTags.length > 1 ? langTags.join(",") : langTags[0]
+    );
+  }
+
+  static toggleAlwaysTranslateLanguagePref(langTag) {
+    if (TranslationsParent.shouldAlwaysTranslateLanguage(langTag)) {
+      this.#removeLangTagFromPref(langTag, kAlwaysTranslateLangsPref);
+    } else {
+      this.#addLangTagToPref(langTag, kAlwaysTranslateLangsPref);
+      this.#removeLangTagFromPref(langTag, kNeverTranslateLangsPref);
+    }
+  }
+
+  static toggleNeverTranslateLanguagePref(langTag) {
+    if (TranslationsParent.shouldNeverTranslateLanguage(langTag)) {
+      this.#removeLangTagFromPref(langTag, kNeverTranslateLangsPref);
+    } else {
+      this.#addLangTagToPref(langTag, kNeverTranslateLangsPref);
+      this.#removeLangTagFromPref(langTag, kAlwaysTranslateLangsPref);
+    }
+  }
+
+  async toggleNeverTranslateSitePermissions() {
+    const perms = Services.perms;
+    const principal = await this.getContentWindowPrincipal();
+    const shouldNeverTranslateSite = await this.shouldNeverTranslateSite();
+    if (shouldNeverTranslateSite) {
+      perms.removeFromPrincipal(principal, kTranslationsPermission);
+    } else {
+      perms.addFromPrincipal(
+        principal,
+        kTranslationsPermission,
+        perms.DENY_ACTION
+      );
+    }
   }
 }
 

@@ -12,8 +12,10 @@ const languagePairs = [
   { fromLang: "uk", toLang: "en", isBeta: true },
 ];
 
-const spanishPageUrl = TRANSLATIONS_TESTER_ES;
 const englishPageUrl = TRANSLATIONS_TESTER_EN;
+const spanishPageUrlDotCom = TRANSLATIONS_TESTER_ES_DOT_COM;
+const spanishPageUrlDotOrg = TRANSLATIONS_TESTER_ES_DOT_ORG;
+const spanishPageUrlDotCom2 = TRANSLATIONS_TESTER_ES_DOT_COM_2;
 
 /**
  * Test that the translations button is correctly visible when navigating between pages.
@@ -21,7 +23,7 @@ const englishPageUrl = TRANSLATIONS_TESTER_EN;
 add_task(async function test_button_visible_navigation() {
   info("Start at a page in Spanish.");
   const { cleanup } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -30,14 +32,14 @@ add_task(async function test_button_visible_navigation() {
     "The button should be visible since the page can be translated from Spanish."
   );
 
-  navigate(englishPageUrl, "Navigate to an English page.");
+  await navigate(englishPageUrl, "Navigate to an English page.");
 
   await assertTranslationsButton(
     button => button.hidden,
     "The button should be invisible since the page is in English."
   );
 
-  navigate(spanishPageUrl, "Navigate back to a Spanish page.");
+  await navigate(spanishPageUrlDotCom, "Navigate back to a Spanish page.");
 
   await assertTranslationsButton(
     button => !button.hidden,
@@ -54,7 +56,7 @@ add_task(async function test_button_visible() {
   info("Start at a page in Spanish.");
 
   const { cleanup, tab: spanishTab } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -96,7 +98,7 @@ add_task(async function test_button_visible() {
  */
 add_task(async function test_translations_panel() {
   const { cleanup, runInPage } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -162,7 +164,7 @@ add_task(async function test_translations_panel() {
  */
 add_task(async function test_translations_panel() {
   const { cleanup, runInPage } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -233,7 +235,7 @@ add_task(async function test_translations_panel() {
  */
 add_task(async function test_translations_panel_switch_language() {
   const { cleanup, runInPage } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -322,7 +324,7 @@ add_task(async function test_translations_panel_switch_language() {
  */
 add_task(async function test_translations_panel_cancel() {
   const { cleanup } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -350,7 +352,7 @@ add_task(async function test_translations_panel_cancel() {
  */
 add_task(async function test_translations_panel_display_beta_languages() {
   const { cleanup } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -396,7 +398,7 @@ add_task(async function test_translations_panel_display_beta_languages() {
  */
 add_task(async function test_translations_panel_manage_languages() {
   const { cleanup } = await loadTestPage({
-    page: spanishPageUrl,
+    page: spanishPageUrlDotCom,
     languagePairs,
   });
 
@@ -425,6 +427,428 @@ add_task(async function test_translations_panel_manage_languages() {
 
   info("Remove the about:preferences tab");
   gBrowser.removeCurrentTab();
+
+  await cleanup();
+});
+
+/**
+ * Tests the effects that toggling the always-translate-languages menuitem
+ * has on subsequent page loads.
+ */
+add_task(async function test_page_loads_with_always_translate_language() {
+  const { cleanup, runInPage } = await loadTestPage({
+    page: spanishPageUrlDotCom,
+    languagePairs,
+    prefs: [["browser.translations.alwaysTranslateLanguages", "pl,fr"]],
+  });
+
+  // The document language "es" is not in the alwaysTranslateLanguages pref,
+  // so the page should be untranslated, in its original form.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  // Simulate clicking always-translate-language in the preferences menu,
+  // adding the document language from the alwaysTranslateLanguages pref.
+  await openPreferencesMenu();
+  await toggleAlwaysTranslateLanguage();
+
+  // Reload the page
+  await navigate(spanishPageUrlDotCom);
+
+  // The page should now be automatically translated because the document language
+  // should be added to the always-translate pref.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is translated automatically",
+      getH1,
+      "DON QUIJOTE DE LA MANCHA [es to en, html]"
+    );
+  });
+
+  // Simulate clicking always-translate-language in the preferences menu
+  // removing the document language from the alwaysTranslateLanguages pref.
+  await openPreferencesMenu();
+  await toggleAlwaysTranslateLanguage();
+
+  // Reload the page
+  await navigate(spanishPageUrlDotCom);
+
+  // The page should no longer automatically translated because the document language
+  // should be removed from the always-translate pref.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  await cleanup();
+});
+
+/**
+ * Tests the effect that toggling the never-translate-languages menuitem
+ * has on subsequent page loads.
+ */
+add_task(async function test_page_loads_with_never_translate_language() {
+  const { cleanup, runInPage } = await loadTestPage({
+    page: spanishPageUrlDotCom,
+    languagePairs,
+    prefs: [["browser.translations.neverTranslateLanguages", "pl,fr"]],
+  });
+
+  await assertTranslationsButton(
+    button => !button.hidden,
+    "The translations button should be visible"
+  );
+
+  // The document language "es" is not in the neverTranslateLanguages pref,
+  // so the page should be untranslated, in its original form.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  // Simulate clicking never-translate-language in the preferences menu,
+  // adding the document language from the neverTranslateLanguages pref.
+  await openPreferencesMenu();
+  await toggleNeverTranslateLanguage();
+
+  // Reload the page
+  await navigate(spanishPageUrlDotCom);
+
+  await assertTranslationsButton(
+    button => button.hidden,
+    "The translations button should be invisible"
+  );
+
+  // The page should still be in its original, untranslated form because
+  // the document language is in the neverTranslateLanguages pref.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  await cleanup();
+});
+
+/**
+ * Tests the effects that the never-translate-sites menuitem has on
+ * subsequent page loads when always-translate-language is active.
+ */
+add_task(async function test_page_loads_with_never_translate_site() {
+  const { cleanup, runInPage } = await loadTestPage({
+    page: spanishPageUrlDotCom,
+    languagePairs,
+  });
+
+  await assertTranslationsButton(
+    button => !button.hidden,
+    "The translations button should be visible"
+  );
+
+  // The document language "es" is not in the alwaysTranslateLanguages pref,
+  // so the page should be untranslated, in its original form.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  // Disallow translations for this site
+  await denyTranslationsPermissionForSite(spanishPageUrlDotCom);
+
+  // Reload the page
+  await navigate(spanishPageUrlDotCom);
+
+  await assertTranslationsButton(
+    button => button.hidden,
+    "The translations button should be invisible"
+  );
+
+  // The page should no longer automatically translated because the site
+  // no longer has permissions to be translated.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  // Go to another page from the same site principal
+  await navigate(spanishPageUrlDotCom2);
+
+  await assertTranslationsButton(
+    button => button.hidden,
+    "The translations button should be invisible"
+  );
+
+  // This page should also be untranslated because the entire site
+  // no longer has permissions to be translated.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  // Go to another page from another site principal
+  await navigate(spanishPageUrlDotOrg);
+
+  await assertTranslationsButton(
+    button => !button.hidden,
+    "The translations button should be visible"
+  );
+
+  // This page should be untranslated because there are no auto-translate
+  // preferences set in this test.
+  await runInPage(async TranslationsTest => {
+    const { getH1 } = TranslationsTest.getSelectors();
+    await TranslationsTest.assertTranslationResult(
+      "The page's H1 is in Spanish.",
+      getH1,
+      "Don Quijote de La Mancha"
+    );
+  });
+
+  await cleanup();
+});
+
+/**
+ * Tests the effects that the never-translate-sites menuitem has on
+ * subsequent page loads when always-translate-language is active.
+ */
+add_task(
+  async function test_page_loads_with_always_translate_language_and_never_translate_site() {
+    const { cleanup, runInPage } = await loadTestPage({
+      page: spanishPageUrlDotCom,
+      languagePairs,
+      prefs: [["browser.translations.alwaysTranslateLanguages", "es"]],
+    });
+
+    await assertTranslationsButton(
+      button => !button.hidden,
+      "The translations button should be visible"
+    );
+
+    // The page should be automatically translated because the document language
+    // should be in the alwaysTranslateLanguages
+    await runInPage(async TranslationsTest => {
+      const { getH1 } = TranslationsTest.getSelectors();
+      await TranslationsTest.assertTranslationResult(
+        "The page's H1 is translated automatically",
+        getH1,
+        "DON QUIJOTE DE LA MANCHA [es to en, html]"
+      );
+    });
+
+    // Disallow translations for this site
+    await denyTranslationsPermissionForSite(spanishPageUrlDotCom);
+
+    // Reload the page
+    await navigate(spanishPageUrlDotCom);
+
+    await assertTranslationsButton(
+      button => button.hidden,
+      "The translations button should be invisible"
+    );
+
+    // The page should no longer automatically translated because the site
+    // no longer has permissions to be translated.
+    await runInPage(async TranslationsTest => {
+      const { getH1 } = TranslationsTest.getSelectors();
+      await TranslationsTest.assertTranslationResult(
+        "The page's H1 is in Spanish.",
+        getH1,
+        "Don Quijote de La Mancha"
+      );
+    });
+
+    // Go to another page from the same site principal
+    await navigate(spanishPageUrlDotCom2);
+
+    await assertTranslationsButton(
+      button => button.hidden,
+      "The translations button should be invisible"
+    );
+
+    // This page should also be untranslated because the entire site
+    // no longer has permissions to be translated.
+    await runInPage(async TranslationsTest => {
+      const { getH1 } = TranslationsTest.getSelectors();
+      await TranslationsTest.assertTranslationResult(
+        "The page's H1 is in Spanish.",
+        getH1,
+        "Don Quijote de La Mancha"
+      );
+    });
+
+    // Go to another page from a different site principal
+    await navigate(spanishPageUrlDotOrg);
+
+    await assertTranslationsButton(
+      button => !button.hidden,
+      "The translations button should be visible"
+    );
+
+    // The page should be automatically translated because the document language
+    // should be in the alwaysTranslateLanguages and this is a different site principal
+    await runInPage(async TranslationsTest => {
+      const { getH1 } = TranslationsTest.getSelectors();
+      await TranslationsTest.assertTranslationResult(
+        "The page's H1 is translated automatically",
+        getH1,
+        "DON QUIJOTE DE LA MANCHA [es to en, html]"
+      );
+    });
+
+    await cleanup();
+  }
+);
+
+/**
+ * Tests toggling the always-translate-language and never-translate-language
+ * menuitems to ensure that they interact correctly with each other and update
+ * the translations menu UI accordingly.
+ */
+add_task(async function test_toggling_translate_language_menuitems() {
+  const { cleanup } = await loadTestPage({
+    page: spanishPageUrlDotCom,
+    languagePairs,
+    prefs: [
+      ["browser.translations.alwaysTranslateLanguages", ""],
+      ["browser.translations.neverTranslateLanguages", ""],
+    ],
+  });
+
+  async function assertIsAlwaysTranslateLanguage(expected) {
+    await assertCheckboxState(
+      expected,
+      "translations-panel-settings-always-translate-language"
+    );
+    is(TranslationsParent.shouldAlwaysTranslateLanguage("es"), expected);
+  }
+
+  async function assertIsNeverTranslateLanguage(expected) {
+    await assertCheckboxState(
+      expected,
+      "translations-panel-settings-never-translate-language"
+    );
+    is(TranslationsParent.shouldNeverTranslateLanguage("es"), expected);
+  }
+
+  await openPreferencesMenu();
+
+  await assertIsAlwaysTranslateLanguage(false);
+  await assertIsNeverTranslateLanguage(false);
+
+  // Simulate clicking always-translate-language in the preferences menu,
+  // adding the document language from the alwaysTranslateLanguages pref.
+  await toggleAlwaysTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(true);
+  await assertIsNeverTranslateLanguage(false);
+
+  // Simulate clicking always-translate-language in the preferences menu,
+  // removing the document language from the alwaysTranslateLanguages pref.
+  await toggleAlwaysTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(false);
+  await assertIsNeverTranslateLanguage(false);
+
+  // Simulate clicking never-translate-language in the preferences menu,
+  // adding the document language from the neverTranslateLanguages pref.
+  await toggleNeverTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(false);
+  await assertIsNeverTranslateLanguage(true);
+
+  // Simulate clicking never-translate-language in the preferences menu,
+  // removing the document language from the neverTranslateLanguages pref.
+  await toggleNeverTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(false);
+  await assertIsNeverTranslateLanguage(false);
+
+  // Simulate clicking always-translate-language in the preferences menu,
+  // adding the document language from the alwaysTranslateLanguages pref.
+  await toggleAlwaysTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(true);
+  await assertIsNeverTranslateLanguage(false);
+
+  // Simulate clicking never-translate-language in the preferences menu,
+  // adding the document language from the neverTranslateLanguages pref
+  // and removing the language from the alwaysTranslateLanguages pref
+  await toggleNeverTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(false);
+  await assertIsNeverTranslateLanguage(true);
+
+  // Simulate clicking always-translate-language in the preferences menu,
+  // adding the document language from the alwaysTranslateLanguages pref
+  // and removing the language from the neverTranslateLanguages pref
+  await toggleNeverTranslateLanguage();
+  await assertIsAlwaysTranslateLanguage(false);
+  await assertIsNeverTranslateLanguage(false);
+
+  await cleanup();
+});
+
+/**
+ * Tests toggling the always-translate-site menuitem to ensure that it
+ * interacts correctly with the translations menu UI.
+ */
+add_task(async function test_toggling_translate_site_menuitem() {
+  const { cleanup } = await loadTestPage({
+    page: spanishPageUrlDotCom,
+    languagePairs,
+  });
+
+  const translationsActor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
+    "Translations"
+  );
+
+  async function assertIsNeverTranslateSite(expected) {
+    await assertCheckboxState(
+      expected,
+      "translations-panel-settings-never-translate-site"
+    );
+    is(
+      await translationsActor.shouldNeverTranslateSite(spanishPageUrlDotCom),
+      expected
+    );
+  }
+
+  await openPreferencesMenu();
+  await assertIsNeverTranslateSite(false);
+
+  // Simulate clicking never-translate-site in the preferences menu,
+  // denying this site permission to be translated.
+  await toggleNeverTranslateSite();
+  await assertIsNeverTranslateSite(true);
+
+  // Simulate clicking never-translate-site in the preferences menu,
+  // re-allowing this site permission to be translated.
+  await toggleNeverTranslateSite();
+  await assertIsNeverTranslateSite(false);
 
   await cleanup();
 });

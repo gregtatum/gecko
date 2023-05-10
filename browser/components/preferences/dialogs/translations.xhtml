@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?>
+<?xml-stylesheet href="chrome://browser/skin/preferences/preferences.css" type="text/css"?>
+
+<window id="TranslationsDialog"
+        data-l10n-id="translations-preferences-title"
+        data-l10n-attrs="title, style"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        xmlns:html="http://www.w3.org/1999/xhtml"
+        onload="gTranslationsPreferences.onLoad();"
+        onunload="gTranslationsPreferences.uninit();"
+        persist="width height">
+
+  <dialog
+    buttons="accept"
+    data-l10n-id="translation-dialog"
+    data-l10n-attrs="buttonlabelaccept, buttonaccesskeyaccept">
+
+  <linkset>
+    <html:link rel="localization" href="browser/preferences/translations.ftl"/>
+  </linkset>
+
+  <script src="chrome://browser/content/preferences/dialogs/translations.js"/>
+
+  <keyset>
+    <key data-l10n-id="translations-close-key" modifiers="accel" oncommand="window.close();"/>
+  </keyset>
+
+  <vbox class="contentPane">
+    <vbox flex="1">
+      <label id="alwaysTranslateLanguagesLabel"
+             data-l10n-id="translations-always-translate-desc"
+             control="permissionsTree"/>
+      <separator class="thin"/>
+      <tree id="alwaysTranslateLanguagesTree" flex="1" style="height: 12em;"
+            hidecolumnpicker="true"
+            onkeypress="gTranslationsPreferences.onAlwaysTranslateLanguageKeyPress(event)"
+            onselect="gTranslationsPreferences.onSelectAlwaysTranslateLanguage();">
+        <treecols>
+          <treecol id="languageCol" data-l10n-id="translations-languages-column" flex="1"/>
+        </treecols>
+        <treechildren/>
+      </tree>
+    </vbox>
+    <hbox class="actionButtons" pack="end">
+      <button id="removeAlwaysTranslateLanguage" disabled="true"
+              data-l10n-id="translations-remove-language-button"
+              oncommand="gTranslationsPreferences.onRemoveAlwaysTranslateLanguage();"/>
+      <button id="removeAllAlwaysTranslateLanguages"
+              data-l10n-id="translations-remove-all-languages-button"
+              oncommand="gTranslationsPreferences.onRemoveAllAlwaysTranslateLanguages();"/>
+      <spacer flex="1"/>
+    </hbox>
+    <separator/>
+    <vbox flex="1">
+      <label id="neverTranslateLanguagesLabel"
+             data-l10n-id="translations-never-translate-desc"
+             control="permissionsTree"/>
+      <separator class="thin"/>
+      <tree id="neverTranslateLanguagesTree" flex="1" style="height: 12em;"
+            hidecolumnpicker="true"
+            onkeypress="gTranslationsPreferences.onNeverTranslateLanguageKeyPress(event)"
+            onselect="gTranslationsPreferences.onSelectNeverTranslateLanguage();">
+        <treecols>
+          <treecol id="languageCol" data-l10n-id="translations-languages-column" flex="1"/>
+        </treecols>
+        <treechildren/>
+      </tree>
+    </vbox>
+    <hbox class="actionButtons" pack="end">
+      <button id="removeNeverTranslateLanguage" disabled="true"
+              data-l10n-id="translations-remove-language-button"
+              oncommand="gTranslationsPreferences.onRemoveNeverTranslateLanguage();"/>
+      <button id="removeAllNeverTranslateLanguages"
+              data-l10n-id="translations-remove-all-languages-button"
+              oncommand="gTranslationsPreferences.onRemoveAllNeverTranslateLanguages();"/>
+      <spacer flex="1"/>
+    </hbox>
+    <separator/>
+    <vbox flex="1">
+      <label id="neverTranslateSitesLabel"
+             data-l10n-id="translation-sites-disabled-desc"
+             control="permissionsTree"/>
+      <separator class="thin"/>
+      <tree id="neverTranslateSitesTree" flex="1" style="height: 12em;"
+            hidecolumnpicker="true"
+            onkeypress="gTranslationsPreferences.onNeverTranslateSiteKeyPress(event)"
+            onselect="gTranslationsPreferences.onSelectNeverTranslateSite();">
+        <treecols>
+          <treecol id="siteCol" data-l10n-id="translations-sites-column" flex="1"/>
+        </treecols>
+        <treechildren/>
+      </tree>
+    </vbox>
+  </vbox>
+
+  <hbox class="actionButtons" pack="end">
+    <button id="removeNeverTranslateSite" disabled="true"
+            data-l10n-id="translations-remove-site-button"
+            oncommand="gTranslationsPreferences.onRemoveNeverTranslateSite();"/>
+    <button id="removeAllNeverTranslateSites"
+            data-l10n-id="translations-remove-all-sites-button"
+            oncommand="gTranslationsPreferences.onRemoveAllNeverTranslateSites();"/>
+    <spacer flex="1"/>
+  </hbox>
+  </dialog>
+</window>

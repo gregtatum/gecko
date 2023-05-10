@@ -3,6 +3,8 @@
 
 "use strict";
 
+const kTranslationsPermission = "translate";
+
 Services.scriptloader.loadSubScript(
   "chrome://mochitests/content/browser/toolkit/components/translations/tests/browser/shared-head.js",
   this
@@ -29,12 +31,78 @@ function assertTranslationsButton(assertion, message) {
   }, message);
 }
 
+async function openPreferencesMenu() {
+  const button = await assertTranslationsButton(
+    b => !b.hidden,
+    "The button is available."
+  );
+
+  await waitForTranslationsPopupEvent("popupshown", () => {
+    click(button, "Opening the popup");
+  });
+
+  const gearIcon = getByL10nId("translations-panel-settings-button");
+  click(gearIcon, "Open the preferences menu");
+}
+
+async function toggleAlwaysTranslateLanguage() {
+  const alwaysTranslateLanguage = getByL10nId(
+    "translations-panel-settings-always-translate-language"
+  );
+  info("Toggle the always-translate-language menuitem");
+  await alwaysTranslateLanguage.doCommand();
+}
+
+async function toggleNeverTranslateLanguage() {
+  const neverTranslateLanguage = getByL10nId(
+    "translations-panel-settings-never-translate-language"
+  );
+  info("Toggle the never-translate-language menuitem");
+  await neverTranslateLanguage.doCommand();
+}
+
+async function toggleNeverTranslateSite() {
+  const neverTranslateSite = getByL10nId(
+    "translations-panel-settings-never-translate-site"
+  );
+  info("Toggle the never-translate-site menuitem");
+  await neverTranslateSite.doCommand();
+}
+
+async function assertCheckboxState(expected, dataL10nId) {
+  const menuItem = getByL10nId(dataL10nId);
+  await TestUtils.waitForCondition(
+    () => menuItem.getAttribute("checked") === (expected ? "true" : "false"),
+    "Waiting for checkbox state"
+  );
+  is(
+    menuItem.getAttribute("checked"),
+    expected ? "true" : "false",
+    `Should match expected checkbox state for ${dataL10nId}`
+  );
+}
+
+function denyTranslationsPermissionForSite(url) {
+  return SpecialPowers.pushPermissions([
+    {
+      type: kTranslationsPermission,
+      allow: false,
+      context: url,
+    },
+  ]);
+}
+
 /**
  * Navigate to a URL and indicate a message as to why.
  */
-function navigate(url, message) {
+async function navigate(url, message) {
   info(message);
+
+  BrowserTestUtils.loadURIString(gBrowser.selectedBrowser, BLANK_PAGE);
+  await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
+
   BrowserTestUtils.loadURIString(gBrowser.selectedBrowser, url);
+  await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
 }
 
 /**

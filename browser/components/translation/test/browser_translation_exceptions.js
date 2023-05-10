@@ -3,25 +3,26 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // tests the translation infobar, using a fake 'Translation' implementation.
+// TODO (Bug 1817084) Remove this file when we disable the extension
 
 const { PermissionTestUtils } = ChromeUtils.importESModule(
   "resource://testing-common/PermissionTestUtils.sys.mjs"
 );
 
 const kLanguagesPref = "browser.translation.neverForLanguages";
-const kShowUIPref = "browser.translation.ui.show";
+const kEnableTranslationsPref = "browser.translation.ui.show";
 const kEnableTranslationPref = "browser.translation.detectLanguage";
 
 function test() {
   waitForExplicitFinish();
 
-  Services.prefs.setBoolPref(kShowUIPref, true);
+  Services.prefs.setBoolPref(kEnableTranslationsPref, true);
   Services.prefs.setBoolPref(kEnableTranslationPref, true);
   let tab = BrowserTestUtils.addTab(gBrowser);
   gBrowser.selectedTab = tab;
   registerCleanupFunction(function() {
     gBrowser.removeTab(tab);
-    Services.prefs.clearUserPref(kShowUIPref);
+    Services.prefs.clearUserPref(kEnableTranslationsPref);
     Services.prefs.clearUserPref(kEnableTranslationPref);
   });
   BrowserTestUtils.browserLoaded(tab.linkedBrowser).then(() => {
@@ -42,7 +43,7 @@ function test() {
   );
 }
 
-function getLanguageExceptions() {
+function getNeverTranslateLanguages() {
   let langs = Services.prefs.getCharPref(kLanguagesPref);
   return langs ? langs.split(",") : [];
 }
@@ -96,7 +97,7 @@ var gTests = [
     desc: "clean exception lists at startup",
     run: function checkNeverForLanguage() {
       is(
-        getLanguageExceptions().length,
+        getNeverTranslateLanguages().length,
         0,
         "we start with an empty list of languages to never translate"
       );
@@ -140,7 +141,7 @@ var gTests = [
       // Click the 'Remove' button.
       remove.click();
       is(tree.view.rowCount, 1, "The language exceptions now contains 1 item");
-      is(getLanguageExceptions().length, 1, "One exception in the pref");
+      is(getNeverTranslateLanguages().length, 1, "One exception in the pref");
 
       // Clear the pref, and check the last item is removed from the display.
       Services.prefs.setCharPref(kLanguagesPref, "");
