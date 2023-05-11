@@ -17,6 +17,15 @@ const TRANSLATIONS_TESTER_ES =
 const TRANSLATIONS_TESTER_NO_TAG =
   URL_PREFIX + DIR_PATH + "translations-tester-no-tag.html";
 
+async function resolveAllDownloads(remoteClients, languagePairs) {
+  await remoteClients.languageIdModels.resolvePendingDownloads(1);
+  // The language id and translation engine each have a wasm file, so expect 2 downloads.
+  await remoteClients.translationsWasm.resolvePendingDownloads(2);
+  await remoteClients.translationModels.resolvePendingDownloads(
+    languagePairs.length * FILES_PER_LANGUAGE_PAIR
+  );
+}
+
 /**
  * The mochitest runs in the parent process. This function opens up a new tab,
  * opens up about:translations, and passes the test requirements into the content process.
@@ -57,7 +66,7 @@ async function openAboutTranslations({
   runInPage,
   detectedLanguageConfidence,
   detectedLangTag,
-  languagePairs,
+  languagePairs = DEFAULT_LANGUAGE_PAIRS,
   prefs,
 }) {
   await SpecialPowers.pushPrefEnv({
@@ -90,18 +99,18 @@ async function openAboutTranslations({
     true // waitForLoad
   );
 
-  if (languagePairs) {
-    // Before loading about:translations, handle the mocking of the actor.
-    TranslationsParent.mockLanguagePairs(languagePairs);
-  }
-  TranslationsParent.mockLanguageIdentification(
-    detectedLangTag ?? "en",
-    detectedLanguageConfidence ?? "0.5"
-  );
+  const { removeMocks, remoteClients } = await createAndMockRemoteSettings({
+    languagePairs,
+    detectedLangTag,
+    detectedLanguageConfidence,
+  });
 
   // Now load the about:translations page, since the actor could be mocked.
   BrowserTestUtils.loadURIString(tab.linkedBrowser, "about:translations");
   await BrowserTestUtils.browserLoaded(tab.linkedBrowser);
+
+  // Automatically resolve the files.
+  await resolveAllDownloads(remoteClients, languagePairs);
 
   await ContentTask.spawn(
     tab.linkedBrowser,
@@ -109,12 +118,8 @@ async function openAboutTranslations({
     runInPage
   );
 
-  if (languagePairs) {
-    TranslationsParent.mockLanguagePairs(null);
-  }
-  if (detectedLangTag && detectedLanguageConfidence) {
-    TranslationsParent.mockLanguageIdentification(null, null);
-  }
+  removeMocks();
+
   BrowserTestUtils.removeTab(tab);
   await SpecialPowers.popPrefEnv();
 }
@@ -284,19 +289,11 @@ async function setupActorTest({
     ],
   });
 
-  if (languagePairs) {
-    const translationModels = await createTranslationModelsRemoteClient(
-      languagePairs
-    );
-    TranslationsParent.translationModelsRemoteClient = translationModels.client;
-  }
-
-  if (detectedLangTag && detectedLanguageConfidence) {
-    TranslationsParent.mockLanguageIdentification(
-      detectedLangTag,
-      detectedLanguageConfidence
-    );
-  }
+  const { remoteClients, removeMocks } = await createAndMockRemoteSettings({
+    languagePairs,
+    detectedLangTag,
+    detectedLanguageConfidence,
+  });
 
   /** @type {import("../../actors/TranslationsParent.sys.mjs").TranslationsParent} */
   const actor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
@@ -305,11 +302,49 @@ async function setupActorTest({
 
   return {
     actor,
+    remoteClients,
     cleanup() {
-      TranslationsParent.translationModelsRemoteClient = null;
-      TranslationsParent.mockLanguageIdentification(null, null);
+      removeMocks();
       return SpecialPowers.popPrefEnv();
     },
+  };
+}
+
+/**
+ * Provide some default language pairs when none are provided.
+ */
+const DEFAULT_LANGUAGE_PAIRS = [
+  { fromLang: "en", toLang: "es", isBeta: false },
+  { fromLang: "es", toLang: "en", isBeta: false },
+];
+
+async function createAndMockRemoteSettings({
+  languagePairs = DEFAULT_LANGUAGE_PAIRS,
+  detectedLanguageConfidence = 0.5,
+  detectedLangTag = "en",
+}) {
+  const remoteClients = {
+    translationModels: await createTranslationModelsRemoteClient(languagePairs),
+    translationsWasm: await createTranslationsWasmRemoteClient(),
+    languageIdModels: await createLanguageIdModelsRemoteClient(),
+  };
+
+  TranslationsParent.mockTranslationsEngine(
+    remoteClients.translationModels.client,
+    remoteClients.translationsWasm.client
+  );
+
+  TranslationsParent.mockLanguageIdentification(
+    detectedLangTag,
+    detectedLanguageConfidence,
+    remoteClients.languageIdModels.client
+  );
+  return {
+    removeMocks() {
+      TranslationsParent.unmockTranslationsEngine();
+      TranslationsParent.unmockLanguageIdentification();
+    },
+    remoteClients,
   };
 }
 
@@ -336,36 +371,28 @@ async function loadTestPage({
     true // waitForLoad
   );
 
-  // Before loading the page, handle any mocking of the actor.
-  if (languagePairs) {
-    TranslationsParent.mockLanguagePairs(languagePairs);
-  }
-
-  if (detectedLangTag && detectedLanguageConfidence) {
-    TranslationsParent.mockLanguageIdentification(
-      detectedLangTag,
-      detectedLanguageConfidence
-    );
-  }
+  const { remoteClients, removeMocks } = await createAndMockRemoteSettings({
+    languagePairs,
+    detectedLanguageConfidence,
+    detectedLangTag,
+  });
 
   BrowserTestUtils.loadURIString(tab.linkedBrowser, page);
   await BrowserTestUtils.browserLoaded(tab.linkedBrowser);
 
   return {
     tab,
+    remoteClients,
+
+    resolveDownloads() {
+      return resolveAllDownloads(remoteClients, languagePairs);
+    },
 
     /**
      * @returns {Promise<void>}
      */
     cleanup() {
-      if (languagePairs) {
-        TranslationsParent.mockLanguagePairs(null);
-      }
-
-      if (detectedLangTag && detectedLanguageConfidence) {
-        TranslationsParent.mockLanguageIdentification(null, null);
-      }
-
+      removeMocks();
       BrowserTestUtils.removeTab(tab);
       return SpecialPowers.popPrefEnv();
     },
@@ -427,7 +454,8 @@ async function captureTranslationsError(callback) {
  * @param {Object} options - The options for `loadTestPage` plus a `runInPage` function.
  */
 async function loadTestPageAndRun(options) {
-  const { cleanup, runInPage } = await loadTestPage(options);
+  const { cleanup, runInPage, resolveDownloads } = await loadTestPage(options);
+  await resolveDownloads();
   await runInPage(options.runInPage);
   await cleanup();
 }
@@ -506,6 +534,11 @@ function createAttachmentMock(client) {
 }
 
 /**
+ * The amount of files that are generated per mocked language pair.
+ */
+const FILES_PER_LANGUAGE_PAIR = 4;
+
+/**
  * Creates a local RemoteSettingsClient for use within tests.
  *
  * @param {Object[]} langPairs
@@ -521,6 +554,10 @@ async function createTranslationModelsRemoteClient(langPairs) {
       { fileType: "qualityModel", name: `qualityModel.${lang}.bin` },
       { fileType: "vocab", name: `vocab.${lang}.spm` },
     ];
+
+    if (models.length !== FILES_PER_LANGUAGE_PAIR) {
+      throw new Error("Files per language pair was wrong.");
+    }
 
     for (const { fileType, name } of models) {
       records.push({
@@ -705,18 +742,9 @@ async function setupAboutPreferences(languagePairs) {
     true // waitForLoad
   );
 
-  const remoteClients = {
-    translationModels: await createTranslationModelsRemoteClient(languagePairs),
-    translationsWasm: await createTranslationsWasmRemoteClient(),
-    languageIdModels: await createLanguageIdModelsRemoteClient(),
-  };
-
-  TranslationsParent.translationModelsRemoteClient =
-    remoteClients.translationModels.client;
-  TranslationsParent.translationsWasmRemoteClient =
-    remoteClients.translationsWasm.client;
-  TranslationsParent.languageIdModelsRemoteClient =
-    remoteClients.languageIdModels.client;
+  const { remoteClients, removeMocks } = await createAndMockRemoteSettings({
+    languagePairs,
+  });
 
   BrowserTestUtils.loadURIString(tab.linkedBrowser, "about:preferences");
   await BrowserTestUtils.browserLoaded(tab.linkedBrowser);
@@ -725,10 +753,7 @@ async function setupAboutPreferences(languagePairs) {
 
   async function cleanup() {
     gBrowser.removeCurrentTab();
-    TranslationsParent.translationModelsRemoteClient = null;
-    TranslationsParent.translationsWasmRemoteClient = null;
-    TranslationsParent.languageIdModelsRemoteClient = null;
-
+    removeMocks();
     await SpecialPowers.popPrefEnv();
   }
 
