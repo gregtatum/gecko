@@ -160,8 +160,8 @@ add_task(async function test_translations_panel() {
 /**
  * Tests translating, and then immediately translating to a new language.
  */
-add_task(async function test_translations_panel() {
-  const { cleanup, runInPage } = await loadTestPage({
+add_task(async function test_translations_panel_retry() {
+  const { cleanup, resolveDownloads, runInPage } = await loadTestPage({
     page: spanishPageUrl,
     languagePairs,
   });
@@ -191,6 +191,8 @@ add_task(async function test_translations_panel() {
     );
   });
 
+  await resolveDownloads(1);
+
   await runInPage(async TranslationsTest => {
     const { getH1 } = TranslationsTest.getSelectors();
     await TranslationsTest.assertTranslationResult(
@@ -216,6 +218,9 @@ add_task(async function test_translations_panel() {
     );
   });
 
+  // This is a pivot language which requires 2 models.
+  await resolveDownloads(2);
+
   await runInPage(async TranslationsTest => {
     const { getH1 } = TranslationsTest.getSelectors();
     await TranslationsTest.assertTranslationResult(
@@ -232,7 +237,7 @@ add_task(async function test_translations_panel() {
  * Tests switching the language.
  */
 add_task(async function test_translations_panel_switch_language() {
-  const { cleanup, runInPage } = await loadTestPage({
+  const { cleanup, resolveDownloads, runInPage } = await loadTestPage({
     page: spanishPageUrl,
     languagePairs,
   });
@@ -304,6 +309,8 @@ add_task(async function test_translations_panel_switch_language() {
       "Start translating by clicking the translate button."
     );
   });
+
+  await resolveDownloads(1);
 
   await runInPage(async TranslationsTest => {
     const { getH1 } = TranslationsTest.getSelectors();
