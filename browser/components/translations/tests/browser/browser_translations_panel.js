@@ -26,21 +26,21 @@ add_task(async function test_button_visible_navigation() {
   });
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    { button: true },
     "The button should be visible since the page can be translated from Spanish."
   );
 
   navigate(englishPageUrl, "Navigate to an English page.");
 
   await assertTranslationsButton(
-    button => button.hidden,
+    { button: false },
     "The button should be invisible since the page is in English."
   );
 
   navigate(spanishPageUrl, "Navigate back to a Spanish page.");
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    { button: true },
     "The button should be visible again since the page is in Spanish."
   );
 
@@ -59,7 +59,7 @@ add_task(async function test_button_visible() {
   });
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    { button: true },
     "The button should be visible since the page can be translated from Spanish."
   );
 
@@ -69,21 +69,21 @@ add_task(async function test_button_visible() {
   );
 
   await assertTranslationsButton(
-    button => button.hidden,
+    { button: false },
     "The button should be invisible since the tab is in English."
   );
 
   await switchTab(spanishTab);
 
   await assertTranslationsButton(
-    button => !button.hidden,
+    { button: true },
     "The button should be visible again since the page is in Spanish."
   );
 
   await switchTab(englishTab);
 
   await assertTranslationsButton(
-    button => button.hidden,
+    { button: false },
     "Don't show for english pages"
   );
 
@@ -100,8 +100,8 @@ add_task(async function test_translations_panel_basics() {
     languagePairs,
   });
 
-  const button = await assertTranslationsButton(
-    b => !b.hidden,
+  const { button } = await assertTranslationsButton(
+    { button: true, circleArrows: false, locale: false, icon: true },
     "The button is available."
   );
 
@@ -125,7 +125,19 @@ add_task(async function test_translations_panel_basics() {
     );
   });
 
+  await assertTranslationsButton(
+    { button: true, circleArrows: true, locale: false, icon: true },
+    "The icon presents the loading indicator."
+  );
+
   await resolveDownloads(1);
+
+  const { locale } = await assertTranslationsButton(
+    { button: true, circleArrows: false, locale: true, icon: true },
+    "The icon presents the locale."
+  );
+
+  is(locale.innerText, "en", "The English language tag is shown.");
 
   await runInPage(async TranslationsTest => {
     const { getH1 } = TranslationsTest.getSelectors();
@@ -156,6 +168,11 @@ add_task(async function test_translations_panel_basics() {
     );
   });
 
+  await assertTranslationsButton(
+    { button: true, circleArrows: false, locale: false, icon: true },
+    "The button is reverted to have an icon."
+  );
+
   await cleanup();
 });
 
@@ -168,8 +185,8 @@ add_task(async function test_translations_panel_retry() {
     languagePairs,
   });
 
-  const button = await assertTranslationsButton(
-    b => !b.hidden,
+  const { button } = await assertTranslationsButton(
+    { button: true },
     "The button is available."
   );
 
@@ -244,8 +261,8 @@ add_task(async function test_translations_panel_switch_language() {
     languagePairs,
   });
 
-  const button = await assertTranslationsButton(
-    b => !b.hidden,
+  const { button } = await assertTranslationsButton(
+    { button: true },
     "The button is available."
   );
 
@@ -335,8 +352,8 @@ add_task(async function test_translations_panel_cancel() {
     languagePairs,
   });
 
-  const button = await assertTranslationsButton(
-    b => !b.hidden,
+  const { button } = await assertTranslationsButton(
+    { button: true },
     "The button is available."
   );
 
@@ -409,8 +426,8 @@ add_task(async function test_translations_panel_manage_languages() {
     languagePairs,
   });
 
-  const button = await assertTranslationsButton(
-    b => !b.hidden,
+  const { button } = await assertTranslationsButton(
+    { button: true },
     "The button is available."
   );
 
