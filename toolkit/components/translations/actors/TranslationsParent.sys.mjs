@@ -21,6 +21,7 @@ const PIVOT_LANGUAGE = "en";
 
 const kAlwaysTranslateLangsPref =
   "browser.translations.alwaysTranslateLanguages";
+const kNeverTranslateLangsPref = "browser.translations.neverTranslateLanguages";
 
 const lazy = {};
 
@@ -57,6 +58,18 @@ XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "alwaysTranslateLangTags",
   kAlwaysTranslateLangsPref,
+  /* aDefaultValue */ [],
+  /* onUpdate */ null,
+  /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
+);
+
+/**
+ * Returns the never-translate language tags as an array.
+ */
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "neverTranslateLangTags",
+  kNeverTranslateLangsPref,
   /* aDefaultValue */ [],
   /* onUpdate */ null,
   /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
@@ -355,6 +368,9 @@ export class TranslationsParent extends JSWindowActorParent {
 
         // The page can be auto-translated
         return true;
+      }
+      case "Translations:MaybeNeverTranslate": {
+        return TranslationsParent.shouldNeverTranslateLanguage(data.docLangTag);
       }
       case "Translations:ReportDetectedLangTags": {
         this.languageState.detectedLanguages = data.langTags;
@@ -1385,16 +1401,27 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * Returns true if the given language tag is present in the never-translate
+   * languages preference, otherwise false.
+   *
+   * @param {string} langTag - A BCP-47 language tag
+   * @returns {boolean}
+   */
+  static shouldNeverTranslateLanguage(langTag) {
+    return lazy.neverTranslateLangTags.includes(langTag);
+  }
+
+  /**
    * Removes the given language tag from the given preference.
    *
    * @param {string} langTag - A BCP-47 language tag
    * @param {string} prefName - The pref name
    */
   static #removeLangTagFromPref(langTag, prefName) {
-    if (prefName !== kAlwaysTranslateLangsPref) {
-      return;
-    }
-    const langTags = lazy.alwaysTranslateLangTags;
+    const langTags =
+      prefName === kAlwaysTranslateLangsPref
+        ? lazy.alwaysTranslateLangTags
+        : lazy.neverTranslateLangTags;
     const newLangTags = langTags.filter(tag => tag !== langTag);
     Services.prefs.setCharPref(
       prefName,
@@ -1409,10 +1436,10 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} prefName - The pref name
    */
   static #addLangTagToPref(langTag, prefName) {
-    if (prefName !== kAlwaysTranslateLangsPref) {
-      return;
-    }
-    const langTags = lazy.alwaysTranslateLangTags;
+    const langTags =
+      prefName === kAlwaysTranslateLangsPref
+        ? lazy.alwaysTranslateLangTags
+        : lazy.neverTranslateLangTags;
     if (!langTags.includes(langTag)) {
       langTags.push(langTag);
     }
@@ -1433,6 +1460,22 @@ export class TranslationsParent extends JSWindowActorParent {
       this.#removeLangTagFromPref(langTag, kAlwaysTranslateLangsPref);
     } else {
       this.#addLangTagToPref(langTag, kAlwaysTranslateLangsPref);
+      this.#removeLangTagFromPref(langTag, kNeverTranslateLangsPref);
+    }
+  }
+
+  /**
+   * Toggles the never-translate language preference by adding the language
+   * to the pref list if it is not present, or removing it if it is present.
+   *
+   * @param {string} langTag - A BCP-47 language tag
+   */
+  static toggleNeverTranslateLanguagePref(langTag) {
+    if (TranslationsParent.shouldNeverTranslateLanguage(langTag)) {
+      this.#removeLangTagFromPref(langTag, kNeverTranslateLangsPref);
+    } else {
+      this.#addLangTagToPref(langTag, kNeverTranslateLangsPref);
+      this.#removeLangTagFromPref(langTag, kAlwaysTranslateLangsPref);
     }
   }
 }

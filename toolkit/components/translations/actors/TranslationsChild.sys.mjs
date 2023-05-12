@@ -719,7 +719,8 @@ export class TranslationsChild extends JSWindowActorChild {
 
     if (
       langTags &&
-      (await this.sendQuery("Translations:MaybeAutoTranslate", langTags))
+      (await this.sendQuery("Translations:MaybeAutoTranslate", langTags)) &&
+      !(await this.sendQuery("Translations:MaybeNeverTranslate", langTags))
     ) {
       this.translatePage(
         langTags.docLangTag,
