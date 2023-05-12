@@ -19,6 +19,9 @@
  */
 const PIVOT_LANGUAGE = "en";
 
+const kAlwaysTranslateLangsPref =
+  "browser.translations.alwaysTranslateLanguages";
+
 const lazy = {};
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
@@ -45,6 +48,18 @@ XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "autoTranslatePagePref",
   "browser.translations.autoTranslate"
+);
+
+/**
+ * Returns the always-translate language tags as an array.
+ */
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "alwaysTranslateLangTags",
+  kAlwaysTranslateLangsPref,
+  /* aDefaultValue */ [],
+  /* onUpdate */ null,
+  /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -316,7 +331,12 @@ export class TranslationsParent extends JSWindowActorParent {
         return this.getLanguagePairs();
       }
       case "Translations:MaybeAutoTranslate": {
-        if (!lazy.autoTranslatePagePref) {
+        if (
+          // The user has not marked this language as always translate.
+          !TranslationsParent.shouldAlwaysTranslateLanguage(data.docLangTag) &&
+          // The pref to always auto-translate is off.
+          !lazy.autoTranslatePagePref
+        ) {
           return false;
         }
 
@@ -1286,7 +1306,7 @@ export class TranslationsParent extends JSWindowActorParent {
       // This page has already been translated, restore it and translate it
       // again once the actor has been recreated.
       TranslationsParent.#translateOnPageReload = { fromLanguage, toLanguage };
-      this.restorePage();
+      this.restorePage(fromLanguage);
     } else {
       this.languageState.requestedTranslationPair = {
         fromLanguage,
@@ -1301,9 +1321,14 @@ export class TranslationsParent extends JSWindowActorParent {
 
   /**
    * Restore the page to the original language by doing a hard reload.
+   *
+   * @param {string} fromLanguage A BCP-47 language tag
    */
-  restorePage() {
-    if (lazy.autoTranslatePagePref) {
+  restorePage(fromLanguage) {
+    if (
+      lazy.autoTranslatePagePref ||
+      TranslationsParent.shouldAlwaysTranslateLanguage(fromLanguage)
+    ) {
       // Skip auto-translate for one page load.
       TranslationsParent.#isPageRestoredForAutoTranslate = true;
     }
@@ -1346,6 +1371,69 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   getLangTagsForTranslation() {
     return this.sendQuery("Translations:GetLangTagsForTranslation");
+  }
+
+  /**
+   * Returns true if the given language tag is present in the always-translate
+   * languages preference, otherwise false.
+   *
+   * @param {string} langTag - A BCP-47 language tag
+   * @returns {boolean}
+   */
+  static shouldAlwaysTranslateLanguage(langTag) {
+    return lazy.alwaysTranslateLangTags.includes(langTag);
+  }
+
+  /**
+   * Removes the given language tag from the given preference.
+   *
+   * @param {string} langTag - A BCP-47 language tag
+   * @param {string} prefName - The pref name
+   */
+  static #removeLangTagFromPref(langTag, prefName) {
+    if (prefName !== kAlwaysTranslateLangsPref) {
+      return;
+    }
+    const langTags = lazy.alwaysTranslateLangTags;
+    const newLangTags = langTags.filter(tag => tag !== langTag);
+    Services.prefs.setCharPref(
+      prefName,
+      newLangTags.length === 1 ? newLangTags[0] : newLangTags.join(",")
+    );
+  }
+
+  /**
+   * Adds the given language tag to the given preference.
+   *
+   * @param {string} langTag - A BCP-47 language tag
+   * @param {string} prefName - The pref name
+   */
+  static #addLangTagToPref(langTag, prefName) {
+    if (prefName !== kAlwaysTranslateLangsPref) {
+      return;
+    }
+    const langTags = lazy.alwaysTranslateLangTags;
+    if (!langTags.includes(langTag)) {
+      langTags.push(langTag);
+    }
+    Services.prefs.setCharPref(
+      prefName,
+      langTags.length > 1 ? langTags.join(",") : langTags[0]
+    );
+  }
+
+  /**
+   * Toggles the always-translate language preference by adding the language
+   * to the pref list if it is not present, or removing it if it is present.
+   *
+   * @param {string} langTag - A BCP-47 language tag
+   */
+  static toggleAlwaysTranslateLanguagePref(langTag) {
+    if (TranslationsParent.shouldAlwaysTranslateLanguage(langTag)) {
+      this.#removeLangTagFromPref(langTag, kAlwaysTranslateLangsPref);
+    } else {
+      this.#addLangTagToPref(langTag, kAlwaysTranslateLangsPref);
+    }
   }
 }
 
