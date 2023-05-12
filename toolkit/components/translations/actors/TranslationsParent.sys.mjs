@@ -19,6 +19,7 @@
  */
 const PIVOT_LANGUAGE = "en";
 
+const kTranslationsPermission = "translations";
 const kAlwaysTranslateLangsPref =
   "browser.translations.alwaysTranslateLanguages";
 const kNeverTranslateLangsPref = "browser.translations.neverTranslateLanguages";
@@ -370,7 +371,10 @@ export class TranslationsParent extends JSWindowActorParent {
         return true;
       }
       case "Translations:MaybeNeverTranslate": {
-        return TranslationsParent.shouldNeverTranslateLanguage(data.docLangTag);
+        return (
+          this.shouldNeverTranslateSite() ||
+          TranslationsParent.shouldNeverTranslateLanguage(data.docLangTag)
+        );
       }
       case "Translations:ReportDetectedLangTags": {
         this.languageState.detectedLanguages = data.langTags;
@@ -1390,6 +1394,14 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * Returns the principal from the content window's origin.
+   * @returns {nsIPrincipal}
+   */
+  getContentWindowPrincipal() {
+    return this.sendQuery("Translations:GetContentWindowPrincipal");
+  }
+
+  /**
    * Returns true if the given language tag is present in the always-translate
    * languages preference, otherwise false.
    *
@@ -1409,6 +1421,29 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static shouldNeverTranslateLanguage(langTag) {
     return lazy.neverTranslateLangTags.includes(langTag);
+  }
+
+  /**
+   * Returns true if the current site is denied permissions to translate,
+   * otherwise returns false.
+   *
+   * @returns {Promise<boolean>}
+   */
+  async shouldNeverTranslateSite() {
+    let principal;
+    try {
+      principal = await this.getContentWindowPrincipal();
+    } catch {
+      // Unable to get content window principal.
+      return false;
+    }
+    const perms = Services.perms;
+    const permission = perms.getPermissionObject(
+      principal,
+      kTranslationsPermission,
+      /* exactHost */ false
+    );
+    return permission?.capability === perms.DENY_ACTION;
   }
 
   /**
@@ -1476,6 +1511,25 @@ export class TranslationsParent extends JSWindowActorParent {
     } else {
       this.#addLangTagToPref(langTag, kNeverTranslateLangsPref);
       this.#removeLangTagFromPref(langTag, kAlwaysTranslateLangsPref);
+    }
+  }
+
+  /**
+   * Toggles the never-translate site permissions by adding DENY_ACTION to
+   * the site principal if it is not present, or removing it if it is present.
+   */
+  async toggleNeverTranslateSitePermissions() {
+    const perms = Services.perms;
+    const principal = await this.getContentWindowPrincipal();
+    const shouldNeverTranslateSite = await this.shouldNeverTranslateSite();
+    if (shouldNeverTranslateSite) {
+      perms.removeFromPrincipal(principal, kTranslationsPermission);
+    } else {
+      perms.addFromPrincipal(
+        principal,
+        kTranslationsPermission,
+        perms.DENY_ACTION
+      );
     }
   }
 }
