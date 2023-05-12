@@ -3,6 +3,8 @@
 
 "use strict";
 
+const kTranslationsPermission = "translations";
+
 Services.scriptloader.loadSubScript(
   "chrome://mochitests/content/browser/toolkit/components/translations/tests/browser/shared-head.js",
   this
@@ -12,7 +14,7 @@ Services.scriptloader.loadSubScript(
  * Assert some property about the translations button.
  *
  * @param {Function} assertion
- * @param {string} message The messag for the assertion.
+ * @param {string} message The message for the assertion.
  * @returns {HTMLElement}
  */
 function assertTranslationsButton(assertion, message) {
@@ -30,11 +32,120 @@ function assertTranslationsButton(assertion, message) {
 }
 
 /**
+ * A convenience function to open the preferences menu of the
+ * translations panel. Fails the test if the menu cannot be opened.
+ */
+async function openPreferencesMenu() {
+  const button = await assertTranslationsButton(
+    b => !b.hidden,
+    "The button is available."
+  );
+
+  await waitForTranslationsPopupEvent("popupshown", () => {
+    click(button, "Opening the popup");
+  });
+
+  const gearIcon = getByL10nId("translations-panel-settings-button");
+  click(gearIcon, "Open the preferences menu");
+}
+
+/**
+ * Simulates the effect of clicking the always-translate-language menuitem.
+ * Requires that the preferences menu of the translations panel is open,
+ * otherwise the test will fail.
+ */
+async function toggleAlwaysTranslateLanguage() {
+  const alwaysTranslateLanguage = getByL10nId(
+    "translations-panel-settings-always-translate-language"
+  );
+  info("Toggle the always-translate-language menuitem");
+  await alwaysTranslateLanguage.doCommand();
+}
+
+/**
+ * Simulates the effect of clicking the never-translate-language menuitem.
+ * Requires that the preferences menu of the translations panel is open,
+ * otherwise the test will fail.
+ */
+async function toggleNeverTranslateLanguage() {
+  const neverTranslateLanguage = getByL10nId(
+    "translations-panel-settings-never-translate-language"
+  );
+  info("Toggle the never-translate-language menuitem");
+  await neverTranslateLanguage.doCommand();
+}
+
+/**
+ * Simulates the effect of clicking the never-translate-site menuitem.
+ * Requires that the preferences menu of the translations panel is open,
+ * otherwise the test will fail.
+ */
+async function toggleNeverTranslateSite() {
+  const neverTranslateSite = getByL10nId(
+    "translations-panel-settings-never-translate-site"
+  );
+  info("Toggle the never-translate-site menuitem");
+  await neverTranslateSite.doCommand();
+}
+
+/**
+ * Asserts that the state of a checkbox with a given dataL10nId is
+ * checked or not, based on the value of expected being true or false.
+ *
+ * @param {boolean} expected - Whether the checkbox should be checked.
+ * @param {string} dataL10nId - The data-l10n-id of the checkbox.
+ */
+async function assertCheckboxState(expected, dataL10nId) {
+  const menuItem = getByL10nId(dataL10nId);
+  await TestUtils.waitForCondition(
+    () => menuItem.getAttribute("checked") === (expected ? "true" : "false"),
+    "Waiting for checkbox state"
+  );
+  is(
+    menuItem.getAttribute("checked"),
+    expected ? "true" : "false",
+    `Should match expected checkbox state for ${dataL10nId}`
+  );
+}
+
+/**
+ * A convenience function to deny translations permissions for a site.
+ *
+ * Unfortunately, there doesn't seem to be a separate environment for
+ * permissions that can be pushed onto SpecialPowers like for prefs.
+ *
+ * This means that toggling the never-translate-languages menuitem
+ * affects other test cases after cleanup.
+ *
+ * This function adds a permission in a way that can be cleaned up
+ * after the test case runs. It would be nice to improve the tests
+ * to not need this workaround.
+ *
+ * @param {string} url The url of the website
+ */
+function denyTranslationsPermissionForSite(url) {
+  return SpecialPowers.pushPermissions([
+    {
+      type: kTranslationsPermission,
+      allow: false,
+      context: url,
+    },
+  ]);
+}
+
+/**
  * Navigate to a URL and indicate a message as to why.
  */
-function navigate(url, message) {
+async function navigate(url, message) {
   info(message);
+
+  // Load a blank page first to ensure that tests don't hang.
+  // I don't know why this is needed, but it appears to be necessary.
+  BrowserTestUtils.loadURIString(gBrowser.selectedBrowser, BLANK_PAGE);
+  await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
+
   BrowserTestUtils.loadURIString(gBrowser.selectedBrowser, url);
+  await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
 }
 
 /**

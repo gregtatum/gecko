@@ -8,7 +8,7 @@
  */
 add_task(async function test_full_page_translation() {
   await loadTestPageAndRun({
-    page: TRANSLATIONS_TESTER_ES,
+    page: TRANSLATIONS_TESTER_ES_DOT_COM,
     prefs: [["browser.translations.autoTranslate", true]],
     languagePairs: [
       { fromLang: "es", toLang: "en", isBeta: false },
