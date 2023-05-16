@@ -240,8 +240,37 @@ export class TranslationsParent extends JSWindowActorParent {
 
   async receiveMessage({ name, data }) {
     switch (name) {
-      case "Translations:GetBergamotWasmArrayBuffer": {
-        return this.#getBergamotWasmArrayBuffer();
+      case "Translations:GetTranslationsEnginePayload": {
+        const { fromLanguage, toLanguage } = data;
+        const bergamotWasmArrayBuffer = this.#getBergamotWasmArrayBuffer();
+
+        let files = await this.getLanguageTranslationModelFiles(
+          fromLanguage,
+          toLanguage
+        );
+
+        let languageModelFiles;
+        if (files) {
+          languageModelFiles = [files];
+        } else {
+          // No matching model was found, try to pivot between English.
+          const [files1, files2] = await Promise.all([
+            this.getLanguageTranslationModelFiles(fromLanguage, PIVOT_LANGUAGE),
+            this.getLanguageTranslationModelFiles(PIVOT_LANGUAGE, toLanguage),
+          ]);
+          if (!files1 || !files2) {
+            throw new Error(
+              `No language models were found for ${fromLanguage} to ${toLanguage}`
+            );
+          }
+          languageModelFiles = [files1, files2];
+        }
+
+        return {
+          bergamotWasmArrayBuffer: await bergamotWasmArrayBuffer,
+          languageModelFiles,
+          isMocked: TranslationsParent.#isTranslationsEngineMocked,
+        };
       }
       case "Translations:GetLanguageIdEnginePayload": {
         const [modelBuffer, wasmBuffer] = await Promise.all([
@@ -264,28 +293,6 @@ export class TranslationsParent extends JSWindowActorParent {
       case "Translations:FullPageTranslationFailed": {
         this.languageState.error = data.reason;
         break;
-      }
-      case "Translations:GetLanguageTranslationModelFiles": {
-        const { fromLanguage, toLanguage } = data;
-        const files = await this.getLanguageTranslationModelFiles(
-          fromLanguage,
-          toLanguage
-        );
-        if (files) {
-          // No pivoting is required.
-          return [files];
-        }
-        // No matching model was found, try to pivot between English.
-        const [files1, files2] = await Promise.all([
-          this.getLanguageTranslationModelFiles(fromLanguage, PIVOT_LANGUAGE),
-          this.getLanguageTranslationModelFiles(PIVOT_LANGUAGE, toLanguage),
-        ]);
-        if (!files1 || !files2) {
-          throw new Error(
-            `No language models were found for ${fromLanguage} to ${toLanguage}`
-          );
-        }
-        return [files1, files2];
       }
       case "Translations:GetSupportedLanguages": {
         return this.getSupportedLanguages();
