@@ -54,6 +54,11 @@ translations-panel-dual-header =
   .title = Translate this page?
 translations-panel-dual-cancel-button = Cancel
 
+## These messages are shown when the translations panel is invoked from the main app
+## menu.
+
+translations-panel-app-menu-header = Translate this page?
+
 ## Each label is followed, on a new line, by a dropdown list of language names.
 ## If this structure is problematic for your locale, an alternative way is to
 ## translate them as `Source language:` and `Target language:`

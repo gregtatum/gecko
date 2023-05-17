@@ -100,11 +100,13 @@ var TranslationsPanel = new (class {
       };
 
       getter("button", "translations-button");
+      getter("appMenuButton", "PanelUI-menu-button");
       getter("buttonLocale", "translations-button-locale");
       getter("buttonCircleArrows", "translations-button-circle-arrows");
       getter("defaultDescription", "translations-panel-default-description");
       getter("defaultToMenuList", "translations-panel-default-to");
       getter("dualFromMenuList", "translations-panel-dual-from");
+      getter("dualPanelView", "translations-panel-view-dual");
       getter("dualToMenuList", "translations-panel-dual-to");
       getter("dualTranslate", "translations-panel-dual-translate");
       getter("error", "translations-panel-error");
@@ -226,6 +228,8 @@ var TranslationsPanel = new (class {
 
   /**
    * Switch to the dual language view of choosing a source and target language.
+   *
+   * @param {boolean} isSubView
    */
   showDualView() {
     const {
@@ -261,7 +265,6 @@ var TranslationsPanel = new (class {
    * (such as a network error) or be a noop if it's already initialized.
    */
   async #showDefaultView() {
-    await this.#ensureLangListsBuilt();
     const actor = this.#getTranslationsActor();
 
     const { defaultToMenuList, defaultDescription, multiview } = this.elements;
@@ -333,8 +336,6 @@ var TranslationsPanel = new (class {
       revisitTranslate,
     } = this.elements;
 
-    await this.#ensureLangListsBuilt();
-
     revisitMenuList.value = "";
     revisitTranslate.disabled = true;
     multiview.setAttribute("mainViewId", "translations-panel-view-revisit");
@@ -387,21 +388,31 @@ var TranslationsPanel = new (class {
   async open(event) {
     const { panel, button } = this.elements;
 
+    const isOpenFromUrlBar = button.contains(event.target);
+
     const {
       requestedTranslationPair,
     } = this.#getTranslationsActor().languageState;
+
+    await this.#ensureLangListsBuilt();
 
     if (requestedTranslationPair) {
       await this.#showRevisitView(requestedTranslationPair).catch(error => {
         this.console.error(error);
       });
-    } else {
+    } else if (isOpenFromUrlBar) {
       await this.#showDefaultView().catch(error => {
         this.console.error(error);
       });
+    } else {
+      this.showDualView();
     }
 
-    PanelMultiView.openPopup(panel, button, {
+    const targetButton = isOpenFromUrlBar
+      ? button
+      : this.elements.appMenuButton;
+
+    PanelMultiView.openPopup(panel, targetButton, {
       position: "bottomright topright",
       triggerEvent: event,
     }).catch(error => this.console.error(error));
