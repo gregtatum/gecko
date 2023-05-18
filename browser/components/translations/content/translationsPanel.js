@@ -102,11 +102,9 @@ var TranslationsPanel = new (class {
       getter("button", "translations-button");
       getter("buttonLocale", "translations-button-locale");
       getter("buttonCircleArrows", "translations-button-circle-arrows");
-      getter("defaultDescription", "translations-panel-default-description");
+      getter("defaultFromMenuList", "translations-panel-default-from");
       getter("defaultToMenuList", "translations-panel-default-to");
-      getter("dualFromMenuList", "translations-panel-dual-from");
-      getter("dualToMenuList", "translations-panel-dual-to");
-      getter("dualTranslate", "translations-panel-dual-translate");
+      getter("defaultTranslate", "translations-panel-default-translate");
       getter("error", "translations-panel-error");
       getter("errorMessage", "translations-panel-error-message");
       getter("multiview", "translations-panel-multiview");
@@ -223,23 +221,20 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * Switch to the dual language view of choosing a source and target language.
+   * Show the default view of choosing a source and target language.
    */
-  showDualView() {
+  #showDefaultView() {
     const {
-      dualTranslate,
-      dualFromMenuList,
-      dualToMenuList,
+      defaultTranslate,
+      defaultFromMenuList,
       multiview,
-      defaultToMenuList,
       panel,
     } = this.elements;
 
     // Remove any old selected values synchronously before asking for new ones.
-    dualFromMenuList.value = "";
-    dualToMenuList.value = defaultToMenuList.value;
+    defaultFromMenuList.value = "";
     // Disable this button since the user must choose a new "from" language.
-    dualTranslate.disabled = true;
+    defaultTranslate.disabled = true;
 
     multiview.showSubView("translations-panel-view-dual");
 
@@ -247,75 +242,10 @@ var TranslationsPanel = new (class {
     panel.addEventListener(
       "ViewShown",
       () => {
-        dualFromMenuList.focus();
+        defaultFromMenuList.focus();
       },
       { once: true }
     );
-  }
-
-  /**
-   * Builds the <menulist> of languages for both the "from" and "to". This can be
-   * called every time the popup is shown, as it will retry when there is an error
-   * (such as a network error) or be a noop if it's already initialized.
-   */
-  async #showDefaultView() {
-    await this.#ensureLangListsBuilt();
-    const actor = this.#getTranslationsActor();
-
-    const { defaultToMenuList, defaultDescription, multiview } = this.elements;
-
-    multiview.setAttribute("mainViewId", "translations-panel-view-default");
-
-    // Remove any old selected values synchronously before asking for new ones.
-    defaultToMenuList.value = "";
-
-    // TODO(Bug 1825801) - There is a race condition, we may download the languages, and
-    // later trigger the subview to be shown after opening the popup again. We need to
-    // properly handle this.
-
-    // TODO(Bug 1825801) - This could potentially be a bad pause, as we aren't showing
-    // the panel until the language list is ready. It's probably fine for a prototype,
-    // but should be handled for the MVP. We might want design direction here, as we need
-    // a subview for when the language list is still being retrieved.
-
-    /** @type {null | { appLangTag: string, docLangTag: string }} */
-    const langTags = await actor.getLangTagsForTranslation();
-
-    if (langTags) {
-      const { docLangTag, appLangTag } = langTags;
-      defaultToMenuList.value = appLangTag;
-      this.#docLangTag = docLangTag;
-    } else {
-      // TODO(Bug 1829687): Handle the case when we don't have the document langauge tag
-      // which can only be triggered when the panel is shown manually. Currently
-      // this will never be shown.
-      this.#docLangTag = "en";
-      this.console.error("No language tags for translation were found.");
-    }
-
-    // Show the default view.
-    const displayNames = new Services.intl.DisplayNames(undefined, {
-      type: "language",
-    });
-    document.l10n.setAttributes(
-      defaultDescription,
-      "translations-panel-default-description",
-      {
-        pageLanguage: displayNames.of(this.#docLangTag),
-      }
-    );
-
-    if (!this.#wasPanelShown) {
-      // Note if a profile has used translations before, we may want to include additional
-      // messaging for first time users.
-      this.#wasPanelShown = true;
-      Services.prefs.setBoolPref("browser.translations.panel.wasShown", true);
-    }
-
-    for (const menuitem of defaultToMenuList.querySelectorAll("menuitem")) {
-      // It is not valid to translate into the original doc language.
-      menuitem.disabled = menuitem.value === this.#docLangTag;
-    }
   }
 
   /**
@@ -364,13 +294,17 @@ var TranslationsPanel = new (class {
    * When changing the "dual" view's language, handle cases where the translate button
    * should be disabled.
    */
-  onChangeDualLanguages() {
-    const { dualTranslate, dualToMenuList, dualFromMenuList } = this.elements;
-    dualTranslate.disabled =
+  onChangeLanguages() {
+    const {
+      defaultTranslate,
+      defaultToMenuList,
+      defaultFromMenuList,
+    } = this.elements;
+    defaultTranslate.disabled =
       // The translation languages are the same, don't allow this translation.
-      dualToMenuList.value === dualFromMenuList.value ||
+      defaultToMenuList.value === defaultFromMenuList.value ||
       // No "from" language was provided.
-      !dualFromMenuList.value;
+      !defaultFromMenuList.value;
   }
 
   /**
@@ -401,16 +335,6 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * Handle the translation button being clicked on the default view.
-   */
-  async onDefaultTranslate() {
-    PanelMultiView.hidePopup(this.elements.panel);
-
-    const actor = this.#getTranslationsActor();
-    actor.translate(this.#docLangTag, this.elements.defaultToMenuList.value);
-  }
-
-  /**
    * Handle the translation button being clicked when there are two language options.
    */
   async onDualTranslate() {
@@ -418,8 +342,8 @@ var TranslationsPanel = new (class {
 
     const actor = this.#getTranslationsActor();
     actor.translate(
-      this.elements.dualFromMenuList.value,
-      this.elements.dualToMenuList.value
+      this.elements.defaultFromMenuList.value,
+      this.elements.defaultToMenuList.value
     );
   }
 

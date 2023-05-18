@@ -19,8 +19,6 @@ translations-panel-displayname-beta =
 
 translations-panel-settings-manage-languages =
   .label = Manage languages
-translations-panel-settings-change-source-language =
-  .label = Change source language
 # TODO(Bug 1831341): We still need the link for this menu item.
 translations-panel-settings-about = About translations in { -brand-shorter-name }
 
@@ -28,20 +26,6 @@ translations-panel-settings-about = About translations in { -brand-shorter-name 
 ## translation view.
 
 translations-panel-default-header = Translate this page?
-
-# If your language requires declining the language name, a possible solution
-# is to adapt the structure of the phrase, or use a support noun, e.g.
-# `Looks like this page is in another language ({ $pageLanguage }). Want to translate it?`
-# Variables:
-#   $pageLanguage (string) - The localized display name of the page's language
-translations-panel-default-description = Looks like this page is in { $pageLanguage }. Want to translate it?
-
-# This label is followed, on a new line, by a dropdown list of language names.
-# If this structure is problematic for your locale, an alternative way is to
-# translate this as `Target language:`
-translations-panel-default-translate-to-label = Translate to
-translations-panel-default-translate-button = Translate
-translations-panel-default-translate-cancel = Not now
 
 translations-panel-error-translating = There was a problem translating. Please try again.
 translations-panel-error-load-languages = Couldn’t load languages
@@ -58,8 +42,8 @@ translations-panel-dual-cancel-button = Cancel
 ## If this structure is problematic for your locale, an alternative way is to
 ## translate them as `Source language:` and `Target language:`
 
-translations-panel-dual-from-label = Translate from
-translations-panel-dual-to-label = Translate to
+translations-panel-default-from-label = Translate from
+translations-panel-default-to-label = Translate to
 
 ## The translation panel appears from the url bar, and this view is the "restore" view
 ## that lets a user restore a page to the original language, or translate into another
