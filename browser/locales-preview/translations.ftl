@@ -26,17 +26,12 @@ translations-panel-settings-about = About translations in { -brand-shorter-name 
 ## translation view.
 
 translations-panel-default-header = Translate this page?
+translations-panel-default-translate-button = Translate
+translations-panel-default-translate-cancel = Cancel
 
 translations-panel-error-translating = There was a problem translating. Please try again.
 translations-panel-error-load-languages = Couldn’t load languages
 translations-panel-error-load-languages-hint = Check your internet connection and try again.
-
-## The translation panel appears from the url bar, and this view is the "dual" translate
-## view that lets you choose a source language and target language for translation
-
-translations-panel-dual-header =
-  .title = Translate this page?
-translations-panel-dual-cancel-button = Cancel
 
 ## Each label is followed, on a new line, by a dropdown list of language names.
 ## If this structure is problematic for your locale, an alternative way is to

@@ -64,6 +64,22 @@
           <description id="translations-panel-error-message"></description>
         </hbox>
       </vbox>
+
+      <hbox class="panel-footer translations-panel-footer">
+        <button class="subviewbutton panel-subview-footer-button"
+                id="translations-panel-not-now"
+                oncommand="TranslationsPanel.onCancel(event);"
+                data-l10n-id="translations-panel-default-translate-cancel"
+                tabindex="0">
+        </button>
+        <button default="true"
+                id="translations-panel-default-translate"
+                class="subviewbutton panel-subview-footer-button"
+                oncommand="TranslationsPanel.onDefaultTranslate(event);"
+                data-l10n-id="translations-panel-default-translate-button"
+                tabindex="0">
+        </button>
+      </hbox>
     </panelview>
 
     <!-- Revisit the translations panel -->

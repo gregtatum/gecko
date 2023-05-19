@@ -223,20 +223,48 @@ var TranslationsPanel = new (class {
   /**
    * Show the default view of choosing a source and target language.
    */
-  #showDefaultView() {
+  async #showDefaultView() {
     const {
-      defaultTranslate,
       defaultFromMenuList,
+      defaultToMenuList,
       multiview,
       panel,
+      error,
     } = this.elements;
+
+    await this.#ensureLangListsBuilt();
 
     // Remove any old selected values synchronously before asking for new ones.
     defaultFromMenuList.value = "";
-    // Disable this button since the user must choose a new "from" language.
-    defaultTranslate.disabled = true;
+    error.hidden = true;
 
-    multiview.showSubView("translations-panel-view-dual");
+    const actor = this.#getTranslationsActor();
+
+    /** @type {null | { appLangTag: string, docLangTag: string }} */
+    const langTags = await actor.getLangTagsForTranslation();
+
+    if (langTags) {
+      const { docLangTag, appLangTag } = langTags;
+      defaultFromMenuList.value = docLangTag;
+      defaultToMenuList.value = appLangTag;
+      this.#docLangTag = docLangTag;
+    } else {
+      // No valid language tags were found for translating.
+      defaultFromMenuList.value = "";
+      this.#docLangTag = null;
+
+      // Attempt to default the "to" language to the app language.
+      for (const appLocale of Services.locale.appLocalesAsBCP47) {
+        const langTag = new Intl.Locale(appLocale).language;
+        if (defaultToMenuList.querySelector(`[value=${langTag}]`)) {
+          defaultToMenuList.value = langTag;
+          break;
+        }
+      }
+    }
+    this.onChangeLanguages();
+
+    multiview.setAttribute("mainViewId", "translations-panel-view-default");
 
     // Focus the "from" language, as it is the only field not set.
     panel.addEventListener(
@@ -337,7 +365,7 @@ var TranslationsPanel = new (class {
   /**
    * Handle the translation button being clicked when there are two language options.
    */
-  async onDualTranslate() {
+  async onDefaultTranslate() {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
