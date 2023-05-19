@@ -373,6 +373,22 @@ var TranslationsPanel = new (class {
   }
 
   /**
+   * Updates the checked states of the settings menu checkboxes that
+   * pertain to site permissions.
+   */
+  async #updateSettingsMenuSiteCheckboxStates() {
+    const { panel } = this.elements;
+    const neverTranslateSiteMenuItems = panel.querySelectorAll(
+      ".never-translate-site-menuitem"
+    );
+    const neverTranslateSite = await this.#getTranslationsActor().shouldNeverTranslateSite();
+
+    for (const menuitem of neverTranslateSiteMenuItems) {
+      menuitem.setAttribute("checked", neverTranslateSite ? "true" : "false");
+    }
+  }
+
+  /**
    * Populates the language-related settings menuitems by adding the
    * localized display name of the document's detected language tag.
    */
@@ -403,7 +419,10 @@ var TranslationsPanel = new (class {
       });
     }
 
-    await this.#updateSettingsMenuLanguageCheckboxStates();
+    await Promise.all([
+      this.#updateSettingsMenuLanguageCheckboxStates(),
+      this.#updateSettingsMenuSiteCheckboxStates(),
+    ]);
   }
 
   /**
@@ -539,6 +558,7 @@ var TranslationsPanel = new (class {
    */
   openSettingsPopup(button) {
     this.#updateSettingsMenuLanguageCheckboxStates();
+    this.#updateSettingsMenuSiteCheckboxStates();
     const popup = button.querySelector("menupopup");
     popup.openPopup(button);
   }
@@ -572,6 +592,16 @@ var TranslationsPanel = new (class {
     const docLangTag = await this.#getDocLangTag();
     TranslationsParent.toggleNeverTranslateLanguagePref(docLangTag);
     await this.#updateSettingsMenuLanguageCheckboxStates();
+  }
+
+  /**
+   * Updates the never-translate-site menuitem permissions and checked state.
+   * If never-translate is currently active for the site, deactivates it.
+   * If never-translate is currently inactive for the site, activates it.
+   */
+  async onNeverTranslateSite() {
+    await this.#getTranslationsActor().toggleNeverTranslateSitePermissions();
+    await this.#updateSettingsMenuSiteCheckboxStates();
   }
 
   /**
@@ -611,7 +641,9 @@ var TranslationsPanel = new (class {
           // The docLangTag is not present in the never-translate list
           !TranslationsParent.shouldNeverTranslateLanguage(
             detectedLanguages.docLangTag
-          )
+          ) &&
+          // The site not present in the never-translate list
+          !(await this.#getTranslationsActor().shouldNeverTranslateSite())
         ) {
           button.hidden = false;
           if (requestedTranslationPair) {
