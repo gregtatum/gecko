@@ -654,15 +654,18 @@ export class TranslationsChild extends JSWindowActorChild {
     this.#langTags = langTags;
     this.reportDetectedLangTagsToParent(langTags);
 
-    if (
-      langTags &&
-      (await this.sendQuery("Translations:MaybeAutoTranslate", langTags))
-    ) {
-      this.translatePage(
-        langTags.docLangTag,
-        langTags.appLangTag,
-        translationsStart
+    if (langTags) {
+      const { maybeAutoTranslate, maybeNeverTranslate } = await this.sendQuery(
+        "Translations:GetTranslationConditions",
+        langTags
       );
+      if (maybeAutoTranslate && !maybeNeverTranslate) {
+        this.translatePage(
+          langTags.docLangTag,
+          langTags.appLangTag,
+          translationsStart
+        );
+      }
     }
   }
 
