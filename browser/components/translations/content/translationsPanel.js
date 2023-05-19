@@ -134,6 +134,22 @@ var TranslationsPanel = new (class {
   }
 
   /**
+   * Returns the cached, detected language tag of the document if available.
+   * Otherwise, attempts to retrieve the detected language tag for the document.
+   *
+   * @returns {Promise<string | null>} A BCP-47 language tag
+   */
+  async #getDocLangTag() {
+    if (!this.#docLangTag) {
+      const {
+        docLangTag,
+      } = await this.#getTranslationsActor().getLangTagsForTranslation();
+      this.#docLangTag = docLangTag;
+    }
+    return this.#docLangTag;
+  }
+
+  /**
    * @type {"initialized" | "error" | "uninitialized"}
    */
   #langListsPhase = "uninitialized";
@@ -321,6 +337,38 @@ var TranslationsPanel = new (class {
   }
 
   /**
+   * Populates the language-related settings menuitems by adding the
+   * localized display name of the document's detected language tag.
+   */
+  async #populateSettingsMenuItems() {
+    const docLangTag = await this.#getDocLangTag();
+    const displayNames = new Services.intl.DisplayNames(undefined, {
+      type: "language",
+    });
+    const docLangDisplayName = displayNames.of(docLangTag);
+
+    const { panel } = this.elements;
+
+    const alwaysTranslateMenuItems = panel.querySelectorAll(
+      ".always-translate-language-menuitem"
+    );
+    const neverTranslateMenuItems = panel.querySelectorAll(
+      ".never-translate-language-menuitem"
+    );
+
+    for (const menuitem of alwaysTranslateMenuItems) {
+      document.l10n.setArgs(menuitem, {
+        language: docLangDisplayName,
+      });
+    }
+    for (const menuitem of neverTranslateMenuItems) {
+      document.l10n.setArgs(menuitem, {
+        language: docLangDisplayName,
+      });
+    }
+  }
+
+  /**
    * Configures the panel for the user to reset the page after it has been translated.
    *
    * @param {TranslationPair} translationPair
@@ -401,6 +449,7 @@ var TranslationsPanel = new (class {
       });
     }
 
+    this.#populateSettingsMenuItems();
     PanelMultiView.openPopup(panel, button, {
       position: "bottomright topright",
       triggerEvent: event,
@@ -414,7 +463,8 @@ var TranslationsPanel = new (class {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
-    actor.translate(this.#docLangTag, this.elements.defaultToMenuList.value);
+    const docLangTag = await this.#getDocLangTag();
+    actor.translate(docLangTag, this.elements.defaultToMenuList.value);
   }
 
   /**
@@ -438,7 +488,8 @@ var TranslationsPanel = new (class {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
-    actor.translate(this.#docLangTag, this.elements.revisitMenuList.value);
+    const docLangTag = await this.#getDocLangTag();
+    actor.translate(docLangTag, this.elements.revisitMenuList.value);
   }
 
   onCancel() {
@@ -465,11 +516,11 @@ var TranslationsPanel = new (class {
   /**
    * Handle the restore button being clicked.
    */
-  onRestore() {
+  async onRestore() {
     const { panel } = this.elements;
     PanelMultiView.hidePopup(panel);
-
-    this.#getTranslationsActor().restorePage();
+    const docLangTag = await this.#getDocLangTag();
+    this.#getTranslationsActor().restorePage(docLangTag);
   }
 
   /**
