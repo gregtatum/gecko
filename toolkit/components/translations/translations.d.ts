@@ -282,8 +282,8 @@ export type NodeVisibility = "in-viewport" | "out-of-viewport" | "hidden";
  * Used to decide how to translate a page for full page translations.
  */
 export interface LangTags {
-  appLangTag: string,
-  docLangTag: string,
+  docLangTag: string | null,
+  userLangTag: string | null,
 }
 
 export interface LanguagePair { fromLang: string, toLang: string };

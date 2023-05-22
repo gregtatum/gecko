@@ -65,7 +65,7 @@ const VERIFY_SIGNATURES_FROM_FS = false;
  * @typedef {import("../translations").LanguageIdEngineMockedPayload} LanguageIdEngineMockedPayload
  * @typedef {import("../translations").LanguageTranslationModelFiles} LanguageTranslationModelFiles
  * @typedef {import("../translations").WasmRecord} WasmRecord
- * @typedef {import("../translations").DetectedLanguages} DetectedLanguages
+ * @typedef {import("../translations").LangTags} LangTags
  * @typedef {import("../translations").LanguagePair} LanguagePair
  * @typedef {import("../translations").SupportedLanguages} SupportedLanguages
  * @typedef {import("../translations").LanguageIdModelRecord} LanguageIdModelRecord
@@ -101,8 +101,10 @@ export class TranslationsParent extends JSWindowActorParent {
 
     if (TranslationsParent.#translateOnPageReload) {
       // The actor was recreated after a page reload, start the translation.
-      const { fromLanguage, toLanguage } =
-        TranslationsParent.#translateOnPageReload;
+      const {
+        fromLanguage,
+        toLanguage,
+      } = TranslationsParent.#translateOnPageReload;
       TranslationsParent.#translateOnPageReload = null;
 
       lazy.console.log(
@@ -185,6 +187,17 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #translateOnPageReload = null;
 
+  /**
+   * An ordered list of preferred languages based on:
+   *   1. App languages
+   *   2. Web requested languages
+   *   3. OS language
+   *
+   * @type {null | string[]}
+   */
+  static #preferredLanguages = null;
+  static #observingLanguages = false;
+
   // On a fast connection, 10 concurrent downloads were measured to be the fastest when
   // downloading all of the language files.
   static MAX_CONCURRENT_DOWNLOADS = 10;
@@ -234,6 +247,84 @@ export class TranslationsParent extends JSWindowActorParent {
     }
 
     return TranslationsParent.#isTranslationsEngineSupported;
+  }
+
+  static #resetPreferredLanguages() {
+    TranslationsParent.#preferredLanguages = null;
+    TranslationsParent.getPreferredLanguages();
+  }
+
+  static async observe(_subject, topic, _data) {
+    switch (topic) {
+      case "nsPref:changed":
+      case "intl:app-locales-changed": {
+        this.#resetPreferredLanguages();
+        break;
+      }
+      default:
+        throw new Error("Unknown observer event", topic);
+    }
+  }
+
+  /**
+   * An ordered list of preferred languages based on:
+   *
+   *   1. App languages
+   *   2. Web requested languages
+   *   3. OS language
+   *
+   * @returns {string[]}
+   */
+  static getPreferredLanguages() {
+    if (TranslationsParent.#preferredLanguages) {
+      return TranslationsParent.#preferredLanguages;
+    }
+
+    if (!TranslationsParent.#observingLanguages) {
+      Services.obs.addObserver(TranslationsParent, "intl:app-locales-changed");
+      Services.prefs.addObserver("intl.accept_languages", TranslationsParent);
+      TranslationsParent.#observingLanguages = true;
+    }
+
+    // The "Accept-Language" values that the localizer or user has indicated for
+    // the preferences for the web. https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
+    // Note that this preference often falls back ultimately to English, even if the
+    // user doesn't actually speak English, or to other languages they do not speak.
+    // However, this preference will be used as an indication that a user may prefer
+    // this language.
+    const webLanguages = Services.prefs
+      .getComplexValue("intl.accept_languages", Ci.nsIPrefLocalizedString)
+      .data.split(/\s*,\s*/g);
+
+    // The system language could also be a good option for a language to offer the user.
+    const osPrefs = Cc["@mozilla.org/intl/ospreferences;1"].getService(
+      Ci.mozIOSPreferences
+    );
+    const { systemLocales } = osPrefs;
+
+    // Combine the locales together.
+    const preferredLocales = new Set([
+      ...Services.locale.appLocalesAsBCP47,
+      ...webLanguages,
+      ...systemLocales,
+    ]);
+
+    // Attempt to convert the locales to lang tags. Do not completely trust the
+    // values coming from preferences and the OS to have been validated as correct
+    // BCP 47 locale identifiers.
+    const langTags = new Set();
+    for (const locale of preferredLocales) {
+      try {
+        langTags.set(new Intl.Locale(locale).language);
+      } catch (_) {
+        // The locale was invalid, discard it.
+      }
+    }
+
+    // Convert the Set to an array to indicate that it is an ordered listing of languages.
+    TranslationsParent.#preferredLanguages = [...langTags];
+
+    return TranslationsParent.#preferredLanguages;
   }
 
   async receiveMessage({ name, data }) {
@@ -313,6 +404,9 @@ export class TranslationsParent extends JSWindowActorParent {
       case "Translations:GetLanguagePairs": {
         return this.getLanguagePairs();
       }
+      case "Translations:GetPreferredLanguages": {
+        return this.getPreferredLanguages();
+      }
       case "Translations:EngineIsReady":
         this.isEngineReady = true;
         this.languageState.isEngineReady = true;
@@ -332,7 +426,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
         this.languageState.requestedTranslationPair = {
           fromLanguage: data.docLangTag,
-          toLanguage: data.appLangTag,
+          toLanguage: data.userLangTag,
         };
 
         // The page can be auto-translated
@@ -456,25 +550,6 @@ export class TranslationsParent extends JSWindowActorParent {
     );
 
     return buffer;
-  }
-
-  /**
-   * For testing purposes, the LanguageIdEngine can be mocked to always return
-   * a pre-determined language tag and confidence value.
-   *
-   * @returns {LanguageIdEngineMockedPayload | null}
-   */
-  #getLanguageIdEngineMockedPayload() {
-    if (
-      !TranslationsParent.#mockedLangTag ||
-      !TranslationsParent.#mockedLanguageIdConfidence
-    ) {
-      return null;
-    }
-    return {
-      langTag: TranslationsParent.#mockedLangTag,
-      confidence: TranslationsParent.#mockedLanguageIdConfidence,
-    };
   }
 
   /**
@@ -708,8 +783,9 @@ export class TranslationsParent extends JSWindowActorParent {
     lazy.console.log(`Getting remote language models.`);
 
     /** @type {TranslationModelRecord[]} */
-    const translationModelRecords =
-      await TranslationsParent.getMaxVersionRecords(client, {
+    const translationModelRecords = await TranslationsParent.getMaxVersionRecords(
+      client,
+      {
         // Names in this collection are not unique, so we are appending the languagePairKey
         // to guarantee uniqueness.
         lookupKey: record =>
@@ -717,7 +793,8 @@ export class TranslationsParent extends JSWindowActorParent {
             record.fromLang,
             record.toLang
           )}`,
-      });
+      }
+    );
 
     if (translationModelRecords.length === 0) {
       throw new Error("Unable to retrieve the translation models.");
@@ -1208,10 +1285,8 @@ export class TranslationsParent extends JSWindowActorParent {
     translationsWasmRemoteClient
   ) {
     lazy.console.log("Mocking RemoteSettings for the translations engine.");
-    TranslationsParent.#translationModelsRemoteClient =
-      translationModelsRemoteClient;
-    TranslationsParent.#translationsWasmRemoteClient =
-      translationsWasmRemoteClient;
+    TranslationsParent.#translationModelsRemoteClient = translationModelsRemoteClient;
+    TranslationsParent.#translationsWasmRemoteClient = translationsWasmRemoteClient;
     TranslationsParent.#isTranslationsEngineMocked = true;
   }
 
@@ -1330,7 +1405,7 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Returns the lang tags that should be offered for translation.
    *
-   * @returns {Promise<null | { appLangTag: string, docLangTag: string }>}
+   * @returns {Promise<{ userLangTag: string | null, docLangTag: string | null }>}
    */
   getLangTagsForTranslation() {
     return this.sendQuery("Translations:GetLangTagsForTranslation");
@@ -1405,7 +1480,7 @@ class TranslationsLanguageState {
   /** @type {TranslationPair | null} */
   #requestedTranslationPair = null;
 
-  /** @type {DetectedLanguages | null} */
+  /** @type {LangTags | null} */
   #detectedLanguages = null;
 
   /** @type {number} */
@@ -1465,7 +1540,7 @@ class TranslationsLanguageState {
    * The TranslationsChild will detect languages and offer them up for translation.
    * The results are stored here.
    *
-   * @returns {DetectedLanguages | null}
+   * @returns {LangTags | null}
    */
   get detectedLanguages() {
     return this.#detectedLanguages;
