@@ -646,7 +646,7 @@ export class TranslationsChild extends JSWindowActorChild {
       }
 
       if (
-        languagePairs.any(
+        languagePairs.some(
           ({ fromLang, toLang }) =>
             fromLang === langTags.docLangTag && toLang === preferredLangTag
         )

@@ -25,9 +25,9 @@ translations-panel-settings-about = About translations in { -brand-shorter-name 
 ## The translation panel appears from the url bar, and this view is the default
 ## translation view.
 
-translations-panel-default-header = Translate this page?
-translations-panel-default-translate-button = Translate
-translations-panel-default-translate-cancel = Cancel
+translations-panel-header = Translate this page?
+translations-panel-translate-button = Translate
+translations-panel-translate-cancel = Cancel
 
 translations-panel-error-translating = There was a problem translating. Please try again.
 translations-panel-error-load-languages = Couldn’t load languages
@@ -41,8 +41,8 @@ translations-panel-app-menu-header = Translate this page?
 ## If this structure is problematic for your locale, an alternative way is to
 ## translate them as `Source language:` and `Target language:`
 
-translations-panel-default-from-label = Translate from
-translations-panel-default-to-label = Translate to
+translations-panel-from-label = Translate from
+translations-panel-to-label = Translate to
 
 ## The translation panel appears from the url bar, and this view is the "restore" view
 ## that lets a user restore a page to the original language, or translate into another
@@ -55,11 +55,10 @@ translations-panel-default-to-label = Translate to
 # Variables:
 #   $fromLanguage (string) - The original language of the document.
 #   $toLanguage (string) - The target language of the translation.
-translations-panel-revisit-header = The page is translated from { $fromLanguage } to { $toLanguage }
-translations-panel-revisit-label = Want to try another language?
+translations-panel-revisit-header = This page is translated from { $fromLanguage } to { $toLanguage }
 translations-panel-choose-language =
   .label = Choose a language
-translations-panel-revisit-restore-button = Show original
+translations-panel-restore-button = Show original
 translations-panel-revisit-translate-button = Translate
 
 ## Firefox Translations language management in about:preferences.

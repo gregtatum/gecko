@@ -32,7 +32,7 @@ add_task(async function test_translations_panel_retry() {
 
   await waitForTranslationsPopupEvent("popuphidden", () => {
     click(
-      getByL10nId("translations-panel-default-translate-button"),
+      getByL10nId("translations-panel-translate-button"),
       "Start translating by clicking the translate button."
     );
   });

@@ -109,16 +109,14 @@ var TranslationsPanel = new (class {
       getter("button", "translations-button");
       getter("buttonLocale", "translations-button-locale");
       getter("buttonCircleArrows", "translations-button-circle-arrows");
-      getter("defaultFromMenuList", "translations-panel-default-from");
-      getter("defaultToMenuList", "translations-panel-default-to");
-      getter("defaultTranslate", "translations-panel-default-translate");
+      getter("fromMenulist", "translations-panel-from");
+      getter("toMenuList", "translations-panel-to");
+      getter("defaultTranslate", "translations-panel-translate");
       getter("error", "translations-panel-error");
       getter("errorMessage", "translations-panel-error-message");
-      getter("multiview", "translations-panel-multiview");
-      getter("notNow", "translations-panel-not-now");
-      getter("revisitHeader", "translations-panel-revisit-header");
-      getter("revisitMenuList", "translations-panel-revisit-to");
-      getter("revisitTranslate", "translations-panel-revisit-translate");
+      getter("header", "translations-panel-header");
+      getter("notNowButton", "translations-panel-not-now");
+      getter("restoreButton", "translations-panel-restore-button");
     }
 
     return this.#lazyElements;
@@ -234,16 +232,20 @@ var TranslationsPanel = new (class {
    */
   async #showDefaultView() {
     const {
-      defaultFromMenuList,
-      defaultToMenuList,
-      multiview,
+      fromMenulist,
+      toMenuList,
       panel,
       error,
+      header,
+      restoreButton,
+      notNowButton,
     } = this.elements;
 
     // Remove any old selected values synchronously before asking for new ones.
-    defaultFromMenuList.value = "";
+    fromMenulist.value = "";
     error.hidden = true;
+
+    document.l10n.setAttributes(header, "translations-panel-header");
 
     const actor = this.#getTranslationsActor();
 
@@ -251,23 +253,24 @@ var TranslationsPanel = new (class {
     const langTags = await actor.getLangTagsForTranslation();
     console.log(`!!! langTags`, langTags);
 
-    defaultFromMenuList.value = langTags?.docLangTag ?? "";
-    defaultToMenuList.value = langTags?.userLangTag ?? "";
+    fromMenulist.value = langTags?.docLangTag ?? "";
+    toMenuList.value = langTags?.userLangTag ?? "";
     this.#docLangTag = langTags?.docLangTag ?? null;
 
     this.onChangeLanguages();
 
-    multiview.setAttribute("mainViewId", "translations-panel-view-default");
+    restoreButton.hidden = true;
+    notNowButton.hidden = false;
 
     // Focus the "from" language, as it is the only field not set.
     panel.addEventListener(
       "ViewShown",
       () => {
-        if (!defaultFromMenuList.value) {
-          defaultFromMenuList.focus();
+        if (!fromMenulist.value) {
+          fromMenulist.focus();
         }
-        if (!defaultToMenuList.value) {
-          defaultToMenuList.focus();
+        if (!toMenuList.value) {
+          toMenuList.focus();
         }
       },
       { once: true }
@@ -281,32 +284,28 @@ var TranslationsPanel = new (class {
    */
   async #showRevisitView({ fromLanguage, toLanguage }) {
     const {
-      multiview,
-      revisitHeader,
-      revisitMenuList,
-      revisitTranslate,
+      header,
+      fromMenulist,
+      toMenuList,
+      restoreButton,
+      notNowButton,
     } = this.elements;
 
-    revisitMenuList.value = "";
-    revisitTranslate.disabled = true;
-    multiview.setAttribute("mainViewId", "translations-panel-view-revisit");
+    fromMenulist.value = fromLanguage;
+    toMenuList.value = toLanguage;
+    this.onChangeLanguages();
+
+    restoreButton.hidden = false;
+    notNowButton.hidden = true;
 
     const displayNames = new Services.intl.DisplayNames(undefined, {
       type: "language",
     });
 
-    for (const menuitem of revisitMenuList.querySelectorAll("menuitem")) {
-      menuitem.disabled = menuitem.value === toLanguage;
-    }
-
-    document.l10n.setAttributes(
-      revisitHeader,
-      "translations-panel-revisit-header",
-      {
-        fromLanguage: displayNames.of(fromLanguage),
-        toLanguage: displayNames.of(toLanguage),
-      }
-    );
+    document.l10n.setAttributes(header, "translations-panel-revisit-header", {
+      fromLanguage: displayNames.of(fromLanguage),
+      toLanguage: displayNames.of(toLanguage),
+    });
   }
 
   /**
@@ -323,16 +322,14 @@ var TranslationsPanel = new (class {
    * should be disabled.
    */
   onChangeLanguages() {
-    const {
-      defaultTranslate,
-      defaultToMenuList,
-      defaultFromMenuList,
-    } = this.elements;
+    const { defaultTranslate, toMenuList, fromMenulist } = this.elements;
     defaultTranslate.disabled =
       // The translation languages are the same, don't allow this translation.
-      defaultToMenuList.value === defaultFromMenuList.value ||
+      toMenuList.value === fromMenulist.value ||
+      // No "to" language was provided.
+      !toMenuList.value ||
       // No "from" language was provided.
-      !defaultFromMenuList.value;
+      !fromMenulist.value;
   }
 
   /**
@@ -372,25 +369,14 @@ var TranslationsPanel = new (class {
   /**
    * Handle the translation button being clicked when there are two language options.
    */
-  async onDefaultTranslate() {
+  async onTranslate() {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
     actor.translate(
-      this.elements.defaultFromMenuList.value,
-      this.elements.defaultToMenuList.value
+      this.elements.fromMenulist.value,
+      this.elements.toMenuList.value
     );
-  }
-
-  /**
-   * Handle the translation button being clicked when the page has already been
-   * translated.
-   */
-  async onRevisitTranslate() {
-    PanelMultiView.hidePopup(this.elements.panel);
-
-    const actor = this.#getTranslationsActor();
-    actor.translate(this.#docLangTag, this.elements.revisitMenuList.value);
   }
 
   onCancel() {
@@ -445,7 +431,10 @@ var TranslationsPanel = new (class {
           buttonCircleArrows,
         } = this.elements;
 
-        if (detectedLanguages) {
+        if (
+          (detectedLanguages.docLangTag && detectedLanguages.userLangTag) ||
+          requestedTranslationPair
+        ) {
           button.hidden = false;
           if (requestedTranslationPair) {
             // The translation is active, update the urlbar button.
@@ -475,11 +464,11 @@ var TranslationsPanel = new (class {
         switch (error) {
           case null:
             this.elements.error.hidden = true;
-            this.elements.notNow.hidden = false;
+            this.elements.notNowButton.hidden = false;
             break;
           case "engine-load-failure":
             this.elements.error.hidden = false;
-            this.elements.notNow.hidden = true;
+            this.elements.notNowButton.hidden = true;
             document.l10n.setAttributes(
               this.elements.errorMessage,
               "translations-panel-error-translating"

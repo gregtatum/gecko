@@ -315,7 +315,7 @@ export class TranslationsParent extends JSWindowActorParent {
     const langTags = new Set();
     for (const locale of preferredLocales) {
       try {
-        langTags.set(new Intl.Locale(locale).language);
+        langTags.add(new Intl.Locale(locale).language);
       } catch (_) {
         // The locale was invalid, discard it.
       }
@@ -405,7 +405,11 @@ export class TranslationsParent extends JSWindowActorParent {
         return this.getLanguagePairs();
       }
       case "Translations:GetPreferredLanguages": {
-        return this.getPreferredLanguages();
+        console.log(
+          `!!! return TranslationsParent.getPreferredLanguages();`,
+          TranslationsParent.getPreferredLanguages()
+        );
+        return TranslationsParent.getPreferredLanguages();
       }
       case "Translations:EngineIsReady":
         this.isEngineReady = true;
@@ -1405,7 +1409,7 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Returns the lang tags that should be offered for translation.
    *
-   * @returns {Promise<{ userLangTag: string | null, docLangTag: string | null }>}
+   * @returns {Promise<LangTags>}
    */
   getLangTagsForTranslation() {
     return this.sendQuery("Translations:GetLangTagsForTranslation");
