@@ -259,7 +259,6 @@ var TranslationsPanel = new (class {
         fromMenuList.value = "";
       }
       toMenuList.value = langTags?.userLangTag ?? "";
-      this.#docLangTag = langTags?.docLangTag ?? null;
 
       this.onChangeLanguages();
 
@@ -457,6 +456,7 @@ var TranslationsPanel = new (class {
           error,
           isEngineReady,
         } = event.detail;
+
         const {
           panel,
           button,
@@ -465,9 +465,9 @@ var TranslationsPanel = new (class {
         } = this.elements;
 
         if (
-          (detectedLanguages.docLangTag &&
-            detectedLanguages.userLangTag &&
-            detectedLanguages.isDocLangTagSupported) ||
+          (detectedLanguages?.docLangTag &&
+            detectedLanguages?.userLangTag &&
+            detectedLanguages?.isDocLangTagSupported) ||
           requestedTranslationPair
         ) {
           button.hidden = false;

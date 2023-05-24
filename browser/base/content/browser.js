@@ -5008,6 +5008,11 @@ var XULBrowserWindow = {
       "repair-text-encoding"
     ));
   },
+  get _menuItemForTranslations() {
+    delete this._menuItemForTranslations;
+    return (this._menuItemForTranslations =
+      document.getElementById("cmd_translate"));
+  },
 
   setDefaultStatus(status) {
     this.defaultStatus = status;
@@ -5416,6 +5421,11 @@ var XULBrowserWindow = {
       } else {
         element.setAttribute("disabled", "true");
       }
+    }
+    if (TranslationsParent.isRestrictedPage(gBrowser.currentURI.spec)) {
+      this._menuItemForTranslations.setAttribute("disabled", "true");
+    } else {
+      this._menuItemForTranslations.removeAttribute("disabled");
     }
   },
 

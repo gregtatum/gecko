@@ -535,10 +535,23 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   /**
+   * Only translate pages that match certain protocols, that way internal pages like
+   * about:* pages will not be translated.
+   */
+  #isRestrictedPage() {
+    const { href } = this.contentWindow.location;
+    // Keep this logic up to date with TranslationsParent.isRestrictedPage.
+    return !(
+      href.startsWith("http://") ||
+      href.startsWith("https://") ||
+      href.startsWith("file:///")
+    );
+  }
+
+  /**
    * Determine if the page should be translated by checking the App's languages and
-   * comparing it to the reported language of the page. In cases where the page can't
-   * be translated (for instance an about:* page) return null. Otherwise return the
-   * best translation fit (if available).
+   * comparing it to the reported language of the page. Return the best translation fit
+   * (if available).
    *
    * @param {number} [translationsStart]
    * @returns {Promise<LangTags>}
@@ -548,7 +561,6 @@ export class TranslationsChild extends JSWindowActorChild {
       return this.#langTags;
     }
 
-    const { href } = this.contentWindow.location;
     const langTags = {
       docLangTag: null,
       userLangTag: null,
@@ -556,11 +568,8 @@ export class TranslationsChild extends JSWindowActorChild {
     };
     this.#langTags = langTags;
 
-    if (
-      !href.startsWith("http://") &&
-      !href.startsWith("https://") &&
-      !href.startsWith("file:///")
-    ) {
+    if (this.#isRestrictedPage()) {
+      // The langTags are still blank here.
       return langTags;
     }
 
@@ -702,6 +711,7 @@ export class TranslationsChild extends JSWindowActorChild {
     this.reportDetectedLangTagsToParent(langTags);
 
     if (
+      langTags &&
       langTags.docLangTag &&
       langTags.userLangTag &&
       (await this.sendQuery("Translations:MaybeAutoTranslate", langTags))
@@ -744,6 +754,11 @@ export class TranslationsChild extends JSWindowActorChild {
       lazy.console.warn("This page was already translated.");
       return;
     }
+    if (this.#isRestrictedPage()) {
+      lazy.console.warn("Attempting to translate a restricted page");
+      return;
+    }
+
     try {
       const engineLoadStart = this.docShell.now();
       // Create a function to get an engine. These engines are pretty heavy in terms
