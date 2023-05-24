@@ -595,7 +595,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   this,
   "gTranslationsEnabled",
   "browser.translations.enable",
-  false,
+  false
 );
 
 customElements.setElementCreationCallback("screenshots-buttons", () => {
@@ -5436,9 +5436,9 @@ var XULBrowserWindow = {
       this._menuItemForTranslations.removeAttribute("disabled");
     }
     if (gTranslationsEnabled) {
-      this._menuItemForTranslations.removeAttribute("hidden")
+      this._menuItemForTranslations.removeAttribute("hidden");
     } else {
-      this._menuItemForTranslations.setAttribute("hidden", "true")
+      this._menuItemForTranslations.setAttribute("hidden", "true");
     }
   },
 

@@ -132,7 +132,8 @@ var TranslationsPanel = new (class {
    * @returns {Promise<LangTags>}
    */
   async #fetchDetectedLanguages() {
-    this.detectedLanguages = await this.#getTranslationsActor().getLangTagsForTranslation();
+    this.detectedLanguages =
+      await this.#getTranslationsActor().getLangTagsForTranslation();
     return this.detectedLanguages;
   }
 
@@ -162,12 +163,8 @@ var TranslationsPanel = new (class {
     actionText: hintCommandText,
     actionCommand: hintCommand,
   }) {
-    const {
-      error,
-      errorMessage,
-      errorMessageHint,
-      errorHintAction,
-    } = this.elements;
+    const { error, errorMessage, errorMessageHint, errorHintAction } =
+      this.elements;
     error.hidden = false;
     document.l10n.setAttributes(errorMessage, message);
 
@@ -193,9 +190,10 @@ var TranslationsPanel = new (class {
    * @returns {TranslationsParent}
    */
   #getTranslationsActor() {
-    const actor = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
-      "Translations"
-    );
+    const actor =
+      gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
+        "Translations"
+      );
 
     if (!actor) {
       throw new Error("Unable to get the TranslationsParent");
@@ -234,11 +232,8 @@ var TranslationsPanel = new (class {
 
     try {
       /** @type {SupportedLanguages} */
-      const {
-        languagePairs,
-        fromLanguages,
-        toLanguages,
-      } = await this.#getTranslationsActor().getSupportedLanguages();
+      const { languagePairs, fromLanguages, toLanguages } =
+        await this.#getTranslationsActor().getSupportedLanguages();
 
       // Verify that we are in a proper state.
       if (languagePairs.length === 0) {
@@ -338,12 +333,8 @@ var TranslationsPanel = new (class {
     if (this.#langListsPhase === "error") {
       // There was an error, display it in the view rather than the language
       // dropdowns.
-      const {
-        restoreButton,
-        notNowButton,
-        header,
-        errorHintAction,
-      } = this.elements;
+      const { restoreButton, notNowButton, header, errorHintAction } =
+        this.elements;
 
       this.#showError({
         message: "translations-panel-error-load-languages",
@@ -434,10 +425,8 @@ var TranslationsPanel = new (class {
    * pertain to languages.
    */
   async #updateSettingsMenuLanguageCheckboxStates() {
-    const {
-      docLangTag,
-      isDocLangTagSupported,
-    } = await this.#getCachedDetectedLanguages();
+    const { docLangTag, isDocLangTagSupported } =
+      await this.#getCachedDetectedLanguages();
 
     const { panel } = this.elements;
     const alwaysTranslateMenuItems = panel.querySelectorAll(
@@ -460,12 +449,10 @@ var TranslationsPanel = new (class {
       return;
     }
 
-    const alwaysTranslateLanguage = TranslationsParent.shouldAlwaysTranslateLanguage(
-      docLangTag
-    );
-    const neverTranslateLanguage = TranslationsParent.shouldNeverTranslateLanguage(
-      docLangTag
-    );
+    const alwaysTranslateLanguage =
+      TranslationsParent.shouldAlwaysTranslateLanguage(docLangTag);
+    const neverTranslateLanguage =
+      TranslationsParent.shouldNeverTranslateLanguage(docLangTag);
 
     for (const menuitem of alwaysTranslateMenuItems) {
       menuitem.setAttribute(
@@ -492,7 +479,8 @@ var TranslationsPanel = new (class {
     const neverTranslateSiteMenuItems = panel.querySelectorAll(
       ".never-translate-site-menuitem"
     );
-    const neverTranslateSite = await this.#getTranslationsActor().shouldNeverTranslateSite();
+    const neverTranslateSite =
+      await this.#getTranslationsActor().shouldNeverTranslateSite();
 
     for (const menuitem of neverTranslateSiteMenuItems) {
       menuitem.setAttribute("checked", neverTranslateSite ? "true" : "false");
@@ -555,13 +543,8 @@ var TranslationsPanel = new (class {
    * @param {TranslationPair} translationPair
    */
   async #showRevisitView({ fromLanguage, toLanguage }) {
-    const {
-      header,
-      fromMenuList,
-      toMenuList,
-      restoreButton,
-      notNowButton,
-    } = this.elements;
+    const { header, fromMenuList, toMenuList, restoreButton, notNowButton } =
+      this.elements;
 
     fromMenuList.value = fromLanguage;
     toMenuList.value = toLanguage;
@@ -614,9 +597,8 @@ var TranslationsPanel = new (class {
 
     await this.#ensureLangListsBuilt();
 
-    const {
-      requestedTranslationPair,
-    } = this.#getTranslationsActor().languageState;
+    const { requestedTranslationPair } =
+      this.#getTranslationsActor().languageState;
 
     if (requestedTranslationPair) {
       await this.#showRevisitView(requestedTranslationPair).catch(error => {
@@ -657,9 +639,8 @@ var TranslationsPanel = new (class {
    * @returns {boolean}
    */
   #isTranslationsActive() {
-    const {
-      requestedTranslationPair,
-    } = this.#getTranslationsActor().languageState;
+    const { requestedTranslationPair } =
+      this.#getTranslationsActor().languageState;
     return requestedTranslationPair !== null;
   }
 
@@ -709,9 +690,8 @@ var TranslationsPanel = new (class {
     if (!docLangTag) {
       throw new Error("Expected to have a document language tag.");
     }
-    const toggledOn = TranslationsParent.toggleAlwaysTranslateLanguagePref(
-      docLangTag
-    );
+    const toggledOn =
+      TranslationsParent.toggleAlwaysTranslateLanguagePref(docLangTag);
     const translationsActive = this.#isTranslationsActive();
     this.#updateSettingsMenuLanguageCheckboxStates();
 
@@ -791,12 +771,8 @@ var TranslationsPanel = new (class {
           isEngineReady,
         } = event.detail;
 
-        const {
-          panel,
-          button,
-          buttonLocale,
-          buttonCircleArrows,
-        } = this.elements;
+        const { panel, button, buttonLocale, buttonCircleArrows } =
+          this.elements;
 
         const hasSupportedLanguage =
           detectedLanguages?.docLangTag &&
