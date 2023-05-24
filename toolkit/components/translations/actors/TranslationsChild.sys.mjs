@@ -552,6 +552,7 @@ export class TranslationsChild extends JSWindowActorChild {
     const langTags = {
       docLangTag: null,
       userLangTag: null,
+      isDocLangTagSupported: true,
     };
     this.#langTags = langTags;
 
@@ -624,7 +625,8 @@ export class TranslationsChild extends JSWindowActorChild {
         message
       );
       lazy.console.log(message, this.contentWindow.location.href);
-      return this.#langTags;
+      // The docLangTag will be set, while the userLangTag will be null.
+      return langTags;
     }
 
     let languagePairs;
@@ -643,13 +645,22 @@ export class TranslationsChild extends JSWindowActorChild {
       if (!languagePairs) {
         // Lazily look up language pairs.
         languagePairs = await this.getLanguagePairs();
+        langTags.isDocLangTagSupported = Boolean(
+          languagePairs.find(({ fromLang }) => fromLang === langTags.docLangTag)
+        );
       }
 
       if (
-        languagePairs.some(
-          ({ fromLang, toLang }) =>
-            fromLang === langTags.docLangTag && toLang === preferredLangTag
-        )
+        languagePairs.some(({ fromLang, toLang }) => {
+          if (langTags.isDocLangTagSupported) {
+            // Match both from and to languages.
+            return (
+              fromLang === langTags.docLangTag && toLang === preferredLangTag
+            );
+          }
+          // Only match the to language, since the "from" is not supported.
+          return toLang === preferredLangTag;
+        })
       ) {
         // A match was found in one of the preferred languages.
         langTags.userLangTag = preferredLangTag;

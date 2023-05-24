@@ -405,10 +405,6 @@ export class TranslationsParent extends JSWindowActorParent {
         return this.getLanguagePairs();
       }
       case "Translations:GetPreferredLanguages": {
-        console.log(
-          `!!! return TranslationsParent.getPreferredLanguages();`,
-          TranslationsParent.getPreferredLanguages()
-        );
         return TranslationsParent.getPreferredLanguages();
       }
       case "Translations:EngineIsReady":

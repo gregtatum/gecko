@@ -86,6 +86,36 @@
         </button>
       </hbox>
     </panelview>
+
+    <panelview id="translations-panel-view-unsupported-language"
+               class="PanelUI-subView translations-panel-view"
+               role="document"
+               showheader="true">
+      <hbox class="panel-header translations-panel-header">
+        <image class="translations-panel-error-icon" />
+        <html:h1>
+          <html:span data-l10n-id="translations-panel-error-unsupported"></html:span>
+        </html:h1>
+      </hbox>
+
+      <vbox class="translations-panel-content">
+        <description id="translations-panel-error-unsupported-hint"></description>
+      </vbox>
+
+      <hbox class="panel-footer translations-panel-footer">
+        <button class="subviewbutton panel-subview-footer-button"
+                oncommand="TranslationsPanel.onChangeSourceLanguage(event);"
+                data-l10n-id="translations-panel-error-change-button"
+                tabindex="0">
+        </button>
+        <button class="subviewbutton panel-subview-footer-button"
+                oncommand="TranslationsPanel.onCancel(event);"
+                data-l10n-id="translations-panel-error-dismiss-button"
+                default="true"
+                tabindex="0">
+        </button>
+      </hbox>
+    </panelview>
   </panelmultiview>
 </panel>
 </html:template>

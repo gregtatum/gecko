@@ -109,14 +109,16 @@ var TranslationsPanel = new (class {
       getter("button", "translations-button");
       getter("buttonLocale", "translations-button-locale");
       getter("buttonCircleArrows", "translations-button-circle-arrows");
-      getter("fromMenulist", "translations-panel-from");
-      getter("toMenuList", "translations-panel-to");
       getter("defaultTranslate", "translations-panel-translate");
       getter("error", "translations-panel-error");
       getter("errorMessage", "translations-panel-error-message");
+      getter("fromMenuList", "translations-panel-from");
       getter("header", "translations-panel-header");
+      getter("multiview", "translations-panel-multiview");
       getter("notNowButton", "translations-panel-not-now");
       getter("restoreButton", "translations-panel-restore-button");
+      getter("toMenuList", "translations-panel-to");
+      getter("unsupportedHint", "translations-panel-error-unsupported-hint");
     }
 
     return this.#lazyElements;
@@ -228,46 +230,89 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * Show the default view of choosing a source and target language.
+   * When a language is not supported, force it to change.
    */
-  async #showDefaultView() {
-    const {
-      fromMenulist,
-      toMenuList,
-      panel,
-      error,
-      header,
-      restoreButton,
-      notNowButton,
-    } = this.elements;
+  async onChangeSourceLanguage(event) {
+    const { panel } = this.elements;
+    panel.addEventListener("popuphidden", async () => {}, { once: true });
+    PanelMultiView.hidePopup(panel);
 
+    await this.#showDefaultView(true /* force this view to be shown */);
+
+    PanelMultiView.openPopup(panel, this.elements.appMenuButton, {
+      position: "bottomright topright",
+      triggeringEvent: event,
+    }).catch(error => this.console.error(error));
+  }
+
+  /**
+   * Show the default view of choosing a source and target language.
+   *
+   * @param {boolean} force - Force the page to show translation options.
+   */
+  async #showDefaultView(force = false) {
+    const { fromMenuList, multiview, panel, error, toMenuList } = this.elements;
     // Remove any old selected values synchronously before asking for new ones.
-    fromMenulist.value = "";
+    fromMenuList.value = "";
     error.hidden = true;
-
-    document.l10n.setAttributes(header, "translations-panel-header");
 
     const actor = this.#getTranslationsActor();
 
     /** @type {null | LangTags} */
     const langTags = await actor.getLangTagsForTranslation();
-    console.log(`!!! langTags`, langTags);
+    if (langTags?.isDocLangTagSupported || force) {
+      // Show the default view with the language selection
+      const { header, restoreButton, notNowButton } = this.elements;
+      document.l10n.setAttributes(header, "translations-panel-header");
 
-    fromMenulist.value = langTags?.docLangTag ?? "";
-    toMenuList.value = langTags?.userLangTag ?? "";
-    this.#docLangTag = langTags?.docLangTag ?? null;
+      if (langTags?.isDocLangTagSupported) {
+        fromMenuList.value = langTags?.docLangTag ?? "";
+      } else {
+        fromMenuList.value = "";
+      }
+      toMenuList.value = langTags?.userLangTag ?? "";
+      this.#docLangTag = langTags?.docLangTag ?? null;
 
-    this.onChangeLanguages();
+      this.onChangeLanguages();
 
-    restoreButton.hidden = true;
-    notNowButton.hidden = false;
+      restoreButton.hidden = true;
+      notNowButton.hidden = false;
+      multiview.setAttribute("mainViewId", "translations-panel-view-default");
+    } else {
+      // Show the "unsupported language" view.
+      const { unsupportedHint } = this.elements;
+      multiview.setAttribute(
+        "mainViewId",
+        "translations-panel-view-unsupported-language"
+      );
+      let language;
+      if (langTags?.docLangTag) {
+        const displayNames = new Intl.DisplayNames(undefined, {
+          type: "language",
+          fallback: "none",
+        });
+        language = displayNames.of(langTags.docLangTag);
+      }
+      if (language) {
+        document.l10n.setAttributes(
+          unsupportedHint,
+          "translations-panel-error-unsupported-hint-known",
+          { language }
+        );
+      } else {
+        document.l10n.setAttributes(
+          unsupportedHint,
+          "translations-panel-error-unsupported-hint-unknown"
+        );
+      }
+    }
 
     // Focus the "from" language, as it is the only field not set.
     panel.addEventListener(
       "ViewShown",
       () => {
-        if (!fromMenulist.value) {
-          fromMenulist.focus();
+        if (!fromMenuList.value) {
+          fromMenuList.focus();
         }
         if (!toMenuList.value) {
           toMenuList.focus();
@@ -285,13 +330,13 @@ var TranslationsPanel = new (class {
   async #showRevisitView({ fromLanguage, toLanguage }) {
     const {
       header,
-      fromMenulist,
+      fromMenuList,
       toMenuList,
       restoreButton,
       notNowButton,
     } = this.elements;
 
-    fromMenulist.value = fromLanguage;
+    fromMenuList.value = fromLanguage;
     toMenuList.value = toLanguage;
     this.onChangeLanguages();
 
@@ -322,14 +367,14 @@ var TranslationsPanel = new (class {
    * should be disabled.
    */
   onChangeLanguages() {
-    const { defaultTranslate, toMenuList, fromMenulist } = this.elements;
+    const { defaultTranslate, toMenuList, fromMenuList } = this.elements;
     defaultTranslate.disabled =
       // The translation languages are the same, don't allow this translation.
-      toMenuList.value === fromMenulist.value ||
+      toMenuList.value === fromMenuList.value ||
       // No "to" language was provided.
       !toMenuList.value ||
       // No "from" language was provided.
-      !fromMenulist.value;
+      !fromMenuList.value;
   }
 
   /**
@@ -374,7 +419,7 @@ var TranslationsPanel = new (class {
 
     const actor = this.#getTranslationsActor();
     actor.translate(
-      this.elements.fromMenulist.value,
+      this.elements.fromMenuList.value,
       this.elements.toMenuList.value
     );
   }
@@ -432,7 +477,9 @@ var TranslationsPanel = new (class {
         } = this.elements;
 
         if (
-          (detectedLanguages.docLangTag && detectedLanguages.userLangTag) ||
+          (detectedLanguages.docLangTag &&
+            detectedLanguages.userLangTag &&
+            detectedLanguages.isDocLangTagSupported) ||
           requestedTranslationPair
         ) {
           button.hidden = false;

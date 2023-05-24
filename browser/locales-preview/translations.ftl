@@ -33,6 +33,18 @@ translations-panel-error-translating = There was a problem translating. Please t
 translations-panel-error-load-languages = Couldn’t load languages
 translations-panel-error-load-languages-hint = Check your internet connection and try again.
 
+translations-panel-error-unsupported = Translation isn’t available for this page
+translations-panel-error-dismiss-button = Got it
+translations-panel-error-change-button = Change source language
+# If your language requires declining the language name, a possible solution
+# is to adapt the structure of the phrase, or use a support noun, e.g.
+# `Sorry, we don't support the language yet: { $language }
+#
+# Variables:
+#   $language (string) - The language of the document.
+translations-panel-error-unsupported-hint-known = Sorry, we don’t support { $language } yet.
+translations-panel-error-unsupported-hint-unknown = Sorry, we don’t support this language yet.
+
 ## Shown when the translations panel is invoked from the main app menu.
 
 translations-panel-app-menu-header = Translate this page?
