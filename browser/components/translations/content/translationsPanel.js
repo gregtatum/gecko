@@ -23,6 +23,13 @@ var TranslationsPanel = new (class {
   #console;
 
   /**
+   * The automatically determined document lang tag.
+   *
+   * @type {null | string}
+   */
+  #langTags = null;
+
+  /**
    * Lazily get a console instance.
    *
    * @returns {Console}
@@ -172,19 +179,16 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * Returns the cached, detected language tag of the document if available.
-   * Otherwise, attempts to retrieve the detected language tag for the document.
+   * Gets the language tags for the document and the user, and caches the result for
+   * subsequent calls.
    *
-   * @returns {Promise<string | null>} A BCP-47 language tag
+   * @returns {Promise<LangTags>} A BCP-47 language tag
    */
-  async #getDocLangTag() {
-    if (!this.#docLangTag) {
-      const {
-        docLangTag,
-      } = await this.#getTranslationsActor().getLangTagsForTranslation();
-      this.#docLangTag = docLangTag;
+  async #getLangTags() {
+    if (!this.#langTags) {
+      this.#langTags = await this.#getTranslationsActor().getLangTagsForTranslation();
     }
-    return this.#docLangTag;
+    return this.#langTags;
   }
 
   /**
@@ -320,6 +324,8 @@ var TranslationsPanel = new (class {
     } = this.elements;
 
     if (this.#langListsPhase === "error") {
+      // There was an error, display it in the view rather than the language
+      // dropdowns.
       const {
         restoreButton,
         notNowButton,
@@ -418,7 +424,7 @@ var TranslationsPanel = new (class {
    * pertain to languages.
    */
   async #updateSettingsMenuLanguageCheckboxStates() {
-    const docLangTag = await this.#getDocLangTag();
+    const docLangTag = await this.#getLangTags();
 
     const alwaysTranslateLanguage = TranslationsParent.shouldAlwaysTranslateLanguage(
       docLangTag
@@ -470,7 +476,7 @@ var TranslationsPanel = new (class {
    * localized display name of the document's detected language tag.
    */
   async #populateSettingsMenuItems() {
-    const docLangTag = await this.#getDocLangTag();
+    const docLangTag = await this.#getLangTags();
     const displayNames = new Services.intl.DisplayNames(undefined, {
       type: "language",
     });
@@ -623,7 +629,7 @@ var TranslationsPanel = new (class {
     PanelMultiView.hidePopup(this.elements.panel);
 
     const actor = this.#getTranslationsActor();
-    const docLangTag = await this.#getDocLangTag();
+    const docLangTag = await this.#getLangTags();
     actor.translate(docLangTag, this.elements.defaultToMenuList.value);
   }
 
@@ -669,7 +675,7 @@ var TranslationsPanel = new (class {
    * If auto-translate is currently inactive for the doc language, activates it.
    */
   async onAlwaysTranslateLanguage() {
-    const docLangTag = await this.#getDocLangTag();
+    const docLangTag = await this.#getLangTags();
     const toggledOn = TranslationsParent.toggleAlwaysTranslateLanguagePref(
       docLangTag
     );
@@ -693,7 +699,7 @@ var TranslationsPanel = new (class {
    * If never-translate is currently inactive for the doc language, activates it.
    */
   async onNeverTranslateLanguage() {
-    const docLangTag = await this.#getDocLangTag();
+    const docLangTag = await this.#getLangTags();
     TranslationsParent.toggleNeverTranslateLanguagePref(docLangTag);
     this.#updateSettingsMenuLanguageCheckboxStates();
 
@@ -726,7 +732,7 @@ var TranslationsPanel = new (class {
   async onRestore() {
     const { panel } = this.elements;
     PanelMultiView.hidePopup(panel);
-    const docLangTag = await this.#getDocLangTag();
+    const docLangTag = await this.#getLangTags();
     this.#getTranslationsActor().restorePage(docLangTag);
   }
 
