@@ -33,35 +33,44 @@
       </hbox>
 
       <vbox class="translations-panel-content">
-        <label data-l10n-id="translations-panel-from-label"></label>
-        <menulist id="translations-panel-from"
-                  flex="1"
-                  value="detect"
-                  size="large"
-                  oncommand="TranslationsPanel.onChangeLanguages(event)">
-          <menupopup id="translations-panel-from-menupopup"
-                     class="translations-panel-language-menupopup-from">
-            <menuitem data-l10n-id="translations-panel-choose-language" value=""></menuitem>
-            <!-- The list of <menuitem> will be dynamically inserted. -->
-          </menupopup>
-        </menulist>
+        <vbox id="translations-panel-lang-selection">
+          <label data-l10n-id="translations-panel-from-label"></label>
+          <menulist id="translations-panel-from"
+                    flex="1"
+                    value="detect"
+                    size="large"
+                    oncommand="TranslationsPanel.onChangeLanguages(event)">
+            <menupopup id="translations-panel-from-menupopup"
+                      class="translations-panel-language-menupopup-from">
+              <menuitem data-l10n-id="translations-panel-choose-language" value=""></menuitem>
+              <!-- The list of <menuitem> will be dynamically inserted. -->
+            </menupopup>
+          </menulist>
 
-        <label data-l10n-id="translations-panel-to-label"></label>
-        <menulist id="translations-panel-to"
-                  flex="1"
-                  value="detect"
-                  size="large"
-                  oncommand="TranslationsPanel.onChangeLanguages(event)">
-          <menupopup id="translations-panel-to-menupopup"
-                     class="translations-panel-language-menupopup-to">
-            <menuitem data-l10n-id="translations-panel-choose-language" value=""></menuitem>
-            <!-- The list of <menuitem> will be dynamically inserted. -->
-          </menupopup>
-        </menulist>
-        <hbox id="translations-panel-error">
-          <image class="translations-panel-error-icon" />
-          <description id="translations-panel-error-message"></description>
-        </hbox>
+          <label data-l10n-id="translations-panel-to-label"></label>
+          <menulist id="translations-panel-to"
+                    flex="1"
+                    value="detect"
+                    size="large"
+                    oncommand="TranslationsPanel.onChangeLanguages(event)">
+            <menupopup id="translations-panel-to-menupopup"
+                      class="translations-panel-language-menupopup-to">
+              <menuitem data-l10n-id="translations-panel-choose-language" value=""></menuitem>
+              <!-- The list of <menuitem> will be dynamically inserted. -->
+            </menupopup>
+          </menulist>
+        </vbox>
+
+        <vbox id="translations-panel-error">
+          <hbox class="translations-panel-error-header">
+            <image class="translations-panel-error-icon translations-panel-error-header-icon" />
+            <description id="translations-panel-error-message"></description>
+          </hbox>
+          <hbox id="translations-panel-error-message-hint"></hbox>
+          <hbox pack="end">
+            <button id="translations-panel-translate-hint-action" />
+          </hbox>
+        </vbox>
       </vbox>
 
       <hbox class="panel-footer translations-panel-footer">

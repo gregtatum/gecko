@@ -32,6 +32,7 @@ translations-panel-translate-cancel = Cancel
 translations-panel-error-translating = There was a problem translating. Please try again.
 translations-panel-error-load-languages = Couldn’t load languages
 translations-panel-error-load-languages-hint = Check your internet connection and try again.
+translations-panel-error-load-languages-hint-button = Try again
 
 translations-panel-error-unsupported = Translation isn’t available for this page
 translations-panel-error-dismiss-button = Got it

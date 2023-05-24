@@ -100,8 +100,11 @@ var TranslationsPanel = new (class {
       getter("defaultTranslate", "translations-panel-translate");
       getter("error", "translations-panel-error");
       getter("errorMessage", "translations-panel-error-message");
+      getter("errorMessageHint", "translations-panel-error-message-hint");
+      getter("errorHintAction", "translations-panel-translate-hint-action");
       getter("fromMenuList", "translations-panel-from");
       getter("header", "translations-panel-header");
+      getter("langSelection", "translations-panel-lang-selection");
       getter("multiview", "translations-panel-multiview");
       getter("notNowButton", "translations-panel-not-now");
       getter("restoreButton", "translations-panel-restore-button");
@@ -110,6 +113,48 @@ var TranslationsPanel = new (class {
     }
 
     return this.#lazyElements;
+  }
+
+  #lastHintCommand = null;
+
+  /**
+   * @param {object} options
+   * @param {string} options.message - l10n id
+   * @param {string} options.hint - l10n id
+   * @param {Function} options.actionText - l10n id
+   * @param {Function} options.actionCommand - The action to perform.
+   */
+  #showError({
+    message,
+    hint,
+    actionText: hintCommandText,
+    actionCommand: hintCommand,
+  }) {
+    const {
+      error,
+      errorMessage,
+      errorMessageHint,
+      errorHintAction,
+    } = this.elements;
+    error.hidden = false;
+    document.l10n.setAttributes(errorMessage, message);
+
+    if (hint) {
+      errorMessageHint.hidden = false;
+      document.l10n.setAttributes(errorMessageHint, hint);
+    } else {
+      errorMessageHint.hidden = true;
+    }
+
+    if (hintCommand && hintCommandText) {
+      errorHintAction.removeEventListener("command", this.#lastHintCommand);
+      this.#lastHintCommand = hintCommand;
+      errorHintAction.addEventListener("command", hintCommand);
+      errorHintAction.hidden = false;
+      document.l10n.setAttributes(errorHintAction, hintCommandText);
+    } else {
+      errorHintAction.hidden = true;
+    }
   }
 
   /**
@@ -233,16 +278,59 @@ var TranslationsPanel = new (class {
     }).catch(error => this.console.error(error));
   }
 
+  async #reloadLangList() {
+    try {
+      await this.#ensureLangListsBuilt();
+      await this.#showDefaultView();
+    } catch (error) {
+      this.elements.errorHintAction.disabled = false;
+    }
+  }
+
   /**
    * Show the default view of choosing a source and target language.
    *
    * @param {boolean} force - Force the page to show translation options.
    */
   async #showDefaultView(force = false) {
-    const { fromMenuList, multiview, panel, error, toMenuList } = this.elements;
+    const {
+      fromMenuList,
+      multiview,
+      panel,
+      error,
+      toMenuList,
+      defaultTranslate,
+      langSelection,
+    } = this.elements;
+
+    if (this.#langListsPhase === "error") {
+      const {
+        restoreButton,
+        notNowButton,
+        header,
+        errorHintAction,
+      } = this.elements;
+
+      this.#showError({
+        message: "translations-panel-error-load-languages",
+        hint: "translations-panel-error-load-languages-hint",
+        actionText: "translations-panel-error-load-languages-hint-button",
+        actionCommand: () => this.#reloadLangList(),
+      });
+
+      document.l10n.setAttributes(header, "translations-panel-header");
+      defaultTranslate.disabled = true;
+      restoreButton.hidden = true;
+      notNowButton.hidden = false;
+      langSelection.hidden = true;
+      errorHintAction.disabled = false;
+      return;
+    }
+
     // Remove any old selected values synchronously before asking for new ones.
     fromMenuList.value = "";
     error.hidden = true;
+    langSelection.hidden = false;
 
     const actor = this.#getTranslationsActor();
 
@@ -372,11 +460,11 @@ var TranslationsPanel = new (class {
   async open(event) {
     const { panel, button } = this.elements;
 
+    await this.#ensureLangListsBuilt();
+
     const {
       requestedTranslationPair,
     } = this.#getTranslationsActor().languageState;
-
-    await this.#ensureLangListsBuilt();
 
     if (requestedTranslationPair) {
       await this.#showRevisitView(requestedTranslationPair).catch(error => {
@@ -468,7 +556,8 @@ var TranslationsPanel = new (class {
           (detectedLanguages?.docLangTag &&
             detectedLanguages?.userLangTag &&
             detectedLanguages?.isDocLangTagSupported) ||
-          requestedTranslationPair
+          requestedTranslationPair ||
+          error
         ) {
           button.hidden = false;
           if (requestedTranslationPair) {
@@ -504,13 +593,15 @@ var TranslationsPanel = new (class {
           case "engine-load-failure":
             this.elements.error.hidden = false;
             this.elements.notNowButton.hidden = true;
-            document.l10n.setAttributes(
-              this.elements.errorMessage,
-              "translations-panel-error-translating"
-            );
+            this.#showError({
+              message: "translations-panel-error-translating",
+            });
+            const targetButton = button.hidden
+              ? this.elements.appMenuButton
+              : button;
 
             // Re-open the menu on an error.
-            PanelMultiView.openPopup(panel, button, {
+            PanelMultiView.openPopup(panel, targetButton, {
               position: "bottomright topright",
             }).catch(panelError => this.console.error(panelError));
 
