@@ -78,9 +78,7 @@ add_task(async function test_translations_panel_switch_language() {
     ).doCommand();
   });
 
-  const translateButton = getByL10nId(
-    "translations-panel-default-translate-button"
-  );
+  const translateButton = getByL10nId("translations-panel-translate-button");
   const fromSelect = getById("translations-panel-dual-from");
   const toSelect = getById("translations-panel-dual-to");
 
