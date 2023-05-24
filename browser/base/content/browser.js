@@ -591,6 +591,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   }
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  this,
+  "gTranslationsEnabled",
+  "browser.translations.enable",
+  false,
+);
+
 customElements.setElementCreationCallback("screenshots-buttons", () => {
   Services.scriptloader.loadSubScript(
     "chrome://browser/content/screenshots/screenshots-buttons.js",
@@ -5422,10 +5429,16 @@ var XULBrowserWindow = {
         element.setAttribute("disabled", "true");
       }
     }
+
     if (TranslationsParent.isRestrictedPage(gBrowser.currentURI.spec)) {
       this._menuItemForTranslations.setAttribute("disabled", "true");
     } else {
       this._menuItemForTranslations.removeAttribute("disabled");
+    }
+    if (gTranslationsEnabled) {
+      this._menuItemForTranslations.removeAttribute("hidden")
+    } else {
+      this._menuItemForTranslations.setAttribute("hidden", "true")
     }
   },
 
