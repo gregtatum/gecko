@@ -9,6 +9,7 @@
  * @typedef {import("../translations").TranslationsEnginePayload} TranslationsEnginePayload
  * @typedef {import("../translations").LanguagePair} LanguagePair
  * @typedef {import("../translations").SupportedLanguages} SupportedLanguages
+ * @typedef {import("../translations").LangTags} LangTags
  */
 
 /**
@@ -163,10 +164,9 @@ class TranslationsEngineCache {
    */
   createGetter(actor, fromLanguage, toLanguage) {
     return async (onlyFromCache = false) => {
-      let enginePromise =
-        this.#engines[
-          TranslationsChild.languagePairKey(fromLanguage, toLanguage)
-        ];
+      let enginePromise = this.#engines[
+        TranslationsChild.languagePairKey(fromLanguage, toLanguage)
+      ];
       if (enginePromise) {
         return enginePromise;
       }
@@ -467,7 +467,7 @@ export class TranslationsChild extends JSWindowActorChild {
    * The matched language tags for the page. Used to find a default language pair for
    * translations.
    *
-   * @type {null | { appLangTag: string, docLangTag: string }}
+   * @type {null | LangTags}
    * */
   #langTags = null;
 
@@ -526,7 +526,7 @@ export class TranslationsChild extends JSWindowActorChild {
 
   /**
    * This is used to conditionally add the translations button.
-   * @param {null | { appLangTag: string, docLangTag: string }} langTags
+   * @param {null | LangTags} langTags
    */
   reportDetectedLangTagsToParent(langTags) {
     this.sendAsyncMessage("Translations:ReportDetectedLangTags", {
@@ -536,10 +536,12 @@ export class TranslationsChild extends JSWindowActorChild {
 
   /**
    * Determine if the page should be translated by checking the App's languages and
-   * comparing it to the reported language of the page. If we can translate the page,
-   * then return the language pair.
+   * comparing it to the reported language of the page. In cases where the page can't
+   * be translated (for instance an about:* page) return null. Otherwise return the
+   * best translation fit (if available).
    *
-   * @returns {Promise<null | { appLangTag: string, docLangTag: string }>}
+   * @param {number} [translationsStart]
+   * @returns {Promise<LangTags>}
    */
   async getLangTagsForTranslation(translationsStart = this.docShell.now()) {
     if (this.#langTags) {
@@ -547,26 +549,30 @@ export class TranslationsChild extends JSWindowActorChild {
     }
 
     const { href } = this.contentWindow.location;
+    const langTags = {
+      docLangTag: null,
+      userLangTag: null,
+      isDocLangTagSupported: true,
+    };
+    this.#langTags = langTags;
+
     if (
       !href.startsWith("http://") &&
       !href.startsWith("https://") &&
       !href.startsWith("file:///")
     ) {
-      return null;
+      return langTags;
     }
-
-    let appLangTag = new Intl.Locale(Services.locale.appLocaleAsBCP47).language;
-    let docLangTag;
 
     // First try to get the langTag from the document's markup.
     try {
       const docLocale = new Intl.Locale(this.document.documentElement.lang);
-      docLangTag = docLocale.language;
+      langTags.docLangTag = docLocale.language;
     } catch (error) {}
 
     // If the document's markup had no specified langTag, attempt
     // to identify the page's language using the LanguageIdEngine.
-    if (!docLangTag) {
+    if (!langTags.docLangTag) {
       let languageIdEngine = await this.createLanguageIdEngine();
       let { langTag, confidence } = await languageIdEngine.identifyLanguage(
         this.#getTextToIdentify()
@@ -575,11 +581,13 @@ export class TranslationsChild extends JSWindowActorChild {
         `${langTag}(${confidence.toFixed(2)}) Detected Page Language`
       );
       if (confidence >= DOC_LANGUAGE_DETECTION_THRESHOLD) {
-        docLangTag = langTag;
+        langTags.docLangTag = langTag;
       }
     }
 
-    if (!docLangTag) {
+    const preferredLanguages = await this.getPreferredLanguages();
+
+    if (!langTags.docLangTag) {
       const message = "No valid language detected.";
       ChromeUtils.addProfilerMarker(
         "TranslationsChild",
@@ -587,7 +595,15 @@ export class TranslationsChild extends JSWindowActorChild {
         message
       );
       lazy.console.log(message, this.contentWindow.location.href);
-      return null;
+
+      const languagePairs = await this.getLanguagePairs();
+
+      // Attempt to find a good language to select for the user.
+      langTags.userLangTag =
+        preferredLanguages.find(langTag => langTag === languagePairs.toLang) ??
+        null;
+
+      return langTags;
     }
 
     ChromeUtils.addProfilerMarker(
@@ -596,7 +612,11 @@ export class TranslationsChild extends JSWindowActorChild {
       "Time to determine langTags"
     );
 
-    if (appLangTag === docLangTag) {
+    // This is a special case where we do not offer a translation if the main app language
+    // and the doc language match. The main app language should be the first preferred
+    // language.
+    if (preferredLanguages[0] === langTags.docLangTag) {
+      // The doc language and the main language match.
       const message =
         "The app and document languages match, so not translating.";
       ChromeUtils.addProfilerMarker(
@@ -605,35 +625,61 @@ export class TranslationsChild extends JSWindowActorChild {
         message
       );
       lazy.console.log(message, this.contentWindow.location.href);
-      return null;
+      // The docLangTag will be set, while the userLangTag will be null.
+      return langTags;
     }
 
-    // There is no reason to look at the language pairs if the engine is already in
-    // the cache.
-    if (!translationsEngineCache.isInCache(docLangTag, appLangTag)) {
-      const languagePairs = await this.getLanguagePairs();
-      if (this.#isDestroyed) {
-        return null;
-      }
+    let languagePairs;
+
+    // Attempt to find a matching language pair for a preferred language.
+    for (const preferredLangTag of preferredLanguages) {
       if (
-        !languagePairs.some(
-          ({ fromLang, toLang }) =>
-            fromLang === docLangTag && toLang === appLangTag
-        )
+        translationsEngineCache.isInCache(langTags.docLangTag, preferredLangTag)
       ) {
-        // No language pairs match.
-        const message = `Translating from "${docLangTag}" to "${appLangTag}" is not supported.`;
-        ChromeUtils.addProfilerMarker(
-          "TranslationsChild",
-          { innerWindowId: this.innerWindowId },
-          message
+        // There is no reason to look at the language pairs if the engine is already in
+        // the cache.
+        langTags.userLangTag = preferredLangTag;
+        break;
+      }
+
+      if (!languagePairs) {
+        // Lazily look up language pairs.
+        languagePairs = await this.getLanguagePairs();
+        langTags.isDocLangTagSupported = Boolean(
+          languagePairs.find(({ fromLang }) => fromLang === langTags.docLangTag)
         );
-        lazy.console.log(message, languagePairs);
-        return null;
+      }
+
+      if (
+        languagePairs.some(({ fromLang, toLang }) => {
+          if (langTags.isDocLangTagSupported) {
+            // Match both from and to languages.
+            return (
+              fromLang === langTags.docLangTag && toLang === preferredLangTag
+            );
+          }
+          // Only match the to language, since the "from" is not supported.
+          return toLang === preferredLangTag;
+        })
+      ) {
+        // A match was found in one of the preferred languages.
+        langTags.userLangTag = preferredLangTag;
+        break;
       }
     }
-    this.#langTags = { appLangTag, docLangTag };
-    return this.#langTags;
+
+    if (!langTags.userLangTag) {
+      // No language pairs match.
+      const message = `No matching translation pairs were found for translating from "${langTags.docLangTag}".`;
+      ChromeUtils.addProfilerMarker(
+        "TranslationsChild",
+        { innerWindowId: this.innerWindowId },
+        message
+      );
+      lazy.console.log(message, languagePairs);
+    }
+
+    return langTags;
   }
 
   /**
@@ -656,12 +702,13 @@ export class TranslationsChild extends JSWindowActorChild {
     this.reportDetectedLangTagsToParent(langTags);
 
     if (
-      langTags &&
+      langTags.docLangTag &&
+      langTags.userLangTag &&
       (await this.sendQuery("Translations:MaybeAutoTranslate", langTags))
     ) {
       this.translatePage(
         langTags.docLangTag,
-        langTags.appLangTag,
+        langTags.userLangTag,
         translationsStart
       );
     }
@@ -879,6 +926,15 @@ export class TranslationsChild extends JSWindowActorChild {
    */
   getLanguagePairs() {
     return this.sendQuery("Translations:GetLanguagePairs");
+  }
+
+  /**
+   * The ordered list of preferred BCP 47 language tags.
+   *
+   * @returns {Promise<string[]>}
+   */
+  getPreferredLanguages() {
+    return this.sendQuery("Translations:GetPreferredLanguages");
   }
 
   /**
