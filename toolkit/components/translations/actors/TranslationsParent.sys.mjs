@@ -465,7 +465,7 @@ export class TranslationsParent extends JSWindowActorParent {
         if (maybeAutoTranslate) {
           this.languageState.requestedTranslationPair = {
             fromLanguage: data.docLangTag,
-            toLanguage: data.appLangTag,
+            toLanguage: data.userLangTag,
           };
         }
 
@@ -1478,7 +1478,7 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Returns the lang tags that should be offered for translation.
    *
-   * @returns {Promise<null | LangTags>}
+   * @returns {Promise<LangTags>}
    */
   getLangTagsForTranslation() {
     return this.sendQuery("Translations:GetLangTagsForTranslation");
