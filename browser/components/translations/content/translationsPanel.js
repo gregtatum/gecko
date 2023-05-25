@@ -23,7 +23,7 @@ var TranslationsPanel = new (class {
   #console;
 
   /**
-   * The cached lang tags.
+   * The cached detected languages for both the document and the user.
    *
    * @type {null | LangTags}
    */
@@ -122,33 +122,10 @@ var TranslationsPanel = new (class {
     return this.#lazyElements;
   }
 
+  /**
+   * Cache the last command used for error hints so that it can be later removed.
+   */
   #lastHintCommand = null;
-
-  /**
-   * Fetches the language tags for the document and the user and caches the results
-   * Use `#getCachedDetectedLanguages` when the lang tags do not need to be re-fetched.
-   * This requires a bit of work to do, so prefer the cached version when possible.
-   *
-   * @returns {Promise<LangTags>}
-   */
-  async #fetchDetectedLanguages() {
-    this.detectedLanguages =
-      await this.#getTranslationsActor().getLangTagsForTranslation();
-    return this.detectedLanguages;
-  }
-
-  /**
-   * If the detected language tags have been retrieved previously, return the cached
-   * version. Otherwise do a fresh lookup of the document's language tag.
-   *
-   * @returns {Promise<LangTags>}
-   */
-  async #getCachedDetectedLanguages() {
-    if (!this.detectedLanguages) {
-      return this.#fetchDetectedLanguages();
-    }
-    return this.detectedLanguages;
-  }
 
   /**
    * @param {object} options
@@ -199,6 +176,32 @@ var TranslationsPanel = new (class {
       throw new Error("Unable to get the TranslationsParent");
     }
     return actor;
+  }
+
+  /**
+   * Fetches the language tags for the document and the user and caches the results
+   * Use `#getCachedDetectedLanguages` when the lang tags do not need to be re-fetched.
+   * This requires a bit of work to do, so prefer the cached version when possible.
+   *
+   * @returns {Promise<LangTags>}
+   */
+  async #fetchDetectedLanguages() {
+    this.detectedLanguages =
+      await this.#getTranslationsActor().getLangTagsForTranslation();
+    return this.detectedLanguages;
+  }
+
+  /**
+   * If the detected language tags have been retrieved previously, return the cached
+   * version. Otherwise do a fresh lookup of the document's language tag.
+   *
+   * @returns {Promise<LangTags>}
+   */
+  async #getCachedDetectedLanguages() {
+    if (!this.detectedLanguages) {
+      return this.#fetchDetectedLanguages();
+    }
+    return this.detectedLanguages;
   }
 
   /**
@@ -286,31 +289,6 @@ var TranslationsPanel = new (class {
     } catch (error) {
       this.console.error(error);
       this.#langListsPhase = "error";
-    }
-  }
-
-  /**
-   * When a language is not supported, force it to change.
-   */
-  async onChangeSourceLanguage(event) {
-    const { panel } = this.elements;
-    panel.addEventListener("popuphidden", async () => {}, { once: true });
-    PanelMultiView.hidePopup(panel);
-
-    await this.#showDefaultView(true /* force this view to be shown */);
-
-    PanelMultiView.openPopup(panel, this.elements.appMenuButton, {
-      position: "bottomright topright",
-      triggeringEvent: event,
-    }).catch(error => this.console.error(error));
-  }
-
-  async #reloadLangList() {
-    try {
-      await this.#ensureLangListsBuilt();
-      await this.#showDefaultView();
-    } catch (error) {
-      this.elements.errorHintAction.disabled = false;
     }
   }
 
@@ -585,6 +563,34 @@ var TranslationsPanel = new (class {
       !toMenuList.value ||
       // No "from" language was provided.
       !fromMenuList.value;
+  }
+
+  /**
+   * When a language is not supported and the menu is manually invoked, an error message
+   * is shown. This method switches the panel back to the language selection view.
+   * Note that this bypasses the showSubView method since the main view doesn't support
+   * a subview.
+   */
+  async onChangeSourceLanguage(event) {
+    const { panel } = this.elements;
+    panel.addEventListener("popuphidden", async () => {}, { once: true });
+    PanelMultiView.hidePopup(panel);
+
+    await this.#showDefaultView(true /* force this view to be shown */);
+
+    PanelMultiView.openPopup(panel, this.elements.appMenuButton, {
+      position: "bottomright topright",
+      triggeringEvent: event,
+    }).catch(error => this.console.error(error));
+  }
+
+  async #reloadLangList() {
+    try {
+      await this.#ensureLangListsBuilt();
+      await this.#showDefaultView();
+    } catch (error) {
+      this.elements.errorHintAction.disabled = false;
+    }
   }
 
   /**

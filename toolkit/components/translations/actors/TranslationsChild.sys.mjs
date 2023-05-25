@@ -767,7 +767,7 @@ export class TranslationsChild extends JSWindowActorChild {
       return;
     }
     if (this.#isRestrictedPage()) {
-      lazy.console.warn("Attempting to translate a restricted page");
+      lazy.console.warn("Attempting to translate a restricted page.");
       return;
     }
 
