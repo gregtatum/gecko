@@ -912,6 +912,15 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   /**
+   * The ordered list of preferred BCP 47 language tags.
+   *
+   * @returns {Promise<string[]>}
+   */
+  getPreferredLanguages() {
+    return this.sendQuery("Translations:GetPreferredLanguages");
+  }
+
+  /**
    * Retrieve the payload for creating a LanguageIdEngine.
    *
    * @returns {Promise<LanguageIdEnginePayload>}
