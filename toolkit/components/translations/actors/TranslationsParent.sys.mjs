@@ -166,9 +166,9 @@ export class TranslationsParent extends JSWindowActorParent {
    * A map of the TranslationModelRecord["id"] to the record of the model in Remote Settings.
    * Used to coordinate the downloads.
    *
-   * @type {Map<string, TranslationModelRecord>}
+   * @type {null | Promise<Map<string, TranslationModelRecord>>}
    */
-  #translationModelRecords = new Map();
+  static #translationModelRecords = null;
 
   /**
    * The RemoteSettingsClient that downloads the translation models.
@@ -660,7 +660,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Promise<Array<LanguagePair>>}
    */
   async getLanguagePairs() {
-    const records = await this.#getTranslationModelRecords();
+    const records = await TranslationsParent.#getTranslationModelRecords();
     const languagePairMap = new Map();
 
     for (const { fromLang, toLang, version } of records.values()) {
@@ -748,11 +748,62 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * @param {Object} event
+   * @param {Object} event.data
+   * @param {TranslationModelRecord[]} event.data.created
+   * @param {TranslationModelRecord[]} event.data.updated
+   * @param {TranslationModelRecord[]} event.data.deleted
+   */
+  static async #handleTranslationsModelsSync({
+    data: { created, updated, deleted },
+  }) {
+    const client = TranslationsParent.#translationModelsRemoteClient;
+    if (!client) {
+      lazy.console.error(
+        "Translations client was not present when receiving a sync event."
+      );
+      return;
+    }
+
+    // Language model attachments will only be downloaded when they are used.
+    lazy.console.log(
+      `Remote Settings "sync" event for remote language models `,
+      {
+        created,
+        updated,
+        deleted,
+      }
+    );
+
+    const records = await TranslationsParent.#getTranslationModelRecords();
+
+    // Remove all the deleted records.
+    for (const record of deleted) {
+      await client.attachments.deleteDownloaded(record);
+      records.delete(record.id);
+    }
+
+    // Pre-emptively remove the old downloads, and set the new updated record.
+    for (const { old: oldRecord, new: newRecord } of updated) {
+      await client.attachments.deleteDownloaded(oldRecord);
+      // The language pairs should be the same on the update, but use the old
+      // record just in case.
+      records.delete(oldRecord.id);
+      records.set(newRecord.id, newRecord);
+    }
+
+    // Add the new records, but don't download any attachments.
+    for (const record of created) {
+      records.set(record.id, record);
+    }
+  }
+
+  /**
    * Lazily initializes the RemoteSettingsClient for the language models.
    *
    * @returns {RemoteSettingsClient}
    */
-  #getTranslationModelsRemoteClient() {
+  static #getTranslationModelsRemoteClient() {
     if (TranslationsParent.#translationModelsRemoteClient) {
       return TranslationsParent.#translationModelsRemoteClient;
     }
@@ -760,39 +811,7 @@ export class TranslationsParent extends JSWindowActorParent {
     /** @type {RemoteSettingsClient} */
     const client = lazy.RemoteSettings("translations-models");
     TranslationsParent.#translationModelsRemoteClient = client;
-
-    client.on("sync", async ({ data: { created, updated, deleted } }) => {
-      // Language model attachments will only be downloaded when they are used.
-      lazy.console.log(
-        `Remote Settings "sync" event for remote language models `,
-        {
-          created,
-          updated,
-          deleted,
-        }
-      );
-
-      // Remove all the deleted records.
-      for (const record of deleted) {
-        await client.attachments.deleteDownloaded(record);
-        this.#translationModelRecords.delete(record.id);
-      }
-
-      // Pre-emptively remove the old downloads, and set the new updated record.
-      for (const { old: oldRecord, new: newRecord } of updated) {
-        await client.attachments.deleteDownloaded(oldRecord);
-        // The language pairs should be the same on the update, but use the old
-        // record just in case.
-        this.#translationModelRecords.delete(oldRecord.id);
-        this.#translationModelRecords.set(newRecord.id, newRecord);
-      }
-
-      // Add the new records, but don't download any attachments.
-      for (const record of created) {
-        this.#translationModelRecords.set(record.id, record);
-      }
-    });
-
+    client.on("sync", TranslationsParent.#handleTranslationsModelsSync);
     return client;
   }
 
@@ -859,47 +878,53 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @returns {Promise<Map<string, TranslationModelRecord>>}
    */
-  async #getTranslationModelRecords() {
-    if (this.#translationModelRecords.size > 0) {
-      return this.#translationModelRecords;
+  static async #getTranslationModelRecords() {
+    if (TranslationsParent.#translationModelRecords) {
+      return TranslationsParent.#translationModelRecords;
     }
 
-    const now = Date.now();
-    const client = this.#getTranslationModelsRemoteClient();
+    // Place the records into a promise to prevent any races.
+    TranslationsParent.#translationModelRecords = (async () => {
+      const records = new Map();
+      const now = Date.now();
+      const client = TranslationsParent.#getTranslationModelsRemoteClient();
 
-    // Load the models. If no data is present, then there will be an initial sync.
-    // Rely on Remote Settings for the syncing strategy for receiving updates.
-    lazy.console.log(`Getting remote language models.`);
+      // Load the models. If no data is present, then there will be an initial sync.
+      // Rely on Remote Settings for the syncing strategy for receiving updates.
+      lazy.console.log(`Getting remote language models.`);
 
-    /** @type {TranslationModelRecord[]} */
-    const translationModelRecords =
-      await TranslationsParent.getMaxVersionRecords(client, {
-        // Names in this collection are not unique, so we are appending the languagePairKey
-        // to guarantee uniqueness.
-        lookupKey: record =>
-          `${record.name}${TranslationsParent.languagePairKey(
-            record.fromLang,
-            record.toLang
-          )}`,
-      });
+      /** @type {TranslationModelRecord[]} */
+      const translationModelRecords =
+        await TranslationsParent.getMaxVersionRecords(client, {
+          // Names in this collection are not unique, so we are appending the languagePairKey
+          // to guarantee uniqueness.
+          lookupKey: record =>
+            `${record.name}${TranslationsParent.languagePairKey(
+              record.fromLang,
+              record.toLang
+            )}`,
+        });
 
-    if (translationModelRecords.length === 0) {
-      throw new Error("Unable to retrieve the translation models.");
-    }
+      if (translationModelRecords.length === 0) {
+        throw new Error("Unable to retrieve the translation models.");
+      }
 
-    for (const record of TranslationsParent.ensureLanguagePairsHavePivots(
-      translationModelRecords
-    )) {
-      this.#translationModelRecords.set(record.id, record);
-    }
+      for (const record of TranslationsParent.ensureLanguagePairsHavePivots(
+        translationModelRecords
+      )) {
+        records.set(record.id, record);
+      }
 
-    const duration = (Date.now() - now) / 1000;
-    lazy.console.log(
-      `Remote language models loaded in ${duration} seconds.`,
-      this.#translationModelRecords
-    );
+      const duration = (Date.now() - now) / 1000;
+      lazy.console.log(
+        `Remote language models loaded in ${duration} seconds.`,
+        records
+      );
 
-    return this.#translationModelRecords;
+      return records;
+    })();
+
+    return TranslationsParent.#translationModelRecords;
   }
 
   /**
@@ -1077,7 +1102,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} requestedLanguage The BCP 47 language tag.
    */
   async deleteLanguageFiles(language) {
-    const client = this.#getTranslationModelsRemoteClient();
+    const client = TranslationsParent.#getTranslationModelsRemoteClient();
     const isForDeletion = true;
     return Promise.all(
       Array.from(
@@ -1098,7 +1123,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} requestedLanguage The BCP 47 language tag.
    */
   async downloadLanguageFiles(language) {
-    const client = this.#getTranslationModelsRemoteClient();
+    const client = TranslationsParent.#getTranslationModelsRemoteClient();
 
     const queue = [];
 
@@ -1119,11 +1144,14 @@ export class TranslationsParent extends JSWindowActorParent {
    * Download all files used for translations.
    */
   async downloadAllFiles() {
-    const client = this.#getTranslationModelsRemoteClient();
+    const client = TranslationsParent.#getTranslationModelsRemoteClient();
 
     const queue = [];
 
-    for (const [recordId, record] of await this.#getTranslationModelRecords()) {
+    for (const [
+      recordId,
+      record,
+    ] of await TranslationsParent.#getTranslationModelRecords()) {
       queue.push({
         onSuccess: () => {
           this.sendQuery("Translations:DownloadedLanguageFile", { recordId });
@@ -1150,10 +1178,10 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Promise<string[]>} A list of record IDs.
    */
   async deleteAllLanguageFiles() {
-    const client = this.#getTranslationModelsRemoteClient();
+    const client = TranslationsParent.#getTranslationModelsRemoteClient();
     await chaosMode();
     await client.attachments.deleteAll();
-    return [...(await this.#getTranslationModelRecords()).keys()];
+    return [...(await TranslationsParent.#getTranslationModelRecords()).keys()];
   }
 
   /**
@@ -1164,7 +1192,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} requestedLanguage The BCP 47 language tag.
    */
   async hasAllFilesForLanguage(requestedLanguage) {
-    const client = this.#getTranslationModelsRemoteClient();
+    const client = TranslationsParent.#getTranslationModelsRemoteClient();
     for (const record of await this.getRecordsForTranslatingToAndFromAppLanguage(
       requestedLanguage,
       true
@@ -1192,7 +1220,7 @@ export class TranslationsParent extends JSWindowActorParent {
     requestedLanguage,
     isForDeletion = false
   ) {
-    const records = await this.#getTranslationModelRecords();
+    const records = await TranslationsParent.#getTranslationModelRecords();
     const appLanguage = new Intl.Locale(Services.locale.appLocaleAsBCP47)
       .language;
 
@@ -1260,13 +1288,15 @@ export class TranslationsParent extends JSWindowActorParent {
     toLanguage,
     withQualityEstimation = false
   ) {
-    const client = this.#getTranslationModelsRemoteClient();
+    const client = TranslationsParent.#getTranslationModelsRemoteClient();
 
     lazy.console.log(
       `Beginning model downloads: "${fromLanguage}" to "${toLanguage}"`
     );
 
-    const records = [...(await this.#getTranslationModelRecords()).values()];
+    const records = [
+      ...(await TranslationsParent.#getTranslationModelRecords()).values(),
+    ];
 
     /** @type {LanguageTranslationModelFiles} */
     let results;
@@ -1375,6 +1405,11 @@ export class TranslationsParent extends JSWindowActorParent {
     TranslationsParent.#translationsWasmRemoteClient =
       translationsWasmRemoteClient;
     TranslationsParent.#isTranslationsEngineMocked = true;
+
+    translationModelsRemoteClient.on(
+      "sync",
+      TranslationsParent.#handleTranslationsModelsSync
+    );
   }
 
   /**
@@ -1384,6 +1419,13 @@ export class TranslationsParent extends JSWindowActorParent {
     lazy.console.log(
       "Removing RemoteSettings mock for the translations engine."
     );
+    TranslationsParent.#translationModelsRemoteClient.off(
+      "sync",
+      TranslationsParent.#handleTranslationsModelsSync
+    );
+
+    TranslationsParent.#translationModelRecords = null;
+
     TranslationsParent.#translationModelsRemoteClient = null;
     TranslationsParent.#translationsWasmRemoteClient = null;
     TranslationsParent.#isTranslationsEngineMocked = false;
