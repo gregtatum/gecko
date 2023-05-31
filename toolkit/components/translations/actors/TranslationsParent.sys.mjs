@@ -32,6 +32,8 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 ChromeUtils.defineESModuleGetters(lazy, {
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
+  TranslationsTelemetry:
+    "chrome://global/content/translations/TranslationsTelemetry.sys.mjs",
 });
 
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
@@ -487,6 +489,11 @@ export class TranslationsParent extends JSWindowActorParent {
           (await this.shouldNeverTranslateSite());
 
         if (maybeAutoTranslate && !maybeNeverTranslate) {
+          lazy.TranslationsTelemetry.onTranslate({
+            fromLanguage: data.docLangTag,
+            toLanguage: data.userLangTag,
+            autoTranslate: maybeAutoTranslate,
+          });
           this.languageState.requestedTranslationPair = {
             fromLanguage: data.docLangTag,
             toLanguage: data.userLangTag,
@@ -1484,6 +1491,11 @@ export class TranslationsParent extends JSWindowActorParent {
         fromLanguage,
         toLanguage,
       };
+      lazy.TranslationsTelemetry.onTranslate({
+        fromLanguage,
+        toLanguage,
+        autoTranslate: false,
+      });
       this.sendAsyncMessage("Translations:TranslatePage", {
         fromLanguage,
         toLanguage,
