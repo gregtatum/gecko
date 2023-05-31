@@ -32,6 +32,8 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 ChromeUtils.defineESModuleGetters(lazy, {
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
+  TranslationsTelemetry:
+    "chrome://global/content/translations/TranslationsTelemetry.sys.mjs",
 });
 
 XPCOMUtils.defineLazyGetter(lazy, "console", () => {
@@ -74,7 +76,8 @@ XPCOMUtils.defineLazyPreferenceGetter(
   ALWAYS_TRANSLATE_LANGS_PREF,
   /* aDefaultPrefValue */ "",
   /* onUpdate */ null,
-  /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
+  /* aTransform */ rawLangTags =>
+    rawLangTags ? new Set(rawLangTags.split(",")) : new Set()
 );
 
 /**
@@ -86,7 +89,8 @@ XPCOMUtils.defineLazyPreferenceGetter(
   NEVER_TRANSLATE_LANGS_PREF,
   /* aDefaultPrefValue */ "",
   /* onUpdate */ null,
-  /* aTransform */ rawLangTags => (rawLangTags ? rawLangTags.split(",") : [])
+  /* aTransform */ rawLangTags =>
+    rawLangTags ? new Set(rawLangTags.split(",")) : new Set()
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -103,6 +107,7 @@ const VERIFY_SIGNATURES_FROM_FS = false;
 
 /**
  * @typedef {import("../translations").TranslationModelRecord} TranslationModelRecord
+ * @typedef {import("../translations").WasmRecord} WasmRecord
  * @typedef {import("../translations").RemoteSettingsClient} RemoteSettingsClient
  * @typedef {import("../translations").LanguageIdEngineMockedPayload} LanguageIdEngineMockedPayload
  * @typedef {import("../translations").LanguageTranslationModelFiles} LanguageTranslationModelFiles
@@ -292,15 +297,18 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Only translate pages that match certain protocols, that way internal pages like
    * about:* pages will not be translated.
-   * @param {string} url
+   * @param {string} scheme - The URI spec
+   * @returns {boolean}
    */
-  static isRestrictedPage(url) {
+  static isRestrictedPage(scheme) {
     // Keep this logic up to date with TranslationsChild.prototype.#isRestrictedPage.
-    return !(
-      url.startsWith("http://") ||
-      url.startsWith("https://") ||
-      url.startsWith("file:///")
-    );
+    switch (scheme) {
+      case "https":
+      case "http":
+      case "file":
+        return false;
+    }
+    return true;
   }
 
   static #resetPreferredLanguages() {
@@ -397,35 +405,7 @@ export class TranslationsParent extends JSWindowActorParent {
     switch (name) {
       case "Translations:GetTranslationsEnginePayload": {
         const { fromLanguage, toLanguage } = data;
-        const bergamotWasmArrayBuffer = this.#getBergamotWasmArrayBuffer();
-
-        let files = await this.getLanguageTranslationModelFiles(
-          fromLanguage,
-          toLanguage
-        );
-
-        let languageModelFiles;
-        if (files) {
-          languageModelFiles = [files];
-        } else {
-          // No matching model was found, try to pivot between English.
-          const [files1, files2] = await Promise.all([
-            this.getLanguageTranslationModelFiles(fromLanguage, PIVOT_LANGUAGE),
-            this.getLanguageTranslationModelFiles(PIVOT_LANGUAGE, toLanguage),
-          ]);
-          if (!files1 || !files2) {
-            throw new Error(
-              `No language models were found for ${fromLanguage} to ${toLanguage}`
-            );
-          }
-          languageModelFiles = [files1, files2];
-        }
-
-        return {
-          bergamotWasmArrayBuffer: await bergamotWasmArrayBuffer,
-          languageModelFiles,
-          isMocked: TranslationsParent.#isTranslationsEngineMocked,
-        };
+        return this.getTranslationsEnginePayload(fromLanguage, toLanguage);
       }
       case "Translations:GetLanguageIdEnginePayload": {
         const [modelBuffer, wasmBuffer] = await Promise.all([
@@ -441,9 +421,6 @@ export class TranslationsParent extends JSWindowActorParent {
       }
       case "Translations:GetIsTranslationsEngineMocked": {
         return TranslationsParent.#isTranslationsEngineMocked;
-      }
-      case "Translations:GetIsTranslationsEngineSupported": {
-        return TranslationsParent.getIsTranslationsEngineSupported();
       }
       case "Translations:FullPageTranslationFailed": {
         this.languageState.error = data.reason;
@@ -467,40 +444,98 @@ export class TranslationsParent extends JSWindowActorParent {
       case "Translations:DeleteLanguageFiles": {
         return this.deleteLanguageFiles(data.language);
       }
-      case "Translations:GetLanguagePairs": {
-        return this.getLanguagePairs();
-      }
       case "Translations:GetPreferredLanguages": {
         return TranslationsParent.getPreferredLanguages();
+      }
+      case "Translations:ClearLangTags": {
+        this.languageState.detectedLanguages = null;
+        return undefined;
+      }
+      case "Translations:ReportLangTags": {
+        const { documentElementLang, href } = data;
+        const detectedLanguages = await this.getDetectedLanguages(
+          documentElementLang,
+          href
+        );
+
+        this.languageState.detectedLanguages = detectedLanguages;
+
+        if (await this.shouldAutoTranslate(detectedLanguages)) {
+          this.translate(
+            detectedLanguages.docLangTag,
+            detectedLanguages.userLangTag,
+            true // autoTranslate
+          );
+        }
+        return undefined;
       }
       case "Translations:EngineIsReady": {
         this.isEngineReady = true;
         this.languageState.isEngineReady = true;
         break;
       }
-      case "Translations:GetTranslationConditions": {
-        const maybeAutoTranslate = TranslationsParent.#maybeAutoTranslate(
-          data.docLangTag
-        );
-        const maybeNeverTranslate =
-          TranslationsParent.shouldNeverTranslateLanguage(data.docLangTag) ||
-          (await this.shouldNeverTranslateSite());
-
-        if (maybeAutoTranslate && !maybeNeverTranslate) {
-          this.languageState.requestedTranslationPair = {
-            fromLanguage: data.docLangTag,
-            toLanguage: data.userLangTag,
-          };
-        }
-
-        return { maybeAutoTranslate, maybeNeverTranslate };
-      }
       case "Translations:ReportDetectedLangTags": {
         this.languageState.detectedLanguages = data.langTags;
         return undefined;
       }
+      case "Translations:IsTranslationsEngineSupported": {
+        return TranslationsParent.getIsTranslationsEngineSupported();
+      }
     }
     return undefined;
+  }
+
+  /**
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   */
+  async getTranslationsEnginePayload(fromLanguage, toLanguage) {
+    const wasmStartTime = Cu.now();
+    const bergamotWasmArrayBufferPromise = this.#getBergamotWasmArrayBuffer();
+    bergamotWasmArrayBufferPromise.then(() => {
+      ChromeUtils.addProfilerMarker(
+        "TranslationsParent",
+        { innerWindowId: this.innerWindowId, startTime: wasmStartTime },
+        "Loading bergamot wasm array buffer"
+      );
+    });
+
+    const modelStartTime = Cu.now();
+    let files = await this.getLanguageTranslationModelFiles(
+      fromLanguage,
+      toLanguage
+    );
+
+    let languageModelFiles;
+    if (files) {
+      languageModelFiles = [files];
+    } else {
+      // No matching model was found, try to pivot between English.
+      const [files1, files2] = await Promise.all([
+        this.getLanguageTranslationModelFiles(fromLanguage, PIVOT_LANGUAGE),
+        this.getLanguageTranslationModelFiles(PIVOT_LANGUAGE, toLanguage),
+      ]);
+      if (!files1 || !files2) {
+        throw new Error(
+          `No language models were found for ${fromLanguage} to ${toLanguage}`
+        );
+      }
+      languageModelFiles = [files1, files2];
+    }
+
+    ChromeUtils.addProfilerMarker(
+      "TranslationsParent",
+      { innerWindowId: this.innerWindowId, startTime: modelStartTime },
+      "Loading translation model files"
+    );
+
+    const bergamotWasmArrayBuffer = await bergamotWasmArrayBufferPromise;
+
+    return {
+      bergamotWasmArrayBuffer,
+      languageModelFiles,
+      isMocked: TranslationsParent.#isTranslationsEngineMocked,
+    };
   }
 
   /**
@@ -532,6 +567,9 @@ export class TranslationsParent extends JSWindowActorParent {
     return true;
   }
 
+  /** @type {Promise<LanguageIdModelRecord> | null} */
+  #languageIdModelRecord = null;
+
   /**
    * Retrieves the language-identification model binary from remote settings.
    *
@@ -542,36 +580,50 @@ export class TranslationsParent extends JSWindowActorParent {
     const now = Date.now();
     const client = this.#getLanguageIdModelRemoteClient();
 
-    /** @type {LanguageIdModelRecord[]} */
-    let modelRecords = await TranslationsParent.getMaxVersionRecords(client);
+    if (!this.#languageIdModelRecord) {
+      // Place the records into a promise to prevent any races.
+      this.#languageIdModelRecord = (async () => {
+        /** @type {LanguageIdModelRecord[]} */
+        let modelRecords = await TranslationsParent.getMaxVersionRecords(
+          client
+        );
 
-    if (modelRecords.length === 0) {
-      throw new Error(
-        "Unable to get language-identification model record from remote settings"
-      );
-    }
+        if (modelRecords.length === 0) {
+          throw new Error(
+            "Unable to get language-identification model record from remote settings"
+          );
+        }
 
-    if (modelRecords.length > 1) {
-      TranslationsParent.reportError(
-        new Error(
-          "Expected the language-identification model collection to have only 1 record."
-        ),
-        modelRecords
-      );
+        if (modelRecords.length > 1) {
+          TranslationsParent.reportError(
+            new Error(
+              "Expected the language-identification model collection to have only 1 record."
+            ),
+            modelRecords
+          );
+        }
+        return modelRecords[0];
+      })();
     }
-    const [modelRecord] = modelRecords;
 
     await chaosMode(1 / 3);
 
-    /** @type {{buffer: ArrayBuffer}} */
-    const { buffer } = await client.attachments.download(modelRecord);
+    try {
+      /** @type {{buffer: ArrayBuffer}} */
+      const { buffer } = await client.attachments.download(
+        await this.#languageIdModelRecord
+      );
 
-    const duration = (Date.now() - now) / 1000;
-    lazy.console.log(
-      `Remote language-identification model loaded in ${duration} seconds.`
-    );
+      const duration = (Date.now() - now) / 1000;
+      lazy.console.log(
+        `Remote language-identification model loaded in ${duration} seconds.`
+      );
 
-    return buffer;
+      return buffer;
+    } catch (error) {
+      this.#languageIdModelRecord = null;
+      throw error;
+    }
   }
 
   /**
@@ -591,6 +643,9 @@ export class TranslationsParent extends JSWindowActorParent {
     return client;
   }
 
+  /** @type {Promise<LanguageIdModelRecord> | null} */
+  #languageIdWasmRecord = null;
+
   /**
    * Retrieves the language-identification wasm binary from remote settings.
    *
@@ -602,45 +657,60 @@ export class TranslationsParent extends JSWindowActorParent {
 
     // Load the wasm binary from remote settings, if it hasn't been already.
     lazy.console.log(`Getting remote language-identification wasm binary.`);
+    if (!this.#languageIdWasmRecord) {
+      // Place the records into a promise to prevent any races.
+      this.#languageIdWasmRecord = (async () => {
+        /** @type {WasmRecord[]} */
+        let wasmRecords = await TranslationsParent.getMaxVersionRecords(
+          client,
+          {
+            filters: { name: "fasttext-wasm" },
+          }
+        );
 
-    /** @type {WasmRecord[]} */
-    let wasmRecords = await TranslationsParent.getMaxVersionRecords(client, {
-      filters: { name: "fasttext-wasm" },
-    });
+        if (wasmRecords.length === 0) {
+          // The remote settings client provides an empty list of records when there is
+          // an error.
+          throw new Error(
+            'Unable to get "fasttext-wasm" language-identification wasm binary from Remote Settings.'
+          );
+        }
 
-    if (wasmRecords.length === 0) {
-      // The remote settings client provides an empty list of records when there is
-      // an error.
-      throw new Error(
-        'Unable to get "fasttext-wasm" language-identification wasm binary from Remote Settings.'
-      );
+        if (wasmRecords.length > 1) {
+          TranslationsParent.reportError(
+            new Error(
+              'Expected the "fasttext-wasm" language-identification wasm collection to only have 1 record.'
+            ),
+            wasmRecords
+          );
+        }
+        return wasmRecords[0];
+      })();
     }
 
-    if (wasmRecords.length > 1) {
-      TranslationsParent.reportError(
-        new Error(
-          'Expected the "fasttext-wasm" language-identification wasm collection to only have 1 record.'
-        ),
-        wasmRecords
+    try {
+      // Unlike the models, greedily download the wasm. It will pull it from a locale
+      // cache on disk if it's already been downloaded. Do not retain a copy, as
+      // this will be running in the parent process. It's not worth holding onto
+      // this much memory, so reload it every time it is needed.
+
+      await chaosMode(1 / 3);
+
+      /** @type {{buffer: ArrayBuffer}} */
+      const { buffer } = await client.attachments.download(
+        await this.#languageIdWasmRecord
       );
+
+      const duration = (Date.now() - start) / 1000;
+      lazy.console.log(
+        `Remote language-identification wasm binary loaded in ${duration} seconds.`
+      );
+
+      return buffer;
+    } catch (error) {
+      this.#languageIdWasmRecord = null;
+      throw error;
     }
-
-    // Unlike the models, greedily download the wasm. It will pull it from a locale
-    // cache on disk if it's already been downloaded. Do not retain a copy, as
-    // this will be running in the parent process. It's not worth holding onto
-    // this much memory, so reload it every time it is needed.
-
-    await chaosMode(1 / 3);
-
-    /** @type {{buffer: ArrayBuffer}} */
-    const { buffer } = await client.attachments.download(wasmRecords[0]);
-
-    const duration = (Date.now() - start) / 1000;
-    lazy.console.log(
-      `Remote language-identification wasm binary loaded in ${duration} seconds.`
-    );
-
-    return buffer;
   }
 
   /**
@@ -655,27 +725,41 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * The cached language pairs.
+   * @type {Promise<Array<LanguagePair>> | null}
+   */
+  static #languagePairs = null;
+
+  /**
    * Get the list of translation pairs supported by the translations engine.
    *
    * @returns {Promise<Array<LanguagePair>>}
    */
-  async getLanguagePairs() {
-    const records = await TranslationsParent.#getTranslationModelRecords();
-    const languagePairMap = new Map();
+  getLanguagePairs() {
+    if (!TranslationsParent.#languagePairs) {
+      TranslationsParent.#languagePairs =
+        TranslationsParent.#getTranslationModelRecords().then(records => {
+          const languagePairMap = new Map();
 
-    for (const { fromLang, toLang, version } of records.values()) {
-      const isBeta = Services.vc.compare(version, "1.0") < 0;
-      const key = TranslationsParent.languagePairKey(fromLang, toLang);
-      if (!languagePairMap.has(key)) {
-        languagePairMap.set(key, { fromLang, toLang, isBeta });
-      }
+          for (const { fromLang, toLang, version } of records.values()) {
+            const isBeta = Services.vc.compare(version, "1.0") < 0;
+            const key = TranslationsParent.languagePairKey(fromLang, toLang);
+            if (!languagePairMap.has(key)) {
+              languagePairMap.set(key, { fromLang, toLang, isBeta });
+            }
+          }
+          return Array.from(languagePairMap.values());
+        });
     }
-
-    return Array.from(languagePairMap.values());
+    return TranslationsParent.#languagePairs;
   }
 
   /**
-   * Returns all of the information needed to render dropdowns for translation
+   * Get the list of languages and their display names, sorted by their display names.
+   * This is more expensive of a call than getLanguagePairs since the display names
+   * are looked up.
+   *
+   * This is all of the information needed to render dropdowns for translation
    * language selection.
    *
    * @returns {Promise<SupportedLanguages>}
@@ -796,6 +880,9 @@ export class TranslationsParent extends JSWindowActorParent {
     for (const record of created) {
       records.set(record.id, record);
     }
+
+    // Invalidate cached data.
+    TranslationsParent.#languagePairs = null;
   }
 
   /**
@@ -879,50 +966,52 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Promise<Map<string, TranslationModelRecord>>}
    */
   static async #getTranslationModelRecords() {
-    if (TranslationsParent.#translationModelRecords) {
-      return TranslationsParent.#translationModelRecords;
+    if (!TranslationsParent.#translationModelRecords) {
+      // Place the records into a promise to prevent any races.
+      TranslationsParent.#translationModelRecords = (async () => {
+        const records = new Map();
+        const now = Date.now();
+        const client = TranslationsParent.#getTranslationModelsRemoteClient();
+
+        // Load the models. If no data is present, then there will be an initial sync.
+        // Rely on Remote Settings for the syncing strategy for receiving updates.
+        lazy.console.log(`Getting remote language models.`);
+
+        /** @type {TranslationModelRecord[]} */
+        const translationModelRecords =
+          await TranslationsParent.getMaxVersionRecords(client, {
+            // Names in this collection are not unique, so we are appending the languagePairKey
+            // to guarantee uniqueness.
+            lookupKey: record =>
+              `${record.name}${TranslationsParent.languagePairKey(
+                record.fromLang,
+                record.toLang
+              )}`,
+          });
+
+        if (translationModelRecords.length === 0) {
+          throw new Error("Unable to retrieve the translation models.");
+        }
+
+        for (const record of TranslationsParent.ensureLanguagePairsHavePivots(
+          translationModelRecords
+        )) {
+          records.set(record.id, record);
+        }
+
+        const duration = (Date.now() - now) / 1000;
+        lazy.console.log(
+          `Remote language models loaded in ${duration} seconds.`,
+          records
+        );
+
+        return records;
+      })();
+
+      TranslationsParent.#translationModelRecords.catch(() => {
+        this.#translationModelRecords = null;
+      });
     }
-
-    // Place the records into a promise to prevent any races.
-    TranslationsParent.#translationModelRecords = (async () => {
-      const records = new Map();
-      const now = Date.now();
-      const client = TranslationsParent.#getTranslationModelsRemoteClient();
-
-      // Load the models. If no data is present, then there will be an initial sync.
-      // Rely on Remote Settings for the syncing strategy for receiving updates.
-      lazy.console.log(`Getting remote language models.`);
-
-      /** @type {TranslationModelRecord[]} */
-      const translationModelRecords =
-        await TranslationsParent.getMaxVersionRecords(client, {
-          // Names in this collection are not unique, so we are appending the languagePairKey
-          // to guarantee uniqueness.
-          lookupKey: record =>
-            `${record.name}${TranslationsParent.languagePairKey(
-              record.fromLang,
-              record.toLang
-            )}`,
-        });
-
-      if (translationModelRecords.length === 0) {
-        throw new Error("Unable to retrieve the translation models.");
-      }
-
-      for (const record of TranslationsParent.ensureLanguagePairsHavePivots(
-        translationModelRecords
-      )) {
-        records.set(record.id, record);
-      }
-
-      const duration = (Date.now() - now) / 1000;
-      lazy.console.log(
-        `Remote language models loaded in ${duration} seconds.`,
-        records
-      );
-
-      return records;
-    })();
 
     return TranslationsParent.#translationModelRecords;
   }
@@ -1042,6 +1131,9 @@ export class TranslationsParent extends JSWindowActorParent {
     return client;
   }
 
+  /** @type {Promise<WasmRecord> | null} */
+  #bergamotWasmRecord = null;
+
   /**
    * Bergamot is the translation engine that has been compiled to wasm. It is shipped
    * to the user via Remote Settings.
@@ -1054,46 +1146,62 @@ export class TranslationsParent extends JSWindowActorParent {
   async #getBergamotWasmArrayBuffer() {
     const start = Date.now();
     const client = this.#getTranslationsWasmRemoteClient();
+    if (!this.#bergamotWasmRecord) {
+      // Place the records into a promise to prevent any races.
+      this.#bergamotWasmRecord = (async () => {
+        // Load the wasm binary from remote settings, if it hasn't been already.
+        lazy.console.log(`Getting remote bergamot-translator wasm records.`);
 
-    // Load the wasm binary from remote settings, if it hasn't been already.
-    lazy.console.log(`Getting remote bergamot-translator wasm records.`);
+        /** @type {WasmRecord[]} */
+        const wasmRecords = await TranslationsParent.getMaxVersionRecords(
+          client,
+          {
+            filters: { name: "bergamot-translator" },
+          }
+        );
 
-    /** @type {WasmRecord[]} */
-    const wasmRecords = await TranslationsParent.getMaxVersionRecords(client, {
-      filters: { name: "bergamot-translator" },
-    });
+        if (wasmRecords.length === 0) {
+          // The remote settings client provides an empty list of records when there is
+          // an error.
+          throw new Error(
+            "Unable to get the bergamot translator from Remote Settings."
+          );
+        }
 
-    if (wasmRecords.length === 0) {
-      // The remote settings client provides an empty list of records when there is
-      // an error.
-      throw new Error(
-        "Unable to get the bergamot translator from Remote Settings."
-      );
+        if (wasmRecords.length > 1) {
+          TranslationsParent.reportError(
+            new Error(
+              "Expected the bergamot-translator to only have 1 record."
+            ),
+            wasmRecords
+          );
+        }
+        return wasmRecords[0];
+      })();
     }
-
-    if (wasmRecords.length > 1) {
-      TranslationsParent.reportError(
-        new Error("Expected the bergamot-translator to only have 1 record."),
-        wasmRecords
-      );
-    }
-
     // Unlike the models, greedily download the wasm. It will pull it from a locale
     // cache on disk if it's already been downloaded. Do not retain a copy, as
     // this will be running in the parent process. It's not worth holding onto
     // this much memory, so reload it every time it is needed.
 
-    await chaosModeError(1 / 3);
+    try {
+      await chaosModeError(1 / 3);
 
-    /** @type {{buffer: ArrayBuffer}} */
-    const { buffer } = await client.attachments.download(wasmRecords[0]);
+      /** @type {{buffer: ArrayBuffer}} */
+      const { buffer } = await client.attachments.download(
+        await this.#bergamotWasmRecord
+      );
 
-    const duration = Date.now() - start;
-    lazy.console.log(
-      `"bergamot-translator" wasm binary loaded in ${duration / 1000} seconds`
-    );
+      const duration = Date.now() - start;
+      lazy.console.log(
+        `"bergamot-translator" wasm binary loaded in ${duration / 1000} seconds`
+      );
 
-    return buffer;
+      return buffer;
+    } catch (error) {
+      this.#bergamotWasmRecord = null;
+      throw error;
+    }
   }
 
   /**
@@ -1425,6 +1533,8 @@ export class TranslationsParent extends JSWindowActorParent {
     );
 
     TranslationsParent.#translationModelRecords = null;
+    TranslationsParent.#languagePairs = null;
+    TranslationsParent.#isTranslationsEngineSupported = null;
 
     TranslationsParent.#translationModelsRemoteClient = null;
     TranslationsParent.#translationsWasmRemoteClient = null;
@@ -1472,8 +1582,9 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {boolean} [autoTranslate]
    */
-  translate(fromLanguage, toLanguage) {
+  translate(fromLanguage, toLanguage, autoTranslate = false) {
     if (this.languageState.requestedTranslationPair) {
       // This page has already been translated, restore it and translate it
       // again once the actor has been recreated.
@@ -1484,6 +1595,11 @@ export class TranslationsParent extends JSWindowActorParent {
         fromLanguage,
         toLanguage,
       };
+      lazy.TranslationsTelemetry.onTranslate({
+        fromLanguage,
+        toLanguage,
+        autoTranslate,
+      });
       this.sendAsyncMessage("Translations:TranslatePage", {
         fromLanguage,
         toLanguage,
@@ -1537,20 +1653,179 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
-   * Returns the lang tags that should be offered for translation.
+   * Returns the language from the document element.
    *
-   * @returns {Promise<LangTags>}
+   * @returns {Promise<string>}
    */
-  getLangTagsForTranslation() {
-    return this.sendQuery("Translations:GetLangTagsForTranslation");
+  queryDocumentElementLang() {
+    return this.sendQuery("Translations:GetDocumentElementLang");
+  }
+
+  async queryIdentifyLanguage() {
+    return this.sendQuery("Translations:IdentifyLanguage");
   }
 
   /**
-   * Returns the principal from the content window's origin.
-   * @returns {nsIPrincipal}
+   * @param {LangTags} langTags
    */
-  getContentWindowPrincipal() {
-    return this.sendQuery("Translations:GetContentWindowPrincipal");
+  async shouldAutoTranslate(langTags) {
+    if (
+      langTags.docLangTag &&
+      langTags.userLangTag &&
+      langTags.isDocLangTagSupported &&
+      TranslationsParent.#maybeAutoTranslate(langTags.docLangTag) &&
+      !TranslationsParent.shouldNeverTranslateLanguage(langTags.docLangTag) &&
+      !(await this.shouldNeverTranslateSite())
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns the lang tags that should be offered for translation. This is in the parent
+   * rather than the child to remove the per-content process memory allocation amount.
+   *
+   * @param {string} [documentElementLang]
+   * @param {string} [href]
+   * @returns {Promise<LangTags>}
+   */
+  async getDetectedLanguages(documentElementLang, href) {
+    if (this.languageState.detectedLanguages) {
+      return this.languageState.detectedLanguages;
+    }
+    const langTags = {
+      docLangTag: null,
+      userLangTag: null,
+      isDocLangTagSupported: false,
+    };
+    if (!TranslationsParent.getIsTranslationsEngineSupported()) {
+      return langTags;
+    }
+
+    if (
+      TranslationsParent.isRestrictedPage(
+        this.browsingContext.currentWindowGlobal.documentURI.scheme
+      )
+    ) {
+      return langTags;
+    }
+    if (documentElementLang === undefined) {
+      documentElementLang = await this.queryDocumentElementLang();
+    }
+
+    let languagePairs = await this.getLanguagePairs();
+
+    const determineIsDocLangTagSupported = () =>
+      Boolean(
+        languagePairs.find(({ fromLang }) => fromLang === langTags.docLangTag)
+      );
+
+    // First try to get the langTag from the document's markup.
+    try {
+      const docLocale = new Intl.Locale(documentElementLang);
+      langTags.docLangTag = docLocale.language;
+      langTags.isDocLangTagSupported = determineIsDocLangTagSupported();
+    } catch (error) {}
+
+    // If the document's markup had no specified langTag, attempt
+    // to identify the page's language using the LanguageIdEngine.
+    if (!langTags.docLangTag) {
+      langTags.docLangTag = await this.queryIdentifyLanguage();
+      langTags.isDocLangTagSupported = determineIsDocLangTagSupported();
+    }
+
+    const preferredLanguages = TranslationsParent.getPreferredLanguages();
+
+    if (!langTags.docLangTag) {
+      const message = "No valid language detected.";
+      ChromeUtils.addProfilerMarker(
+        "TranslationsChild",
+        { innerWindowId: this.innerWindowId },
+        message
+      );
+      lazy.console.log(message, href);
+
+      const languagePairs = await this.getLanguagePairs();
+
+      // Attempt to find a good language to select for the user.
+      langTags.userLangTag =
+        preferredLanguages.find(langTag => langTag === languagePairs.toLang) ??
+        null;
+
+      return langTags;
+    }
+
+    // This is a special case where we do not offer a translation if the main app language
+    // and the doc language match. The main app language should be the first preferred
+    // language.
+    if (preferredLanguages[0] === langTags.docLangTag) {
+      // The doc language and the main language match.
+      const message =
+        "The app and document languages match, so not translating.";
+      ChromeUtils.addProfilerMarker(
+        "TranslationsChild",
+        { innerWindowId: this.innerWindowId },
+        message
+      );
+      lazy.console.log(message, href);
+      // The docLangTag will be set, while the userLangTag will be null.
+      return langTags;
+    }
+
+    // Attempt to find a matching language pair for a preferred language.
+    for (const preferredLangTag of preferredLanguages) {
+      if (!langTags.isDocLangTagSupported) {
+        if (languagePairs.some(({ toLang }) => toLang === preferredLangTag)) {
+          // Only match the "to" language, since the "from" is not supported.
+          langTags.userLangTag = preferredLangTag;
+        }
+        break;
+      }
+
+      // Is there a direct language pair match?
+      if (
+        languagePairs.some(
+          ({ fromLang, toLang }) =>
+            fromLang === langTags.docLangTag && toLang === preferredLangTag
+        )
+      ) {
+        // A match was found in one of the preferred languages.
+        langTags.userLangTag = preferredLangTag;
+        break;
+      }
+
+      // Is there a pivot language match?
+      if (
+        // Match doc -> pivot
+        languagePairs.some(
+          ({ fromLang, toLang }) =>
+            fromLang === langTags.docLangTag && toLang === PIVOT_LANGUAGE
+        ) &&
+        // Match pivot -> preferred language
+        languagePairs.some(
+          ({ fromLang, toLang }) =>
+            fromLang === PIVOT_LANGUAGE && toLang === preferredLangTag
+        )
+      ) {
+        langTags.userLangTag = preferredLangTag;
+        break;
+      }
+    }
+
+    if (!langTags.userLangTag) {
+      // No language pairs match.
+      const message = `No matching translation pairs were found for translating from "${langTags.docLangTag}".`;
+      ChromeUtils.addProfilerMarker(
+        "TranslationsChild",
+        { innerWindowId: this.innerWindowId },
+        message
+      );
+      lazy.console.log(message, languagePairs);
+    }
+
+    return langTags;
   }
 
   /**
@@ -1561,7 +1836,10 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {boolean}
    */
   static shouldAlwaysTranslateLanguage(langTag) {
-    return lazy.alwaysTranslateLangTags.includes(langTag);
+    if (!langTag) {
+      return false;
+    }
+    return lazy.alwaysTranslateLangTags.has(langTag);
   }
 
   /**
@@ -1572,7 +1850,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {boolean}
    */
   static shouldNeverTranslateLanguage(langTag) {
-    return lazy.neverTranslateLangTags.includes(langTag);
+    return lazy.neverTranslateLangTags.has(langTag);
   }
 
   /**
@@ -1582,16 +1860,9 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Promise<boolean>}
    */
   async shouldNeverTranslateSite() {
-    let principal;
-    try {
-      principal = await this.getContentWindowPrincipal();
-    } catch {
-      // Unable to get content window principal.
-      return false;
-    }
     const perms = Services.perms;
     const permission = perms.getPermissionObject(
-      principal,
+      this.browsingContext.currentWindowGlobal.documentPrincipal,
       TRANSLATIONS_PERMISSION,
       /* exactHost */ false
     );
@@ -1609,8 +1880,8 @@ export class TranslationsParent extends JSWindowActorParent {
       prefName === ALWAYS_TRANSLATE_LANGS_PREF
         ? lazy.alwaysTranslateLangTags
         : lazy.neverTranslateLangTags;
-    const newLangTags = langTags.filter(tag => tag !== langTag);
-    Services.prefs.setCharPref(prefName, newLangTags.join(","));
+    const newLangTags = [...langTags].filter(tag => tag !== langTag);
+    Services.prefs.setCharPref(prefName, [...newLangTags].join(","));
   }
 
   /**
@@ -1624,10 +1895,10 @@ export class TranslationsParent extends JSWindowActorParent {
       prefName === ALWAYS_TRANSLATE_LANGS_PREF
         ? lazy.alwaysTranslateLangTags
         : lazy.neverTranslateLangTags;
-    if (!langTags.includes(langTag)) {
-      langTags.push(langTag);
+    if (!langTags.has(langTag)) {
+      langTags.add(langTag);
     }
-    Services.prefs.setCharPref(prefName, langTags.join(","));
+    Services.prefs.setCharPref(prefName, [...langTags].join(","));
   }
 
   /**
@@ -1672,13 +1943,13 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   async toggleNeverTranslateSitePermissions() {
     const perms = Services.perms;
-    const principal = await this.getContentWindowPrincipal();
     const shouldNeverTranslateSite = await this.shouldNeverTranslateSite();
+    const { documentPrincipal } = this.browsingContext.currentWindowGlobal;
     if (shouldNeverTranslateSite) {
-      perms.removeFromPrincipal(principal, TRANSLATIONS_PERMISSION);
+      perms.removeFromPrincipal(documentPrincipal, TRANSLATIONS_PERMISSION);
     } else {
       perms.addFromPrincipal(
-        principal,
+        documentPrincipal,
         TRANSLATIONS_PERMISSION,
         perms.DENY_ACTION
       );
