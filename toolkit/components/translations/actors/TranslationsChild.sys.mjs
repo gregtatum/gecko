@@ -66,8 +66,6 @@ const DOC_LANGUAGE_DETECTION_THRESHOLD = 0.65;
  */
 const DOC_TEXT_TO_IDENTIFY_LENGTH = 1024;
 
-const PIVOT_LANGUAGE = "en";
-
 /**
  * See the TranslationsParent for documentation.
  */
@@ -119,21 +117,6 @@ export class TranslationsChild extends JSWindowActorChild {
    * @type {TranslationsEngineCache | null}
    */
   static #engineCache = null;
-
-  /**
-   * Retrieve a substring of text from the document body to be
-   * analyzed by the LanguageIdEngine to determine the page's language.
-   *
-   * @returns {string}
-   */
-  #getTextToIdentify() {
-    let encoder = Cu.createDocumentEncoder("text/plain");
-    encoder.init(this.document, "text/plain", encoder.SkipInvisibleContent);
-    return encoder
-      .encodeToStringWithMaxLength(DOC_TEXT_TO_IDENTIFY_LENGTH)
-      .replaceAll("\r", "")
-      .replaceAll("\n", " ");
-  }
 
   /**
    * @overrides JSWindowActorChild.prototype.handleEvent
@@ -204,163 +187,40 @@ export class TranslationsChild extends JSWindowActorChild {
    * @param {number} [translationsStart]
    * @returns {Promise<LangTags>}
    */
-  async getLangTagsForTranslation(translationsStart = this.docShell.now()) {
-    if (this.#langTags) {
-      return this.#langTags;
-    }
-
-    const langTags = {
-      docLangTag: null,
-      userLangTag: null,
-      isDocLangTagSupported: false,
-    };
-    this.#langTags = langTags;
-
-    if (this.#isRestrictedPage()) {
-      // The langTags are still blank here.
-      return langTags;
-    }
-    let languagePairs = await this.getLanguagePairs();
-
-    const determineIsDocLangTagSupported = docLangTag =>
-      Boolean(
-        languagePairs.find(({ fromLang }) => fromLang === langTags.docLangTag)
-      );
-
-    // First try to get the langTag from the document's markup.
-    try {
-      const docLocale = new Intl.Locale(this.document.documentElement.lang);
-      langTags.docLangTag = docLocale.language;
-      langTags.isDocLangTagSupported = determineIsDocLangTagSupported(
-        docLocale.language
-      );
-    } catch (error) {}
-
-    // If the document's markup had no specified langTag, attempt
-    // to identify the page's language using the LanguageIdEngine.
-    if (!langTags.docLangTag) {
-      let languageIdEngine = await this.createLanguageIdEngine();
-      let { langTag, confidence } = await languageIdEngine.identifyLanguage(
-        this.#getTextToIdentify()
-      );
-      lazy.console.log(
-        `${langTag}(${confidence.toFixed(2)}) Detected Page Language`
-      );
-      if (confidence >= DOC_LANGUAGE_DETECTION_THRESHOLD) {
-        langTags.docLangTag = langTag;
-        langTags.isDocLangTagSupported =
-          determineIsDocLangTagSupported(langTag);
-      }
-    }
-
-    const preferredLanguages = await this.getPreferredLanguages();
-
-    if (!langTags.docLangTag) {
-      const message = "No valid language detected.";
-      ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
-        { innerWindowId: this.innerWindowId },
-        message
-      );
-      lazy.console.log(message, this.contentWindow.location.href);
-
-      const languagePairs = await this.getLanguagePairs();
-
-      // Attempt to find a good language to select for the user.
-      langTags.userLangTag =
-        preferredLanguages.find(langTag => langTag === languagePairs.toLang) ??
-        null;
-
-      return langTags;
-    }
-
-    ChromeUtils.addProfilerMarker(
-      "TranslationsChild",
-      { innerWindowId: this.innerWindowId, startTime: translationsStart },
-      "Time to determine langTags"
-    );
-
-    // This is a special case where we do not offer a translation if the main app language
-    // and the doc language match. The main app language should be the first preferred
-    // language.
-    if (preferredLanguages[0] === langTags.docLangTag) {
-      // The doc language and the main language match.
-      const message =
-        "The app and document languages match, so not translating.";
-      ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
-        { innerWindowId: this.innerWindowId },
-        message
-      );
-      lazy.console.log(message, this.contentWindow.location.href);
-      // The docLangTag will be set, while the userLangTag will be null.
-      return langTags;
-    }
-
-    // Attempt to find a matching language pair for a preferred language.
-    for (const preferredLangTag of preferredLanguages) {
-      if (
-        TranslationsChild.#engineCache?.isInCache(
-          langTags.docLangTag,
-          preferredLangTag
-        )
-      ) {
-        // There is no reason to look at the language pairs if the engine is already in
-        // the cache.
-        langTags.userLangTag = preferredLangTag;
-        break;
-      }
-
-      if (!langTags.isDocLangTagSupported) {
-        if (languagePairs.some(({ toLang }) => toLang === preferredLangTag)) {
-          // Only match the "to" language, since the "from" is not supported.
-          langTags.userLangTag = preferredLangTag;
+  async getLangTagsForTranslation() {
+    if (!this.#langTags) {
+      this.#langTags = await this.sendQuery(
+        "Translations:GetLangTagsForTranslation",
+        {
+          href: this.contentWindow.location.href,
+          documentElementLang: this.document.documentElement.lang,
         }
-        break;
-      }
-
-      // Is there a direct language pair match?
-      if (
-        languagePairs.some(
-          ({ fromLang, toLang }) =>
-            fromLang === langTags.docLangTag && toLang === preferredLangTag
-        )
-      ) {
-        // A match was found in one of the preferred languages.
-        langTags.userLangTag = preferredLangTag;
-        break;
-      }
-
-      // Is there a pivot language match?
-      if (
-        // Match doc -> pivot
-        languagePairs.some(
-          ({ fromLang, toLang }) =>
-            fromLang === langTags.docLangTag && toLang === PIVOT_LANGUAGE
-        ) &&
-        // Match pivot -> preferred language
-        languagePairs.some(
-          ({ fromLang, toLang }) =>
-            fromLang === PIVOT_LANGUAGE && toLang === preferredLangTag
-        )
-      ) {
-        langTags.userLangTag = preferredLangTag;
-        break;
-      }
-    }
-
-    if (!langTags.userLangTag) {
-      // No language pairs match.
-      const message = `No matching translation pairs were found for translating from "${langTags.docLangTag}".`;
-      ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
-        { innerWindowId: this.innerWindowId },
-        message
       );
-      lazy.console.log(message, languagePairs);
     }
 
-    return langTags;
+    return this.#langTags;
+  }
+
+  /**
+   * @returns {string | null}
+   */
+  async identifyLanguage() {
+    let languageIdEngine = await this.createLanguageIdEngine();
+
+    // Grab a selection of text.
+    let encoder = Cu.createDocumentEncoder("text/plain");
+    encoder.init(this.document, "text/plain", encoder.SkipInvisibleContent);
+    let text = encoder
+      .encodeToStringWithMaxLength(DOC_TEXT_TO_IDENTIFY_LENGTH)
+      .replaceAll("\r", "")
+      .replaceAll("\n", " ");
+
+    let { langTag, confidence } = await languageIdEngine.identifyLanguage(text);
+
+    lazy.console.log(
+      `${langTag}(${confidence.toFixed(2)}) Detected Page Language`
+    );
+    return confidence >= DOC_LANGUAGE_DETECTION_THRESHOLD ? langTag : null;
   }
 
   /**
@@ -565,6 +425,10 @@ export class TranslationsChild extends JSWindowActorChild {
         return this.getLangTagsForTranslation();
       case "Translations:GetContentWindowPrincipal":
         return this.getContentWindowPrincipal();
+      case "Translations:GetDocumentElementLang":
+        return this.document.documentElement.lang;
+      case "Translations:IdentifyLanguage":
+        return this.identifyLanguage();
       default:
         lazy.console.warn("Unknown message.", name);
     }
@@ -633,19 +497,6 @@ export class TranslationsChild extends JSWindowActorChild {
    */
   getLanguagePairs() {
     return this.sendQuery("Translations:GetLanguagePairs");
-  }
-
-  /**
-   * The ordered list of preferred BCP 47 language tags.
-   *
-   *   1. App languages
-   *   2. Web requested languages
-   *   3. OS languages
-   *
-   * @returns {Promise<string[]>}
-   */
-  getPreferredLanguages() {
-    return this.sendQuery("Translations:GetPreferredLanguages");
   }
 
   /**
