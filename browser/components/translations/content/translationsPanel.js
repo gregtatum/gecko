@@ -388,7 +388,7 @@ var TranslationsPanel = new (class {
    */
   async #fetchDetectedLanguages() {
     this.detectedLanguages =
-      await this.#getTranslationsActor().getLangTagsForTranslation();
+      await this.#getTranslationsActor().getDetectedLanguages();
     return this.detectedLanguages;
   }
 
@@ -1041,7 +1041,6 @@ var TranslationsPanel = new (class {
           error,
           isEngineReady,
         } = event.detail;
-
         const { panel, button, buttonLocale, buttonCircleArrows } =
           this.elements;
 

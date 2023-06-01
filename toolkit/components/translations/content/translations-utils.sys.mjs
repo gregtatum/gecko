@@ -34,12 +34,46 @@ ChromeUtils.defineESModuleGetters(lazy, {
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
 });
 
+/**
+ * The threshold that the language-identification confidence
+ * value must be greater than in order to provide the detected language
+ * tag for translations.
+ *
+ * This value should ideally be one that does not allow false positives
+ * while also not being too restrictive.
+ *
+ * At this time, this value is not driven by statistical data or analysis.
+ */
+const DOC_LANGUAGE_DETECTION_THRESHOLD = 0.65;
+
+/**
+ * The length of the substring to pull from the document's text for language
+ * identification.
+ *
+ * This value should ideally be one that is large enough to yield a confident
+ * identification result without being too large or expensive to extract.
+ *
+ * At this time, this value is not driven by statistical data or analysis.
+ */
+const DOC_TEXT_TO_IDENTIFY_LENGTH = 1024;
+
 export class LanguageIdEngine {
   /** @type {Worker} */
   #languageIdWorker;
   // Multiple messages can be sent before a response is received. This ID is used to keep
   // track of the messages. It is incremented on every use.
   #messageId = 0;
+
+  /**
+   * Create and initialize the LanguageIdEngine.
+   *
+   * @returns {LanguageIdENgine}
+   */
+  static async createFromPayload(payload) {
+    const engine = new LanguageIdEngine(await payload);
+    await engine.isReady;
+    return engine;
+  }
 
   /**
    * Construct and initialize the language-id worker.
@@ -121,6 +155,26 @@ export class LanguageIdEngine {
         messageId,
       });
     });
+  }
+
+  /**
+   * @returns {string | null}
+   */
+  async identifyLanguageFromDocument(document) {
+    // Grab a selection of text.
+    let encoder = Cu.createDocumentEncoder("text/plain");
+    encoder.init(document, "text/plain", encoder.SkipInvisibleContent);
+    let text = encoder
+      .encodeToStringWithMaxLength(DOC_TEXT_TO_IDENTIFY_LENGTH)
+      .replaceAll("\r", "")
+      .replaceAll("\n", " ");
+
+    let { langTag, confidence } = await this.identifyLanguage(text);
+
+    lazy.console.log(
+      `${langTag}(${confidence.toFixed(2)}) Detected Page Language`
+    );
+    return confidence >= DOC_LANGUAGE_DETECTION_THRESHOLD ? langTag : null;
   }
 }
 
