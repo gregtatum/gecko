@@ -44,41 +44,9 @@ XPCOMUtils.defineLazyGetter(lazy, "console", () => {
 });
 
 /**
- * The threshold that the language-identification confidence
- * value must be greater than in order to provide the detected language
- * tag for translations.
- *
- * This value should ideally be one that does not allow false positives
- * while also not being too restrictive.
- *
- * At this time, this value is not driven by statistical data or analysis.
- */
-const DOC_LANGUAGE_DETECTION_THRESHOLD = 0.65;
-
-/**
- * The length of the substring to pull from the document's text for language
- * identification.
- *
- * This value should ideally be one that is large enough to yield a confident
- * identification result without being too large or expensive to extract.
- *
- * At this time, this value is not driven by statistical data or analysis.
- */
-const DOC_TEXT_TO_IDENTIFY_LENGTH = 1024;
-
-/**
  * See the TranslationsParent for documentation.
  */
 export class TranslationsChild extends JSWindowActorChild {
-  constructor() {
-    super();
-    ChromeUtils.addProfilerMarker(
-      "TranslationsChild",
-      null,
-      "TranslationsChild constructor"
-    );
-  }
-
   /**
    * The getter for the TranslationsEngine, managed by the EngineCache.
    *
@@ -104,14 +72,6 @@ export class TranslationsChild extends JSWindowActorChild {
   translatedDoc = null;
 
   /**
-   * The matched language tags for the page. Used to find a default language pair for
-   * translations.
-   *
-   * @type {null | LangTags}
-   * */
-  #langTags = null;
-
-  /**
    * The engine cache, which is lazily instantiated.
    *
    * @type {TranslationsEngineCache | null}
@@ -123,53 +83,33 @@ export class TranslationsChild extends JSWindowActorChild {
    * @param {{ type: string }} event
    */
   handleEvent(event) {
-    ChromeUtils.addProfilerMarker(
-      "TranslationsChild",
-      null,
-      "Event: " + event.type
-    );
     switch (event.type) {
       case "DOMContentLoaded":
         this.innerWindowId = this.contentWindow.windowGlobalChild.innerWindowId;
-        this.maybeOfferTranslation().catch(error => lazy.console.log(error));
+        if (!this.isRestrictedPage()) {
+          this.sendAsyncMessage("Translations:ReportLangTags", {
+            documentElementLang: this.document.documentElement.lang,
+          });
+        }
         break;
       case "pagehide":
-        lazy.console.log(
-          "pagehide",
-          this.contentWindow.location,
-          this.#langTags
-        );
-        this.reportDetectedLangTagsToParent(null);
+        if (!this.isRestrictedPage()) {
+          this.sendAsyncMessage("Translations:ClearLangTags");
+        }
         break;
     }
-    return undefined;
   }
 
-  /**
-   * This is used to conditionally add the translations button.
-   * @param {null | LangTags} langTags
-   */
-  reportDetectedLangTagsToParent(langTags) {
-    this.sendAsyncMessage("Translations:ReportDetectedLangTags", {
-      langTags,
-    });
-  }
-
-  /**
-   * Returns the principal from the content window's origin.
-   * @returns {nsIPrincipal}
-   */
-  getContentWindowPrincipal() {
-    return Services.scriptSecurityManager.createContentPrincipalFromOrigin(
-      this.contentWindow.location.origin
-    );
-  }
+  #isRestrictedPage;
 
   /**
    * Only translate pages that match certain protocols, that way internal pages like
    * about:* pages will not be translated.
    */
-  #isRestrictedPage() {
+  isRestrictedPage() {
+    if (this.#isRestrictedPage !== undefined) {
+      return this.#isRestrictedPage;
+    }
     const { href } = this.contentWindow.location;
     // Keep this logic up to date with TranslationsParent.isRestrictedPage.
     return !(
@@ -177,103 +117,6 @@ export class TranslationsChild extends JSWindowActorChild {
       href.startsWith("https://") ||
       href.startsWith("file:///")
     );
-  }
-
-  /**
-   * Determine if the page should be translated by checking the App's languages and
-   * comparing it to the reported language of the page. Return the best translation fit
-   * (if available).
-   *
-   * @param {number} [translationsStart]
-   * @returns {Promise<LangTags>}
-   */
-  async getLangTagsForTranslation() {
-    if (!this.#langTags) {
-      this.#langTags = await this.sendQuery(
-        "Translations:GetLangTagsForTranslation",
-        {
-          href: this.contentWindow.location.href,
-          documentElementLang: this.document.documentElement.lang,
-        }
-      );
-    }
-
-    return this.#langTags;
-  }
-
-  /**
-   * @returns {string | null}
-   */
-  async identifyLanguage() {
-    let languageIdEngine = await this.createLanguageIdEngine();
-
-    // Grab a selection of text.
-    let encoder = Cu.createDocumentEncoder("text/plain");
-    encoder.init(this.document, "text/plain", encoder.SkipInvisibleContent);
-    let text = encoder
-      .encodeToStringWithMaxLength(DOC_TEXT_TO_IDENTIFY_LENGTH)
-      .replaceAll("\r", "")
-      .replaceAll("\n", " ");
-
-    let { langTag, confidence } = await languageIdEngine.identifyLanguage(text);
-
-    lazy.console.log(
-      `${langTag}(${confidence.toFixed(2)}) Detected Page Language`
-    );
-    return confidence >= DOC_LANGUAGE_DETECTION_THRESHOLD ? langTag : null;
-  }
-
-  /**
-   * Deduce the language tags on the page, and either:
-   *  1. Show an offer to translate.
-   *  2. Auto-translate.
-   *  3. Do nothing.
-   */
-  async maybeOfferTranslation() {
-    const translationsStart = this.docShell.now();
-
-    const isSupported = await this.isTranslationsEngineSupported;
-    if (!isSupported) {
-      return;
-    }
-
-    const langTags = await this.getLangTagsForTranslation(translationsStart);
-
-    this.#langTags = langTags;
-    this.reportDetectedLangTagsToParent(langTags);
-
-    if (langTags.docLangTag && langTags.userLangTag) {
-      const { maybeAutoTranslate, maybeNeverTranslate } = await this.sendQuery(
-        "Translations:GetTranslationConditions",
-        langTags
-      );
-      if (maybeAutoTranslate && !maybeNeverTranslate) {
-        lazy.TranslationsTelemetry.onTranslate({
-          fromLanguage: langTags.docLangTag,
-          toLanguage: langTags.userLangTag,
-          autoTranslate: maybeAutoTranslate,
-        });
-        this.translatePage(
-          langTags.docLangTag,
-          langTags.userLangTag,
-          translationsStart
-        );
-      }
-    }
-  }
-
-  /**
-   * Lazily initialize this value. It doesn't change after being set.
-   *
-   * @type {Promise<boolean>}
-   */
-  get isTranslationsEngineSupported() {
-    // Delete the getter and set the real value directly onto the TranslationsChild's
-    // prototype. This value never changes while a browser is open.
-    delete TranslationsChild.isTranslationsEngineSupported;
-    return (TranslationsChild.isTranslationsEngineSupported = this.sendQuery(
-      "Translations:GetIsTranslationsEngineSupported"
-    ));
   }
 
   /**
@@ -292,7 +135,7 @@ export class TranslationsChild extends JSWindowActorChild {
       lazy.console.warn("This page was already translated.");
       return;
     }
-    if (this.#isRestrictedPage()) {
+    if (this.isRestrictedPage()) {
       lazy.console.warn("Attempting to translate a restricted page.");
       return;
     }
@@ -400,136 +243,68 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   /**
-   * Receive a message from the parent.
-   *
    * @param {{ name: string, data: any }} message
    */
-  receiveMessage({ name, data }) {
+  async receiveMessage({ name, data }) {
     switch (name) {
-      case "Translations:TranslatePage":
-        const langTags = data ?? this.#langTags;
-        if (!langTags) {
-          lazy.console.warn(
-            "Attempting to translate a page, but no language tags were given."
-          );
-          break;
-        }
-        lazy.TranslationsTelemetry.onTranslate({
-          fromLanguage: langTags.fromLanguage,
-          toLanguage: langTags.toLanguage,
-          autoTranslate: false,
-        });
-        this.translatePage(langTags.fromLanguage, langTags.toLanguage);
+      case "Translations:TranslatePage": {
+        const { fromLanguage, toLanguage } = data;
+        this.translatePage(fromLanguage, toLanguage);
         break;
+      }
       case "Translations:GetLangTagsForTranslation":
         return this.getLangTagsForTranslation();
       case "Translations:GetContentWindowPrincipal":
         return this.getContentWindowPrincipal();
       case "Translations:GetDocumentElementLang":
         return this.document.documentElement.lang;
-      case "Translations:IdentifyLanguage":
-        return this.identifyLanguage();
+      case "Translations:IdentifyLanguage": {
+        const engine = await lazy.LanguageIdEngine.createFromPayload(
+          this.sendQuery("Translations:GetLanguageIdEnginePayload")
+        );
+        return engine.identifyLanguageFromDocument(this.document);
+      }
       default:
         lazy.console.warn("Unknown message.", name);
     }
     return undefined;
   }
 
-  /**
-   * Get the list of languages and their display names, sorted by their display names.
-   * This is more expensive of a call than getLanguagePairs since the display names
-   * are looked up.
-   *
-   * @returns {Promise<Array<SupportedLanguages>>}
-   */
   getSupportedLanguages() {
     return this.sendQuery("Translations:GetSupportedLanguages");
   }
 
-  /**
-   * @param {string} language The BCP 47 language tag.
-   */
   hasAllFilesForLanguage(language) {
     return this.sendQuery("Translations:HasAllFilesForLanguage", {
       language,
     });
   }
 
-  /**
-   * @param {string} language The BCP 47 language tag.
-   */
   deleteLanguageFiles(language) {
     return this.sendQuery("Translations:DeleteLanguageFiles", {
       language,
     });
   }
 
-  /**
-   * @param {string} language The BCP 47 language tag.
-   */
   downloadLanguageFiles(language) {
     return this.sendQuery("Translations:DownloadLanguageFiles", {
       language,
     });
   }
 
-  /**
-   * Download all files from Remote Settings.
-   */
   downloadAllFiles() {
     return this.sendQuery("Translations:DownloadAllFiles");
   }
 
-  /**
-   * Delete all language files.
-   * @returns {Promise<string[]>} Returns a list of deleted record ids.
-   */
   deleteAllLanguageFiles() {
     return this.sendQuery("Translations:DeleteAllLanguageFiles");
   }
 
-  /**
-   * Get the language pairs that can be used for translations. This is cheaper than
-   * the getSupportedLanguages call, since the localized display names of the languages
-   * are not needed.
-   *
-   * @returns {Promise<Array<LanguagePair>>}
-   */
-  getLanguagePairs() {
-    return this.sendQuery("Translations:GetLanguagePairs");
-  }
-
-  /**
-   * Retrieve the payload for creating a LanguageIdEngine.
-   *
-   * @returns {Promise<LanguageIdEnginePayload>}
-   */
-  async #getLanguageIdEnginePayload() {
-    return this.sendQuery("Translations:GetLanguageIdEnginePayload");
-  }
-
-  /**
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
-   * @returns {TranslationsEnginePayload}
-   */
   async #getTranslationsEnginePayload(fromLanguage, toLanguage) {
     return this.sendQuery("Translations:GetTranslationsEnginePayload", {
       fromLanguage,
       toLanguage,
     });
-  }
-
-  /**
-   * Construct and initialize the LanguageIdEngine.
-   *
-   * @returns {LanguageIdEngine}
-   */
-  async createLanguageIdEngine() {
-    const payload = await this.#getLanguageIdEnginePayload();
-    const engine = new lazy.LanguageIdEngine(payload);
-    await engine.isReady;
-    return engine;
   }
 
   /**
