@@ -121,53 +121,50 @@ export class TranslationsChild extends JSWindowActorChild {
    * @param {{ type: string }} event
    */
   handleEvent(event) {
-    ChromeUtils.addProfilerMarker(
-      "TranslationsChild",
-      null,
-      "Event: " + event.type
-    );
     switch (event.type) {
       case "DOMContentLoaded":
         this.innerWindowId = this.contentWindow.windowGlobalChild.innerWindowId;
-        this.maybeOfferTranslation().catch(error => lazy.console.error(error));
+        if (!this.isRestrictedPage()) {
+          this.sendAsyncMessage("Translations:ReportLangTags", {
+            href: this.contentWindow.location.href,
+            documentElementLang: this.document.documentElement.lang,
+            contentWindowPrincipal: this.getContentWindowPrincipal(),
+          });
+        }
         break;
       case "pagehide":
-        lazy.console.log(
-          "pagehide",
-          this.contentWindow.location,
-          this.#langTags
-        );
-        this.reportDetectedLangTagsToParent(null);
+        if (!this.isRestrictedPage()) {
+          this.sendAsyncMessage("Translations:ClearLangTags");
+        }
         break;
     }
-    return undefined;
-  }
-
-  /**
-   * This is used to conditionally add the translations button.
-   * @param {null | LangTags} langTags
-   */
-  reportDetectedLangTagsToParent(langTags) {
-    this.sendAsyncMessage("Translations:ReportDetectedLangTags", {
-      langTags,
-    });
   }
 
   /**
    * Returns the principal from the content window's origin.
-   * @returns {nsIPrincipal}
+   * @returns {nsIPrincipal | null}
    */
   getContentWindowPrincipal() {
-    return Services.scriptSecurityManager.createContentPrincipalFromOrigin(
-      this.contentWindow.location.origin
-    );
+    const { origin } = this.contentWindow.location;
+    try {
+      return Services.scriptSecurityManager.createContentPrincipalFromOrigin(
+        origin
+      );
+    } catch (error) {
+      return null;
+    }
   }
+
+  #isRestrictedPage;
 
   /**
    * Only translate pages that match certain protocols, that way internal pages like
    * about:* pages will not be translated.
    */
-  #isRestrictedPage() {
+  isRestrictedPage() {
+    if (this.#isRestrictedPage !== undefined) {
+      return this.#isRestrictedPage;
+    }
     const { href } = this.contentWindow.location;
     // Keep this logic up to date with TranslationsParent.isRestrictedPage.
     return !(
@@ -175,28 +172,6 @@ export class TranslationsChild extends JSWindowActorChild {
       href.startsWith("https://") ||
       href.startsWith("file:///")
     );
-  }
-
-  /**
-   * Determine if the page should be translated by checking the App's languages and
-   * comparing it to the reported language of the page. Return the best translation fit
-   * (if available).
-   *
-   * @param {number} [translationsStart]
-   * @returns {Promise<LangTags>}
-   */
-  async getLangTagsForTranslation() {
-    if (!this.#langTags) {
-      this.#langTags = await this.sendQuery(
-        "Translations:GetLangTagsForTranslation",
-        {
-          href: this.contentWindow.location.href,
-          documentElementLang: this.document.documentElement.lang,
-        }
-      );
-    }
-
-    return this.#langTags;
   }
 
   /**
@@ -222,54 +197,6 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   /**
-   * Deduce the language tags on the page, and either:
-   *  1. Show an offer to translate.
-   *  2. Auto-translate.
-   *  3. Do nothing.
-   */
-  async maybeOfferTranslation() {
-    const translationsStart = this.docShell.now();
-
-    const isSupported = await this.isTranslationsEngineSupported;
-    if (!isSupported) {
-      return;
-    }
-
-    const langTags = await this.getLangTagsForTranslation(translationsStart);
-
-    this.#langTags = langTags;
-    this.reportDetectedLangTagsToParent(langTags);
-
-    if (langTags.docLangTag && langTags.userLangTag) {
-      const { maybeAutoTranslate, maybeNeverTranslate } = await this.sendQuery(
-        "Translations:GetTranslationConditions",
-        langTags
-      );
-      if (maybeAutoTranslate && !maybeNeverTranslate) {
-        this.translatePage(
-          langTags.docLangTag,
-          langTags.userLangTag,
-          translationsStart
-        );
-      }
-    }
-  }
-
-  /**
-   * Lazily initialize this value. It doesn't change after being set.
-   *
-   * @type {Promise<boolean>}
-   */
-  get isTranslationsEngineSupported() {
-    // Delete the getter and set the real value directly onto the TranslationsChild's
-    // prototype. This value never changes while a browser is open.
-    delete TranslationsChild.isTranslationsEngineSupported;
-    return (TranslationsChild.isTranslationsEngineSupported = this.sendQuery(
-      "Translations:GetIsTranslationsEngineSupported"
-    ));
-  }
-
-  /**
    * Load the translation engine and translate the page.
    *
    * @param {{fromLanguage: string, toLanguage: string}} langTags
@@ -285,7 +212,7 @@ export class TranslationsChild extends JSWindowActorChild {
       lazy.console.warn("This page was already translated.");
       return;
     }
-    if (this.#isRestrictedPage()) {
+    if (this.isRestrictedPage()) {
       lazy.console.warn("Attempting to translate a restricted page.");
       return;
     }
