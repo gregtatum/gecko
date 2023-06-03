@@ -956,8 +956,10 @@ var TranslationsPanel = new (class {
   openSettingsPopup(button) {
     this.#updateSettingsMenuLanguageCheckboxStates();
     this.#updateSettingsMenuSiteCheckboxStates();
-    const popup = button.querySelector("menupopup");
-    popup.openPopup(button);
+    const popup = button.ownerDocument.getElementById(
+      "translations-panel-settings-menupopup"
+    );
+    popup.openPopup(button, "after_end");
   }
 
   /**
