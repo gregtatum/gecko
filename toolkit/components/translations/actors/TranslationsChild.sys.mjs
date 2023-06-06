@@ -259,7 +259,7 @@ export class TranslationsChild extends JSWindowActorChild {
       case "Translations:GetDocumentElementLang":
         return this.document.documentElement.lang;
       case "Translations:IdentifyLanguage": {
-        const engine = await lazy.LanguageIdEngine.createFromPayload(
+        const engine = await lazy.LanguageIdEngine.getOrCreate(() =>
           this.sendQuery("Translations:GetLanguageIdEnginePayload")
         );
         return engine.identifyLanguageFromDocument(this.document);

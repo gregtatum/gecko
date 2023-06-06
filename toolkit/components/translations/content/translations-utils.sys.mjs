@@ -64,15 +64,48 @@ export class LanguageIdEngine {
   // track of the messages. It is incremented on every use.
   #messageId = 0;
 
+  static #cachedEngine = null;
+  static #cachedEngineTimeoutId = null;
+  static #cachedEngineTimeoutMS = 30_000;
+
   /**
-   * Create and initialize the LanguageIdEngine.
+   * Gets a cached engine, or creates a new one.
    *
-   * @returns {LanguageIdENgine}
+   * @param {() => Object} getPayload
+   * @returns {LanguageIdEngine}
    */
-  static async createFromPayload(payload) {
-    const engine = new LanguageIdEngine(await payload);
+  static getOrCreate(getPayload) {
+    if (!this.#cachedEngine) {
+      this.#cachedEngine = LanguageIdEngine.#create(getPayload);
+    }
+    return this.#cachedEngine;
+  }
+
+  /**
+   * @param {() => Object} getPayload
+   * @returns {Promise<LanguageIdEngine>}
+   */
+  static async #create(getPayload) {
+    const engine = new LanguageIdEngine(await getPayload());
     await engine.isReady;
+    LanguageIdEngine.#resetCacheTimeout();
     return engine;
+  }
+
+  static #resetCacheTimeout() {
+    if (LanguageIdEngine.#cachedEngineTimeoutId) {
+      lazy.clearTimeout(LanguageIdEngine.#cachedEngineTimeoutId);
+    }
+    LanguageIdEngine.#cachedEngineTimeoutId = lazy.setTimeout(
+      LanguageIdEngine.#clearEngineCache,
+      LanguageIdEngine.#cachedEngineTimeoutMS
+    );
+  }
+
+  static #clearEngineCache() {
+    lazy.console.log("Clearing the engine cache");
+    LanguageIdEngine.#cachedEngine = null;
+    LanguageIdEngine.#cachedEngineTimeoutId = null;
   }
 
   /**
@@ -131,6 +164,7 @@ export class LanguageIdEngine {
    * @returns {Promise<{ langTag: string, confidence: number }>}
    */
   identifyLanguage(message) {
+    LanguageIdEngine.#resetCacheTimeout();
     const messageId = this.#messageId++;
     return new Promise((resolve, reject) => {
       const onMessage = ({ data }) => {
@@ -283,6 +317,10 @@ export class TranslationsEngineCache {
     return Boolean(this.#engines[languagePairKey(fromLanguage, toLanguage)]);
   }
 }
+
+let _cachedLanguageIdEngine;
+
+function getLanguageIdEngine() {}
 
 /**
  * The TranslationsEngine encapsulates the logic for translating messages. It can
