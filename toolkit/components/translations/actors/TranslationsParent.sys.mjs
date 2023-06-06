@@ -107,6 +107,7 @@ const VERIFY_SIGNATURES_FROM_FS = false;
 
 /**
  * @typedef {import("../translations").TranslationModelRecord} TranslationModelRecord
+ * @typedef {import("../translations").WasmRecord} WasmRecord
  * @typedef {import("../translations").RemoteSettingsClient} RemoteSettingsClient
  * @typedef {import("../translations").LanguageIdEngineMockedPayload} LanguageIdEngineMockedPayload
  * @typedef {import("../translations").LanguageTranslationModelFiles} LanguageTranslationModelFiles
@@ -293,15 +294,10 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Only translate pages that match certain protocols, that way internal pages like
    * about:* pages will not be translated.
+   * @param {string} scheme - The URI spec
    * @returns {boolean}
    */
-  static isRestrictedPage() {
-    if (!this.browsingContext) {
-      console.trace(`!!! no browsing context`);
-      return true;
-    }
-    const { scheme } = this.browsingContext.currentWindowGlobal.documentURI;
-    console.log(`!!! scheme`, scheme);
+  static isRestrictedPage(scheme) {
     // Keep this logic up to date with TranslationsChild.prototype.#isRestrictedPage.
     switch (scheme) {
       case "https":
@@ -406,6 +402,7 @@ export class TranslationsParent extends JSWindowActorParent {
     switch (name) {
       case "Translations:GetTranslationsEnginePayload": {
         const { fromLanguage, toLanguage } = data;
+        console.log(`!!! Translations:GetTranslationsEnginePayload`);
         const bergamotWasmArrayBuffer = this.#getBergamotWasmArrayBuffer();
 
         let files = await this.getLanguageTranslationModelFiles(
@@ -482,10 +479,6 @@ export class TranslationsParent extends JSWindowActorParent {
       }
       case "Translations:ReportLangTags": {
         const { documentElementLang, href } = data;
-        console.log(
-          `!!! this.browsingContext.currentWindowGlobal`,
-          this.browsingContext.currentWindowGlobal
-        );
         const detectedLanguages = await this.getDetectedLanguages(
           documentElementLang,
           href
@@ -545,6 +538,39 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * Caches a RemoteSetting record lookup.
+   *
+   * @type {Record<string, any>}
+   */
+  #recordsCache = {};
+
+  /**
+   * Caches the RemoteSettings clients record lookup.
+   *
+   * @type {Record<string, any>}
+   */
+  #clientCache = {};
+
+  /**
+   * @param {string} key
+   */
+  static recordCacher(key, getRecords) {
+    if (TranslationsParent[key]) {
+      return TranslationsParent[key];
+    }
+    const recordsPromise = getRecords();
+    TranslationsParent[key] = recordsPromise;
+    recordsPromise.catch(() => {
+      // If the promise doesn't resolve, make sure and clear it out.
+      TranslationsParent[key] = null;
+    });
+    return recordsPromise;
+  }
+
+  /** @type {Promise<LanguageIdModelRecord> | null} */
+  #languageIdModelRecord = null;
+
+  /**
    * Retrieves the language-identification model binary from remote settings.
    *
    * @returns {Promise<ArrayBuffer>}
@@ -554,36 +580,50 @@ export class TranslationsParent extends JSWindowActorParent {
     const now = Date.now();
     const client = this.#getLanguageIdModelRemoteClient();
 
-    /** @type {LanguageIdModelRecord[]} */
-    let modelRecords = await TranslationsParent.getMaxVersionRecords(client);
+    if (!this.#languageIdModelRecord) {
+      // Place the records into a promise to prevent any races.
+      this.#languageIdModelRecord = (async () => {
+        /** @type {LanguageIdModelRecord[]} */
+        let modelRecords = await TranslationsParent.getMaxVersionRecords(
+          client
+        );
 
-    if (modelRecords.length === 0) {
-      throw new Error(
-        "Unable to get language-identification model record from remote settings"
-      );
-    }
+        if (modelRecords.length === 0) {
+          throw new Error(
+            "Unable to get language-identification model record from remote settings"
+          );
+        }
 
-    if (modelRecords.length > 1) {
-      TranslationsParent.reportError(
-        new Error(
-          "Expected the language-identification model collection to have only 1 record."
-        ),
-        modelRecords
-      );
+        if (modelRecords.length > 1) {
+          TranslationsParent.reportError(
+            new Error(
+              "Expected the language-identification model collection to have only 1 record."
+            ),
+            modelRecords
+          );
+        }
+        return modelRecords[0];
+      })();
     }
-    const [modelRecord] = modelRecords;
 
     await chaosMode(1 / 3);
 
-    /** @type {{buffer: ArrayBuffer}} */
-    const { buffer } = await client.attachments.download(modelRecord);
+    try {
+      /** @type {{buffer: ArrayBuffer}} */
+      const { buffer } = await client.attachments.download(
+        await this.#languageIdModelRecord
+      );
 
-    const duration = (Date.now() - now) / 1000;
-    lazy.console.log(
-      `Remote language-identification model loaded in ${duration} seconds.`
-    );
+      const duration = (Date.now() - now) / 1000;
+      lazy.console.log(
+        `Remote language-identification model loaded in ${duration} seconds.`
+      );
 
-    return buffer;
+      return buffer;
+    } catch (error) {
+      this.#languageIdModelRecord = null;
+      throw error;
+    }
   }
 
   /**
@@ -603,6 +643,9 @@ export class TranslationsParent extends JSWindowActorParent {
     return client;
   }
 
+  /** @type {Promise<LanguageIdModelRecord> | null} */
+  #languageIdWasmRecord = null;
+
   /**
    * Retrieves the language-identification wasm binary from remote settings.
    *
@@ -614,45 +657,60 @@ export class TranslationsParent extends JSWindowActorParent {
 
     // Load the wasm binary from remote settings, if it hasn't been already.
     lazy.console.log(`Getting remote language-identification wasm binary.`);
+    if (!this.#languageIdWasmRecord) {
+      // Place the records into a promise to prevent any races.
+      this.#languageIdWasmRecord = (async () => {
+        /** @type {WasmRecord[]} */
+        let wasmRecords = await TranslationsParent.getMaxVersionRecords(
+          client,
+          {
+            filters: { name: "fasttext-wasm" },
+          }
+        );
 
-    /** @type {WasmRecord[]} */
-    let wasmRecords = await TranslationsParent.getMaxVersionRecords(client, {
-      filters: { name: "fasttext-wasm" },
-    });
+        if (wasmRecords.length === 0) {
+          // The remote settings client provides an empty list of records when there is
+          // an error.
+          throw new Error(
+            'Unable to get "fasttext-wasm" language-identification wasm binary from Remote Settings.'
+          );
+        }
 
-    if (wasmRecords.length === 0) {
-      // The remote settings client provides an empty list of records when there is
-      // an error.
-      throw new Error(
-        'Unable to get "fasttext-wasm" language-identification wasm binary from Remote Settings.'
-      );
+        if (wasmRecords.length > 1) {
+          TranslationsParent.reportError(
+            new Error(
+              'Expected the "fasttext-wasm" language-identification wasm collection to only have 1 record.'
+            ),
+            wasmRecords
+          );
+        }
+        return wasmRecords[0];
+      })();
     }
 
-    if (wasmRecords.length > 1) {
-      TranslationsParent.reportError(
-        new Error(
-          'Expected the "fasttext-wasm" language-identification wasm collection to only have 1 record.'
-        ),
-        wasmRecords
+    try {
+      // Unlike the models, greedily download the wasm. It will pull it from a locale
+      // cache on disk if it's already been downloaded. Do not retain a copy, as
+      // this will be running in the parent process. It's not worth holding onto
+      // this much memory, so reload it every time it is needed.
+
+      await chaosMode(1 / 3);
+
+      /** @type {{buffer: ArrayBuffer}} */
+      const { buffer } = await client.attachments.download(
+        await this.#languageIdWasmRecord
       );
+
+      const duration = (Date.now() - start) / 1000;
+      lazy.console.log(
+        `Remote language-identification wasm binary loaded in ${duration} seconds.`
+      );
+
+      return buffer;
+    } catch (error) {
+      this.#languageIdWasmRecord = null;
+      throw error;
     }
-
-    // Unlike the models, greedily download the wasm. It will pull it from a locale
-    // cache on disk if it's already been downloaded. Do not retain a copy, as
-    // this will be running in the parent process. It's not worth holding onto
-    // this much memory, so reload it every time it is needed.
-
-    await chaosMode(1 / 3);
-
-    /** @type {{buffer: ArrayBuffer}} */
-    const { buffer } = await client.attachments.download(wasmRecords[0]);
-
-    const duration = (Date.now() - start) / 1000;
-    lazy.console.log(
-      `Remote language-identification wasm binary loaded in ${duration} seconds.`
-    );
-
-    return buffer;
   }
 
   /**
@@ -875,7 +933,10 @@ export class TranslationsParent extends JSWindowActorParent {
       // Simulate an error by providing empty records.
       return [];
     }
-    console.log(`!!! getMaxVersionRecords`);
+    console.trace(
+      `!!! getMaxVersionRecords`,
+      remoteSettingsClient.collectionName
+    );
     const retrievedRecords = await remoteSettingsClient.get({
       // Pull the records from the network.
       syncIfEmpty: true,
@@ -910,50 +971,52 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Promise<Map<string, TranslationModelRecord>>}
    */
   static async #getTranslationModelRecords() {
-    if (TranslationsParent.#translationModelRecords) {
-      return TranslationsParent.#translationModelRecords;
+    if (!TranslationsParent.#translationModelRecords) {
+      // Place the records into a promise to prevent any races.
+      TranslationsParent.#translationModelRecords = (async () => {
+        const records = new Map();
+        const now = Date.now();
+        const client = TranslationsParent.#getTranslationModelsRemoteClient();
+
+        // Load the models. If no data is present, then there will be an initial sync.
+        // Rely on Remote Settings for the syncing strategy for receiving updates.
+        lazy.console.log(`Getting remote language models.`);
+
+        /** @type {TranslationModelRecord[]} */
+        const translationModelRecords =
+          await TranslationsParent.getMaxVersionRecords(client, {
+            // Names in this collection are not unique, so we are appending the languagePairKey
+            // to guarantee uniqueness.
+            lookupKey: record =>
+              `${record.name}${TranslationsParent.languagePairKey(
+                record.fromLang,
+                record.toLang
+              )}`,
+          });
+
+        if (translationModelRecords.length === 0) {
+          throw new Error("Unable to retrieve the translation models.");
+        }
+
+        for (const record of TranslationsParent.ensureLanguagePairsHavePivots(
+          translationModelRecords
+        )) {
+          records.set(record.id, record);
+        }
+
+        const duration = (Date.now() - now) / 1000;
+        lazy.console.log(
+          `Remote language models loaded in ${duration} seconds.`,
+          records
+        );
+
+        return records;
+      })();
+
+      TranslationsParent.#translationModelRecords.catch(() => {
+        this.#translationModelRecords = null;
+      });
     }
-
-    // Place the records into a promise to prevent any races.
-    TranslationsParent.#translationModelRecords = (async () => {
-      const records = new Map();
-      const now = Date.now();
-      const client = TranslationsParent.#getTranslationModelsRemoteClient();
-
-      // Load the models. If no data is present, then there will be an initial sync.
-      // Rely on Remote Settings for the syncing strategy for receiving updates.
-      lazy.console.log(`Getting remote language models.`);
-
-      /** @type {TranslationModelRecord[]} */
-      const translationModelRecords =
-        await TranslationsParent.getMaxVersionRecords(client, {
-          // Names in this collection are not unique, so we are appending the languagePairKey
-          // to guarantee uniqueness.
-          lookupKey: record =>
-            `${record.name}${TranslationsParent.languagePairKey(
-              record.fromLang,
-              record.toLang
-            )}`,
-        });
-
-      if (translationModelRecords.length === 0) {
-        throw new Error("Unable to retrieve the translation models.");
-      }
-
-      for (const record of TranslationsParent.ensureLanguagePairsHavePivots(
-        translationModelRecords
-      )) {
-        records.set(record.id, record);
-      }
-
-      const duration = (Date.now() - now) / 1000;
-      lazy.console.log(
-        `Remote language models loaded in ${duration} seconds.`,
-        records
-      );
-
-      return records;
-    })();
 
     return TranslationsParent.#translationModelRecords;
   }
@@ -1074,6 +1137,9 @@ export class TranslationsParent extends JSWindowActorParent {
     return client;
   }
 
+  /** @type {Promise<WasmRecord> | null} */
+  #bergamotWasmRecord = null;
+
   /**
    * Bergamot is the translation engine that has been compiled to wasm. It is shipped
    * to the user via Remote Settings.
@@ -1086,46 +1152,62 @@ export class TranslationsParent extends JSWindowActorParent {
   async #getBergamotWasmArrayBuffer() {
     const start = Date.now();
     const client = this.#getTranslationsWasmRemoteClient();
+    if (!this.#bergamotWasmRecord) {
+      // Place the records into a promise to prevent any races.
+      this.#bergamotWasmRecord = (async () => {
+        // Load the wasm binary from remote settings, if it hasn't been already.
+        lazy.console.log(`Getting remote bergamot-translator wasm records.`);
 
-    // Load the wasm binary from remote settings, if it hasn't been already.
-    lazy.console.log(`Getting remote bergamot-translator wasm records.`);
+        /** @type {WasmRecord[]} */
+        const wasmRecords = await TranslationsParent.getMaxVersionRecords(
+          client,
+          {
+            filters: { name: "bergamot-translator" },
+          }
+        );
 
-    /** @type {WasmRecord[]} */
-    const wasmRecords = await TranslationsParent.getMaxVersionRecords(client, {
-      filters: { name: "bergamot-translator" },
-    });
+        if (wasmRecords.length === 0) {
+          // The remote settings client provides an empty list of records when there is
+          // an error.
+          throw new Error(
+            "Unable to get the bergamot translator from Remote Settings."
+          );
+        }
 
-    if (wasmRecords.length === 0) {
-      // The remote settings client provides an empty list of records when there is
-      // an error.
-      throw new Error(
-        "Unable to get the bergamot translator from Remote Settings."
-      );
+        if (wasmRecords.length > 1) {
+          TranslationsParent.reportError(
+            new Error(
+              "Expected the bergamot-translator to only have 1 record."
+            ),
+            wasmRecords
+          );
+        }
+        return wasmRecords[0];
+      })();
     }
-
-    if (wasmRecords.length > 1) {
-      TranslationsParent.reportError(
-        new Error("Expected the bergamot-translator to only have 1 record."),
-        wasmRecords
-      );
-    }
-
     // Unlike the models, greedily download the wasm. It will pull it from a locale
     // cache on disk if it's already been downloaded. Do not retain a copy, as
     // this will be running in the parent process. It's not worth holding onto
     // this much memory, so reload it every time it is needed.
 
-    await chaosModeError(1 / 3);
+    try {
+      await chaosModeError(1 / 3);
 
-    /** @type {{buffer: ArrayBuffer}} */
-    const { buffer } = await client.attachments.download(wasmRecords[0]);
+      /** @type {{buffer: ArrayBuffer}} */
+      const { buffer } = await client.attachments.download(
+        await this.#bergamotWasmRecord
+      );
 
-    const duration = Date.now() - start;
-    lazy.console.log(
-      `"bergamot-translator" wasm binary loaded in ${duration / 1000} seconds`
-    );
+      const duration = Date.now() - start;
+      lazy.console.log(
+        `"bergamot-translator" wasm binary loaded in ${duration / 1000} seconds`
+      );
 
-    return buffer;
+      return buffer;
+    } catch (error) {
+      this.#bergamotWasmRecord = null;
+      throw error;
+    }
   }
 
   /**
@@ -1155,7 +1237,6 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} requestedLanguage The BCP 47 language tag.
    */
   async downloadLanguageFiles(language) {
-    console.log(`!!! downloadLanguageFiles parent`);
     const client = TranslationsParent.#getTranslationModelsRemoteClient();
 
     const queue = [];
@@ -1584,7 +1665,7 @@ export class TranslationsParent extends JSWindowActorParent {
     return this.sendQuery("Translations:GetDocumentElementLang");
   }
 
-  queryIdentifyLanguage() {
+  async queryIdentifyLanguage() {
     return this.sendQuery("Translations:IdentifyLanguage");
   }
 
@@ -1630,7 +1711,12 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!TranslationsParent.getIsTranslationsEngineSupported()) {
       return langTags;
     }
-    if (TranslationsParent.isRestrictedPage()) {
+
+    if (
+      TranslationsParent.isRestrictedPage(
+        this.browsingContext.currentWindowGlobal.documentURI.scheme
+      )
+    ) {
       return langTags;
     }
     if (documentElementLang === undefined) {
