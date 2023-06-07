@@ -402,7 +402,6 @@ export class TranslationsParent extends JSWindowActorParent {
     switch (name) {
       case "Translations:GetTranslationsEnginePayload": {
         const { fromLanguage, toLanguage } = data;
-        console.log(`!!! Translations:GetTranslationsEnginePayload`);
         const bergamotWasmArrayBuffer = this.#getBergamotWasmArrayBuffer();
 
         let files = await this.getLanguageTranslationModelFiles(
@@ -535,36 +534,6 @@ export class TranslationsParent extends JSWindowActorParent {
 
     // The page can be auto-translated
     return true;
-  }
-
-  /**
-   * Caches a RemoteSetting record lookup.
-   *
-   * @type {Record<string, any>}
-   */
-  #recordsCache = {};
-
-  /**
-   * Caches the RemoteSettings clients record lookup.
-   *
-   * @type {Record<string, any>}
-   */
-  #clientCache = {};
-
-  /**
-   * @param {string} key
-   */
-  static recordCacher(key, getRecords) {
-    if (TranslationsParent[key]) {
-      return TranslationsParent[key];
-    }
-    const recordsPromise = getRecords();
-    TranslationsParent[key] = recordsPromise;
-    recordsPromise.catch(() => {
-      // If the promise doesn't resolve, make sure and clear it out.
-      TranslationsParent[key] = null;
-    });
-    return recordsPromise;
   }
 
   /** @type {Promise<LanguageIdModelRecord> | null} */
@@ -933,10 +902,6 @@ export class TranslationsParent extends JSWindowActorParent {
       // Simulate an error by providing empty records.
       return [];
     }
-    console.trace(
-      `!!! getMaxVersionRecords`,
-      remoteSettingsClient.collectionName
-    );
     const retrievedRecords = await remoteSettingsClient.get({
       // Pull the records from the network.
       syncIfEmpty: true,
@@ -1107,7 +1072,6 @@ export class TranslationsParent extends JSWindowActorParent {
     if (TranslationsParent.#translationsWasmRemoteClient) {
       return TranslationsParent.#translationsWasmRemoteClient;
     }
-    console.log(`!!! wasm client`);
 
     /** @type {RemoteSettingsClient} */
     const client = lazy.RemoteSettings("translations-wasm");
