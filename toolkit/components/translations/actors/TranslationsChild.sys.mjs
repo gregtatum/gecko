@@ -15,14 +15,12 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 export class TranslationsChild extends JSWindowActorChild {
   /**
-   * Store this at the beginning so that there is no risk of access a dead object
-   * to read it.
+   * Store this since the window may be dead when the value is needed.
    * @type {number | null}
    */
   innerWindowId = null;
   isDestroyed = false;
   #didTranslate = false;
-  #isRestrictedPage;
 
   handleEvent(event) {
     switch (event.type) {
@@ -47,9 +45,6 @@ export class TranslationsChild extends JSWindowActorChild {
    * about:* pages will not be translated.
    */
   isRestrictedPage() {
-    if (this.#isRestrictedPage !== undefined) {
-      return this.#isRestrictedPage;
-    }
     const { href } = this.contentWindow.location;
     // Keep this logic up to date with TranslationsParent.isRestrictedPage.
     return !(
@@ -70,18 +65,16 @@ export class TranslationsChild extends JSWindowActorChild {
         }
         return undefined;
       }
-      case "Translations:GetLangTagsForTranslation":
-        return this.getLangTagsForTranslation();
-      case "Translations:GetContentWindowPrincipal":
-        return this.getContentWindowPrincipal();
       case "Translations:GetDocumentElementLang":
         return this.document.documentElement.lang;
       case "Translations:IdentifyLanguage": {
-        const engine = await lazy.LanguageIdEngine.getOrCreate(() =>
-          this.sendQuery("Translations:GetLanguageIdEnginePayload")
-        );
+        const engine = await this.createLanguageIdEngine();
         return engine.identifyLanguageFromDocument(this.document);
       }
+      case "Translations:DownloadedLanguageFile":
+      case "Translations:DownloadLanguageFileError":
+        // Currently unhandled.
+        return undefined;
       default:
         throw new Error("Unknown message.", name);
     }
@@ -121,11 +114,26 @@ export class TranslationsChild extends JSWindowActorChild {
     this.sendAsyncMessage("Translations:EngineIsReady");
   }
 
-  async getTranslationsEnginePayload(fromLanguage, toLanguage) {
+  isTranslationsEngineSupported() {
+    return this.sendQuery("Translations:IsTranslationsEngineSupported");
+  }
+
+  getTranslationsEnginePayload(fromLanguage, toLanguage) {
     return this.sendQuery("Translations:GetTranslationsEnginePayload", {
       fromLanguage,
       toLanguage,
     });
+  }
+
+  createLanguageIdEngine() {
+    return lazy.LanguageIdEngine.getOrCreate(() =>
+      this.sendQuery("Translations:GetLanguageIdEnginePayload")
+    );
+  }
+
+  createTranslationsEngine(fromLanguage, toLanguage) {
+    // Bypass the engine cache and always create a new one.
+    return lazy.TranslationsEngine.create(this, fromLanguage, toLanguage);
   }
 
   async didDestroy() {

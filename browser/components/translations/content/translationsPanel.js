@@ -1027,12 +1027,17 @@ var TranslationsPanel = new (class {
     this.#getTranslationsActor().restorePage(docLangTag);
   }
 
+  handleEventId = 0;
+
   /**
    * Set the state of the translations button in the URL bar.
    *
    * @param {CustomEvent} event
    */
   handleEvent = async event => {
+    // Check this value after every `await` to guard against race conditions.
+    const handleEventId = ++this.handleEventId;
+
     switch (event.type) {
       case "TranslationsParent:LanguageState":
         const {
@@ -1078,6 +1083,10 @@ var TranslationsPanel = new (class {
           // Finally check that this is a supported language that we should translate.
           (hasSupportedLanguage && !(await shouldNeverTranslate()))
         ) {
+          if (handleEventId !== this.handleEventId) {
+            // A new handleEvent was received, this one is stale.
+            return;
+          }
           button.hidden = false;
           if (requestedTranslationPair) {
             // The translation is active, update the urlbar button.
@@ -1100,6 +1109,10 @@ var TranslationsPanel = new (class {
             buttonCircleArrows.hidden = true;
           }
         } else {
+          if (handleEventId !== this.handleEventId) {
+            // A new handleEvent was received, this one is stale.
+            return;
+          }
           this.#hideTranslationsButton();
         }
 

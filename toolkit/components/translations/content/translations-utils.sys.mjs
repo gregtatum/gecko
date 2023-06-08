@@ -271,41 +271,59 @@ export class TranslationsEngine {
     }
 
     // A new engine needs to be created.
-    const enginePromise = (async () => {
-      const startTime = actor.docShell.now();
+    const enginePromise = TranslationsEngine.create(
+      actor,
+      fromLanguage,
+      toLanguage
+    );
 
-      try {
-        const engine = new TranslationsEngine(
-          fromLanguage,
-          toLanguage,
-          await actor.getTranslationsEnginePayload(fromLanguage, toLanguage),
-          actor.innerWindowId
-        );
+    this.#cachedEngine = { languagePairKey, enginePromise };
+    TranslationsEngine.keepAlive(languagePairKey);
 
-        await engine.isReady;
-
-        ChromeUtils.addProfilerMarker(
-          "TranslationsEngine",
-          { innerWindowId: actor.innerWindowId, startTime },
-          `Translations engine loaded for "${fromLanguage}" to "${toLanguage}"`
-        );
-
-        return engine;
-      } catch (error) {
+    enginePromise.then(
+      () => {
+        void TranslationsEngine.keepAlive(languagePairKey);
+      },
+      error => {
         lazy.console.error(
           `The engine failed to load for translating "${fromLanguage}" to "${toLanguage}". Removing it from the cache.`,
           error
         );
         // Remove the engine if it fails to initialize.
         this.#cachedEngine = null;
-        throw error;
       }
-    })();
-
-    this.#cachedEngine = { languagePairKey, enginePromise };
-    TranslationsEngine.keepAlive(languagePairKey);
+    );
 
     return enginePromise;
+  }
+
+  /**
+   * Create a TranslationsEngine and bypass the cache.
+   *
+   * @param {TranslationsChild} actor
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   * @returns {Promise<TranslationsEngine>}
+   */
+  static async create(actor, fromLanguage, toLanguage) {
+    const startTime = actor.docShell.now();
+
+    const engine = new TranslationsEngine(
+      fromLanguage,
+      toLanguage,
+      await actor.getTranslationsEnginePayload(fromLanguage, toLanguage),
+      actor.innerWindowId
+    );
+
+    await engine.isReady;
+
+    ChromeUtils.addProfilerMarker(
+      "TranslationsEngine",
+      { innerWindowId: actor.innerWindowId, startTime },
+      `Translations engine loaded for "${fromLanguage}" to "${toLanguage}"`
+    );
+
+    return engine;
   }
 
   /**
@@ -341,7 +359,6 @@ export class TranslationsEngine {
       TranslationsEngine.#cachedEngine?.enginePromise.then(engine =>
         engine.terminate()
       );
-      TranslationsEngine.#cachedEngine = null;
     }, CACHE_TIMEOUT_MS);
   }
 
@@ -557,6 +574,11 @@ export class TranslationsEngine {
    */
   terminate() {
     this.#translationsWorker.terminate();
+    TranslationsEngine.#cachedEngine?.then(engine => {
+      if (engine === this) {
+        TranslationsEngine.#cachedEngine = null;
+      }
+    });
   }
 
   /**

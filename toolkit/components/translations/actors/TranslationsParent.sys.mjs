@@ -503,6 +503,9 @@ export class TranslationsParent extends JSWindowActorParent {
         this.languageState.detectedLanguages = data.langTags;
         return undefined;
       }
+      case "Translations:IsTranslationsEngineSupported": {
+        return TranslationsParent.getIsTranslationsEngineSupported();
+      }
     }
     return undefined;
   }
@@ -852,7 +855,6 @@ export class TranslationsParent extends JSWindowActorParent {
 
     // Invalidate cached data.
     TranslationsParent.#languagePairs = null;
-    TranslationsParent.#translationModelRecords = null;
   }
 
   /**
@@ -1503,6 +1505,8 @@ export class TranslationsParent extends JSWindowActorParent {
     );
 
     TranslationsParent.#translationModelRecords = null;
+    TranslationsParent.#languagePairs = null;
+    TranslationsParent.#isTranslationsEngineSupported = null;
 
     TranslationsParent.#translationModelsRemoteClient = null;
     TranslationsParent.#translationsWasmRemoteClient = null;
@@ -1645,10 +1649,6 @@ export class TranslationsParent extends JSWindowActorParent {
       !TranslationsParent.shouldNeverTranslateLanguage(langTags.docLangTag) &&
       !(await this.shouldNeverTranslateSite())
     ) {
-      this.languageState.requestedTranslationPair = {
-        fromLanguage: langTags.docLangTag,
-        toLanguage: langTags.userLangTag,
-      };
       return true;
     }
 
@@ -1852,8 +1852,8 @@ export class TranslationsParent extends JSWindowActorParent {
       prefName === ALWAYS_TRANSLATE_LANGS_PREF
         ? lazy.alwaysTranslateLangTags
         : lazy.neverTranslateLangTags;
-    const newLangTags = langTags.filter(tag => tag !== langTag);
-    Services.prefs.setCharPref(prefName, newLangTags.join(","));
+    const newLangTags = [...langTags].filter(tag => tag !== langTag);
+    Services.prefs.setCharPref(prefName, [...newLangTags].join(","));
   }
 
   /**
@@ -1870,7 +1870,7 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!langTags.has(langTag)) {
       langTags.add(langTag);
     }
-    Services.prefs.setCharPref(prefName, langTags.join(","));
+    Services.prefs.setCharPref(prefName, [...langTags].join(","));
   }
 
   /**
