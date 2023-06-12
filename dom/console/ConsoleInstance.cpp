@@ -64,17 +64,8 @@ ConsoleInstance::ConsoleInstance(JSContext* aCx,
   if (!aOptions.mMaxLogLevelPref.IsEmpty()) {
     mConsole->mMaxLogLevelPref = aOptions.mMaxLogLevelPref;
     NS_ConvertUTF16toUTF8 pref(aOptions.mMaxLogLevelPref);
-    nsAutoCString value;
-    nsresult rv = Preferences::GetCString(pref.get(), value);
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      nsString message;
-      message.AssignLiteral(
-          "Console.maxLogLevelPref used with a non-existing pref: ");
-      message.Append(aOptions.mMaxLogLevelPref);
-
-      nsContentUtils::LogSimpleConsoleError(message, "chrome"_ns, false,
-                                            true /* from chrome context*/);
-    }
+    mConsole->UpdateMaxLogLevelFromPref(pref);
+    Preferences::AddStrongObserver(mConsole, pref);
   }
 }
 

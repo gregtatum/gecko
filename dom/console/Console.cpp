@@ -976,6 +976,12 @@ Console::Observe(nsISupports* aSubject, const char* aTopic,
     return NS_OK;
   }
 
+  if (!strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
+    MOZ_ASSERT(!NS_strcmp(aData, mMaxLogLevelPref.get()));
+    NS_ConvertUTF16toUTF8 pref(mMaxLogLevelPref);
+    UpdateMaxLogLevelFromPref(pref);
+  }
+
   return NS_OK;
 }
 
@@ -2870,21 +2876,18 @@ void Console::ExecuteDumpFunction(const nsAString& aMessage) {
   fflush(stdout);
 }
 
-ConsoleLogLevel PrefToValue(const nsAString& aPref,
-                            const ConsoleLogLevel aLevel) {
-  if (!NS_IsMainThread()) {
-    NS_WARNING("Console.maxLogLevelPref is not supported on workers!");
-    return ConsoleLogLevel::All;
-  }
-  if (aPref.IsEmpty()) {
-    return aLevel;
-  }
-
-  NS_ConvertUTF16toUTF8 pref(aPref);
+void Console::UpdateMaxLogLevelFromPref(nsCString& aPref) {
   nsAutoCString value;
-  nsresult rv = Preferences::GetCString(pref.get(), value);
+  nsresult rv = Preferences::GetCString(aPref.get(), value);
   if (NS_WARN_IF(NS_FAILED(rv))) {
-    return aLevel;
+    nsString message;
+    message.AssignLiteral(
+        "Console.maxLogLevelPref used with a non-existing pref: ");
+    message.Append(mMaxLogLevelPref);
+
+    nsContentUtils::LogSimpleConsoleError(message, "chrome"_ns, false,
+                                          true /* from chrome context*/);
+    return;
   }
 
   int index = FindEnumStringIndexImpl(value.get(), value.Length(),
@@ -2896,16 +2899,15 @@ ConsoleLogLevel PrefToValue(const nsAString& aPref,
 
     nsContentUtils::LogSimpleConsoleError(message, "chrome"_ns, false,
                                           true /* from chrome context*/);
-    return aLevel;
+    return;
   }
 
   MOZ_ASSERT(index < (int)ConsoleLogLevelValues::Count);
-  return static_cast<ConsoleLogLevel>(index);
+  mMaxLogLevel = static_cast<ConsoleLogLevel>(index);
 }
 
 bool Console::ShouldProceed(MethodName aName) const {
-  ConsoleLogLevel maxLogLevel = PrefToValue(mMaxLogLevelPref, mMaxLogLevel);
-  return WebIDLLogLevelToInteger(maxLogLevel) <=
+  return WebIDLLogLevelToInteger(mMaxLogLevel) <=
          InternalLogLevelToInteger(aName);
 }
 

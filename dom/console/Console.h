@@ -376,6 +376,8 @@ class Console final : public nsIObserver, public nsSupportsWeakReference {
 
   uint32_t InternalLogLevelToInteger(MethodName aName) const;
 
+  void UpdateMaxLogLevelFromPref(nsCString& aPref);
+
   class ArgumentData {
    public:
     bool Initialize(JSContext* aCx, const Sequence<JS::Value>& aArguments);
