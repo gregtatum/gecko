@@ -58,6 +58,22 @@
 #include "nsIWebNavigation.h"
 #include "nsIXPConnect.h"
 
+// Do not commit, debug only:
+#include "mozilla/Utf8.h"
+std::string ToUtf8(mozilla::Span<const char16_t> input) {
+  size_t buff_len = input.Length() * 3;
+  std::string result(buff_len, ' ');
+  result.reserve(buff_len);
+  size_t result_len =
+      ConvertUtf16toUtf8(input, mozilla::Span(result.data(), buff_len));
+  result.resize(result_len);
+  return result;
+}
+#include <wchar.h>
+std::string ToUtf8(const char16_t* input) {
+  return ToUtf8({input, wcslen(reinterpret_cast<const wchar_t*>(input))});
+}
+
 // The maximum allowed number of concurrent timers per page.
 #define MAX_PAGE_TIMERS 10000
 
@@ -977,6 +993,10 @@ Console::Observe(nsISupports* aSubject, const char* aTopic,
   }
 
   if (!strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
+    auto a = ToUtf8(aData);
+    auto b = ToUtf8(mMaxLogLevelPref.get());
+    printf("!!! %s == %s\n", a.data(), b.data());
+
     MOZ_ASSERT(!NS_strcmp(aData, mMaxLogLevelPref.get()));
     NS_ConvertUTF16toUTF8 pref(mMaxLogLevelPref);
     UpdateMaxLogLevelFromPref(pref);

@@ -5374,6 +5374,8 @@ nsresult Preferences::RemoveObserver(nsIObserver* aObserver,
     MOZ_ASSERT(!sPreferences);
     return NS_OK;  // Observers have been released automatically.
   }
+
+  printf("!!! Preferences::RemoveObserver %s\n", aPref.Data());
   NS_ENSURE_TRUE(sPreferences, NS_ERROR_NOT_AVAILABLE);
   return sPreferences->mRootBranch->RemoveObserver(aPref, aObserver);
 }

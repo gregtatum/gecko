@@ -1,0 +1,44 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <title>Test logLevel preference in a ChromeWorker</title>
+  <script src="chrome://mochikit/content/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" href="chrome://mochikit/content/tests/SimpleTest/test.css"/>
+  <script><![CDATA[
+    add_task(async function test_console_log_level_worker() {
+      await SpecialPowers.pushPrefEnv({ set: [["pref.test.console", "log"]] });
+
+      const workerScript = /* js */ `
+        dump("!!! Inside of worker\\n");
+        // console
+        //   .createInstance({ maxLogLevelPref: "pref.test.console" })
+        //   .log("Hello world!");
+
+        self.postMessage('msg from worker');
+      `;
+      const worker = new ChromeWorker(
+        URL.createObjectURL(new Blob([workerScript], { type: "text/javascript" }))
+      );
+
+      const messagePromise = new Promise(resolve => {
+        worker.onmessage = function (e) {
+          dump("!!! Received: " + e.data + "\n");
+          ok(true, "Message received.");
+          resolve();
+        };
+      });
+
+      worker.postMessage("hello"); // Start the worker.
+
+      await messagePromise;
+
+    });
+  ]]></script>
+</head>
+<body>
+<p id="display"></p>
+<div id="content" style="display: none"></div>
+<pre id="test"></pre>
+</body>
+</html>

@@ -61,11 +61,20 @@ ConsoleInstance::ConsoleInstance(JSContext* aCx,
     mConsole->mMaxLogLevel = aOptions.mMaxLogLevel.Value();
   }
 
-  if (!aOptions.mMaxLogLevelPref.IsEmpty()) {
-    mConsole->mMaxLogLevelPref = aOptions.mMaxLogLevelPref;
+  printf("!!! ConsoleInstance::ConsoleInstance\n");
+
+  if (!aOptions.mMaxLogLevelPref.IsEmpty() && NS_IsMainThread()) {
     NS_ConvertUTF16toUTF8 pref(aOptions.mMaxLogLevelPref);
-    mConsole->UpdateMaxLogLevelFromPref(pref);
-    Preferences::AddStrongObserver(mConsole, pref);
+    printf("!!! mMaxLogLevelPref  %s\n", pref.get());
+    if (NS_IsMainThread()) {
+      mConsole->mMaxLogLevelPref = aOptions.mMaxLogLevelPref;
+      mConsole->UpdateMaxLogLevelFromPref(pref);
+      printf("!!! isMainThread\n");
+      Preferences::AddStrongObserver(mConsole, pref);
+    } else {
+      printf("!!! isNotMainThread\n");
+      NS_WARNING("Console.emaxLogLevelPref is not supported on workers!");
+    }
   }
 }
 
