@@ -6,6 +6,14 @@
 urlbar-translations-button =
   .tooltiptext = Translate this page
 
+# Variables:
+#   $language (string) - The localized display name of the language translated to.
+urlbar-translations-button-translated =
+  .tooltiptext = Page translated to { $language }
+
+urlbar-translations-button-loading =
+  .tooltiptext = Translations are loading
+
 translations-panel-settings-button =
   .aria-label = Manage translation settings
 
