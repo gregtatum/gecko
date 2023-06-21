@@ -830,6 +830,19 @@ async function selectAboutPreferencesElements() {
   };
 }
 
+/**
+ * Force focus to an element that isn't focusable.
+ * Toolbar buttons aren't focusable because if they were, clicking them would
+ * focus them, which is undesirable. Therefore, they're only made focusable
+ * when a user is navigating with the keyboard. This function forces focus as
+ * is done during toolbar keyboard navigation.
+ */
+function forceFocus(element) {
+  element.setAttribute("tabindex", "-1");
+  element.focus();
+  element.removeAttribute("tabindex");
+}
+
 function click(button, message) {
   info(message);
   if (button.hidden) {
@@ -840,6 +853,7 @@ function click(button, message) {
 
 function hitEnterKey(button, message) {
   info(message);
+  forceFocus(button);
   button.dispatchEvent(
     new KeyboardEvent("keypress", {
       key: "Enter",

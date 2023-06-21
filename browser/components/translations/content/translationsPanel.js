@@ -907,6 +907,7 @@ var TranslationsPanel = new (class {
    * Removes the translations button.
    */
   #hideTranslationsButton() {
+    console.trace(`!!! hideTranslationsButton`);
     const { button, buttonLocale, buttonCircleArrows } = this.elements;
     button.hidden = true;
     buttonLocale.hidden = true;
@@ -929,14 +930,15 @@ var TranslationsPanel = new (class {
    * Handle the translation button being clicked when there are two language options.
    */
   async onTranslate() {
-    PanelMultiView.hidePopup(this.elements.panel);
-
+    const { panel, fromMenuList, toMenuList } = this.elements;
     const actor = this.#getTranslationsActor();
     actor.translate(
-      this.elements.fromMenuList.value,
-      this.elements.toMenuList.value,
+      fromMenuList.value,
+      toMenuList.value,
       false // reportAsAutoTranslate
     );
+
+    PanelMultiView.hidePopup(panel);
   }
 
   onCancel() {
@@ -1095,6 +1097,8 @@ var TranslationsPanel = new (class {
           error,
           isEngineReady,
         } = event.detail;
+
+        console.log(`!!! event.detail`, event.detail);
 
         const { panel, button, buttonLocale, buttonCircleArrows } =
           this.elements;

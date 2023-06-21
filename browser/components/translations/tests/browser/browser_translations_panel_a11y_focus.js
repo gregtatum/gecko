@@ -7,7 +7,7 @@
  * Tests the a11y focus behavior.
  */
 add_task(async function test_translations_panel_a11y_focus() {
-  const { cleanup } = await loadTestPage({
+  const { cleanup, resolveDownloads } = await loadTestPage({
     page: SPANISH_PAGE_URL,
     languagePairs: LANGUAGE_PAIRS,
   });
@@ -26,6 +26,24 @@ add_task(async function test_translations_panel_a11y_focus() {
     "translations-panel-settings-button",
     "The settings button is focused."
   );
+
+  hitTabUntil("translations-panel-translate-button");
+
+  await waitForTranslationsPopupEvent("popuphidden", () => {
+    forceFocus(getByL10nId("translations-panel-translate-button"));
+    EventUtils.synthesizeKey("KEY_Enter");
+  });
+
+  await resolveDownloads(1);
+
+  console.log(`!!! document.activeElement`, document.activeElement);
+  await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
+  await TestUtils.waitForCondition(
+    () => document.activeElement === button,
+    "Waiting for focus."
+  );
+
+  // is(document.activeElement, button, "The translations button is focused.");
 
   await cleanup();
 });

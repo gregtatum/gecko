@@ -215,6 +215,16 @@ function click(button, message) {
   EventUtils.synthesizeMouseAtCenter(button, {});
 }
 
+function hitTabUntil(l10nId) {
+  const element = getByL10nId(l10nId);
+  for (let i = 0; i < 100; i++) {
+    EventUtils.synthesizeKey("VK_TAB");
+    if (document.activeElement === element) {
+      return;
+    }
+  }
+}
+
 /**
  * @param {Element} element
  * @returns {boolean}
@@ -310,7 +320,7 @@ async function waitForTranslationsPopupEvent(eventName, callback) {
   }
   const promise = BrowserTestUtils.waitForEvent(panel, eventName);
   callback();
-  info("Waiting for the translations panel popup to be shown");
+  info("Waiting for the translations panel popup event " + eventName);
   await promise;
   // Wait a single tick on the event loop.
   await new Promise(resolve => setTimeout(resolve, 0));
