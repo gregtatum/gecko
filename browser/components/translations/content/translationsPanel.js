@@ -156,11 +156,9 @@ class CheckboxStateMachine {
       case CheckboxStateMachine.#computeState(1, 0, 0, 0): {
         return PageAction.RESTORE_PAGE;
       }
+      case CheckboxStateMachine.#computeState(0, 0, 1, 0):
       case CheckboxStateMachine.#computeState(0, 1, 0, 0):
       case CheckboxStateMachine.#computeState(0, 0, 0, 0): {
-        return PageAction.HIDE_BUTTON;
-      }
-      case CheckboxStateMachine.#computeState(0, 0, 1, 0): {
         return PageAction.SHOW_BUTTON;
       }
     }
@@ -180,14 +178,12 @@ class CheckboxStateMachine {
       case CheckboxStateMachine.#computeState(1, 0, 0, 0): {
         return PageAction.RESTORE_PAGE;
       }
-      case CheckboxStateMachine.#computeState(0, 1, 0, 0):
-      case CheckboxStateMachine.#computeState(0, 0, 0, 0): {
-        return PageAction.HIDE_BUTTON;
-      }
       case CheckboxStateMachine.#computeState(0, 1, 0, 1): {
         return PageAction.TRANSLATE_PAGE;
       }
-      case CheckboxStateMachine.#computeState(0, 0, 0, 1): {
+      case CheckboxStateMachine.#computeState(0, 0, 0, 1):
+      case CheckboxStateMachine.#computeState(0, 1, 0, 0):
+      case CheckboxStateMachine.#computeState(0, 0, 0, 0): {
         return PageAction.SHOW_BUTTON;
       }
     }
@@ -1131,19 +1127,6 @@ var TranslationsPanel = new (class {
 
         this.#updateViewFromTranslationStatus();
 
-        /**
-         * Defer this check to the end of the `if` statement since it requires work.
-         */
-        const shouldNeverTranslate = async () => {
-          return Boolean(
-            TranslationsParent.shouldNeverTranslateLanguage(
-              detectedLanguages?.docLangTag
-            ) ||
-              // The site is present in the never-translate list.
-              (await this.#getTranslationsActor().shouldNeverTranslateSite())
-          );
-        };
-
         if (
           // We've already requested to translate this page, so always show the icon.
           requestedTranslationPair ||
@@ -1151,9 +1134,8 @@ var TranslationsPanel = new (class {
           // when a user manually invokes the translation and we wouldn't normally show
           // the icon.
           error ||
-          // Finally check that this is a supported language that we should translate.
+          // Finally check that we can translate this language.
           (hasSupportedLanguage &&
-            !(await shouldNeverTranslate()) &&
             (await TranslationsParent.getIsTranslationsEngineSupported()))
         ) {
           if (handleEventId !== this.handleEventId) {
