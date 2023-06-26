@@ -332,13 +332,28 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {string} scheme - The URI spec
    * @returns {boolean}
    */
-  static isRestrictedPage(scheme) {
+  static isRestrictedPage(documentURI) {
     // Keep this logic up to date with TranslationsChild.prototype.#isRestrictedPage.
-    switch (scheme) {
+    switch (documentURI.scheme) {
       case "https":
       case "http":
       case "file":
         return false;
+      case "data": {
+        // Allow certain data URLs.
+        if (documentURI.spec.startsWith("data:")) {
+          const result = documentURI.spec.match(/^data:([\w\/]*)[,;]/);
+          if (!result) {
+            return true;
+          }
+          const type = result[1];
+          return !(
+            type === "text/html" ||
+            type === "text/plain" ||
+            type === ""
+          );
+        }
+      }
     }
     return true;
   }
@@ -1756,7 +1771,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
     if (
       TranslationsParent.isRestrictedPage(
-        this.browsingContext.currentWindowGlobal.documentURI.scheme
+        this.browsingContext.currentWindowGlobal.documentURI
       )
     ) {
       return langTags;

@@ -53,11 +53,26 @@ export class TranslationsChild extends JSWindowActorChild {
     }
     const { href } = this.contentWindow.location;
     // Keep this logic up to date with TranslationsParent.isRestrictedPage.
-    return !(
+    if (
       href.startsWith("http://") ||
       href.startsWith("https://") ||
       href.startsWith("file:///")
-    );
+    ) {
+      return false;
+    }
+
+    // Allow certain data URLs.
+    if (href.startsWith("data:")) {
+      const result = href.match(/^data:([\w\/]*)[,;]/);
+      if (!result) {
+        return true;
+      }
+      const type = result[1];
+      return type === "text/html" || "text/plain";
+    }
+
+    // Anything else is restricted.
+    return true;
   }
 
   async receiveMessage({ name, data }) {
