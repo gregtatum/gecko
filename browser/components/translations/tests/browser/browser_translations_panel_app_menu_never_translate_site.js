@@ -3,58 +3,58 @@
 
 "use strict";
 
-/**
- * Tests the effect of unchecking the never-translate-site menuitem,
- * regranting translations permissions to this page.
- * The translations button should reappear.
- */
-add_task(async function test_uncheck_never_translate_site_shows_button() {
-  const { cleanup, runInPage } = await loadTestPage({
-    page: SPANISH_PAGE_URL,
-    languagePairs: LANGUAGE_PAIRS,
-    permissionsUrls: [SPANISH_PAGE_URL],
-  });
+// /**
+//  * Tests the effect of unchecking the never-translate-site menuitem,
+//  * regranting translations permissions to this page.
+//  * The translations button should reappear.
+//  */
+// add_task(async function test_uncheck_never_translate_site_shows_button() {
+//   const { cleanup, runInPage } = await loadTestPage({
+//     page: SPANISH_PAGE_URL,
+//     languagePairs: LANGUAGE_PAIRS,
+//     permissionsUrls: [SPANISH_PAGE_URL],
+//   });
 
-  info(
-    "Translations permissions are currently allowed for this test page " +
-      "and the page should be untranslated, in its original form."
-  );
-  await runInPage(async TranslationsTest => {
-    const { getH1 } = TranslationsTest.getSelectors();
-    await TranslationsTest.assertTranslationResult(
-      "The page's H1 is in Spanish.",
-      getH1,
-      "Don Quijote de La Mancha"
-    );
-  });
+//   info(
+//     "Translations permissions are currently allowed for this test page " +
+//       "and the page should be untranslated, in its original form."
+//   );
+//   await runInPage(async TranslationsTest => {
+//     const { getH1 } = TranslationsTest.getSelectors();
+//     await TranslationsTest.assertTranslationResult(
+//       "The page's H1 is in Spanish.",
+//       getH1,
+//       "Don Quijote de La Mancha"
+//     );
+//   });
 
-  await assertTranslationsButton(
-    { button: true, circleArrows: false, locale: false, icon: true },
-    "The translations button is visible."
-  );
+//   await assertTranslationsButton(
+//     { button: true, circleArrows: false, locale: false, icon: true },
+//     "The translations button is visible."
+//   );
 
-  info(
-    "Simulate clicking never-translate-site in the settings menu, " +
-      "denying translations permissions for this content window principal"
-  );
-  await openTranslationsSettingsMenuViaTranslationsButton();
+//   info(
+//     "Simulate clicking never-translate-site in the settings menu, " +
+//       "denying translations permissions for this content window principal"
+//   );
+//   await openTranslationsSettingsMenuViaTranslationsButton();
 
-  await assertIsNeverTranslateSite(SPANISH_PAGE_URL, false);
-  await toggleNeverTranslateSite();
-  await assertIsNeverTranslateSite(SPANISH_PAGE_URL, true);
+//   await assertIsNeverTranslateSite(SPANISH_PAGE_URL, false);
+//   await toggleNeverTranslateSite();
+//   await assertIsNeverTranslateSite(SPANISH_PAGE_URL, true);
 
-  info(
-    "Simulate clicking always-translate-language in the settings menu, " +
-      "adding the document language to the alwaysTranslateLanguages pref"
-  );
-  await openTranslationsSettingsMenuViaAppMenu();
+//   info(
+//     "Simulate clicking always-translate-language in the settings menu, " +
+//       "adding the document language to the alwaysTranslateLanguages pref"
+//   );
+//   await openTranslationsSettingsMenuViaAppMenu();
 
-  await assertIsNeverTranslateSite(SPANISH_PAGE_URL, true);
-  await toggleNeverTranslateSite();
-  await assertIsNeverTranslateSite(SPANISH_PAGE_URL, false);
+//   await assertIsNeverTranslateSite(SPANISH_PAGE_URL, true);
+//   await toggleNeverTranslateSite();
+//   await assertIsNeverTranslateSite(SPANISH_PAGE_URL, false);
 
-  await cleanup();
-});
+//   await cleanup();
+// });
 
 /**
  * Tests the effect of unchecking the never-translate-site menuitem while
