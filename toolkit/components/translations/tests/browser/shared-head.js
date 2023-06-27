@@ -288,7 +288,7 @@ function getTranslationsParent() {
  * Closes the translations panel if it is open.
  */
 function closeTranslationsPanelIfOpen() {
-  return TestUtils.waitForCondition(() => {
+  return waitForCondition(() => {
     const panel = document.getElementById("translations-panel");
     if (!panel) {
       return true;
@@ -803,7 +803,7 @@ async function createLanguageIdModelsRemoteClient(
 async function selectAboutPreferencesElements() {
   const document = gBrowser.selectedBrowser.contentDocument;
 
-  const rows = await TestUtils.waitForCondition(() => {
+  const rows = await waitForCondition(() => {
     const elements = document.querySelectorAll(".translations-manage-language");
     if (elements.length !== 3) {
       return false;
@@ -877,7 +877,7 @@ async function assertVisibility({ message, visible, hidden }) {
   info(message);
   try {
     // First wait for the condition to be met.
-    await TestUtils.waitForCondition(() => {
+    await waitForCondition(() => {
       for (const element of Object.values(visible)) {
         if (element.hidden) {
           return false;
@@ -1093,4 +1093,18 @@ class TestTranslationsTelemetry {
       `Telemetry rate ${name} should have expected denominator`
     );
   }
+}
+
+/**
+ * Provide longer defaults for the waitForCondition.
+ *
+ * @param {Function} callback
+ * @param {string} messages
+ */
+function waitForCondition(callback, message) {
+  const interval = 100;
+  // Use 4 times the defaults to guard against intermittents. Many of the tests rely on
+  // communication between the parent and child process, which is inherently async.
+  const maxTries = 50 * 4;
+  return TestUtils.waitForCondition(callback, message, interval, maxTries);
 }
