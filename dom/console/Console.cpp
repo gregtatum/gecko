@@ -995,7 +995,8 @@ Console::Observe(nsISupports* aSubject, const char* aTopic,
   if (!strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
     auto a = ToUtf8(aData);
     auto b = ToUtf8(mMaxLogLevelPref.get());
-    printf("!!! %s == %s\n", a.data(), b.data());
+    printf("!!! Dispatched: \"%s\" == mMaxLogLevelPref: \"%s\"\n", a.data(),
+           b.data());
 
     MOZ_ASSERT(!NS_strcmp(aData, mMaxLogLevelPref.get()));
     NS_ConvertUTF16toUTF8 pref(mMaxLogLevelPref);
