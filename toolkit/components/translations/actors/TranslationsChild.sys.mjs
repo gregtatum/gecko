@@ -19,7 +19,6 @@ export class TranslationsChild extends JSWindowActorChild {
    * @type {number | null}
    */
   innerWindowId = null;
-  isDestroyed = false;
   #wasTranslationsEngineCreated = false;
 
   handleEvent(event) {
@@ -101,10 +100,11 @@ export class TranslationsChild extends JSWindowActorChild {
   }
 
   didDestroy() {
-    this.isDestroyed = true;
     if (this.#wasTranslationsEngineCreated) {
       // Only run this if needed, as it will de-lazify the code.
-      lazy.TranslationsEngine.discardTranslationQueue(this.innerWindowId);
+      lazy.TranslationsEngine.discardTranslationQueue(
+        this.manager.innerWindowID
+      );
     }
   }
 }
