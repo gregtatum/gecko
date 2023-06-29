@@ -18,14 +18,11 @@ export class TranslationsChild extends JSWindowActorChild {
    * Store this since the window may be dead when the value is needed.
    * @type {number | null}
    */
-  innerWindowId = null;
   #wasTranslationsEngineCreated = false;
 
   handleEvent(event) {
     switch (event.type) {
       case "DOMContentLoaded":
-        this.innerWindowId =
-          this.contentWindow?.windowGlobalChild.innerWindowId;
         this.sendAsyncMessage("Translations:ReportLangTags", {
           documentElementLang: this.document.documentElement.lang,
         });
