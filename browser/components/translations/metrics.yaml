@@ -16,6 +16,9 @@ translations.panel:
     description: >
       Triggers when the translations panel is opened.
     extra_keys:
+      flow_id:
+        type: string
+        description: A UUID to associate related translations events in this session.
       opened_from:
         type: string
         description: The method by which the translations panel was opened.
