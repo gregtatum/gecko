@@ -3674,6 +3674,11 @@ pref("browser.translations.chaos.timeoutMS", 0);
 // See https://bugzilla.mozilla.org/show_bug.cgi?id=1836974
 pref("browser.translations.languageIdentification.useFastText", false);
 
+// A pref to provide an identifier to track the flow of telemetry events in Translations.
+// Events that are related (such as being from the same open-panel session) should have
+// the same flowId.
+pref("browser.translations.telemetry.flowId", "");
+
 // When a user cancels this number of authentication dialogs coming from
 // a single web page in a row, all following authentication dialogs will
 // be blocked (automatically canceled) for that page. The counter resets
