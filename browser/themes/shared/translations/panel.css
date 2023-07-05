@@ -13,8 +13,17 @@
 
 .translations-panel-header {
   text-align: initial;
-  padding: var(--arrowpanel-padding);
-  padding-bottom: 0;
+  padding-inline: var(--arrowpanel-padding);
+  padding-top: 8px;
+}
+
+h1.translations-panel-header-wrapper {
+  flex-grow: 0;
+}
+
+.translations-panel-beta {
+  flex-shrink: 0;
+  flex-grow: 1;
 }
 
 .translations-panel-beta-icon {
@@ -24,6 +33,20 @@
   -moz-context-properties: fill, stroke;
   fill: currentColor;
   stroke: currentColor;
+  margin-inline: 8px;
+}
+
+panel {
+ opacity: 0.8;
+}
+
+.translations-panel-beta-icon {
+  opacity: 0.8;
+}
+
+#translations-panel-intro {
+  margin-block: 4px;
+  line-height: 1.6;
 }
 
 #translations-panel-settings > image {
@@ -32,7 +55,8 @@
 }
 
 .translations-panel-content {
-  padding: var(--arrowpanel-padding);
+  padding-inline: var(--arrowpanel-padding);
+  padding-block: 0 8px;
   gap: var(--arrowpanel-padding);
 }
 

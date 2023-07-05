@@ -65,8 +65,8 @@ translations-panel-translate-button-loading =
 translations-panel-translate-cancel =
   .label = Cancel
 
-translations-panel-intro-header = Translate this page in Firefox
-translations-panel-intro-description = Stay tuned as we add more languages and refine our translation capabilities. <a data-l10n-id="learn-more">Learn more</a>
+translations-panel-intro-header = Try private translations in Firefox
+translations-panel-intro-description = For your privacy, translations never leave your device. New languages and improvements coming soon! <a data-l10n-id="learn-more">Learn more</a>
 
 translations-panel-error-translating = There was a problem translating. Please try again.
 translations-panel-error-load-languages = Couldn’t load languages
