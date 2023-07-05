@@ -19,6 +19,7 @@
       <hbox class="panel-header translations-panel-header">
         <html:h1>
           <html:span id="translations-panel-header"></html:span>
+          <image class="translations-panel-beta-icon"></image>
         </html:h1>
         <toolbarbutton id="translations-panel-settings" class="panel-info-button"
                        data-l10n-id="translations-panel-settings-button"
@@ -27,6 +28,11 @@
       </hbox>
 
       <vbox class="translations-panel-content">
+        <vbox id="translations-panel-intro">
+          <description data-l10n-id="translations-panel-intro-description">
+            <html:a data-l10n-name="learn-more" id="translations-panel-intro-link"/>
+          </description>
+        </vbox>
         <vbox id="translations-panel-lang-selection">
           <label data-l10n-id="translations-panel-from-label" id="translations-panel-from-label"></label>
           <menulist id="translations-panel-from"

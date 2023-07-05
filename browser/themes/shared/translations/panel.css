@@ -17,6 +17,15 @@
   padding-bottom: 0;
 }
 
+.translations-panel-beta-icon {
+  list-style-image: url(chrome://browser/skin/beta.svg);
+  width: 34px;
+  height: 20px;
+  -moz-context-properties: fill, stroke;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
 #translations-panel-settings > image {
   /* Override the panel-info-button with a gear icon. */
   list-style-image: url(chrome://global/skin/icons/settings.svg);

@@ -25,6 +25,9 @@ const PageAction = Object.freeze({
   TRANSLATE_PAGE: "TRANSLATE_PAGE",
 });
 
+// TODO - TESTING ONLY, REMOVE ME!!!
+Services.prefs.setBoolPref("browser.translations.panelShown", false);
+
 /**
  * A mechanism for determining the next relevant page action
  * based on the current translated state of the page and the state
@@ -287,6 +290,8 @@ var TranslationsPanel = new (class {
       getter("errorHintAction", "translations-panel-translate-hint-action");
       getter("fromMenuList", "translations-panel-from");
       getter("header", "translations-panel-header");
+      getter("intro", "translations-panel-intro");
+      getter("introLink", "translations-panel-intro-link");
       getter("langSelection", "translations-panel-lang-selection");
       getter("multiview", "translations-panel-multiview");
       getter("cancelButton", "translations-panel-cancel");
@@ -327,9 +332,10 @@ var TranslationsPanel = new (class {
     actionText: hintCommandText,
     actionCommand: hintCommand,
   }) {
-    const { error, errorMessage, errorMessageHint, errorHintAction } =
+    const { error, errorMessage, errorMessageHint, errorHintAction, intro } =
       this.elements;
     error.hidden = false;
+    intro.hidden = true;
     document.l10n.setAttributes(errorMessage, message);
 
     if (hint) {
@@ -558,9 +564,14 @@ var TranslationsPanel = new (class {
       toMenuList,
       defaultTranslate,
       langSelection,
+      intro,
+      header,
     } = this.elements;
 
     this.#updateViewFromTranslationStatus();
+
+    // Unconditionally hide the intro text in case the panel is re-shown.
+    intro.hidden = true;
 
     if (this.#langListsPhase === "error") {
       // There was an error, display it in the view rather than the language
@@ -605,6 +616,16 @@ var TranslationsPanel = new (class {
       restoreButton.hidden = true;
       cancelButton.hidden = false;
       multiview.setAttribute("mainViewId", "translations-panel-view-default");
+
+      if (
+        Services.prefs.getBoolPref("browser.translations.panelShown", false)
+      ) {
+        document.l10n.setAttributes(header, "translations-panel-header");
+      } else {
+        Services.prefs.setBoolPref("browser.translations.panelShown", true);
+        intro.hidden = false;
+        document.l10n.setAttributes(header, "translations-panel-intro-header");
+      }
     } else {
       // Show the "unsupported language" view.
       const { unsupportedHint } = this.elements;
@@ -786,8 +807,8 @@ var TranslationsPanel = new (class {
    * @param {TranslationPair} translationPair
    */
   async #showRevisitView({ fromLanguage, toLanguage }) {
-    const { fromMenuList, toMenuList } = this.elements;
-
+    const { fromMenuList, toMenuList, intro } = this.elements;
+    intro.hidden = true;
     fromMenuList.value = fromLanguage;
     toMenuList.value = toLanguage;
     this.onChangeLanguages();
