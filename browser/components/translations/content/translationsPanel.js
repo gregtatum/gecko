@@ -65,6 +65,18 @@ class CheckboxPageAction {
    */
   #neverTranslateSite = false;
 
+  get _hasShownPanel() {
+    // Private fields can't be deleted, so use an underscore.
+    delete this._hasShownPanel;
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "_hasShownPanel",
+      "browser.translations.panelShown",
+      false
+    );
+    return this._hasShownPanel;
+  }
+
   /**
    * @param {boolean} translationsActive
    * @param {boolean} alwaysTranslateLanguage
@@ -617,9 +629,7 @@ var TranslationsPanel = new (class {
       cancelButton.hidden = false;
       multiview.setAttribute("mainViewId", "translations-panel-view-default");
 
-      if (
-        Services.prefs.getBoolPref("browser.translations.panelShown", false)
-      ) {
+      if (this._hasShownPanel) {
         document.l10n.setAttributes(header, "translations-panel-header");
       } else {
         Services.prefs.setBoolPref("browser.translations.panelShown", true);

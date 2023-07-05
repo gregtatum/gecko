@@ -13,8 +13,8 @@
 
 .translations-panel-header {
   text-align: initial;
-  padding-inline: var(--arrowpanel-padding);
-  padding-top: 8px;
+  padding: var(--arrowpanel-padding);
+  padding-bottom: 0;
 }
 
 h1.translations-panel-header-wrapper {
@@ -40,12 +40,13 @@ panel {
  opacity: 0.8;
 }
 
-.translations-panel-beta-icon {
-  opacity: 0.8;
+@media not (prefers-contrast) {
+  .translations-panel-beta-icon {
+    opacity: 0.8;
+  }
 }
 
 #translations-panel-intro {
-  margin-block: 4px;
   line-height: 1.6;
 }
 
@@ -55,8 +56,8 @@ panel {
 }
 
 .translations-panel-content {
-  padding-inline: var(--arrowpanel-padding);
-  padding-block: 0 8px;
+  padding: var(--arrowpanel-padding);
+  padding-bottom: 8px;
   gap: var(--arrowpanel-padding);
 }
 
