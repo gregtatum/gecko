@@ -168,6 +168,37 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #previousDetectedLanguages = null;
 
+  /**
+   * A randomly generated uuid to connect the flow of telemetry events.
+   */
+  static #flowId = null;
+
+  /**
+   * Forces the creation of a new Translations telemetry flowId and returns it.
+   * @returns {string}
+   */
+  static async createFlowId() {
+    const flowId = crypto.randomUUID();
+    TranslationsParent.#flowId = flowId;
+    return Promise.resolve(flowId);
+  }
+
+  /**
+   * Returns a Translations telemetry flowId by retrieving the cached value
+   * if available, or creating a new one otherwise.
+   * @returns {string}
+   */
+  static async getOrCreateFlowId() {
+    // If we have the flowId cached, return it.
+    if (TranslationsParent.#flowId) {
+      return Promise.resolve(TranslationsParent.#flowId);
+    }
+
+    // If no flowId exists, create one.
+    return TranslationsParent.createFlowId();
+  }
+
+
   actorCreated() {
     this.languageState = new TranslationsLanguageState(
       this,
@@ -542,6 +573,12 @@ export class TranslationsParent extends JSWindowActorParent {
       }
       case "Translations:DeleteLanguageFiles": {
         return this.deleteLanguageFiles(data.language);
+      }
+      case "Translations:CreateFlowId": {
+        return TranslationsParent.createFlowId();
+      }
+      case "Translations:GetOrCreateFlowId": {
+        return TranslationsParent.getOrCreateFlowId();
       }
       case "Translations:ReportLangTags": {
         const { documentElementLang, href } = data;
@@ -1698,7 +1735,7 @@ export class TranslationsParent extends JSWindowActorParent {
         fromLanguage,
         toLanguage,
       };
-      lazy.TranslationsTelemetry.onTranslate({
+      lazy.TranslationsTelemetry.onTranslate(TranslationsParent, {
         fromLanguage,
         toLanguage,
         autoTranslate: reportAsAutoTranslate,

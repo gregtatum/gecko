@@ -191,7 +191,7 @@ export class TranslationsEngine {
       TranslationsEngine.getOrCreate(actor, fromLanguage, toLanguage);
 
     getEngine().catch(error => {
-      lazy.TranslationsTelemetry.onError(error);
+      lazy.TranslationsTelemetry.onError(actor, error);
     });
 
     // Wait for the engine to be ready.

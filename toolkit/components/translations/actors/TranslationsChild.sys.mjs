@@ -26,6 +26,7 @@ export class TranslationsChild extends JSWindowActorChild {
   isDestroyed = false;
   #isPageHidden = false;
   #wasTranslationsEngineCreated = false;
+  #flowId = null;
 
   handleEvent(event) {
     switch (event.type) {
@@ -160,6 +161,19 @@ export class TranslationsChild extends JSWindowActorChild {
       fromLanguage,
       toLanguage,
     });
+  }
+
+  async createFlowId() {
+    const flowId = await this.sendQuery("Translations:CreateFlowId");
+    this.#flowId = flowId;
+    return flowId;
+  }
+
+  async getOrCreateFlowId() {
+    if (!this.#flowId) {
+      this.#flowId = await this.sendQuery("Translations:GetOrCreateFlowId");
+    }
+    return this.#flowId;
   }
 
   getOrCreateLanguageIdEngine() {
