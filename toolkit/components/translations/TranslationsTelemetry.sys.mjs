@@ -7,15 +7,22 @@
  */
 export class TranslationsTelemetry {
   /**
+   * @param {string} flowId - TODO DOCS
+   */
+  constructor(flowId) {
+    this.flowId = flowId;
+  }
+
+  /**
    * Records a telemetry event when full page translation fails.
    *
    * @param {TranslationsParent | TranslationsChild} translationsActor
    * @param {Error} error
    */
-  static async onError(translationsActor, error) {
+  onError(error) {
     Glean.translations.errorRate.addToNumerator(1);
     Glean.translations.error.record({
-      flow_id: await translationsActor.getOrCreateFlowId(),
+      flow_id: this.flowId,
       reason: String(error),
     });
   }
@@ -29,10 +36,10 @@ export class TranslationsTelemetry {
    * @param {string} data.toLanguage
    * @param {boolean} data.autoTranslate
    */
-  static async onTranslate(translationsActor, data) {
+  onTranslate(data) {
     Glean.translations.requestsCount.add(1);
     Glean.translations.translationRequest.record({
-      flow_id: await translationsActor.getOrCreateFlowId(),
+      flow_id: this.flowId,
       from_language: data.fromLanguage,
       to_language: data.toLanguage,
       auto_translate: data.autoTranslate,
