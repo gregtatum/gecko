@@ -39,7 +39,8 @@ translations-panel-displayname-beta =
 
 translations-panel-settings-manage-languages =
   .label = Manage languages
-translations-panel-settings-about = About translations in { -brand-shorter-name }
+translations-panel-settings-about2 =
+  .label = About translations in { -brand-shorter-name }
 
 # Text displayed for the option to always translate a given language
 # Variables:
