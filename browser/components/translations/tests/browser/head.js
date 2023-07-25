@@ -200,6 +200,20 @@ async function toggleNeverTranslateSite() {
 }
 
 /**
+ * Simulates the effect of clicking a menuitem. Requires that the popupset to be open,
+ * otherwise the test will fail.
+ *
+ * @param {string} l10nId
+ */
+async function clickMenuItemByL10nId(l10nId) {
+  info(`Clicking the menu item "${l10nId}".`);
+
+  await waitForSettingsPopupEvent("popuphidden", async () => {
+    await synthesizeClick(getByL10nId(l10nId));
+  });
+}
+
+/**
  * Asserts that the always-translate-language checkbox matches the expected checked state.
  *
  * @param {string} langTag - A BCP-47 language tag
@@ -562,9 +576,7 @@ function maybeGetByL10nId(l10nId, doc = document) {
 }
 
 /**
- * XUL popups will fire the popupshown and popuphidden events. These will fire for
- * any type of popup in the browser. This function waits for one of those events, and
- * checks that the viewId of the popup is PanelUI-profiler
+ * Waits for the translation popup event.
  *
  * @param {"popupshown" | "popuphidden"} eventName
  * @param {Function} callback
@@ -583,13 +595,52 @@ async function waitForTranslationsPopupEvent(
   if (!panel) {
     throw new Error("Unable to find the translations panel element.");
   }
-  const promise = BrowserTestUtils.waitForEvent(panel, eventName);
-  await callback();
-  info("Waiting for the translations panel popup to be shown");
-  await promise;
+  await waitForPopupEvent(eventName, callback, panel);
   if (postEventAssertion) {
     postEventAssertion();
   }
+}
+
+/**
+ * Waits for the translation popup event.
+ *
+ * @param {"popupshown" | "popuphidden"} eventName
+ * @param {Function} callback
+ * @returns {Promise<void>}
+ */
+async function waitForSettingsPopupEvent(eventName, callback) {
+  const panel = document.getElementById(
+    "translations-panel-settings-menupopup"
+  );
+  if (!panel) {
+    throw new Error("Unable to find the translations settings panel.");
+  }
+  return waitForPopupEvent(eventName, callback, panel);
+}
+
+/**
+ * XUL popups will fire the popupshown and popuphidden events. These will fire for
+ * any type of popup in the browser. This function waits for one of those events.
+ *
+ * @param {"popupshown" | "popuphidden"} eventName
+ * @param {Function} callback
+ * @param {XULElement} panel
+ * @returns {Promise<void>}
+ */
+async function waitForPopupEvent(eventName, callback, panel) {
+  const promise = new Promise(resolve => {
+    const handler = event => {
+      panel.removeEventListener(eventName, handler);
+      if (event.target === panel) {
+        resolve();
+      }
+    };
+    panel.addEventListener(eventName, handler);
+  });
+
+  await callback();
+  info(`Waiting for the popup event "${eventName}" for panel ${panel.id}`);
+  await promise;
   // Wait a single tick on the event loop.
   await new Promise(resolve => setTimeout(resolve, 0));
 }
@@ -625,3 +676,33 @@ const LANGUAGE_PAIRS = [
   { fromLang: "en", toLang: "uk" },
   { fromLang: "uk", toLang: "en" },
 ];
+
+function hidePopup() {
+  return waitForTranslationsPopupEvent("popuphidden", () => {
+    click(
+      getByL10nId("translations-panel-translate-cancel"),
+      "Hide the popup."
+    );
+  });
+}
+
+function synthesizeClick(element) {
+  return new Promise(resolve => {
+    element.addEventListener(
+      "click",
+      function () {
+        resolve();
+      },
+      { once: true }
+    );
+
+    EventUtils.synthesizeMouseAtCenter(element, {
+      type: "mousedown",
+      isSynthesized: false,
+    });
+    EventUtils.synthesizeMouseAtCenter(element, {
+      type: "mouseup",
+      isSynthesized: false,
+    });
+  });
+}

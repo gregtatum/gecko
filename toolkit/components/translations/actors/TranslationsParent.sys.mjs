@@ -2239,6 +2239,23 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * Toggle offering translations.
+   */
+  static toggleAlwaysOfferTranslations() {
+    Services.prefs.setBoolPref(
+      "browser.translations.automaticallyPopup",
+      !lazy.automaticallyPopupPref
+    );
+  }
+
+  /**
+   * The pref for if we can always offer a translation when it's available.
+   */
+  static canAlwaysOfferTranslations() {
+    return lazy.automaticallyPopupPref;
+  }
+
+  /**
    * Toggles the never-translate language preference by adding the language
    * to the pref list if it is not present, or removing it if it is present.
    *
