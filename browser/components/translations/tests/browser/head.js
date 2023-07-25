@@ -150,6 +150,17 @@ async function toggleNeverTranslateSite() {
 }
 
 /**
+ * Simulates the effect of clicking a menuitem. Requires that the popupset to be open,
+ * otherwise the test will fail.
+ *
+ * @param {string} l10nId
+ */
+async function clickMenuItemByL10nId(l10nId) {
+  info(`Clicking the menu item "${l10nId}".`);
+  await getByL10nId(l10nId).doCommand();
+}
+
+/**
  * Asserts that the always-translate-language checkbox matches the expected checked state.
  *
  * @param {string} langTag - A BCP-47 language tag

@@ -682,6 +682,10 @@ var TranslationsPanel = new (class {
     const neverTranslateMenuItems = panel.ownerDocument.querySelectorAll(
       ".never-translate-language-menuitem"
     );
+    const alwaysOfferTranslationsMenuItems =
+      panel.ownerDocument.querySelectorAll(
+        ".always-offer-translations-menuitem"
+      );
 
     if (
       !docLangTag ||
@@ -715,6 +719,12 @@ var TranslationsPanel = new (class {
         neverTranslateLanguage ? "true" : "false"
       );
       menuitem.disabled = false;
+    }
+    for (const menuitem of alwaysOfferTranslationsMenuItems) {
+      menuitem.setAttribute(
+        "checked",
+        TranslationsParent.canAlwaysOfferTranslations() ? "true" : "false"
+      );
     }
   }
 
@@ -1060,6 +1070,13 @@ var TranslationsPanel = new (class {
     TranslationsParent.toggleAlwaysTranslateLanguagePref(docLangTag);
     this.#updateSettingsMenuLanguageCheckboxStates();
     await this.#doPageAction(pageAction);
+  }
+
+  /**
+   * Toggle offering translations.
+   */
+  async onAlwaysOfferTranslation() {
+    TranslationsParent.toggleAlwaysOfferTranslations();
   }
 
   /**
