@@ -156,6 +156,10 @@ function defaultProfilePreferences(
     // Do not warn when multiple tabs will be opened
     'browser.tabs.warnOnOpen': false,
 
+    // Do not identify languages to automatically offer translations, as tests
+    // frequently operate on pages without document languages.
+    'browser.translations.languageIdentification.enable': false,
+
     // Disable the UI tour.
     'browser.uitour.enabled': false,
     // Turn off search suggestions in the location bar so as not to trigger

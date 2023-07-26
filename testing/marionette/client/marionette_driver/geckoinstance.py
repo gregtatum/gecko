@@ -45,6 +45,10 @@ class GeckoInstance(object):
         "browser.region.network.url": "",
         # Don't pull Top Sites content from the network
         "browser.topsites.contile.enabled": False,
+        # Do not identify languages to automatically offer translations, as tests
+        # frequently operate on pages without document languages. This adds unneeded
+        # overhead.
+        "browser.translations.languageIdentification.enable": False,
         # Disable UI tour
         "browser.uitour.pinnedTabUrl": "http://%(server)s/uitour-dummy/pinnedTab",
         "browser.uitour.url": "http://%(server)s/uitour-dummy/tour",
