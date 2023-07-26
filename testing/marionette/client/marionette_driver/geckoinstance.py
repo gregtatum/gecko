@@ -45,6 +45,9 @@ class GeckoInstance(object):
         "browser.region.network.url": "",
         # Don't pull Top Sites content from the network
         "browser.topsites.contile.enabled": False,
+        # Do not automatically offer translations, as tests do not expect this.
+        "browser.translations.automaticallyPopup": False,
+        "browser.translations.languageIdentification.enable": False,
         # Disable UI tour
         "browser.uitour.pinnedTabUrl": "http://%(server)s/uitour-dummy/pinnedTab",
         "browser.uitour.url": "http://%(server)s/uitour-dummy/tour",

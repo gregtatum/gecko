@@ -52,6 +52,10 @@ lazy_static! {
         // Start with a blank page (about:blank)
         ("browser.startup.page", Pref::new(0)),
 
+        // Do not automatically offer translations, as tests do not expect this.
+        ("browser.translations.automaticallyPopup", Pref::new(false)),
+        ("browser.translations.languageIdentification.enable", Pref::new(false)),
+
         // Disable the UI tour
         ("browser.uitour.enabled", Pref::new(false)),
 
