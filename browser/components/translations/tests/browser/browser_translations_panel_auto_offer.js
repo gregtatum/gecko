@@ -3,16 +3,6 @@
 
 "use strict";
 
-function hidePopup() {
-  return waitForTranslationsPopupEvent("popuphidden", () => {
-    info("Hide the popup");
-    click(
-      getByL10nId("translations-panel-translate-cancel"),
-      "Hide the popup."
-    );
-  });
-}
-
 /**
  * Tests that the popup is automatically offered.
  */

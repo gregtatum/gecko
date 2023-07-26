@@ -3,20 +3,15 @@
 
 "use strict";
 
-function hidePopup() {
-  return waitForTranslationsPopupEvent("popuphidden", () => {
-    info("Hide the popup");
-    click(
-      getByL10nId("translations-panel-translate-cancel"),
-      "Hide the popup."
-    );
-  });
-}
+requestLongerTimeout(100);
 
 /**
  * Tests that the popup is automatically offered.
  */
-add_task(async function test_translations_panel_auto_offer() {
+add_task(async function test_translations_panel_auto_offer_settings() {
+  await openTranslationsSettingsMenuViaTranslationsButton();
+  await hidePopup();
+
   const panel = document.getElementById("translations-panel");
 
   let popupCount = 0;
@@ -56,7 +51,15 @@ add_task(async function test_translations_panel_auto_offer() {
     "The popup was opened a second time automatically after changing the pref."
   );
 
-  await hidePopup();
+  info("Hide the popup");
+  await waitForTranslationsPopupEvent("popuphidden", () => {
+    click(
+      getByL10nId("translations-panel-translate-cancel"),
+      "Hide the popup."
+    );
+  })();
+
+  panel.removeEventListener("popupshown", onPopupShown);
 
   await cleanup();
 });

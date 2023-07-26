@@ -408,3 +408,13 @@ const LANGUAGE_PAIRS = [
   { fromLang: "en", toLang: "uk" },
   { fromLang: "uk", toLang: "en" },
 ];
+
+function hidePopup() {
+  return waitForTranslationsPopupEvent("popuphidden", () => {
+    info("Hide the popup");
+    click(
+      getByL10nId("translations-panel-translate-cancel"),
+      "Hide the popup."
+    );
+  });
+}
