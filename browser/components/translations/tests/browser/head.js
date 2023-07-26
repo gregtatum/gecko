@@ -69,8 +69,14 @@ async function openTranslationsSettingsMenuViaTranslationsButton() {
     click(button, "Opening the popup");
   });
 
-  const gearIcon = getByL10nId("translations-panel-settings-button");
-  click(gearIcon, "Open the settings menu");
+  await waitForSettingsPopupEvent("popupshown", () => {
+    click(
+      getByL10nId("translations-panel-settings-button"),
+      "Open the settings menu"
+    );
+  });
+
+  info("The translations settings menu is now open.");
 }
 
 /**
@@ -157,7 +163,10 @@ async function toggleNeverTranslateSite() {
  */
 async function clickMenuItemByL10nId(l10nId) {
   info(`Clicking the menu item "${l10nId}".`);
-  await getByL10nId(l10nId).doCommand();
+
+  await waitForSettingsPopupEvent("popuphidden", async () => {
+    await synthesizeClick(getByL10nId(l10nId));
+  });
 }
 
 /**
@@ -357,9 +366,7 @@ function maybeGetByL10nId(l10nId, doc = document) {
 }
 
 /**
- * XUL popups will fire the popupshown and popuphidden events. These will fire for
- * any type of popup in the browser. This function waits for one of those events, and
- * checks that the viewId of the popup is PanelUI-profiler
+ * Waits for the translation popup event.
  *
  * @param {"popupshown" | "popuphidden"} eventName
  * @param {Function} callback
@@ -370,9 +377,49 @@ async function waitForTranslationsPopupEvent(eventName, callback) {
   if (!panel) {
     throw new Error("Unable to find the translations panel element.");
   }
-  const promise = BrowserTestUtils.waitForEvent(panel, eventName);
-  callback();
-  info("Waiting for the translations panel popup to be shown");
+  return waitForPopupEvent(eventName, callback, panel);
+}
+
+/**
+ * Waits for the translation popup event.
+ *
+ * @param {"popupshown" | "popuphidden"} eventName
+ * @param {Function} callback
+ * @returns {Promise<void>}
+ */
+async function waitForSettingsPopupEvent(eventName, callback) {
+  const panel = document.getElementById(
+    "translations-panel-settings-menupopup"
+  );
+  if (!panel) {
+    throw new Error("Unable to find the translations settings panel.");
+  }
+  return waitForPopupEvent(eventName, callback, panel);
+}
+
+/**
+ * XUL popups will fire the popupshown and popuphidden events. These will fire for
+ * any type of popup in the browser. This function waits for one of those events.
+ *
+ * @param {"popupshown" | "popuphidden"} eventName
+ * @param {Function} callback
+ * @param {XULElement} panel
+ * @returns {Promise<void>}
+ */
+async function waitForPopupEvent(eventName, callback, panel) {
+  const promise = new Promise(resolve => {
+    const handler = event => {
+      console.log(`!!! event`, event);
+      panel.removeEventListener(eventName, handler);
+      if (event.target === panel) {
+        resolve();
+      }
+    };
+    panel.addEventListener(eventName, handler);
+  });
+
+  await callback();
+  info(`Waiting for the popup event "${eventName}" for panel ${panel.id}`);
   await promise;
   // Wait a single tick on the event loop.
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -411,10 +458,30 @@ const LANGUAGE_PAIRS = [
 
 function hidePopup() {
   return waitForTranslationsPopupEvent("popuphidden", () => {
-    info("Hide the popup");
     click(
       getByL10nId("translations-panel-translate-cancel"),
       "Hide the popup."
     );
+  });
+}
+
+function synthesizeClick(element) {
+  return new Promise(resolve => {
+    element.addEventListener(
+      "click",
+      function () {
+        resolve();
+      },
+      { once: true }
+    );
+
+    EventUtils.synthesizeMouseAtCenter(element, {
+      type: "mousedown",
+      isSynthesized: false,
+    });
+    EventUtils.synthesizeMouseAtCenter(element, {
+      type: "mouseup",
+      isSynthesized: false,
+    });
   });
 }
