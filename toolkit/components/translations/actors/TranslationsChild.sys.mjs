@@ -62,6 +62,12 @@ export class TranslationsChild extends JSWindowActorChild {
             return null;
           }
 
+          // Identifying the language takes work, make sure we are idle enough to do
+          // the work in order to not block.
+          await new Promise(resolve =>
+            this.contentWindow.requestIdleCallback(resolve)
+          );
+
           // Try to use the fastText engine if directed to do so.
           if (data.useFastText) {
             const engine = await this.getOrCreateLanguageIdEngine();

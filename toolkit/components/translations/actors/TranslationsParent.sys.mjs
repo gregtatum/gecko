@@ -1943,7 +1943,18 @@ export class TranslationsParent extends JSWindowActorParent {
           langTags.isDocLangTagSupported = determineIsDocLangTagSupported();
         }
       }
-    } else if (lazy.identifyLanguagePref) {
+    } else {
+      // If we are going to identify the language, wait until we are idle to do so.
+      const { requestIdleCallback } =
+        this.browsingContext.top.embedderElement.ownerGlobal;
+
+      // Identifying the language takes work, make sure we are idle enough to do
+      // the work in order to not block.
+      await new Promise(resolve => requestIdleCallback(resolve));
+      if (this.#isDestroyed) {
+        return null;
+      }
+
       // If the document's markup had no specified langTag, attempt
       // to identify the page's language using the LanguageIdEngine.
       langTags.docLangTag = await this.queryIdentifyLanguage();
@@ -1951,8 +1962,6 @@ export class TranslationsParent extends JSWindowActorParent {
         return null;
       }
       langTags.isDocLangTagSupported = determineIsDocLangTagSupported();
-    } else {
-      return null;
     }
 
     const preferredLanguages = TranslationsParent.getPreferredLanguages();
