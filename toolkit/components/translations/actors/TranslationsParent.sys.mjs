@@ -73,6 +73,12 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "browser.translations.automaticallyPopup"
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "identifyLanguagePref",
+  "browser.translations.languageIdentification.enable"
+);
+
 /**
  * Returns the always-translate language tags as an array.
  */
@@ -1937,7 +1943,7 @@ export class TranslationsParent extends JSWindowActorParent {
           langTags.isDocLangTagSupported = determineIsDocLangTagSupported();
         }
       }
-    } else {
+    } else if (lazy.identifyLanguagePref) {
       // If the document's markup had no specified langTag, attempt
       // to identify the page's language using the LanguageIdEngine.
       langTags.docLangTag = await this.queryIdentifyLanguage();
@@ -1945,6 +1951,8 @@ export class TranslationsParent extends JSWindowActorParent {
         return null;
       }
       langTags.isDocLangTagSupported = determineIsDocLangTagSupported();
+    } else {
+      return null;
     }
 
     const preferredLanguages = TranslationsParent.getPreferredLanguages();
