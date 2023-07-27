@@ -158,6 +158,7 @@ function defaultProfilePreferences(
 
     // Do not automatically offer translations, as tests do not expect this.
     'browser.translations.automaticallyPopup': false,
+    'browser.translations.languageIdentification.enable': false,
 
     // Disable the UI tour.
     'browser.uitour.enabled': false,
