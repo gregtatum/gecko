@@ -3660,6 +3660,10 @@ pref("browser.translations.chaos.timeoutMS", 0);
 // See https://bugzilla.mozilla.org/show_bug.cgi?id=1836974
 pref("browser.translations.languageIdentification.useFastText", false);
 
+// The default behavior for translations is to identify the language of the page if
+// no language tag is set.
+pref("browser.translations.languageIdentification.enable", true);
+
 // When a user cancels this number of authentication dialogs coming from
 // a single web page in a row, all following authentication dialogs will
 // be blocked (automatically canceled) for that page. The counter resets
