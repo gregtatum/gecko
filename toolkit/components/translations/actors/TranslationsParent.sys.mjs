@@ -450,41 +450,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @type {Promise<boolean>}
    */
   static getIsTranslationsEngineSupported() {
-    if (lazy.simulateUnsupportedEnginePref) {
-      // Use the non-lazy console.log so that the user is always informed as to why
-      // the translations engine is not working.
-      console.log(
-        "Translations: The translations engine is disabled through the pref " +
-          '"browser.translations.simulateUnsupportedEngine".'
-      );
-
-      // The user is manually testing unsupported engines.
-      return Promise.resolve(false);
-    }
-
-    if (TranslationsParent.#isTranslationsEngineMocked) {
-      // A mocked translations engine is always supported.
-      return Promise.resolve(true);
-    }
-
-    if (TranslationsParent.#isTranslationsEngineSupported === null) {
-      TranslationsParent.#isTranslationsEngineSupported = detectSimdSupport();
-
-      TranslationsParent.#isTranslationsEngineSupported.then(
-        isSupported => () => {
-          // Use the non-lazy console.log so that the user is always informed as to why
-          // the translations engine is not working.
-          if (!isSupported) {
-            console.log(
-              "Translations: The translations engine is not supported on your device as " +
-                "it does not support Wasm SIMD operations."
-            );
-          }
-        }
-      );
-    }
-
-    return TranslationsParent.#isTranslationsEngineSupported;
+    return true;
   }
 
   /**
