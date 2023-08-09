@@ -1385,6 +1385,17 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Promise<ArrayBuffer>}
    */
   static async #getBergamotWasmArrayBuffer() {
+    // Uncomment below to load in a local bergamot translator. This is useful for
+    // testing new wasm blobs or new features.
+    if (true) {
+      // ln -s path/to/bergamot-translator/build-wasm/bergamot-translator-worker.js toolkit/components/translations/bergamot-translator/bergamot-translator.js
+      const response = await fetch(
+        "chrome://global/content/translations/bergamot-translator.wasm"
+      );
+      lazy.console.log("Using a local wasm translation engine blob");
+      return response.arrayBuffer();
+    }
+
     const start = Date.now();
     const client = TranslationsParent.#getTranslationsWasmRemoteClient();
     if (!TranslationsParent.#bergamotWasmRecord) {

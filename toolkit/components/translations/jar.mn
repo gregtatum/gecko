@@ -4,6 +4,7 @@
 
 toolkit.jar:
     content/global/translations/bergamot-translator.js        (bergamot-translator/bergamot-translator.js)
+    content/global/translations/bergamot-translator.wasm      (bergamot-translator/bergamot-translator.wasm)
     content/global/translations/fasttext.js                   (fasttext/fasttext.js)
     content/global/translations/fasttext_wasm.js              (fasttext/fasttext_wasm.js)
     content/global/translations/language-id-engine.sys.mjs    (content/language-id-engine.sys.mjs)
