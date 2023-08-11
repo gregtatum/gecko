@@ -202,17 +202,26 @@ export class TranslationsEngine {
       return;
     }
 
+    /**
+     * Extract the translation from the response.
+     *
+     * @param {Promise<Array<{ translation: string, alignments?: Array<number[]>}>>} response
+     * @returns {Promise<Array<string>>} response
+     */
+    const pickTranslations = promise =>
+      promise.then(responses => responses.map(r => r.translation));
+
     const translatedDoc = new lazy.TranslationsDocument(
       document,
       fromLanguage,
       innerWindowId,
       html =>
         getEngine().then(engine =>
-          engine.translateHTML([html], actor.innerWindowId)
+          pickTranslations(engine.translateHTML([html], actor.innerWindowId))
         ),
       text =>
         getEngine().then(engine =>
-          engine.translateText([text], actor.innerWindowId)
+          pickTranslations(engine.translateText([text], actor.innerWindowId))
         ),
       () => this.docShell.now()
     );
@@ -311,10 +320,18 @@ export class TranslationsEngine {
    *
    * @param {string[]} messageBatch
    * @param {number} innerWindowId
+   * @param {boolean} includeAlignments
+   *   Alignments are the probability that a source word is related to the translated
+   *   word. Currently it's useful for debugging translation markup issues.
    * @returns {Promise<string[]>}
    */
-  translateText(messageBatch, innerWindowId) {
-    return this.#translate(messageBatch, false, innerWindowId);
+  translateText(messageBatch, innerWindowId, includeAlignments) {
+    return this.#translate(
+      messageBatch,
+      false,
+      innerWindowId,
+      includeAlignments
+    );
   }
 
   /**
@@ -322,10 +339,18 @@ export class TranslationsEngine {
    *
    * @param {string[]} messageBatch
    * @param {number} innerWindowId
+   * @param {boolean} includeAlignments
+   *   Alignments are the probability that a source word is related to the translated
+   *   word. Currently it's useful for debugging translation markup issues.
    * @returns {Promise<string[]>}
    */
-  translateHTML(messageBatch, innerWindowId) {
-    return this.#translate(messageBatch, true, innerWindowId);
+  translateHTML(messageBatch, innerWindowId, includeAlignments) {
+    return this.#translate(
+      messageBatch,
+      true,
+      innerWindowId,
+      includeAlignments
+    );
   }
 
   /**
@@ -335,9 +360,12 @@ export class TranslationsEngine {
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
    * @param {number} innerWindowId
-   * @returns {Promise<string[]>}
+   * @param {boolean} includeAlignments
+   *   Alignments are the probability that a source word is related to the translated
+   *   word. Currently it's useful for debugging translation markup issues.
+   * @returns {Promise<{ translations: string[], alignments?: Array<number[]>}
    */
-  #translate(messageBatch, isHTML, innerWindowId) {
+  #translate(messageBatch, isHTML, innerWindowId, includeAlignments) {
     TranslationsEngine.keepAlive(this.languagePairKey);
 
     const messageId = this.#messageId++;
@@ -360,7 +388,11 @@ export class TranslationsEngine {
         }
 
         if (data.type === "translation-response") {
-          resolve(data.translations);
+          const results = { translations: data.translations };
+          if (data.alignments) {
+            results.alignments = data.alignments;
+          }
+          resolve(data);
         }
         if (data.type === "translation-error") {
           reject(data.error);
@@ -376,6 +408,7 @@ export class TranslationsEngine {
         messageBatch,
         messageId,
         innerWindowId,
+        includeAlignments,
       });
     });
   }

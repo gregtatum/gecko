@@ -131,7 +131,13 @@ function handleMessages(engine) {
 
       switch (data.type) {
         case "translation-request": {
-          const { messageBatch, messageId, isHTML, innerWindowId } = data;
+          const {
+            messageBatch,
+            messageId,
+            isHTML,
+            innerWindowId,
+            includeAlignments,
+          } = data;
           if (discardPromise) {
             // Wait for messages to be discarded if there are any.
             await discardPromise;
@@ -141,10 +147,11 @@ function handleMessages(engine) {
             // back. The translation may never return if the translations are discarded
             // before they have time to be run. In this case this await is just never
             // resolved, and the postMessage is never run.
-            const translations = await engine.translate(
+            const { translations, alignments } = await engine.translate(
               messageBatch,
               isHTML,
-              innerWindowId
+              innerWindowId,
+              includeAlignments
             );
 
             // This logging level can be very verbose and slow, so only do it under the
@@ -157,11 +164,16 @@ function handleMessages(engine) {
               innerWindowId,
             });
 
-            postMessage({
+            const message = {
               type: "translation-response",
               translations,
               messageId,
-            });
+            };
+            if (alignments) {
+              message.alignments = alignments;
+            }
+
+            postMessage(message);
           } catch (error) {
             console.error(error);
             let message = "An error occurred in the engine worker.";
@@ -264,7 +276,7 @@ class Engine {
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
    * @param {number} innerWindowId - This is required
-   *
+   * @param {boolean} includeAlignments
    * @param {boolean} withQualityEstimation
    * @returns {Promise<string[]>}
    */
@@ -272,6 +284,7 @@ class Engine {
     messageBatch,
     isHTML,
     innerWindowId,
+    includeAlignments,
     withQualityEstimation = false
   ) {
     return this.#getWorkQueue(innerWindowId).runTask(() =>
@@ -279,6 +292,7 @@ class Engine {
         messageBatch,
         isHTML,
         innerWindowId,
+        includeAlignments,
         withQualityEstimation
       )
     );
@@ -328,6 +342,7 @@ class Engine {
    * @param {string[]} messageBatch
    * @param {boolean} isHTML
    * @param {number} innerWindowId
+   * @param {boolean} includeAlignments
    * @param {boolean} withQualityEstimation
    * @returns {string[]}
    */
@@ -335,6 +350,7 @@ class Engine {
     messageBatch,
     isHTML,
     innerWindowId,
+    includeAlignments,
     withQualityEstimation = false
   ) {
     const startTime = performance.now();
@@ -372,6 +388,13 @@ class Engine {
         );
       }
 
+      let alignments;
+      if (includeAlignments) {
+        alignments = BergamotUtils.mapVector(responses, response =>
+          response.getAlignments()
+        );
+      }
+
       // Extract JavaScript values out of the vector.
       const translations = BergamotUtils.mapVector(responses, response =>
         response.getTranslatedText()
@@ -388,7 +411,7 @@ class Engine {
         `Translated ${length} code units.`
       );
 
-      return translations;
+      return { translations, alignments };
     } finally {
       // Free up any memory that was allocated. This will always run.
       messages?.delete();

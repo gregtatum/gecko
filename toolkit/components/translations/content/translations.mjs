@@ -185,7 +185,22 @@ class TranslationsState {
       const start = performance.now();
 
       this.translationRequest = AT_translate([messageToTranslate]);
-      const [translation] = await this.translationRequest;
+      const {
+        translations: [translation],
+        alignments: [annotations],
+      } = await this.translationRequest;
+
+      for (const { alignments, source, target } of annotations) {
+        const table = [
+          [undefined, ...source.map(text => JSON.stringify(text))],
+        ];
+        for (let j = 0; j < alignments.length; j++) {
+          const row = alignments[j].map(n => Math.floor(n * 1e3) / 1e3);
+          row.unshift(JSON.stringify(target[j]));
+          table.push(row);
+        }
+        console.table(table);
+      }
 
       // The measure events will show up in the Firefox Profiler.
       performance.measure(

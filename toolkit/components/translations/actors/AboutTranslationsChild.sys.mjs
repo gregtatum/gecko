@@ -290,7 +290,7 @@ export class AboutTranslationsChild extends JSWindowActorChild {
   /**
    * @param {string[]} messageBatch
    * @param {number} innerWindowId
-   * @returns {Promise<string[]>}
+   * @returns {Promise<{translations: string[], alignments?: Array<number[]>}>}
    */
   AT_translate(messageBatch, innerWindowId) {
     if (!this.translationsEngine) {
@@ -298,14 +298,24 @@ export class AboutTranslationsChild extends JSWindowActorChild {
         "The translations engine was not created."
       );
     }
+    // Alignments are the probability that a source word is related to the translated
+    // word. Currently it's useful for debugging translation markup issues.
+    const includeAlignments = true;
+
     const promise = this.#isHtmlTranslation
-      ? this.translationsEngine.translateHTML(messageBatch, innerWindowId)
-      : this.translationsEngine.translateText(messageBatch, innerWindowId);
+      ? this.translationsEngine.translateHTML(
+          messageBatch,
+          innerWindowId,
+          includeAlignments
+        )
+      : this.translationsEngine.translateText(
+          messageBatch,
+          innerWindowId,
+          includeAlignments
+        );
 
     return this.#convertToContentPromise(
-      promise.then(translations =>
-        Cu.cloneInto(translations, this.contentWindow)
-      )
+      promise.then(response => Cu.cloneInto(response, this.contentWindow))
     );
   }
 
