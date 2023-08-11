@@ -2671,10 +2671,88 @@ function loadBergamot(Module) {
     return Emval.toHandle(rv);
   }
 
+  var emval_symbols = {};
+
+  function getStringOrSymbol(address) {
+  var symbol = emval_symbols[address];
+  if (symbol === undefined) {
+    return readLatin1String(address);
+  }
+  return symbol;
+  }
+
+  var emval_methodCallers = [];
+
+  function __emval_call_void_method(caller, handle, methodName, args) {
+  caller = emval_methodCallers[caller];
+  handle = Emval.toValue(handle);
+  methodName = getStringOrSymbol(methodName);
+  caller(handle, methodName, null, args);
+  }
+
+  function __emval_addMethodCaller(caller) {
+  var id = emval_methodCallers.length;
+  emval_methodCallers.push(caller);
+  return id;
+  }
+
+  var emval_registeredMethods = [];
+
+  function __emval_get_method_caller(argCount, argTypes) {
+  var types = __emval_lookupTypes(argCount, argTypes);
+  var retType = types[0];
+  var signatureName = retType.name + "_$" + types.slice(1).map(function(t) {
+    return t.name;
+  }).join("_") + "$";
+  var returnId = emval_registeredMethods[signatureName];
+  if (returnId !== undefined) {
+    return returnId;
+  }
+  var argN = new Array(argCount - 1);
+  var invokerFunction = (handle, name, destructors, args) => {
+    var offset = 0;
+    for (var i = 0; i < argCount - 1; ++i) {
+    argN[i] = types[i + 1]["readValueFromPointer"](args + offset);
+    offset += types[i + 1]["argPackAdvance"];
+    }
+    var rv = handle[name].apply(handle, argN);
+    for (var i = 0; i < argCount - 1; ++i) {
+    if (types[i + 1].deleteObject) {
+      types[i + 1].deleteObject(argN[i]);
+    }
+    }
+    if (!retType.isVoid) {
+    return retType["toWireType"](destructors, rv);
+    }
+  };
+  returnId = __emval_addMethodCaller(invokerFunction);
+  emval_registeredMethods[signatureName] = returnId;
+  return returnId;
+  }
+
   function __emval_incref(handle) {
     if (handle > 4) {
       emval_handle_array[handle].refcount += 1;
     }
+  }
+
+  function __emval_new_array() {
+    return Emval.toHandle([]);
+  }
+
+  function __emval_new_cstring(v) {
+    return Emval.toHandle(getStringOrSymbol(v));
+  }
+
+  function __emval_new_object() {
+    return Emval.toHandle({});
+  }
+
+  function __emval_set_property(handle, key, value) {
+    handle = Emval.toValue(handle);
+    key = Emval.toValue(key);
+    value = Emval.toValue(value);
+    handle[key] = value;
   }
 
   function __emval_take_value(type, argv) {
@@ -3310,8 +3388,14 @@ function loadBergamot(Module) {
     _emscripten_date_now: __emscripten_date_now,
     _emscripten_get_now_is_monotonic: __emscripten_get_now_is_monotonic,
     _emval_call: __emval_call,
+    _emval_call_void_method: __emval_call_void_method,
     _emval_decref: __emval_decref,
+    _emval_get_method_caller: __emval_get_method_caller,
     _emval_incref: __emval_incref,
+    _emval_new_array: __emval_new_array,
+    _emval_new_cstring: __emval_new_cstring,
+    _emval_new_object: __emval_new_object,
+    _emval_set_property: __emval_set_property,
     _emval_take_value: __emval_take_value,
     _localtime_js: __localtime_js,
     _mmap_js: __mmap_js,
@@ -3335,6 +3419,7 @@ function loadBergamot(Module) {
     setTempRet0: _setTempRet0,
     strftime_l: _strftime_l,
   };
+
 
   var asm = createWasm();
 
