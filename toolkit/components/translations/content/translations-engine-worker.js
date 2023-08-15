@@ -554,7 +554,8 @@ class BergamotUtils {
         // This is the amount of memory that a simple run of Bergamot uses, in byte.
         // INITIAL_MEMORY: 459_276_288,
         preRun: [],
-        onAbort() {
+        onAbort(error) {
+          console.error(error);
           reject(new Error("Error loading Bergamot wasm module."));
         },
         onRuntimeInitialized: async () => {
