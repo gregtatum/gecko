@@ -554,6 +554,16 @@ class BergamotUtils {
         // This is the amount of memory that a simple run of Bergamot uses, in byte.
         // INITIAL_MEMORY: 459_276_288,
         preRun: [],
+        printErr(...args) {
+          if (_loggingLevel !== "Error" && _loggingLevel !== "Warn") {
+            console.log("Translations: [bergamot stderr]", ...args);
+          }
+        },
+        print(...args) {
+          if (_loggingLevel !== "Error" && _loggingLevel !== "Warn") {
+            console.log("Translations: [bergamot stdout]", ...args);
+          }
+        },
         onAbort(error) {
           console.error(error);
           reject(new Error("Error loading Bergamot wasm module."));

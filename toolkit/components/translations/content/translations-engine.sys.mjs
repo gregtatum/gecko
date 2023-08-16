@@ -209,7 +209,7 @@ export class TranslationsEngine {
      * @returns {Promise<Array<string>>} response
      */
     const pickTranslations = promise =>
-      promise.then(responses => responses.map(r => r.translation));
+      promise.then(response => response.translations);
 
     const translatedDoc = new lazy.TranslationsDocument(
       document,

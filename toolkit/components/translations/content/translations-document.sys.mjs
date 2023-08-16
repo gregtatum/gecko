@@ -466,6 +466,18 @@ export class TranslationsDocument {
       return NodeStatus.NOT_TRANSLATABLE;
     }
 
+    const { display } = node.ownerGlobal.getComputedStyle(node);
+    console.log(`!!! getComputedStyle`);
+    if (display === "none") {
+      return NodeStatus.NOT_TRANSLATABLE;
+    }
+    if (display === "block" || display === "flex" || display === "grid") {
+      return NodeStatus.SUBDIVIDE_FURTHER;
+    }
+    if (display === "inline" || display === "inline-block") {
+      return NodeStatus.READY_TO_TRANSLATE;
+    }
+
     if (this.isExcludedNode(node)) {
       // This is an explicitly excluded node.
       return NodeStatus.NOT_TRANSLATABLE;
