@@ -1039,7 +1039,6 @@ var TranslationsPanel = new (class {
       case panel.id: {
         TranslationsParent.telemetry().panel().onClose();
         this.#isPopupOpen = false;
-        this.elements.error.hidden = true;
         break;
       }
       case fromMenuList.firstChild.id: {
@@ -1537,6 +1536,7 @@ var TranslationsPanel = new (class {
 
         switch (error) {
           case null:
+            this.elements.error.hidden = true;
             break;
           case "engine-load-failure":
             if (!this.#isShowingDefaultView()) {
