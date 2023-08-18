@@ -1262,11 +1262,6 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {TranslationModelRecord[] | LanguagePair[]} records
    */
   static ensureLanguagePairsHavePivots(records) {
-    if (!AppConstants.DEBUG) {
-      // Only run this check on debug builds as it's in the performance critical first
-      // page load path.
-      return records;
-    }
     // lang -> pivot
     const hasToPivot = new Set();
     // pivot -> en
