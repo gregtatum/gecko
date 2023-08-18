@@ -215,13 +215,6 @@ var TranslationsPanel = new (class {
   }
 
   /**
-   * Tracks if the popup is open, or scheduled to be open.
-   *
-   * @type {boolean}
-   */
-  #isPopupOpen = false;
-
-  /**
    * Where the lazy elements are stored.
    *
    * @type {Record<string, Element>?}
@@ -1021,7 +1014,6 @@ var TranslationsPanel = new (class {
     switch (event.target.id) {
       case panel.id: {
         TranslationsParent.telemetry().panel().onClose();
-        this.#isPopupOpen = false;
         break;
       }
       case fromMenuList.firstChild.id: {
@@ -1087,8 +1079,6 @@ var TranslationsPanel = new (class {
       openedFromAppMenu,
       isFirstUserInteraction,
     });
-
-    this.#isPopupOpen = true;
 
     PanelMultiView.openPopup(panel, target, {
       position: "bottomright topright",
@@ -1427,12 +1417,10 @@ var TranslationsPanel = new (class {
           TranslationsPanel.detectedLanguages = detectedLanguages;
         }
 
-        if (this.#isPopupOpen) {
-          // Make sure to use the language state that is passed by the event.detail, and
-          // don't read it from the actor here, as it's possible the actor isn't available
-          // via the gBrowser.selectedBrowser.
-          this.#updateViewFromTranslationStatus(event.detail);
-        }
+        // Make sure to use the language state that is passed by the event.detail, and
+        // don't read it from the actor here, as it's possible the actor isn't available
+        // via the gBrowser.selectedBrowser.
+        this.#updateViewFromTranslationStatus(event.detail);
 
         if (
           // We've already requested to translate this page, so always show the icon.
