@@ -311,6 +311,8 @@ var TranslationsPanel = new (class {
       getter("toMenuList", "translations-panel-to");
       getter("translateButton", "translations-panel-translate");
       getter("unsupportedHint", "translations-panel-error-unsupported-hint");
+      getter("fromMenuPopup", "translations-panel-from-menupopup");
+      getter("toMenuPopup", "translations-panel-to-menupopup");
 
       // Getters by class
       getter(
@@ -445,6 +447,21 @@ var TranslationsPanel = new (class {
    * via RemoteSettings.
    */
   async #ensureLangListsBuilt() {
+    if (TranslationsParent.languageListId) {
+      // The language list has changed, re-build it.
+      this.#langListsPhase = "uninitialized";
+
+      const removeOldLangs = menuItems => {
+        // Retain the first menuitem, "Choose a language".
+        for (let i = 1; i < menuItems.length; i++) {
+          menuItems[i].remove();
+        }
+      };
+      const { fromMenuPopup, toMenuPopup } = this.elements;
+      removeOldLangs(fromMenuPopup.querySelectorAll("menuitem"));
+      removeOldLangs(toMenuPopup.querySelectorAll("menuitem"));
+    }
+
     switch (this.#langListsPhase) {
       case "initialized":
         // This has already been initialized.
@@ -470,31 +487,18 @@ var TranslationsPanel = new (class {
         throw new Error("No translation languages were retrieved.");
       }
 
-      const { panel } = this.elements;
-      const fromPopups = panel.querySelectorAll(
-        ".translations-panel-language-menupopup-from"
-      );
-      const toPopups = panel.querySelectorAll(
-        ".translations-panel-language-menupopup-to"
-      );
-
-      for (const popup of fromPopups) {
-        for (const { langTag, displayName } of fromLanguages) {
-          const fromMenuItem = document.createXULElement("menuitem");
-          fromMenuItem.setAttribute("value", langTag);
-          fromMenuItem.setAttribute("label", displayName);
-          popup.appendChild(fromMenuItem);
+      const createLanguages = (popup, languages) => {
+        for (const { langTag, displayName } of languages) {
+          const menuItem = document.createXULElement("menuitem");
+          menuItem.setAttribute("value", langTag);
+          menuItem.setAttribute("label", displayName);
+          popup.appendChild(menuItem);
         }
-      }
+      };
 
-      for (const popup of toPopups) {
-        for (const { langTag, displayName } of toLanguages) {
-          const toMenuItem = document.createXULElement("menuitem");
-          toMenuItem.setAttribute("value", langTag);
-          toMenuItem.setAttribute("label", displayName);
-          popup.appendChild(toMenuItem);
-        }
-      }
+      const { fromMenuPopup, toMenuPopup } = this.elements;
+      createLanguages(fromMenuPopup, fromLanguages);
+      createLanguages(toMenuPopup, toLanguages);
 
       this.#langListsPhase = "initialized";
     } catch (error) {

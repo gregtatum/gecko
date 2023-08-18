@@ -199,6 +199,14 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #previousDetectedLanguages = null;
 
+  /**
+   * A monotonically increasing ID that represents when the language list changes.
+   * This is a very infrequent event, but allows the front-end to update when the
+   * language list has been changed.
+   * @type {number}
+   */
+  static languageListId = 0;
+
   actorCreated() {
     this.languageState = new TranslationsLanguageState(
       this,
@@ -1119,6 +1127,8 @@ export class TranslationsParent extends JSWindowActorParent {
 
     // Invalidate cached data.
     TranslationsParent.#languagePairs = null;
+    // Signal that a new language list is available.
+    TranslationsParent.languageListId++;
   }
 
   /**
