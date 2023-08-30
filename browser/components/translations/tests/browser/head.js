@@ -380,9 +380,17 @@ async function assertLangTagIsShownOnTranslationsButton(
 
 async function clickCancelButton() {
   const { cancelButton } = TranslationsPanel.elements;
-  ok(isVisible(cancelButton), "Expected the cancel button to be visible");
+  ok(isVisible(cancelButton), "Expect the cancel button to be visible");
   await waitForTranslationsPopupEvent("popuphidden", () => {
-    click(cancelButton, "Clicking the cancel button");
+    click(cancelButton, "Click the cancel button");
+  });
+}
+
+async function clickRestoreButton() {
+  const { restoreButton } = TranslationsPanel.elements;
+  ok(isVisible(restoreButton), "Expect the restore-page button to be visible");
+  await waitForTranslationsPopupEvent("popuphidden", () => {
+    click(restoreButton, "Click the restore-page button");
   });
 }
 
