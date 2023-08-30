@@ -405,6 +405,24 @@ async function clickDismissErrorButton() {
   });
 }
 
+async function clickTranslateButton({
+  downloadHandler = null,
+  pivotTranslation = false,
+} = {}) {
+  const { translateButton } = TranslationsPanel.elements;
+  ok(isVisible(translateButton), "Expect the translate button to be visible");
+  await waitForTranslationsPopupEvent("popuphidden", () => {
+    click(translateButton, "Click the translate button");
+  });
+  await assertTranslationsButton(
+    { button: true, circleArrows: true, locale: false, icon: true },
+    "The icon presents the loading indicator."
+  );
+  if (downloadHandler) {
+    await downloadHandler(pivotTranslation ? 2 : 1);
+  }
+}
+
 /**
  * Asserts that for each provided expectation, the visible state of the corresponding
  * element in TranslationsPanel.elements both exists and matches the visibility expectation.
