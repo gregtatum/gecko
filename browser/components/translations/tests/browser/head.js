@@ -378,6 +378,14 @@ async function assertLangTagIsShownOnTranslationsButton(
   );
 }
 
+async function clickCancelButton() {
+  const { cancelButton } = TranslationsPanel.elements;
+  ok(isVisible(cancelButton), "Expected the cancel button to be visible");
+  await waitForTranslationsPopupEvent("popuphidden", () => {
+    click(cancelButton, "Clicking the cancel button");
+  });
+}
+
 /**
  * Asserts that for each provided expectation, the visible state of the corresponding
  * element in TranslationsPanel.elements both exists and matches the visibility expectation.
@@ -712,7 +720,6 @@ async function waitForTranslationsPopupEvent(
   }
   const promise = BrowserTestUtils.waitForEvent(panel, eventName);
   await callback();
-  info("Waiting for the translations panel popup to be shown");
   await promise;
   if (postEventAssertion) {
     postEventAssertion();
