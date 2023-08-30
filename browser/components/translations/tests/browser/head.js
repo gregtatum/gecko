@@ -257,6 +257,17 @@ async function clickNeverTranslateSite() {
 }
 
 /**
+ * Simulates the effect of clicking the manage-languages menuitem.
+ * Requires that the settings menu of the translations panel is open,
+ * otherwise the test will fail.
+ */
+async function clickManageLanguages() {
+  await clickSettingsMenuItemByL10nId(
+    "translations-panel-settings-manage-languages"
+  );
+}
+
+/**
  * Asserts that the always-translate-language checkbox matches the expected checked state.
  *
  * @param {string} langTag - A BCP-47 language tag
