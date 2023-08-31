@@ -133,6 +133,10 @@ class WindowGlobalParent final : public WindowContext,
     aTitle = mDocumentTitle.valueOr(nsString());
   }
 
+  void GetDocumentLang(nsAString& aLang) const {
+    aLang = mDocumentLang.valueOr(nsString());
+  }
+
   nsIPrincipal* GetContentBlockingAllowListPrincipal() const {
     return mDocContentBlockingAllowListPrincipal;
   }
@@ -249,6 +253,7 @@ class WindowGlobalParent final : public WindowContext,
   mozilla::ipc::IPCResult RecvUpdateSandboxFlags(uint32_t aSandboxFlags);
   mozilla::ipc::IPCResult RecvUpdateDocumentCspSettings(
       bool aBlockAllMixedContent, bool aUpgradeInsecureRequests);
+  mozilla::ipc::IPCResult RecvUpdateDocumentLang(const Maybe<nsString>& aLang);
   mozilla::ipc::IPCResult RecvUpdateDocumentTitle(const nsString& aTitle);
   mozilla::ipc::IPCResult RecvUpdateHttpsOnlyStatus(uint32_t aHttpsOnlyStatus);
   mozilla::ipc::IPCResult RecvSetIsInitialDocument(bool aIsInitialDocument) {
@@ -339,6 +344,7 @@ class WindowGlobalParent final : public WindowContext,
 
   nsCOMPtr<nsIURI> mDocumentURI;
   Maybe<nsString> mDocumentTitle;
+  Maybe<nsString> mDocumentLang;
 
   bool mIsInitialDocument;
 

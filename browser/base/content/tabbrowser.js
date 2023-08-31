@@ -5931,6 +5931,26 @@
         }
       });
 
+      // This event listener wires together the document language being received
+      // to the translations actor. This is done through C++ code to avoid loading
+      // the TranslationsChild on every page load.
+      this.addEventListener("document-lang-received", event => {
+        let currentWindowGlobal;
+        let translationsActor;
+        try {
+          const browser = event.target;
+          currentWindowGlobal = browser.browsingContext.currentWindowGlobal;
+          translationsActor = currentWindowGlobal?.getActor("Translations");
+        } catch {
+          // The translations actor may not be supported, in this case the call
+          // to getActor will throw.
+        }
+        if (!currentWindowGlobal || !translationsActor) {
+          return;
+        }
+        translationsActor.reportLangTags(currentWindowGlobal.documentLang);
+      });
+
       this.addEventListener("pagetitlechanged", event => {
         let browser = event.target;
         let tab = this.getTabForBrowser(browser);

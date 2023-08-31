@@ -689,38 +689,6 @@ export class TranslationsParent extends JSWindowActorParent {
         TranslationsParent.telemetry().onError(data.errorMessage);
         break;
       }
-      case "Translations:ReportLangTags": {
-        const { documentElementLang, href } = data;
-        const detectedLanguages = await this.getDetectedLanguages(
-          documentElementLang,
-          href
-        ).catch(error => {
-          // Detecting the languages can fail if the page gets destroyed before it
-          // can be completed. This runs on every page that doesn't have a lang tag,
-          // so only report the error if you have Translations logging turned on to
-          // avoid console spam.
-          lazy.console.log("Failed to get the detected languages.", error);
-        });
-
-        if (!detectedLanguages) {
-          // The actor was already destroyed, and the detectedLanguages weren't reported
-          // in time.
-          return undefined;
-        }
-
-        this.languageState.detectedLanguages = detectedLanguages;
-
-        if (this.shouldAutoTranslate(detectedLanguages)) {
-          this.translate(
-            detectedLanguages.docLangTag,
-            detectedLanguages.userLangTag,
-            true // reportAsAutoTranslate
-          );
-        } else {
-          this.maybeOfferTranslations(detectedLanguages);
-        }
-        return undefined;
-      }
       case "Translations:EngineIsReady": {
         this.isEngineReady = true;
         this.languageState.isEngineReady = true;
@@ -731,6 +699,40 @@ export class TranslationsParent extends JSWindowActorParent {
       }
     }
     return undefined;
+  }
+
+  /**
+   * @param {string} documentElementLang
+   */
+  async reportLangTags(documentElementLang) {
+    // TODO - Add href.
+    const detectedLanguages = await this.getDetectedLanguages(
+      documentElementLang
+    ).catch(error => {
+      // Detecting the languages can fail if the page gets destroyed before it
+      // can be completed. This runs on every page that doesn't have a lang tag,
+      // so only report the error if you have Translations logging turned on to
+      // avoid console spam.
+      lazy.console.log("Failed to get the detected languages.", error);
+    });
+
+    if (!detectedLanguages) {
+      // The actor was already destroyed, and the detectedLanguages weren't reported
+      // in time.
+      return;
+    }
+
+    this.languageState.detectedLanguages = detectedLanguages;
+
+    if (this.shouldAutoTranslate(detectedLanguages)) {
+      this.translate(
+        detectedLanguages.docLangTag,
+        detectedLanguages.userLangTag,
+        true // reportAsAutoTranslate
+      );
+    } else {
+      this.maybeOfferTranslations(detectedLanguages);
+    }
   }
 
   /**
@@ -1979,11 +1981,10 @@ export class TranslationsParent extends JSWindowActorParent {
    * rather than the child to remove the per-content process memory allocation amount.
    *
    * @param {string} [documentElementLang]
-   * @param {string} [href]
    * @returns {Promise<LangTags | null>} - Returns null if the actor was destroyed before
    *   the result could be resolved.
    */
-  async getDetectedLanguages(documentElementLang, href) {
+  async getDetectedLanguages(documentElementLang) {
     if (this.languageState.detectedLanguages) {
       return this.languageState.detectedLanguages;
     }
@@ -2062,7 +2063,10 @@ export class TranslationsParent extends JSWindowActorParent {
         { innerWindowId: this.innerWindowId },
         message
       );
-      lazy.console.log(message, href);
+      lazy.console.log(
+        message,
+        this.browsingContext.currentWindowGlobal?.documentURI.spec
+      );
 
       const languagePairs = await TranslationsParent.getLanguagePairs();
       if (this.#isDestroyed) {
@@ -2087,7 +2091,10 @@ export class TranslationsParent extends JSWindowActorParent {
         { innerWindowId: this.innerWindowId },
         message
       );
-      lazy.console.log(message, href);
+      lazy.console.log(
+        message,
+        this.browsingContext.currentWindowGlobal?.documentURI.spec
+      );
       // The docLangTag will be set, while the userLangTag will be null.
       return langTags;
     }

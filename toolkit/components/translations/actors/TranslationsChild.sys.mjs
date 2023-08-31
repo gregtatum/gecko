@@ -25,18 +25,6 @@ export class TranslationsChild extends JSWindowActorChild {
   innerWindowId = null;
   #wasTranslationsEngineCreated = false;
 
-  handleEvent(event) {
-    switch (event.type) {
-      case "DOMContentLoaded":
-        this.innerWindowId =
-          this.contentWindow?.windowGlobalChild.innerWindowId;
-        this.sendAsyncMessage("Translations:ReportLangTags", {
-          documentElementLang: this.document.documentElement.lang,
-        });
-        break;
-    }
-  }
-
   async receiveMessage({ name, data }) {
     switch (name) {
       case "Translations:TranslatePage": {

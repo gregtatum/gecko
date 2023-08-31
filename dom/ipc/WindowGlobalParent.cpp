@@ -428,6 +428,31 @@ IPCResult WindowGlobalParent::RecvUpdateDocumentPrincipal(
 
   return IPC_OK();
 }
+
+IPCResult WindowGlobalParent::RecvUpdateDocumentLang(
+    const Maybe<nsString>& aLang) {
+  mDocumentLang = aLang;
+
+  if (BrowsingContext()->IsTop()) {
+    // Attempt to dispatch through the observer.
+    nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
+    if (obs) {
+      obs->NotifyWhenScriptSafe(ToSupports(this), "document-lang-received",
+                                aLang ? aLang->get() : nullptr);
+    }
+  }
+
+  if (BrowsingContext()->IsTop()) {
+    if (Element* frameElement = BrowsingContext()->GetEmbedderElement()) {
+      AsyncEventDispatcher::RunDOMEventWhenSafe(
+          *frameElement, u"document-lang-received"_ns, CanBubble::eYes,
+          ChromeOnlyDispatch::eYes);
+    }
+  }
+
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateDocumentTitle(
     const nsString& aTitle) {
   if (mDocumentTitle.isSome() && mDocumentTitle.value() == aTitle) {
