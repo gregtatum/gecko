@@ -106,6 +106,7 @@
       }
 
       Services.obs.addObserver(this, "contextual-identity-updated");
+      Services.obs.addObserver(this, "document-lang-received");
 
       Services.els.addSystemEventListener(document, "keydown", this, false);
       Services.els.addSystemEventListener(document, "keypress", this, false);
@@ -5772,6 +5773,12 @@
           }
           break;
         }
+        // case "document-lang-received":
+        //   console.log(
+        //     `!!! tabbrowser.js observer document-lang-received`,
+        //     aData
+        //   );
+        //   break;
       }
     },
 
@@ -5928,6 +5935,23 @@
           // saying we took care of this close request by closing the tab.
           event.preventDefault();
         }
+      });
+
+      this.addEventListener("document-lang-received", event => {
+        let currentWindowGlobal;
+        let translationsActor;
+        try {
+          const browser = event.target;
+          currentWindowGlobal = browser.browsingContext.currentWindowGlobal;
+          translationsActor = currentWindowGlobal?.getActor("Translations");
+        } catch {
+          // The translations actor may not be supported here.
+        }
+        if (!currentWindowGlobal || !translationsActor) {
+          return;
+        }
+        translationsActor.reportLangTags(currentWindowGlobal.documentLang);
+        // let browser = event.target;
       });
 
       this.addEventListener("pagetitlechanged", event => {

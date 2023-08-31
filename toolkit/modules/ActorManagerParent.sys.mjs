@@ -485,12 +485,12 @@ let JSWINDOWACTORS = {
   Translations: {
     parent: {
       esModuleURI: "resource://gre/actors/TranslationsParent.sys.mjs",
-    },
-    child: {
-      esModuleURI: "resource://gre/actors/TranslationsChild.sys.mjs",
       events: {
         DOMContentLoaded: {},
       },
+    },
+    child: {
+      esModuleURI: "resource://gre/actors/TranslationsChild.sys.mjs",
     },
     matches: [
       "http://*/*",

@@ -97,6 +97,7 @@ interface WindowGlobalParent : WindowContext {
   readonly attribute Principal? contentBlockingAllowListPrincipal;
   readonly attribute URI? documentURI;
   readonly attribute DOMString documentTitle;
+  readonly attribute DOMString documentLang;
   readonly attribute nsICookieJarSettings? cookieJarSettings;
 
   // True if the the currently loaded document is in fullscreen.

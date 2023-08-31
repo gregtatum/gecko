@@ -200,6 +200,21 @@ export class TranslationsParent extends JSWindowActorParent {
   static #previousDetectedLanguages = null;
 
   actorCreated() {
+    // browsingContext: ,
+    console.log(`!!! Translations actor created`, {
+      currentWindowGlobal: this.browsingContext.currentWindowGlobal,
+      lang: this.browsingContext.currentWindowGlobal?.lang,
+      embeddingElement: this.browsingContext.embeddingElement,
+      topEmbeddingElement: this.browsingContext.top.embeddingElement,
+    });
+    console.log(`!!! this.browsingContext`, this.browsingContext);
+    // this.browsingContext.embeddingElement.addEventListener(
+    //   "document-lang-received",
+    //   () => {
+    //     console.log(`!!! Translations actor`, "document-lang-received");
+    //   }
+    // );
+
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -221,6 +236,17 @@ export class TranslationsParent extends JSWindowActorParent {
         toLanguage,
         false // reportAsAutoTranslate
       );
+    }
+  }
+
+  handleEvent(event) {
+    switch (event.type) {
+      case "DOMContentLoaded":
+        console.log(
+          `!!! DOMContentLoaded this.browsingContext.currentWindowGlobal?.lang`,
+          this.browsingContext.currentWindowGlobal?.lang
+        );
+        break;
     }
   }
 
@@ -689,38 +715,6 @@ export class TranslationsParent extends JSWindowActorParent {
         TranslationsParent.telemetry().onError(data.errorMessage);
         break;
       }
-      case "Translations:ReportLangTags": {
-        const { documentElementLang, href } = data;
-        const detectedLanguages = await this.getDetectedLanguages(
-          documentElementLang,
-          href
-        ).catch(error => {
-          // Detecting the languages can fail if the page gets destroyed before it
-          // can be completed. This runs on every page that doesn't have a lang tag,
-          // so only report the error if you have Translations logging turned on to
-          // avoid console spam.
-          lazy.console.log("Failed to get the detected languages.", error);
-        });
-
-        if (!detectedLanguages) {
-          // The actor was already destroyed, and the detectedLanguages weren't reported
-          // in time.
-          return undefined;
-        }
-
-        this.languageState.detectedLanguages = detectedLanguages;
-
-        if (this.shouldAutoTranslate(detectedLanguages)) {
-          this.translate(
-            detectedLanguages.docLangTag,
-            detectedLanguages.userLangTag,
-            true // reportAsAutoTranslate
-          );
-        } else {
-          this.maybeOfferTranslations(detectedLanguages);
-        }
-        return undefined;
-      }
       case "Translations:EngineIsReady": {
         this.isEngineReady = true;
         this.languageState.isEngineReady = true;
@@ -731,6 +725,37 @@ export class TranslationsParent extends JSWindowActorParent {
       }
     }
     return undefined;
+  }
+
+  async reportLangTags(documentElementLang) {
+    console.log(`!!! reportLangTags`);
+    const detectedLanguages = await this.getDetectedLanguages(
+      documentElementLang
+    ).catch(error => {
+      // Detecting the languages can fail if the page gets destroyed before it
+      // can be completed. This runs on every page that doesn't have a lang tag,
+      // so only report the error if you have Translations logging turned on to
+      // avoid console spam.
+      lazy.console.log("Failed to get the detected languages.", error);
+    });
+
+    if (!detectedLanguages) {
+      // The actor was already destroyed, and the detectedLanguages weren't reported
+      // in time.
+      return;
+    }
+
+    this.languageState.detectedLanguages = detectedLanguages;
+
+    if (this.shouldAutoTranslate(detectedLanguages)) {
+      this.translate(
+        detectedLanguages.docLangTag,
+        detectedLanguages.userLangTag,
+        true // reportAsAutoTranslate
+      );
+    } else {
+      this.maybeOfferTranslations(detectedLanguages);
+    }
   }
 
   /**

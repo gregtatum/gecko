@@ -8252,6 +8252,17 @@ void Document::UnblockDOMContentLoaded() {
     presShell->GetRefreshDriver()->NotifyDOMContentLoaded();
   }
 
+  if (WindowGlobalChild* child = GetWindowGlobalChild()) {
+    nsAutoString contentLang;
+    nsAtom* langAtom = GetRootElement()->GetLang();
+    if (langAtom) {
+      nsDependentString lang(langAtom->GetUTF16String());
+      child->SendUpdateDocumentLang(Some(lang));
+    } else {
+      child->SendUpdateDocumentLang(Nothing{});
+    }
+  }
+
   MOZ_ASSERT(mReadyState == READYSTATE_INTERACTIVE);
   if (!mSynchronousDOMContentLoaded) {
     MOZ_RELEASE_ASSERT(NS_IsMainThread());

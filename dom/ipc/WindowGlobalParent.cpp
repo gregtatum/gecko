@@ -77,6 +77,22 @@ extern mozilla::LazyLogModule gUseCountersLog;
 
 namespace mozilla::dom {
 
+// Do not commit, debug only:
+#include "mozilla/Utf8.h"
+std::string ToUtf8(mozilla::Span<const char16_t> input) {
+  size_t buff_len = input.Length() * 3;
+  std::string result(buff_len, ' ');
+  result.reserve(buff_len);
+  size_t result_len =
+      ConvertUtf16toUtf8(input, mozilla::Span(result.data(), buff_len));
+  result.resize(result_len);
+  return result;
+}
+#include <wchar.h>
+std::string ToUtf8(const char16_t* input) {
+  return ToUtf8({input, wcslen(reinterpret_cast<const wchar_t*>(input))});
+}
+
 WindowGlobalParent::WindowGlobalParent(
     CanonicalBrowsingContext* aBrowsingContext, uint64_t aInnerWindowId,
     uint64_t aOuterWindowId, FieldValues&& aInit)
@@ -428,6 +444,46 @@ IPCResult WindowGlobalParent::RecvUpdateDocumentPrincipal(
 
   return IPC_OK();
 }
+
+// IPCResult WindowGlobalParent::RecvUpdateDocumentLang(
+//     const Maybe<nsString>& aLang) {
+//   mDocumentLang = aLang;
+//   if (BrowsingContext()->IsTop()) {
+//     nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
+//     if (obs) {
+//       obs->NotifyWhenScriptSafe(ToSupports(this), "document-lang-received",
+//                                 aLang ? aLang->get() : nullptr);
+//     }
+//   }
+
+//   return IPC_OK();
+// }
+
+IPCResult WindowGlobalParent::RecvUpdateDocumentLang(
+    const Maybe<nsString>& aLang) {
+  mDocumentLang = aLang;
+
+  printf("!!! WindowGlobalParent::RecvUpdateDocumentLang\n");
+  if (BrowsingContext()->IsTop()) {
+    // Attempt to dispatch through the observer.
+    nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
+    if (obs) {
+      obs->NotifyWhenScriptSafe(ToSupports(this), "document-lang-received",
+                                aLang ? aLang->get() : nullptr);
+    }
+  }
+
+  if (BrowsingContext()->IsTop()) {
+    if (Element* frameElement = BrowsingContext()->GetEmbedderElement()) {
+      AsyncEventDispatcher::RunDOMEventWhenSafe(
+          *frameElement, u"document-lang-received"_ns, CanBubble::eYes,
+          ChromeOnlyDispatch::eYes);
+    }
+  }
+
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateDocumentTitle(
     const nsString& aTitle) {
   if (mDocumentTitle.isSome() && mDocumentTitle.value() == aTitle) {
