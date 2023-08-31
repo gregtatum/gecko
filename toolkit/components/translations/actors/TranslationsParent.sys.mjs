@@ -2059,7 +2059,7 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!langTags.docLangTag) {
       const message = "No valid language detected.";
       ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
+        "TranslationsParent",
         { innerWindowId: this.innerWindowId },
         message
       );
@@ -2087,7 +2087,7 @@ export class TranslationsParent extends JSWindowActorParent {
       const message =
         "The app and document languages match, so not translating.";
       ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
+        "TranslationsParent",
         { innerWindowId: this.innerWindowId },
         message
       );
@@ -2143,7 +2143,7 @@ export class TranslationsParent extends JSWindowActorParent {
       // No language pairs match.
       const message = `No matching translation pairs were found for translating from "${langTags.docLangTag}".`;
       ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
+        "TranslationsParent",
         { innerWindowId: this.innerWindowId },
         message
       );
@@ -2425,8 +2425,7 @@ class TranslationsLanguageState {
   }
 
   /**
-   * The TranslationsChild will detect languages and offer them up for translation.
-   * The results are stored here.
+   * The stored results for the detected languages.
    *
    * @returns {LangTags | null}
    */
