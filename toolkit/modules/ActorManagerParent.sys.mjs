@@ -488,9 +488,6 @@ let JSWINDOWACTORS = {
     },
     child: {
       esModuleURI: "resource://gre/actors/TranslationsChild.sys.mjs",
-      events: {
-        DOMContentLoaded: {},
-      },
     },
     matches: [
       "http://*/*",
