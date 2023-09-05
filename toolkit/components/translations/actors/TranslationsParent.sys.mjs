@@ -1164,37 +1164,7 @@ export class TranslationsParent extends JSWindowActorParent {
     remoteSettingsClient,
     { filters = {}, lookupKey = record => record.name } = {}
   ) {
-    try {
-      await chaosMode(1 / 4);
-    } catch (_error) {
-      // Simulate an error by providing empty records.
-      return [];
-    }
-    const retrievedRecords = await remoteSettingsClient.get({
-      // Pull the records from the network.
-      syncIfEmpty: true,
-      // Don't verify the signature if the client is mocked.
-      verifySignature: VERIFY_SIGNATURES_FROM_FS,
-      // Apply any filters for retrieving the records.
-      filters,
-    });
-
-    // Create a mapping to only the max version of each record discriminated by
-    // the result of the lookupKey() function.
-    const maxVersionRecordMap = retrievedRecords.reduce((records, record) => {
-      const key = lookupKey(record);
-      const existing = records.get(key);
-      if (
-        !existing ||
-        // existing version less than record version
-        Services.vc.compare(existing.version, record.version) < 0
-      ) {
-        records.set(key, record);
-      }
-      return records;
-    }, new Map());
-
-    return Array.from(maxVersionRecordMap.values());
+    return [];
   }
 
   /**
