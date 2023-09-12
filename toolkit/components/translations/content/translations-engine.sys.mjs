@@ -54,7 +54,7 @@ export class TranslationsEngine {
   static #keepAliveTimeout = null;
 
   /** @type {Worker} */
-  #translationsWorker;
+  translationsWorker;
 
   /**
    * Multiple messages can be sent before a response is received. This ID is used to keep
@@ -75,7 +75,7 @@ export class TranslationsEngine {
    * @param {TranslationsChild} actor
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @returns {Promise<TranslationsEngine | null>}
+   * @returns {Promise<TranslationsEngine>}
    */
   static getOrCreate(actor, fromLanguage, toLanguage) {
     const languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
@@ -262,7 +262,9 @@ export class TranslationsEngine {
     /** @type {string} */
     this.toLanguage = toLanguage;
     this.languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
-    this.#translationsWorker = new Worker(
+    const browser = Services.appShell.createWindowlessBrowser(false);
+    const { SharedWorker } = browser.document.ownerGlobal;
+    this.translationsWorker = new SharedWorker(
       "chrome://global/content/translations/translations-engine-worker.js"
     );
 
@@ -275,9 +277,9 @@ export class TranslationsEngine {
         } else if (data.type === "initialization-error") {
           reject(data.error);
         }
-        this.#translationsWorker.removeEventListener("message", onMessage);
+        this.translationsWorker.removeEventListener("message", onMessage);
       };
-      this.#translationsWorker.addEventListener("message", onMessage);
+      this.translationsWorker.addEventListener("message", onMessage);
     });
 
     // Make sure the ArrayBuffers are transferred, not cloned.
@@ -292,7 +294,7 @@ export class TranslationsEngine {
       }
     }
 
-    this.#translationsWorker.postMessage(
+    this.translationsWorker.postMessage(
       {
         type: "initialize",
         fromLanguage,
@@ -349,7 +351,7 @@ export class TranslationsEngine {
           data.innerWindowId === innerWindowId
         ) {
           // The page was unloaded, and we no longer need to listen for a response.
-          this.#translationsWorker.removeEventListener("message", onMessage);
+          this.translationsWorker.removeEventListener("message", onMessage);
           return;
         }
 
@@ -365,12 +367,12 @@ export class TranslationsEngine {
         if (data.type === "translation-error") {
           reject(data.error);
         }
-        this.#translationsWorker.removeEventListener("message", onMessage);
+        this.translationsWorker.removeEventListener("message", onMessage);
       };
 
-      this.#translationsWorker.addEventListener("message", onMessage);
+      this.translationsWorker.addEventListener("message", onMessage);
 
-      this.#translationsWorker.postMessage({
+      this.translationsWorker.postMessage({
         type: "translation-request",
         isHTML,
         messageBatch,
@@ -386,7 +388,7 @@ export class TranslationsEngine {
    * translations.
    */
   terminate() {
-    this.#translationsWorker.terminate();
+    this.translationsWorker.terminate();
     TranslationsEngine.#cachedEngine?.then(engine => {
       if (engine === this) {
         TranslationsEngine.#cachedEngine = null;
@@ -416,7 +418,7 @@ export class TranslationsEngine {
    * @param {number} innerWindowId
    */
   discardTranslationQueue(innerWindowId) {
-    this.#translationsWorker.postMessage({
+    this.translationsWorker.postMessage({
       type: "discard-translation-queue",
       innerWindowId,
     });

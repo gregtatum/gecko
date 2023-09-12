@@ -54,6 +54,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
   TranslationsTelemetry:
     "chrome://global/content/translations/TranslationsTelemetry.sys.mjs",
+  TranslationsEngine:
+    "chrome://global/content/translations/translations-engine.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -1868,7 +1870,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {boolean} reportAsAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
+  async translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
@@ -1888,29 +1890,55 @@ export class TranslationsParent extends JSWindowActorParent {
       // again once the actor has been recreated.
       TranslationsParent.#translateOnPageReload = { fromLanguage, toLanguage };
       this.restorePage(fromLanguage);
-    } else {
-      const { docLangTag } = this.languageState.detectedLanguages;
-      const preferredLanguages = TranslationsParent.getPreferredLanguages();
-      const topPreferredLanguage =
-        preferredLanguages && preferredLanguages.length
-          ? preferredLanguages[0]
-          : null;
-      this.languageState.requestedTranslationPair = {
-        fromLanguage,
-        toLanguage,
-      };
-      TranslationsParent.telemetry().onTranslate({
-        docLangTag,
-        fromLanguage,
-        toLanguage,
-        topPreferredLanguage,
-        autoTranslate: reportAsAutoTranslate,
-      });
-      this.sendAsyncMessage("Translations:TranslatePage", {
-        fromLanguage,
-        toLanguage,
-      });
+      return;
     }
+    // TODO - Simplify.
+    const actorInterface = {
+      docShell: {
+        now: () => Cu.now(),
+      },
+      innerWindowId: this.innerWindowId,
+      getTranslationsEnginePayload: (...args) =>
+        TranslationsParent.getTranslationsEnginePayload(...args),
+    };
+
+    let engine;
+    try {
+      engine = await lazy.TranslationsEngine.getOrCreate(
+        actorInterface,
+        fromLanguage,
+        toLanguage
+      );
+    } catch (error) {
+      lazy.console.error(error);
+      this.languageState.error = error;
+      return;
+    }
+    console.log(`!!! engine`, engine);
+
+    const { docLangTag } = this.languageState.detectedLanguages;
+    const preferredLanguages = TranslationsParent.getPreferredLanguages();
+    const topPreferredLanguage =
+      preferredLanguages && preferredLanguages.length
+        ? preferredLanguages[0]
+        : null;
+    this.languageState.requestedTranslationPair = {
+      fromLanguage,
+      toLanguage,
+    };
+    TranslationsParent.telemetry().onTranslate({
+      docLangTag,
+      fromLanguage,
+      toLanguage,
+      topPreferredLanguage,
+      autoTranslate: reportAsAutoTranslate,
+    });
+    lazy.TranslationsEngine;
+
+    this.sendAsyncMessage("Translations:TranslatePage", {
+      fromLanguage,
+      toLanguage,
+    });
   }
 
   /**

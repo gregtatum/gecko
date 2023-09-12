@@ -40,16 +40,16 @@ export class TranslationsChild extends JSWindowActorChild {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "Translations:TranslatePage": {
-        lazy.TranslationsEngine.translatePage(this, data).then(
-          () => {
-            this.#wasTranslationsEngineCreated = true;
-          },
-          () => {
-            this.sendAsyncMessage("Translations:FullPageTranslationFailed", {
-              reason: "engine-load-failure",
-            });
-          }
-        );
+        // lazy.TranslationsEngine.translatePage(this, data).then(
+        //   () => {
+        //     this.#wasTranslationsEngineCreated = true;
+        //   },
+        //   () => {
+        //     this.sendAsyncMessage("Translations:FullPageTranslationFailed", {
+        //       reason: "engine-load-failure",
+        //     });
+        //   }
+        // );
         return undefined;
       }
       case "Translations:GetDocumentElementLang":
