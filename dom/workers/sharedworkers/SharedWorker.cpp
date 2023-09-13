@@ -82,10 +82,10 @@ already_AddRefed<SharedWorker> SharedWorker::Constructor(
     storageAllowed = StorageAllowedForWindow(window);
   }
 
-  if (storageAllowed == StorageAccess::eDeny) {
-    aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
-    return nullptr;
-  }
+  // if (storageAllowed == StorageAccess::eDeny) {
+  //   aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
+  //   return nullptr;
+  // }
 
   if (ShouldPartitionStorage(storageAllowed) &&
       !StoragePartitioningEnabled(

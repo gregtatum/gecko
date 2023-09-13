@@ -294,7 +294,8 @@ export class TranslationsEngine {
       }
     }
 
-    this.translationsWorker.postMessage(
+    console.log(`!!! this.translationsWorker`, this.translationsWorker);
+    this.translationsWorker.port.postMessage(
       {
         type: "initialize",
         fromLanguage,
@@ -372,7 +373,7 @@ export class TranslationsEngine {
 
       this.translationsWorker.addEventListener("message", onMessage);
 
-      this.translationsWorker.postMessage({
+      this.translationsWorker.port.postMessage({
         type: "translation-request",
         isHTML,
         messageBatch,
@@ -418,7 +419,7 @@ export class TranslationsEngine {
    * @param {number} innerWindowId
    */
   discardTranslationQueue(innerWindowId) {
-    this.translationsWorker.postMessage({
+    this.translationsWorker.port.postMessage({
       type: "discard-translation-queue",
       innerWindowId,
     });
