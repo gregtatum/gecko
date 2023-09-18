@@ -581,6 +581,7 @@ nsScriptSecurityManager::CheckSameOriginURI(nsIURI* aSourceURI,
     }
     return NS_ERROR_DOM_BAD_URI;
   }
+
   return NS_OK;
 }
 

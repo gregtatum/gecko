@@ -15,3 +15,5 @@ BROWSER_CHROME_MANIFESTS += ["tests/browser/browser.ini"]
 
 with Files("docs/**"):
     SCHEDULES.exclusive = ["docs"]
+
+EXTRA_JS_MODULES += ["TranslationsEngineWorker.js"]

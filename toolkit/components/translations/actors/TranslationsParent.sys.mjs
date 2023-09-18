@@ -1914,7 +1914,7 @@ export class TranslationsParent extends JSWindowActorParent {
       this.languageState.error = error;
       return;
     }
-    console.log(`!!! engine`, engine);
+    console.log(`!!! TranslationsParent - Engine was created`, engine);
 
     const { docLangTag } = this.languageState.detectedLanguages;
     const preferredLanguages = TranslationsParent.getPreferredLanguages();
@@ -1935,9 +1935,11 @@ export class TranslationsParent extends JSWindowActorParent {
     });
     lazy.TranslationsEngine;
 
+    console.log(`!!! TranslationsParent - Attempt to send the engine port.`);
     this.sendAsyncMessage("Translations:TranslatePage", {
       fromLanguage,
       toLanguage,
+      port: engine.port,
     });
   }
 

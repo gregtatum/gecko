@@ -182,24 +182,25 @@ export class TranslationsEngine {
    * @param {{fromLanguage: string, toLanguage: string}} langTags
    * @returns {Promise<void>}
    */
-  static async translatePage(actor, { fromLanguage, toLanguage }) {
+  static async translatePage(actor, { fromLanguage, toLanguage, port }) {
     const translationsStart = actor.docShell.now();
-
-    const getEngine = () =>
-      TranslationsEngine.getOrCreate(actor, fromLanguage, toLanguage);
-
-    getEngine().catch(error => {
-      actor.sendTelemetryError(error);
-    });
-
-    // Wait for the engine to be ready.
-    const engine = await getEngine();
+    this.port = port;
 
     const { document, innerWindowId } = actor;
 
     if (engine.translatedDoc?.innerWindowId === innerWindowId) {
       lazy.console.error("This page was already translated.");
       return;
+    }
+
+    const engine = new TranslationsEngine(
+      fromLanguage,
+      toLanguage,
+      null,
+      innerWindowId
+    );
+    function getEngine() {
+      return engine;
     }
 
     const translatedDoc = new lazy.TranslationsDocument(
@@ -263,50 +264,69 @@ export class TranslationsEngine {
     this.toLanguage = toLanguage;
     this.languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
     const browser = Services.appShell.createWindowlessBrowser(false);
-    const { SharedWorker } = browser.document.ownerGlobal;
-    this.translationsWorker = new SharedWorker(
-      "chrome://global/content/translations/translations-engine-worker.js"
-    );
-
-    /** @type {Promise<void>} */
-    this.isReady = new Promise((resolve, reject) => {
-      const onMessage = ({ data }) => {
-        lazy.console.log("Received initialization message", data);
-        if (data.type === "initialization-success") {
-          resolve();
-        } else if (data.type === "initialization-error") {
-          reject(data.error);
-        }
-        this.translationsWorker.removeEventListener("message", onMessage);
-      };
-      this.translationsWorker.addEventListener("message", onMessage);
-    });
-
-    // Make sure the ArrayBuffers are transferred, not cloned.
-    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
-    const transferables = [];
+    console.log(`!!! browser`, browser);
     if (enginePayload) {
-      transferables.push(enginePayload.bergamotWasmArrayBuffer);
-      for (const files of enginePayload.languageModelFiles) {
-        for (const { buffer } of Object.values(files)) {
-          transferables.push(buffer);
+      const { SharedWorker } = browser.document.ownerGlobal;
+      this.translationsWorker = new SharedWorker(
+        "chrome://global/content/translations/translations-engine-worker.js"
+      );
+
+      /** @type {Promise<void>} */
+      this.isReady = new Promise((resolve, reject) => {
+        const onMessage = ({ data }) => {
+          lazy.console.log("Received initialization message", data);
+          if (data.type === "initialization-success") {
+            resolve();
+          } else if (data.type === "initialization-error") {
+            reject(data.error);
+          }
+          this.translationsWorker.port.removeEventListener(
+            "message",
+            onMessage
+          );
+        };
+        console.log(`!!! listening for message`);
+        this.translationsWorker.port.addEventListener("message", onMessage);
+      });
+
+      // Make sure the ArrayBuffers are transferred, not cloned.
+      // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+      const transferables = [];
+      if (enginePayload) {
+        transferables.push(enginePayload.bergamotWasmArrayBuffer);
+        for (const files of enginePayload.languageModelFiles) {
+          for (const { buffer } of Object.values(files)) {
+            transferables.push(buffer);
+          }
         }
       }
-    }
 
-    console.log(`!!! this.translationsWorker`, this.translationsWorker);
-    this.translationsWorker.port.postMessage(
-      {
-        type: "initialize",
-        fromLanguage,
-        toLanguage,
-        enginePayload,
-        innerWindowId,
-        messageId: this.#messageId++,
-        logLevel: lazy.logLevel,
-      },
-      transferables
-    );
+      console.log(
+        `!!! translationsWorker posting to initialize`,
+        this.translationsWorker
+      );
+
+      const channel = new MessageChannel();
+      this.port = channel.port1;
+
+      transferables.push(channel.port2);
+
+      this.translationsWorker.port.start();
+      this.translationsWorker.port.postMessage(
+        {
+          type: "initialize",
+          fromLanguage,
+          toLanguage,
+          enginePayload,
+          innerWindowId,
+          messageId: this.#messageId++,
+          logLevel: lazy.logLevel,
+          port: channel.port2,
+        },
+        transferables
+      );
+      this.translationsWorker.port.start();
+    }
   }
 
   /**
@@ -341,7 +361,7 @@ export class TranslationsEngine {
    * @returns {Promise<string[]>}
    */
   #translate(messageBatch, isHTML, innerWindowId) {
-    TranslationsEngine.keepAlive(this.languagePairKey);
+    // TranslationsEngine.keepAlive(this.languagePairKey);
 
     const messageId = this.#messageId++;
 
@@ -352,7 +372,7 @@ export class TranslationsEngine {
           data.innerWindowId === innerWindowId
         ) {
           // The page was unloaded, and we no longer need to listen for a response.
-          this.translationsWorker.removeEventListener("message", onMessage);
+          this.port.removeEventListener("message", onMessage);
           return;
         }
 
@@ -368,12 +388,12 @@ export class TranslationsEngine {
         if (data.type === "translation-error") {
           reject(data.error);
         }
-        this.translationsWorker.removeEventListener("message", onMessage);
+        this.port.removeEventListener("message", onMessage);
       };
 
-      this.translationsWorker.addEventListener("message", onMessage);
+      this.port.addEventListener("message", onMessage);
 
-      this.translationsWorker.port.postMessage({
+      this.port.port.postMessage({
         type: "translation-request",
         isHTML,
         messageBatch,
@@ -389,7 +409,7 @@ export class TranslationsEngine {
    * translations.
    */
   terminate() {
-    this.translationsWorker.terminate();
+    this.port.terminate();
     TranslationsEngine.#cachedEngine?.then(engine => {
       if (engine === this) {
         TranslationsEngine.#cachedEngine = null;
@@ -419,7 +439,7 @@ export class TranslationsEngine {
    * @param {number} innerWindowId
    */
   discardTranslationQueue(innerWindowId) {
-    this.translationsWorker.port.postMessage({
+    this.port.postMessage({
       type: "discard-translation-queue",
       innerWindowId,
     });

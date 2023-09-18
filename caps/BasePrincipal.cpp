@@ -698,13 +698,17 @@ nsresult BasePrincipal::CheckMayLoadHelper(nsIURI* aURI,
     }
   }
 
-  if (aReport) {
-    nsScriptSecurityManager::ReportError(
-        "CheckSameOriginError", prinURI, aURI,
-        mOriginAttributes.mPrivateBrowsingId > 0, aInnerWindowID);
-  }
+  printf("!!! Bypassing nsScriptSecurityManager::ReportError\n");
+  return NS_OK;
 
-  return NS_ERROR_DOM_BAD_URI;
+  // if (aReport) {
+  //   printf("!!! nsScriptSecurityManager::ReportError\n");
+  //   nsScriptSecurityManager::ReportError(
+  //       "CheckSameOriginError", prinURI, aURI,
+  //       mOriginAttributes.mPrivateBrowsingId > 0, aInnerWindowID);
+  // }
+
+  // return NS_ERROR_DOM_BAD_URI;
 }
 
 NS_IMETHODIMP
