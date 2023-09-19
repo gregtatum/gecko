@@ -205,15 +205,17 @@ export class TranslationsDocument {
    * @param {Document} document
    * @param {string} documentLanguage - The BCP 47 language tag.
    * @param {number} innerWindowId - This is used for better profiler marker reporting.
-   * @param {TranslationFunction} translateHTML
-   * @param {TranslationFunction} translateText
+   * @param {MessagePort} port - The port to the translations engine.
+   * @param {number} translationsStart
+   * @param {() => number} now
    */
   constructor(
     document,
     documentLanguage,
     innerWindowId,
-    translateHTML,
-    translateText
+    port,
+    translationsStart,
+    now
   ) {
     /**
      * The language of the document. If elements are found that do not match this language,
@@ -229,11 +231,8 @@ export class TranslationsDocument {
       );
     }
 
-    /** @type {TranslationFunction} */
-    this.translateHTML = translateHTML;
-
-    /** @type {TranslationFunction} */
-    this.translateText = translateText;
+    /** @type {QueuedTranslator} */
+    this.translator = new QueuedTranslator(port);
 
     /** @type {number} */
     this.innerWindowId = innerWindowId;
@@ -281,6 +280,27 @@ export class TranslationsDocument {
         }
       }
     });
+
+    this.addRootElement(document.querySelector("title"));
+    this.addRootElement(document.body, true /* reportWordsInViewport */);
+
+    this.viewportTranslated.then(() => {
+      ChromeUtils.addProfilerMarker(
+        "TranslationsChild",
+        { innerWindowId, startTime: now() },
+        "Viewport translations"
+      );
+      ChromeUtils.addProfilerMarker(
+        "TranslationsChild",
+        { innerWindowId, startTime: translationsStart },
+        "Time to first translation"
+      );
+    });
+
+    lazy.console.log(
+      "Beginning to translate.",
+      document.defaultView.location.href
+    );
   }
 
   /**
@@ -614,13 +634,17 @@ export class TranslationsDocument {
       });
     }
 
-    let text, translate;
+    /** @type {string} */
+    let text;
+    /** @type {boolean} */
+    let isHTML;
+
     if (node.nodeType === Node.ELEMENT_NODE) {
       text = node.innerHTML;
-      translate = this.translateHTML;
+      isHTML = true;
     } else {
       text = node.textContent;
-      translate = this.translateText;
+      isHTML = false;
     }
 
     if (text.trim().length === 0) {
@@ -633,9 +657,17 @@ export class TranslationsDocument {
 
     this.#pendingTranslationsCount++;
     try {
-      const [translatedHTML] = await translate(text);
+      const translatedHTML = await this.translator.translate(
+        node,
+        text,
+        isHTML
+      );
       this.#pendingTranslationsCount--;
-      this.scheduleNodeUpdateWithTranslation(node, translatedHTML);
+      // The translatedHTML is null when the request is stale, for instance when multiple
+      // translations have been queued for the same node.
+      if (translatedHTML != null) {
+        this.scheduleNodeUpdateWithTranslation(node, translatedHTML);
+      }
     } catch (error) {
       this.#pendingTranslationsCount--;
       lazy.console.error("Translation failed", error);
@@ -1278,5 +1310,134 @@ function* getAncestorsIterator(node) {
     parent = parent.parentNode
   ) {
     yield parent;
+  }
+}
+
+/**
+ * When a page is hidden, mutations may occur in the DOM. It doesn't make sense to
+ * translate those elements while the page is hidden, especially as it may bring
+ * a translations engine back to life, which can be quite expensive. Queue those
+ * messages here.
+ */
+class QueuedTranslator {
+  /**
+   * Pause sending the translations, this will queue them until un-paused.
+   */
+  #paused = false;
+
+  /**
+   * @type {MessagePort}
+   */
+  #port;
+
+  /**
+   * An id for each message sent. This is used to match up the request and response.
+   */
+  #nextMessageId = 0;
+
+  /**
+   * Tie together a message id to a resolved response.
+   * @type {Record<number, { resolve: () => string, reject: Function }}
+   */
+  #requests = {};
+
+  /**
+   * If the translations are paused, they are queued here. This Map is ordered by
+   * from oldest to newest requests with stale requests being removed.
+   * @type {Map<Node, Array<Object>>}
+   */
+  #queue = new Map();
+
+  /**
+   * @param {MessagePort} port
+   */
+  constructor(port) {
+    this.#port = port;
+    // Match up a response on the port to message that was sent.
+    port.onmessage = ({ data }) => {
+      const { targetText, messageId } = data;
+      const requests = this.#requests[messageId];
+      if (!requests) {
+        throw new Error(
+          "Could not find a resolve function for the messageId " + messageId
+        );
+      }
+      requests.resolve(targetText);
+    };
+  }
+
+  /**
+   * Send a request to translate text to the Translations Engine. If it returns `null`
+   * then the request is stale. A rejection means there was an error in the translation.
+   * This request may be queued.
+   *
+   * @param {node} Node
+   * @param {string} sourceText
+   * @param {boolean} isHTML
+   */
+  translate(node, sourceText, isHTML) {
+    if (this.#paused) {
+      // Queue the request while we are paused.
+      return new Promise((resolve, reject) => {
+        const staleRequest = this.#queue.get(node);
+        if (staleRequest) {
+          // Stale requests get resolved as null.
+          staleRequest.resolve(null);
+          // Delete the entry so that the order of the queue is maintained. The
+          // new request will be put on the end.
+          this.#queue.delete(node);
+        }
+
+        // This Promises's resolve nad reject will be chained after the translation
+        // request. For now add it to the queue along with the other arguments.
+        this.#queue.set(node, { sourceText, isHTML, resolve, reject });
+      });
+    }
+    return this.#postTranslationRequest(sourceText, isHTML);
+  }
+
+  /**
+   * Posts the translation to the translations engine through the MessagePort.
+   *
+   * @param {MessagePort} port
+   * @return {{ translateText: TranslationFunction, translateHTML: TranslationFunction}}
+   */
+  #postTranslationRequest(sourceText, isHTML) {
+    return new Promise((resolve, reject) => {
+      const messageId = this.#nextMessageId++;
+      // Store the "resolve" for the promise. It will be matched back up with the
+      // `messageId` in #handlePortMessage.
+      this.#requests[messageId] = { resolve, reject };
+      this.#port.postMessage({
+        messageId,
+        sourceText,
+        isHTML,
+      });
+    });
+  }
+
+  /**
+   * Pause translations, or resume. Translations are de-duplicated based on the DOM
+   * node, and only live translations will be posted.
+   *
+   * @param {boolean} paused
+   */
+  pause(paused) {
+    if (this.#paused && !paused) {
+      for (const [node, value] of this.#queue) {
+        const { sourceText, isHTML, resolve, reject } = value;
+        if (Cu.isDeadWrapper(node)) {
+          // If the node is dead, resolve without any text. Do not reject as that
+          // will be treated as an error.
+          resolve(null);
+        } else {
+          this.#postTranslationRequest(sourceText, isHTML).then(
+            resolve,
+            reject
+          );
+        }
+      }
+    }
+    this.#paused = paused;
   }
 }

@@ -204,7 +204,15 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #previousDetectedLanguages = null;
 
+  /**
+   * Keep track of the live actors by InnerWindowID.
+   *
+   * @type {Map<InnerWindowID, TranslationsParent>}
+   */
+  static #actorsByInnerWindowId = new Map();
+
   actorCreated() {
+    this.innerWindowId = this.browsingContext.top.embedderElement.innerWindowID;
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -349,6 +357,72 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
+   */
+  static #engine = null;
+
+  static getEngineProcess() {
+    if (!this.#engine) {
+      TranslationsParent.#engine = TranslationsParent.#getEngineProcessImpl();
+    }
+    return this.#engine;
+  }
+
+  /**
+   * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
+   */
+  static async #getEngineProcessImpl() {
+    // TODO(before landing) - Use some keep alive timers.
+
+    // Create a windowless browser, which doesn't render to the screen. The
+    // nsIWindowlessBrowser is a strong reference, that must be closed before dropping
+    // the reference. It only provides access to a docShell and browsingContext.
+    /** @type {nsIWindowlessBrowser} */
+    const windowlessBrowser = Services.appShell.createWindowlessBrowser(false);
+    const { docShell, browsingContext } = windowlessBrowser;
+
+    // Load the nsIWebNavigation interface onto the windowless browser to enable
+    // the loading of a document.
+    docShell.QueryInterface(Ci.nsIWebNavigation);
+    docShell.loadURI(
+      Services.io.newURI(
+        "chrome://global/content/translations/translations-engine.html"
+      ),
+      {
+        triggeringPrincipal:
+          Services.scriptSecurityManager.getSystemPrincipal(),
+        loadFlags: Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_HISTORY,
+      }
+    );
+
+    // Wait for the chrome document global to be created.
+    await new Promise(resolve => {
+      const observer = (window, topic, _data) => {
+        if (window.document === docShell.document) {
+          Services.obs.removeObserver(observer, topic);
+          resolve();
+        }
+      };
+      Services.obs.addObserver(observer, "chrome-document-global-created");
+    });
+
+    // Wait for the document to be ready.
+    const document = windowlessBrowser.document;
+    if (document.readyState !== "complete") {
+      await new Promise(resolve => {
+        document.defaultView.addEventListener("load", () => resolve(), {
+          once: true,
+        });
+      });
+    }
+
+    const actor =
+      browsingContext.currentWindowGlobal.getActor("TranslationsEngine");
+
+    return { windowlessBrowser, actor };
+  }
+
+  /**
    * Offer translations (for instance by automatically opening the popup panel) whenever
    * languages are detected, but only do it once per host per session.
    * @param {LangTags} detectedLanguages
@@ -447,6 +521,10 @@ export class TranslationsParent extends JSWindowActorParent {
         "maybeOfferTranslations - Offering a translation",
         documentURI.spec,
         detectedLanguages
+      );
+
+      TranslationsParent.getEngineProcess().catch(error =>
+        console.error(error)
       );
 
       browser.dispatchEvent(
@@ -741,11 +819,6 @@ export class TranslationsParent extends JSWindowActorParent {
           this.maybeOfferTranslations(detectedLanguages);
         }
         return undefined;
-      }
-      case "Translations:EngineIsReady": {
-        this.isEngineReady = true;
-        this.languageState.isEngineReady = true;
-        break;
       }
       case "Translations:IsTranslationsEngineSupported": {
         return TranslationsParent.getIsTranslationsEngineSupported();
@@ -1874,7 +1947,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {boolean} isAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  translate(fromLanguage, toLanguage, isAutoTranslate) {
+  async translate(fromLanguage, toLanguage, isAutoTranslate) {
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
@@ -1899,15 +1972,52 @@ export class TranslationsParent extends JSWindowActorParent {
       this.restorePage(fromLanguage);
     } else {
       const { docLangTag } = this.languageState.detectedLanguages;
+
+      let engineProcess;
+      try {
+        engineProcess = await TranslationsParent.getEngineProcess();
+      } catch (error) {
+        console.error("Failed to get the translation engine process", error);
+        return;
+      }
+
+      if (this.requestedTranslationPair != null) {
+        throw new Error(
+          "A translation was started when there was already an existing one."
+        );
+      }
+
+      if (!this.innerWindowId) {
+        throw new Error(
+          "The innerWindowId for the TranslationsParent was not available."
+        );
+      }
+
+      // Once a translation is started, the innerWindowId needs to be remembered in
+      // order to report back from the eng
+      TranslationsParent.#actorsByInnerWindowId.set(this.innerWindowId, this);
+
+      // The MessageChannel will be used for communicating directly between the content
+      // process and the engine's process.
+      const { port1, port2 } = new MessageChannel();
+      engineProcess.actor.startTranslation(
+        this,
+        fromLanguage,
+        toLanguage,
+        port1
+      );
+
+      this.languageState.requestedTranslationPair = {
+        fromLanguage,
+        toLanguage,
+      };
+
       const preferredLanguages = TranslationsParent.getPreferredLanguages();
       const topPreferredLanguage =
         preferredLanguages && preferredLanguages.length
           ? preferredLanguages[0]
           : null;
-      this.languageState.requestedTranslationPair = {
-        fromLanguage,
-        toLanguage,
-      };
+
       TranslationsParent.telemetry().onTranslate({
         docLangTag,
         fromLanguage,
@@ -1915,10 +2025,18 @@ export class TranslationsParent extends JSWindowActorParent {
         topPreferredLanguage,
         autoTranslate: isAutoTranslate,
       });
-      this.sendAsyncMessage("Translations:TranslatePage", {
-        fromLanguage,
-        toLanguage,
-      });
+
+      this.sendAsyncMessage(
+        "Translations:TranslatePage",
+        {
+          fromLanguage,
+          toLanguage,
+          port: port2,
+        },
+        // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+        // Mark the MessageChannel port as transferable.
+        [port2]
+      );
     }
   }
 
@@ -2370,6 +2488,26 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   didDestroy() {
+    if (!this.innerWindowId) {
+      throw new Error(
+        "The innerWindowId for the TranslationsParent was not available."
+      );
+    }
+
+    TranslationsParent.#actorsByInnerWindowId.delete(this.innerWindowId);
+
+    if (TranslationsParent.#engine) {
+      TranslationsParent.#engine
+        // If the engine fails to load, ignore it since we are destructing.
+        .catch(() => null)
+        .then(engineProcess => {
+          engineProcess?.actor.endTranslation(this.innerWindowId);
+        })
+        // This error will be one from the endTranslation code, which we need to
+        // surface.
+        .catch(error => lazy.console.error(error));
+    }
+
     this.#isDestroyed = true;
   }
 }
