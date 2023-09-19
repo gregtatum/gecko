@@ -93,6 +93,21 @@ export class TestWindowChild extends JSWindowActorChild {
     return "TestWindowChild";
   }
 
+  /**
+   * Used to ensure the message ports are transferable.
+   * @returns {Promise<string>}
+   */
+  sendMessagePort() {
+    const { port1, port2 } = new MessageChannel();
+    this.sendAsyncMessage("messagePort", { port: port2 }, [port2]);
+    return new Promise(resolve => {
+      port1.onmessage = message => {
+        resolve(message.data);
+        port1.close();
+      };
+    });
+  }
+
   didDestroy() {
     Services.obs.notifyObservers(this, "test-js-window-actor-diddestroy", true);
   }
