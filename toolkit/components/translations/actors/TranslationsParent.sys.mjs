@@ -54,6 +54,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
   TranslationsTelemetry:
     "chrome://global/content/translations/TranslationsTelemetry.sys.mjs",
+  HiddenFrame: "resource://gre/modules/HiddenFrame.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -199,7 +200,15 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #previousDetectedLanguages = null;
 
+  /**
+   * Keep track of the live actors by InnerWindowID.
+   *
+   * @type {Map<InnerWindowID, TranslationsParent>}
+   */
+  static #actorsByInnerWindowId = new Map();
+
   actorCreated() {
+    this.innerWindowId = this.browsingContext.top.embedderElement.innerWindowID;
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -344,6 +353,124 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * @type {Promise<{ hiddenFrame: HiddenFrame, actor: TranslationsEngineParent }> | null}
+   */
+  static #engine = null;
+
+  static async getEngineProcess() {
+    if (!this.#engine) {
+      TranslationsParent.#engine = TranslationsParent.#getEngineProcessImpl();
+    }
+    const enginePromise = TranslationsParent.#engine;
+
+    // Determine if the actor was destroyed, or if there was an error. In this case
+    // attempt to rebuild the process.
+    let needsRebuilding = true;
+    try {
+      const { actor } = await enginePromise;
+      needsRebuilding = actor.isDestroyed;
+    } catch {}
+
+    if (enginePromise !== TranslationsParent.#engine) {
+      // This call lost the race, something else updated the engine promise, return that.
+      return TranslationsParent.#engine;
+    }
+
+    if (needsRebuilding) {
+      // The engine was destroyed, attempt to re-create the engine process.
+      this.#engine = (async () => {
+        await TranslationsParent.destroyEngineProcess();
+        return TranslationsParent.#getEngineProcessImpl();
+      })();
+    }
+
+    return this.#engine;
+  }
+
+  static destroyEngineProcess() {
+    const enginePromise = this.#engine;
+    this.#engine = null;
+    if (enginePromise) {
+      ChromeUtils.addProfilerMarker(
+        "TranslationsParent",
+        {},
+        "Destroying the translations engine process"
+      );
+      // TODO(before landing) - Send out a signal to the ports that they are being shut
+      // down, or maybe see if ports report that they are closed.
+      return enginePromise.then(({ hiddenFrame }) => {
+        hiddenFrame.destroy();
+      });
+    }
+    return Promise.resolve();
+  }
+
+  /**
+   * @type {Promise<{ hiddenFrame: HiddenFrame, actor: TranslationsEngineParent }> | null}
+   */
+  static async #getEngineProcessImpl() {
+    ChromeUtils.addProfilerMarker(
+      "TranslationsParent",
+      {},
+      "Creating the translations engine process"
+    );
+
+    // Manages the hidden ChromeWindow.
+    const hiddenFrame = new lazy.HiddenFrame();
+    const chromeWindow = await hiddenFrame.get();
+    const doc = chromeWindow.document;
+
+    const browser = doc.createXULElement("browser");
+    browser.setAttribute("remote", "true");
+    browser.setAttribute("remoteType", "web");
+    browser.setAttribute("disableglobalhistory", "true");
+    browser.setAttribute("type", "content");
+    browser.setAttribute(
+      "src",
+      "chrome://global/content/translations/translations-engine.html"
+    );
+    doc.documentElement.appendChild(browser);
+
+    // Wait for the translations engine to be loaded.
+    await new Promise(resolve => {
+      const listener = {
+        QueryInterface: ChromeUtils.generateQI([
+          "nsIWebProgressListener",
+          "nsIWebProgressListener2",
+          "nsISupportsWeakReference",
+        ]),
+
+        /**
+         * @param {nsIWebProgress} _webProgress
+         * @param {nsIRequest} request
+         * @param {number} stateFlags
+         * @param {nsresult} _status
+         */
+        onStateChange(_webProgress, request, stateFlags, _status) {
+          if (!request) {
+            return;
+          }
+          if (
+            stateFlags & Ci.nsIWebProgressListener.STATE_STOP &&
+            stateFlags & Ci.nsIWebProgressListener.STATE_IS_NETWORK
+          ) {
+            browser.removeProgressListener(listener);
+            resolve();
+          }
+        },
+      };
+      browser.addProgressListener(listener, Ci.nsIWebProgress.NOTIFY_STATE_ALL);
+    });
+
+    const actor =
+      browser.browsingContext.currentWindowGlobal.getActor(
+        "TranslationsEngine"
+      );
+
+    return { hiddenFrame, browser, actor };
+  }
+
+  /**
    * Offer translations (for instance by automatically opening the popup panel) whenever
    * languages are detected, but only do it once per host per session.
    * @param {LangTags} detectedLanguages
@@ -442,6 +569,10 @@ export class TranslationsParent extends JSWindowActorParent {
         "maybeOfferTranslations - Offering a translation",
         documentURI.spec,
         detectedLanguages
+      );
+
+      TranslationsParent.getEngineProcess().catch(error =>
+        console.error(error)
       );
 
       browser.dispatchEvent(
@@ -697,11 +828,8 @@ export class TranslationsParent extends JSWindowActorParent {
         this.languageState.error = data.reason;
         break;
       }
-      case "Translations:GetSupportedLanguages": {
-        return TranslationsParent.getSupportedLanguages();
-      }
-      case "Translations:SendTelemetryError": {
-        TranslationsParent.telemetry().onError(data.errorMessage);
+      case "Translations:Pause": {
+        this.#discardTranslations(false /* keep the MessagePort open. */);
         break;
       }
       case "Translations:ReportLangTags": {
@@ -735,14 +863,6 @@ export class TranslationsParent extends JSWindowActorParent {
           this.maybeOfferTranslations(detectedLanguages);
         }
         return undefined;
-      }
-      case "Translations:EngineIsReady": {
-        this.isEngineReady = true;
-        this.languageState.isEngineReady = true;
-        break;
-      }
-      case "Translations:IsTranslationsEngineSupported": {
-        return TranslationsParent.getIsTranslationsEngineSupported();
       }
     }
     return undefined;
@@ -1872,7 +1992,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {boolean} reportAsAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
+  async translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
@@ -1894,15 +2014,47 @@ export class TranslationsParent extends JSWindowActorParent {
       this.restorePage(fromLanguage);
     } else {
       const { docLangTag } = this.languageState.detectedLanguages;
+
+      let engineProcess;
+      try {
+        engineProcess = await TranslationsParent.getEngineProcess();
+      } catch (error) {
+        console.error("Failed to get the translation engine process", error);
+        return;
+      }
+
+      if (!this.innerWindowId) {
+        throw new Error(
+          "The innerWindowId for the TranslationsParent was not available."
+        );
+      }
+
+      // Once a translation is started, the innerWindowId needs to be remembered in
+      // order to report back from the eng
+      TranslationsParent.#actorsByInnerWindowId.set(this.innerWindowId, this);
+
+      // The MessageChannel will be used for communicating directly between the content
+      // process and the engine's process.
+      const { port1, port2 } = new MessageChannel();
+      engineProcess.actor.startTranslation(
+        fromLanguage,
+        toLanguage,
+        port1,
+        this.innerWindowId,
+        this
+      );
+
+      this.languageState.requestedTranslationPair = {
+        fromLanguage,
+        toLanguage,
+      };
+
       const preferredLanguages = TranslationsParent.getPreferredLanguages();
       const topPreferredLanguage =
         preferredLanguages && preferredLanguages.length
           ? preferredLanguages[0]
           : null;
-      this.languageState.requestedTranslationPair = {
-        fromLanguage,
-        toLanguage,
-      };
+
       TranslationsParent.telemetry().onTranslate({
         docLangTag,
         fromLanguage,
@@ -1910,10 +2062,18 @@ export class TranslationsParent extends JSWindowActorParent {
         topPreferredLanguage,
         autoTranslate: reportAsAutoTranslate,
       });
-      this.sendAsyncMessage("Translations:TranslatePage", {
-        fromLanguage,
-        toLanguage,
-      });
+
+      this.sendAsyncMessage(
+        "Translations:TranslatePage",
+        {
+          fromLanguage,
+          toLanguage,
+          port: port2,
+        },
+        // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+        // Mark the MessageChannel port as transferable.
+        [port2]
+      );
     }
   }
 
@@ -2364,7 +2524,44 @@ export class TranslationsParent extends JSWindowActorParent {
     return true;
   }
 
+  /**
+   * @param {boolean} closePort - Set to true to close the MessagePort.
+   */
+  #discardTranslations(closePort) {
+    if (!TranslationsParent.#engine) {
+      return;
+    }
+    TranslationsParent.#engine
+      // If the engine fails to load, ignore it since we are ending translations.
+      .catch(() => null)
+      .then(engineProcess => {
+        if (engineProcess && this.languageState.requestedTranslationPair) {
+          const { fromLanguage, toLanguage } =
+            this.languageState.requestedTranslationPair;
+          engineProcess.actor.discardTranslations(
+            this.innerWindowId,
+            fromLanguage,
+            toLanguage,
+            closePort
+          );
+        }
+      })
+      // This error will be one from the endTranslation code, which we need to
+      // surface.
+      .catch(error => lazy.console.error(error));
+  }
+
   didDestroy() {
+    if (!this.innerWindowId) {
+      throw new Error(
+        "The innerWindowId for the TranslationsParent was not available."
+      );
+    }
+
+    TranslationsParent.#actorsByInnerWindowId.delete(this.innerWindowId);
+
+    this.#discardTranslations(true /* close the MessagePort */);
+
     this.#isDestroyed = true;
   }
 }
