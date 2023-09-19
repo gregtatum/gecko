@@ -344,6 +344,78 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
+   * @type {Promise<{ browser: Browser, actor: TranslationsEngineParent }> | null}
+   */
+  #engine = null;
+
+  async getEngine() {
+    if (this.#engine) {
+      return this.#engine;
+    }
+    const browser = Services.appShell.createWindowlessBrowser(false);
+    const chromeShell = browser.docShell;
+    chromeShell.QueryInterface(Ci.nsIWebNavigation);
+    browser.browsingContext.useGlobalHistory = false;
+
+    chromeShell.loadURI(
+      Services.io.newURI(
+        "chrome://global/content/translations/translations-process.html"
+      ),
+      {
+        triggeringPrincipal:
+          Services.scriptSecurityManager.getSystemPrincipal(),
+      }
+    );
+
+    // Wait for the chrome document global to be created.
+    await new Promise(resolve => {
+      const observer = (window, topic, _data) => {
+        if (window.document === chromeShell.document) {
+          Services.obs.removeObserver(observer, topic);
+          resolve();
+        }
+      };
+      Services.obs.addObserver(observer, "chrome-document-global-created");
+    });
+
+    // Wait for the document to be ready.
+    const doc = browser.document;
+    if (doc.readyState !== "complete") {
+      await new Promise(resolve => {
+        doc.defaultView.addEventListener("load", () => resolve(), {
+          once: true,
+        });
+      });
+    }
+
+    const actor =
+      browser.browsingContext.currentWindowGlobal.getActor(
+        "TranslationsEngine"
+      );
+
+    return { browser, actor };
+  }
+
+  /**
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   */
+  async startTranslation(fromLanguage, toLanguage) {
+    const engine = await this.getEngine();
+    // The message channel will be used for communicating directly between the content
+    // process and the engine.
+    const { port1, port2 } = new MessageChannel();
+    engine.actor.startTranslation(fromLanguage, toLanguage, port1);
+    const data = { port: port2 };
+    const transferables = [port2];
+    this.sendAsyncQuery(
+      "TranslationsParent:StartTranslation",
+      data,
+      transferables
+    );
+  }
+
+  /**
    * Offer translations (for instance by automatically opening the popup panel) whenever
    * languages are detected, but only do it once per host per session.
    * @param {LangTags} detectedLanguages
@@ -443,6 +515,8 @@ export class TranslationsParent extends JSWindowActorParent {
         documentURI.spec,
         detectedLanguages
       );
+
+      this.loadEngineProcess().catch(error => console.error(error));
 
       browser.dispatchEvent(
         new CustomEvent("TranslationsParent:OfferTranslation", {

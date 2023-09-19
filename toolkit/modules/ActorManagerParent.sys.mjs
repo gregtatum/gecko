@@ -504,6 +504,17 @@ let JSWINDOWACTORS = {
     enablePreference: "browser.translations.enable",
   },
 
+  TranslationsEngine: {
+    parent: {
+      esModuleURI: "resource://gre/actors/TranslationsEngineParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "resource://gre/actors/TranslationsEngineChild.sys.mjs",
+    },
+    matches: ["chrome://global/content/translations/translations-process.html"],
+    enablePreference: "browser.translations.enable",
+  },
+
   UAWidgets: {
     child: {
       esModuleURI: "resource://gre/actors/UAWidgetsChild.sys.mjs",
