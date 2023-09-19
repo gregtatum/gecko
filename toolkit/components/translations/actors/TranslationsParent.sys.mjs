@@ -56,6 +56,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "chrome://global/content/translations/TranslationsTelemetry.sys.mjs",
   TranslationsEngine:
     "chrome://global/content/translations/translations-engine.sys.mjs",
+  HiddenFrame: "resource://gre/modules/HiddenFrame.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -1864,6 +1865,25 @@ export class TranslationsParent extends JSWindowActorParent {
     lazy.console.log(error, ...args);
   }
 
+  static #hiddenFrame = null;
+
+  static async getHiddenFrame() {
+    if (!TranslationsParent.#hiddenFrame) {
+      TranslationsParent.#hiddenFrame = new lazy.HiddenFrame();
+      const frame = await TranslationsParent.#hiddenFrame.get();
+      const doc = frame.document;
+      const browser = doc.createXULElement("browser");
+      browser.setAttribute("remote", "true");
+      browser.setAttribute("remoteType", "web");
+      browser.setAttribute("type", "content");
+      browser.setAttribute(
+        "src",
+        "chrome://global/content/translations/translations-engine.xhtml"
+      );
+      doc.documentElement.appendChild(browser);
+    }
+  }
+
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
@@ -1892,55 +1912,67 @@ export class TranslationsParent extends JSWindowActorParent {
       this.restorePage(fromLanguage);
       return;
     }
-    // TODO - Simplify.
-    const actorInterface = {
-      docShell: {
-        now: () => Cu.now(),
-      },
-      innerWindowId: this.innerWindowId,
-      getTranslationsEnginePayload: (...args) =>
-        TranslationsParent.getTranslationsEnginePayload(...args),
-    };
+    const enginePayload = await TranslationsParent.getTranslationsEnginePayload(
+      fromLanguage,
+      toLanguage
+    );
 
-    let engine;
-    try {
-      engine = await lazy.TranslationsEngine.getOrCreate(
-        actorInterface,
+    const hiddenFrame = await TranslationsParent.getHiddenFrame();
+    const transferables = [enginePayload];
+    console.log(`!!! hiddenFrame`, hiddenFrame);
+
+    console.log(`!!! TranslationsParent -> postMessage initialize`);
+    hiddenFrame.postMessage(
+      {
+        type: "initialize",
         fromLanguage,
-        toLanguage
-      );
-    } catch (error) {
-      lazy.console.error(error);
-      this.languageState.error = error;
-      return;
-    }
-    console.log(`!!! TranslationsParent - Engine was created`, engine);
+        toLanguage,
+        enginePayload,
+        innerWindowId: this.innerWindowId,
+        logLevel: "Debug", // TODO
+      },
+      transferables
+    );
 
-    const { docLangTag } = this.languageState.detectedLanguages;
-    const preferredLanguages = TranslationsParent.getPreferredLanguages();
-    const topPreferredLanguage =
-      preferredLanguages && preferredLanguages.length
-        ? preferredLanguages[0]
-        : null;
-    this.languageState.requestedTranslationPair = {
-      fromLanguage,
-      toLanguage,
-    };
-    TranslationsParent.telemetry().onTranslate({
-      docLangTag,
-      fromLanguage,
-      toLanguage,
-      topPreferredLanguage,
-      autoTranslate: reportAsAutoTranslate,
-    });
-    lazy.TranslationsEngine;
+    // let engine;
+    // try {
+    //   engine = await lazy.TranslationsEngine.getOrCreate(
+    //     actorInterface,
+    //     fromLanguage,
+    //     toLanguage
+    //   );
+    // } catch (error) {
+    //   lazy.console.error(error);
+    //   this.languageState.error = error;
+    //   return;
+    // }
+    // console.log(`!!! TranslationsParent - Engine was created`, engine);
 
-    console.log(`!!! TranslationsParent - Attempt to send the engine port.`);
-    this.sendAsyncMessage("Translations:TranslatePage", {
-      fromLanguage,
-      toLanguage,
-      port: engine.port,
-    });
+    // const { docLangTag } = this.languageState.detectedLanguages;
+    // const preferredLanguages = TranslationsParent.getPreferredLanguages();
+    // const topPreferredLanguage =
+    //   preferredLanguages && preferredLanguages.length
+    //     ? preferredLanguages[0]
+    //     : null;
+    // this.languageState.requestedTranslationPair = {
+    //   fromLanguage,
+    //   toLanguage,
+    // };
+    // TranslationsParent.telemetry().onTranslate({
+    //   docLangTag,
+    //   fromLanguage,
+    //   toLanguage,
+    //   topPreferredLanguage,
+    //   autoTranslate: reportAsAutoTranslate,
+    // });
+    // lazy.TranslationsEngine;
+
+    // console.log(`!!! TranslationsParent - Attempt to send the engine port.`);
+    // this.sendAsyncMessage("Translations:TranslatePage", {
+    //   fromLanguage,
+    //   toLanguage,
+    //   port: engine.port,
+    // });
   }
 
   /**
