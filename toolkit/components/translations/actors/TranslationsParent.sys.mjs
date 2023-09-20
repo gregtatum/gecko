@@ -199,6 +199,12 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #previousDetectedLanguages = null;
 
+  /**
+   * The
+   * @type {null | number}
+   */
+  #translationId = null;
+
   actorCreated() {
     this.languageState = new TranslationsLanguageState(
       this,
@@ -348,7 +354,7 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   #engine = null;
 
-  async getEngine() {
+  async getEngineProcess() {
     if (this.#engine) {
       return this.#engine;
     }
@@ -359,7 +365,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
     chromeShell.loadURI(
       Services.io.newURI(
-        "chrome://global/content/translations/translations-process.html"
+        "chrome://global/content/translations/translations-engine.html"
       ),
       {
         triggeringPrincipal:
@@ -394,25 +400,6 @@ export class TranslationsParent extends JSWindowActorParent {
       );
 
     return { browser, actor };
-  }
-
-  /**
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
-   */
-  async startTranslation(fromLanguage, toLanguage) {
-    const engine = await this.getEngine();
-    // The message channel will be used for communicating directly between the content
-    // process and the engine.
-    const { port1, port2 } = new MessageChannel();
-    engine.actor.startTranslation(fromLanguage, toLanguage, port1);
-    const data = { port: port2 };
-    const transferables = [port2];
-    this.sendAsyncQuery(
-      "TranslationsParent:StartTranslation",
-      data,
-      transferables
-    );
   }
 
   /**
@@ -809,11 +796,6 @@ export class TranslationsParent extends JSWindowActorParent {
           this.maybeOfferTranslations(detectedLanguages);
         }
         return undefined;
-      }
-      case "Translations:EngineIsReady": {
-        this.isEngineReady = true;
-        this.languageState.isEngineReady = true;
-        break;
       }
       case "Translations:IsTranslationsEngineSupported": {
         return TranslationsParent.getIsTranslationsEngineSupported();
@@ -1942,7 +1924,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {boolean} reportAsAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
+  async translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
@@ -1964,15 +1946,42 @@ export class TranslationsParent extends JSWindowActorParent {
       this.restorePage(fromLanguage);
     } else {
       const { docLangTag } = this.languageState.detectedLanguages;
+
+      let engineProcess;
+      try {
+        engineProcess = await this.getEngineProcess();
+      } catch (error) {
+        console.error("Failed to get the translation engine process", error);
+        return;
+      }
+
+      if (this.#translationId != null) {
+        throw new Error(
+          "A translation was started when there was already an existing one."
+        );
+      }
+
+      // The MessageChannel will be used for communicating directly between the content
+      // process and the engine's process.
+      const { port1, port2 } = new MessageChannel();
+      this.#translationId = engineProcess.actor.startTranslation(
+        fromLanguage,
+        toLanguage,
+        this.innerWindowId,
+        port1
+      );
+
+      this.languageState.requestedTranslationPair = {
+        fromLanguage,
+        toLanguage,
+      };
+
       const preferredLanguages = TranslationsParent.getPreferredLanguages();
       const topPreferredLanguage =
         preferredLanguages && preferredLanguages.length
           ? preferredLanguages[0]
           : null;
-      this.languageState.requestedTranslationPair = {
-        fromLanguage,
-        toLanguage,
-      };
+
       TranslationsParent.telemetry().onTranslate({
         docLangTag,
         fromLanguage,
@@ -1980,10 +1989,18 @@ export class TranslationsParent extends JSWindowActorParent {
         topPreferredLanguage,
         autoTranslate: reportAsAutoTranslate,
       });
-      this.sendAsyncMessage("Translations:TranslatePage", {
-        fromLanguage,
-        toLanguage,
-      });
+
+      this.sendAsyncMessage(
+        "Translations:TranslatePage",
+        {
+          fromLanguage,
+          toLanguage,
+          port: port2,
+        },
+        // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
+        // Mark the MessageChannel port as transferable.
+        [port2]
+      );
     }
   }
 
@@ -2435,6 +2452,17 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   didDestroy() {
+    if (this.#translationId != null) {
+      this.getEngineProcess().then(
+        engineProcess => {
+          engineProcess.actor.destroy;
+        },
+        error => {
+          console.error("Failed to get the translation engine process", error);
+        }
+      );
+    }
+
     this.#isDestroyed = true;
   }
 }

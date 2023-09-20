@@ -4,8 +4,8 @@
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
-  TranslationsEngine:
-    "chrome://global/content/translations/translations-engine.sys.mjs",
+  TranslationsDocument:
+    "chrome://global/content/translations/translations-document.sys.mjs",
   // The fastText languageIdEngine
   LanguageIdEngine:
     "chrome://global/content/translations/language-id-engine.sys.mjs",
@@ -19,20 +19,21 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 export class TranslationsChild extends JSWindowActorChild {
   /**
-   * Store this since the window may be dead when the value is needed.
-   * @type {number | null}
+   * @type {TranslationsDocument | null}
    */
-  innerWindowId = null;
-  #wasTranslationsEngineCreated = false;
+  #translatedDoc = null;
 
   handleEvent(event) {
     switch (event.type) {
       case "DOMContentLoaded":
-        this.innerWindowId =
-          this.contentWindow?.windowGlobalChild.innerWindowId;
         this.sendAsyncMessage("Translations:ReportLangTags", {
           documentElementLang: this.document.documentElement.lang,
         });
+        break;
+      case "pageshow":
+        this.#translatedDoc?.translator.pause(false);
+      case "pagehide":
+        this.#translatedDoc?.translator.pause(true);
         break;
     }
   }
@@ -40,16 +41,20 @@ export class TranslationsChild extends JSWindowActorChild {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "Translations:TranslatePage": {
-        lazy.TranslationsEngine.translatePage(this, data).then(
-          () => {
-            this.#wasTranslationsEngineCreated = true;
-          },
-          () => {
-            this.sendAsyncMessage("Translations:FullPageTranslationFailed", {
-              reason: "engine-load-failure",
-            });
-          }
+        if (this.#translatedDoc) {
+          lazy.console.error("This page was already translated.");
+          return;
+        }
+
+        this.translatedDoc = new lazy.TranslationsDocument(
+          this.document,
+          data.fromLanguage,
+          this.contentWindow.windowGlobalChild.innerWindowId,
+          data.port,
+          data.translationsStart,
+          () => this.docShell.now()
         );
+
         return undefined;
       }
       case "Translations:GetDocumentElementLang":
@@ -91,25 +96,17 @@ export class TranslationsChild extends JSWindowActorChild {
     this.sendAsyncMessage("Translations:SendTelemetryError", { errorMessage });
   }
 
+  // TODO(Before landing) - Move this to about:translations actor.
   getSupportedLanguages() {
     return this.sendQuery("Translations:GetSupportedLanguages");
   }
 
-  sendEngineIsReady() {
-    this.sendAsyncMessage("Translations:EngineIsReady");
-  }
-
+  // TODO(Before landing) - Move this to about:translations actor.
   isTranslationsEngineSupported() {
     return this.sendQuery("Translations:IsTranslationsEngineSupported");
   }
 
-  getTranslationsEnginePayload(fromLanguage, toLanguage) {
-    return this.sendQuery("Translations:GetTranslationsEnginePayload", {
-      fromLanguage,
-      toLanguage,
-    });
-  }
-
+  // TODO(Before landing) - Should this be moved too?
   getOrCreateLanguageIdEngine() {
     return lazy.LanguageIdEngine.getOrCreate(() => {
       if (!this.manager || !this.manager.isCurrentGlobal) {
@@ -117,19 +114,5 @@ export class TranslationsChild extends JSWindowActorChild {
       }
       return this.sendQuery("Translations:GetLanguageIdEnginePayload");
     });
-  }
-
-  createTranslationsEngine(fromLanguage, toLanguage) {
-    // Bypass the engine cache and always create a new one.
-    return lazy.TranslationsEngine.create(this, fromLanguage, toLanguage);
-  }
-
-  didDestroy() {
-    if (this.#wasTranslationsEngineCreated) {
-      // Only run this if needed, as it will de-lazify the code.
-      lazy.TranslationsEngine.discardTranslationQueue(
-        this.manager.innerWindowId
-      );
-    }
   }
 }

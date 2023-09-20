@@ -2,37 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* globals TE_log, TE_logError, TE_requestEnginePayload */
+
+/**
+ * This file lives in the translation engine's content process. It is unpriviliged,
+ * and is in charge of managing the lifecycle the translations engine.
+ *
+ * TOD(before landing) - Document this process better.
+ */
+
+// How long the cache remains alive between uses, in milliseconds.
+const CACHE_TIMEOUT_MS = 10_000;
+
 /**
  * @typedef {import("./translations-document.sys.mjs").TranslationsDocument} TranslationsDocument
  * @typedef {import("../translations.js").TranslationsEnginePayload} TranslationsEnginePayload
  */
-
-const lazy = {};
-
-import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "logLevel",
-  "browser.translations.logLevel"
-);
-
-ChromeUtils.defineLazyGetter(lazy, "console", () => {
-  return console.createInstance({
-    maxLogLevelPref: "browser.translations.logLevel",
-    prefix: "Translations",
-  });
-});
-
-ChromeUtils.defineESModuleGetters(lazy, {
-  setTimeout: "resource://gre/modules/Timer.sys.mjs",
-  clearTimeout: "resource://gre/modules/Timer.sys.mjs",
-  TranslationsDocument:
-    "chrome://global/content/translations/translations-document.sys.mjs",
-});
-
-// How long the cache remains alive between uses, in milliseconds.
-const CACHE_TIMEOUT_MS = 10_000;
 
 /**
  * The TranslationsEngine encapsulates the logic for translating messages. It can
@@ -72,23 +57,19 @@ export class TranslationsEngine {
    * call, and then return the cached one. After a timeout when the engine hasn't
    * been used, it is destroyed.
    *
-   * @param {TranslationsChild} actor
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {number} innerWindowId
    * @returns {Promise<TranslationsEngine | null>}
    */
-  static getOrCreate(actor, fromLanguage, toLanguage) {
+  static getOrCreate(fromLanguage, toLanguage) {
     const languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
     if (this.#cachedEngine?.languagePairKey === languagePairKey) {
       return this.#cachedEngine.enginePromise;
     }
 
     // A new engine needs to be created.
-    const enginePromise = TranslationsEngine.create(
-      actor,
-      fromLanguage,
-      toLanguage
-    );
+    const enginePromise = TranslationsEngine.create(fromLanguage, toLanguage);
 
     this.#cachedEngine = { languagePairKey, enginePromise };
     TranslationsEngine.keepAlive(languagePairKey);
@@ -113,28 +94,21 @@ export class TranslationsEngine {
   /**
    * Create a TranslationsEngine and bypass the cache.
    *
-   * @param {TranslationsChild} actor
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @returns {Promise<TranslationsEngine>}
    */
-  static async create(actor, fromLanguage, toLanguage) {
-    const startTime = actor.docShell.now();
+  static async create(fromLanguage, toLanguage) {
+    const startTime = performance.now();
 
-    const engine = new TranslationsEngine(
-      fromLanguage,
-      toLanguage,
-      await actor.getTranslationsEnginePayload(fromLanguage, toLanguage),
-      actor.innerWindowId
-    );
+    const engine = new TranslationsEngine(fromLanguage, toLanguage, await TE);
 
     await engine.isReady;
 
-    ChromeUtils.addProfilerMarker(
-      "TranslationsEngine",
-      { innerWindowId: actor.innerWindowId, startTime },
-      `Translations engine loaded for "${fromLanguage}" to "${toLanguage}"`
-    );
+    TE_addProfilerMarker({
+      startTime,
+      message: `Translations engine loaded for "${fromLanguage}" to "${toLanguage}"`,
+    });
 
     return engine;
   }
@@ -176,87 +150,14 @@ export class TranslationsEngine {
   }
 
   /**
-   * Load the translation engine and translate the page.
-   *
-   * @param {TranslationsChild} actor
-   * @param {{fromLanguage: string, toLanguage: string}} langTags
-   * @returns {Promise<void>}
-   */
-  static async translatePage(actor, { fromLanguage, toLanguage }) {
-    const translationsStart = actor.docShell.now();
-
-    const getEngine = () =>
-      TranslationsEngine.getOrCreate(actor, fromLanguage, toLanguage);
-
-    getEngine().catch(error => {
-      actor.sendTelemetryError(error);
-    });
-
-    // Wait for the engine to be ready.
-    const engine = await getEngine();
-
-    const { document, innerWindowId } = actor;
-
-    if (engine.translatedDoc?.innerWindowId === innerWindowId) {
-      lazy.console.error("This page was already translated.");
-      return;
-    }
-
-    const translatedDoc = new lazy.TranslationsDocument(
-      document,
-      fromLanguage,
-      innerWindowId,
-      html =>
-        getEngine().then(engine =>
-          engine.translateHTML([html], actor.innerWindowId)
-        ),
-      text =>
-        getEngine().then(engine =>
-          engine.translateText([text], actor.innerWindowId)
-        ),
-      () => this.docShell.now()
-    );
-
-    engine.translatedDoc = translatedDoc;
-
-    lazy.console.log(
-      "Beginning to translate.",
-      actor.contentWindow.location.href
-    );
-
-    actor.sendEngineIsReady();
-
-    translatedDoc.addRootElement(document.querySelector("title"));
-    translatedDoc.addRootElement(
-      document.body,
-      true /* reportWordsInViewport */
-    );
-
-    translatedDoc.viewportTranslated.then(() => {
-      ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
-        { innerWindowId, startTime: actor.docShell.now() },
-        "Viewport translations"
-      );
-      ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
-        { innerWindowId, startTime: translationsStart },
-        "Time to first translation"
-      );
-    });
-  }
-
-  /**
    * Construct and initialize the worker.
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {TranslationsEnginePayload} enginePayload - If there is no engine payload
    *   then the engine will be mocked. This allows this class to be used in tests.
-   * @param {number} innerWindowId - This only used for creating profiler markers in
-   *   the initial creation of the engine.
    */
-  constructor(fromLanguage, toLanguage, enginePayload, innerWindowId) {
+  constructor(fromLanguage, toLanguage, enginePayload) {
     /** @type {string} */
     this.fromLanguage = fromLanguage;
     /** @type {string} */
@@ -298,7 +199,6 @@ export class TranslationsEngine {
         fromLanguage,
         toLanguage,
         enginePayload,
-        innerWindowId,
         messageId: this.#messageId++,
         logLevel: lazy.logLevel,
       },
@@ -307,37 +207,15 @@ export class TranslationsEngine {
   }
 
   /**
-   * Translate text without any HTML.
-   *
-   * @param {string[]} messageBatch
-   * @param {number} innerWindowId
-   * @returns {Promise<string[]>}
-   */
-  translateText(messageBatch, innerWindowId) {
-    return this.#translate(messageBatch, false, innerWindowId);
-  }
-
-  /**
-   * Translate valid HTML. Note that this method throws if invalid markup is provided.
-   *
-   * @param {string[]} messageBatch
-   * @param {number} innerWindowId
-   * @returns {Promise<string[]>}
-   */
-  translateHTML(messageBatch, innerWindowId) {
-    return this.#translate(messageBatch, true, innerWindowId);
-  }
-
-  /**
    * The implementation for translation. Use translateText or translateHTML for the
    * public API.
    *
-   * @param {string[]} messageBatch
+   * @param {string} sourceText
    * @param {boolean} isHTML
    * @param {number} innerWindowId
    * @returns {Promise<string[]>}
    */
-  #translate(messageBatch, isHTML, innerWindowId) {
+  translate(sourceText, isHTML, innerWindowId) {
     TranslationsEngine.keepAlive(this.languagePairKey);
 
     const messageId = this.#messageId++;
@@ -373,7 +251,7 @@ export class TranslationsEngine {
       this.#translationsWorker.postMessage({
         type: "translation-request",
         isHTML,
-        messageBatch,
+        sourceText,
         messageId,
         innerWindowId,
       });
@@ -401,11 +279,9 @@ export class TranslationsEngine {
    */
   static discardTranslationQueue(innerWindowId) {
     TranslationsEngine.#cachedEngine?.enginePromise.then(engine => {
-      ChromeUtils.addProfilerMarker(
-        "TranslationsChild",
-        null,
-        "Request to discard translation queue"
-      );
+      TE_addProfilerMarker({
+        message: "Request to discard translation queue",
+      });
       engine.discardTranslationQueue(innerWindowId);
     });
   }
@@ -437,3 +313,21 @@ export class TranslationsEngine {
 function getLanguagePairKey(fromLanguage, toLanguage) {
   return `${fromLanguage},${toLanguage}`;
 }
+
+/**
+ * Listen for events coming from the TranslationsEngine actor.
+ */
+window.addEventListener("TranslationsEngineChromeToContent", ({ detail }) => {
+  switch (detail.type) {
+    case "StartTranslation": {
+      const { fromLanguage, toLanguage, translationId, port } = detail;
+      break;
+    }
+    case "EndTranslation": {
+      const { translationId } = detail;
+      break;
+    }
+    default:
+      throw new Error("Unknown TranslationsEngineChromeToContent event.");
+  }
+});

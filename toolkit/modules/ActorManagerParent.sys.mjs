@@ -490,6 +490,8 @@ let JSWINDOWACTORS = {
       esModuleURI: "resource://gre/actors/TranslationsChild.sys.mjs",
       events: {
         DOMContentLoaded: {},
+        pageshow: {},
+        pagehide: {},
       },
     },
     matches: [
@@ -511,7 +513,7 @@ let JSWINDOWACTORS = {
     child: {
       esModuleURI: "resource://gre/actors/TranslationsEngineChild.sys.mjs",
     },
-    matches: ["chrome://global/content/translations/translations-process.html"],
+    matches: ["chrome://global/content/translations/translations-engine.html"],
     enablePreference: "browser.translations.enable",
   },
 

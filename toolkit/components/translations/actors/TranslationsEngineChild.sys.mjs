@@ -8,17 +8,27 @@
  */
 export class TranslationsEngineChild extends JSWindowActorChild {
   actorCreated() {
-    console.log(`!!! TranslationsEngineChild actorCreated`);
     this.#exportFunctions();
   }
 
   async receiveMessage({ name, data }) {
     switch (name) {
-      case "TranslationsEngine:Initialize":
-        console.log(`!!! TranslationsEngine:Initialize`, data);
+      case "TranslationsEngine:StartTranslation": {
+        const { fromLanguage, toLanguage, innerWindowId, port } = data;
+        this.#sendEventToContent({
+          type: "StartTranslation",
+          fromLanguage,
+          toLanguage,
+          innerWindowId,
+          port: Cu.cloneInto(port, this.contentWindow),
+        });
         break;
-      case "TranslationsEngine:Initialize":
-        console.log(`!!! TranslationsEngine:Initialize`, data);
+      }
+      case "TranslationsEngine:EndTranslation":
+        this.#sendEventToContent({
+          type: "EndTranslation",
+          translationsId: data.translationsId,
+        });
         break;
       default:
         console.error("Unknown message received", name);
@@ -103,8 +113,8 @@ export class TranslationsEngineChild extends JSWindowActorChild {
   }
 
   /**
-   * @param {fromLanguage} string
-   * @param {toLanguage} string
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
    */
   TE_requestEnginePayload(fromLanguage, toLanguage) {
     return this.#convertToContentPromise(
@@ -113,5 +123,14 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         toLanguage,
       })
     );
+  }
+
+  /**
+   * @param {Object} options
+   * @param {number?} options.startTime
+   * @param {string} options.message
+   */
+  TE_addProfilerMarker({ startTime, message }) {
+    ChromeUtils.addProfilerMarker("TranslationsEngine", { startTime }, message);
   }
 }
