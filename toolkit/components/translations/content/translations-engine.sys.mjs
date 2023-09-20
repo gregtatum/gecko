@@ -2,7 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* globals TE_log, TE_logError, TE_requestEnginePayload */
+/* eslint-env browser */
+/* globals TE_addProfilerMarker, TE_getLogLevel, TE_log, TE_logError, TE_getLogLevel,
+           TE_requestEnginePayload */
 
 /**
  * This file lives in the translation engine's content process. It is unpriviliged,
@@ -79,7 +81,7 @@ export class TranslationsEngine {
         void TranslationsEngine.keepAlive(languagePairKey);
       },
       error => {
-        lazy.console.error(
+        TE_logError(
           `The engine failed to load for translating "${fromLanguage}" to "${toLanguage}". Removing it from the cache.`,
           error
         );
@@ -101,7 +103,11 @@ export class TranslationsEngine {
   static async create(fromLanguage, toLanguage) {
     const startTime = performance.now();
 
-    const engine = new TranslationsEngine(fromLanguage, toLanguage, await TE);
+    const engine = new TranslationsEngine(
+      fromLanguage,
+      toLanguage,
+      await TE_requestEnginePayload()
+    );
 
     await engine.isReady;
 
@@ -138,10 +144,10 @@ export class TranslationsEngine {
       return;
     }
     if (TranslationsEngine.#keepAliveTimeout) {
-      lazy.clearTimeout(TranslationsEngine.#keepAliveTimeout);
+      clearTimeout(TranslationsEngine.#keepAliveTimeout);
     }
 
-    TranslationsEngine.#keepAliveTimeout = lazy.setTimeout(() => {
+    TranslationsEngine.#keepAliveTimeout = setTimeout(() => {
       // Terminate the engine worker.
       TranslationsEngine.#cachedEngine?.enginePromise.then(engine =>
         engine.terminate()
@@ -170,7 +176,7 @@ export class TranslationsEngine {
     /** @type {Promise<void>} */
     this.isReady = new Promise((resolve, reject) => {
       const onMessage = ({ data }) => {
-        lazy.console.log("Received initialization message", data);
+        TE_log("Received initialization message", data);
         if (data.type === "initialization-success") {
           resolve();
         } else if (data.type === "initialization-error") {
@@ -200,7 +206,7 @@ export class TranslationsEngine {
         toLanguage,
         enginePayload,
         messageId: this.#messageId++,
-        logLevel: lazy.logLevel,
+        logLevel: TE_getLogLevel(),
       },
       transferables
     );
@@ -238,7 +244,7 @@ export class TranslationsEngine {
         }
 
         if (data.type === "translation-response") {
-          resolve(data.translations);
+          resolve(data.targetText);
         }
         if (data.type === "translation-error") {
           reject(data.error);
@@ -314,17 +320,52 @@ function getLanguagePairKey(fromLanguage, toLanguage) {
   return `${fromLanguage},${toLanguage}`;
 }
 
+const ports = new Map();
+
 /**
  * Listen for events coming from the TranslationsEngine actor.
  */
 window.addEventListener("TranslationsEngineChromeToContent", ({ detail }) => {
   switch (detail.type) {
     case "StartTranslation": {
-      const { fromLanguage, toLanguage, translationId, port } = detail;
+      const { fromLanguage, toLanguage, innerWindowId, port } = detail;
+      // Listen to the port to the content process for incoming messages, and pass
+      // them to the TranslationsEngine manager.
+      port.onmessage = async ({ sourceText, isHTML, messageId }) => {
+        const engine = await TranslationsEngine.getOrCreate(
+          fromLanguage,
+          toLanguage
+        );
+        if (!engine) {
+          return;
+        }
+        const targetText = await engine.translate(
+          sourceText,
+          isHTML,
+          innerWindowId
+        );
+        port.postMessage({
+          messageId,
+          targetText,
+        });
+      };
+
+      ports.set(innerWindowId, port);
       break;
     }
     case "EndTranslation": {
-      const { translationId } = detail;
+      const { innerWindowId } = detail;
+
+      // Deleting a reference to the port and unsetting the onmessage handler may
+      // not be strictly necessary, but it's better to be safe that we aren't leaking.
+      const port = ports.delete(innerWindowId);
+      if (port) {
+        port.onmessage = null;
+        ports.delete(innerWindowId);
+      }
+
+      // The page no longer needs its translations.
+      TranslationsEngine.discardTranslationQueue(innerWindowId);
       break;
     }
     default:

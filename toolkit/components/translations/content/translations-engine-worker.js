@@ -137,11 +137,11 @@ function handleMessages(engine) {
             await discardPromise;
           }
           try {
-            // Add translations to the work queue, and when they return, post the message
+            // Add a translation to the work queue, and when it returns, post the message
             // back. The translation may never return if the translations are discarded
-            // before they have time to be run. In this case this await is just never
+            // before it have time to be run. In this case this await is just never
             // resolved, and the postMessage is never run.
-            const translations = await engine.translate(
+            const targetText = await engine.translate(
               sourceText,
               isHTML,
               innerWindowId
@@ -152,14 +152,14 @@ function handleMessages(engine) {
             // these, and get all of the other logs.
             trace("Translation complete", {
               sourceText,
-              translations,
+              targetText,
               isHTML,
               innerWindowId,
             });
 
             postMessage({
               type: "translation-response",
-              translations,
+              targetText,
               messageId,
             });
           } catch (error) {
@@ -265,7 +265,7 @@ class Engine {
    * @param {boolean} isHTML
    * @param {number} innerWindowId - This is required
    *
-   * @returns {Promise<string[]>}sourceText
+   * @returns {Promise<string>}sourceText
    */
   translate(sourceText, isHTML, innerWindowId) {
     return this.#getWorkQueue(innerWindowId).runTask(() =>
@@ -311,7 +311,7 @@ class Engine {
   }
 
   /**
-   * Run the translation models to perform a batch of message translations. This
+   * Run the translation models to perform a translation. This
    * blocks the worker thread until it is completed.
    *
    * @param {string} sourceText
@@ -355,19 +355,14 @@ class Engine {
         );
       }
 
-      // Extract JavaScript values out of the vector.
-      const [translations] = BergamotUtils.mapVector(responses, response =>
-        response.getTranslatedText()
-      );
-
-      // Report on the time it took to do these translations.
+      // Report on the time it took to do this translation.
       ChromeUtils.addProfilerMarker(
         "TranslationsWorker",
         { startTime, innerWindowId },
         `Translated ${sourceText.length} code units.`
       );
 
-      return translations;
+      return responses.get(0);
     } finally {
       // Free up any memory that was allocated. This will always run.
       messages?.delete();

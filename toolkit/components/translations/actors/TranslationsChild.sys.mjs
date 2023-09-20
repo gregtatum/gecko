@@ -32,6 +32,7 @@ export class TranslationsChild extends JSWindowActorChild {
         break;
       case "pageshow":
         this.#translatedDoc?.translator.pause(false);
+        break;
       case "pagehide":
         this.#translatedDoc?.translator.pause(true);
         break;
@@ -42,8 +43,8 @@ export class TranslationsChild extends JSWindowActorChild {
     switch (name) {
       case "Translations:TranslatePage": {
         if (this.#translatedDoc) {
-          lazy.console.error("This page was already translated.");
-          return;
+          console.error("This page was already translated.");
+          return undefined;
         }
 
         this.translatedDoc = new lazy.TranslationsDocument(

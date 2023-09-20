@@ -237,9 +237,6 @@ export class TranslationsDocument {
     /** @type {QueuedTranslator} */
     this.translator = new QueuedTranslator(port);
 
-    /** @type {TranslationFunction} */
-    this.translateText = translateText;
-
     /** @type {number} */
     this.innerWindowId = innerWindowId;
 
@@ -307,10 +304,6 @@ export class TranslationsDocument {
       "Beginning to translate.",
       document.defaultView.location.href
     );
-  }
-
-  pause(paused) {
-    this.#paused = paused;
   }
 
   /**
@@ -1364,14 +1357,14 @@ class QueuedTranslator {
   constructor(port) {
     this.#port = port;
     // Match up a response on the port to message that was sent.
-    port.addEventListener("message", data => {
-      const resolve = this.#requests[data.messageId];
+    port.addEventListener("message", ({ targetText, messageId }) => {
+      const resolve = this.#requests[messageId];
       if (!resolve) {
         throw new Error(
           "Could not find a resolve function for the messageId " + messageId
         );
       }
-      resolve(data.translatedText);
+      resolve(targetText);
     });
   }
 
@@ -1386,6 +1379,7 @@ class QueuedTranslator {
    */
   translate(node, sourceText, isHTML) {
     if (this.#paused) {
+      // Queue the request while we are paused.
       return new Promise((resolve, reject) => {
         const staleRequest = this.#queue.get(node);
         if (staleRequest) {
@@ -1400,9 +1394,8 @@ class QueuedTranslator {
         // request. For now add it to the queue along with the other arguments.
         this.#queue.set(node, { sourceText, isHTML, resolve, reject });
       });
-    } else {
-      this.#postTranslationRequest(sourceText, isHTML);
     }
+    return this.#postTranslationRequest(sourceText, isHTML);
   }
 
   /**
@@ -1416,7 +1409,7 @@ class QueuedTranslator {
       const messageId = this.#nextMessageId++;
       // Store the "resolve" for the promise. It will be matched back up with the
       // `messageId` in #handlePortMessage.
-      requests[messageId] = { resolve, reject };
+      this.#requests[messageId] = { resolve, reject };
       this.#port.postMessage({
         messageId,
         sourceText,

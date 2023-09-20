@@ -2,6 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const lazy = {};
+
+ChromeUtils.defineLazyGetter(lazy, "console", () => {
+  return console.createInstance({
+    maxLogLevelPref: "browser.translations.logLevel",
+    prefix: "Translations",
+  });
+});
+
 /**
  * The engine child is responsible for exposing privileged code to the un-privileged
  * space the engine runs in.
@@ -27,7 +36,7 @@ export class TranslationsEngineChild extends JSWindowActorChild {
       case "TranslationsEngine:EndTranslation":
         this.#sendEventToContent({
           type: "EndTranslation",
-          translationsId: data.translationsId,
+          innerWindowId: data.innerWindowId,
         });
         break;
       default:
@@ -51,7 +60,13 @@ export class TranslationsEngineChild extends JSWindowActorChild {
    * page. This restricts the security capabilities of the content page.
    */
   #exportFunctions() {
-    const fns = ["TE_log", "TE_logError", "TE_requestEnginePayload"];
+    const fns = [
+      "TE_addProfilerMarker",
+      "TE_getLogLevel",
+      "TE_log",
+      "TE_logError",
+      "TE_requestEnginePayload",
+    ];
     for (const defineAs of fns) {
       Cu.exportFunction(this[defineAs].bind(this), this.contentWindow, {
         defineAs,
@@ -95,6 +110,22 @@ export class TranslationsEngineChild extends JSWindowActorChild {
   }
 
   /**
+   * @param {Object} options
+   * @param {number?} options.startTime
+   * @param {string} options.message
+   */
+  TE_addProfilerMarker({ startTime, message }) {
+    ChromeUtils.addProfilerMarker("TranslationsEngine", { startTime }, message);
+  }
+
+  /**
+   * @returns {string}
+   */
+  TE_getLogLevel() {
+    return Services.prefs.getCharPref("browser.translations.logLevel");
+  }
+
+  /**
    * Log messages if "browser.translations.logLevel" is set to "All".
    *
    * @param {...any} args
@@ -123,14 +154,5 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         toLanguage,
       })
     );
-  }
-
-  /**
-   * @param {Object} options
-   * @param {number?} options.startTime
-   * @param {string} options.message
-   */
-  TE_addProfilerMarker({ startTime, message }) {
-    ChromeUtils.addProfilerMarker("TranslationsEngine", { startTime }, message);
   }
 }
