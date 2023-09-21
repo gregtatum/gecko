@@ -1144,6 +1144,7 @@ bool JSStructuredCloneWriter::parseTransferable() {
   }
 
   if (!transferable.isObject()) {
+    printf("!!! JS_SCERR_TRANSFERABLE a\n");
     return reportDataCloneError(JS_SCERR_TRANSFERABLE);
   }
 
@@ -1154,6 +1155,7 @@ bool JSStructuredCloneWriter::parseTransferable() {
     return false;
   }
   if (!isArray) {
+    printf("!!! JS_SCERR_TRANSFERABLE b\n");
     return reportDataCloneError(JS_SCERR_TRANSFERABLE);
   }
 
@@ -1184,6 +1186,7 @@ bool JSStructuredCloneWriter::parseTransferable() {
     }
 
     if (!v.isObject()) {
+      printf("!!! JS_SCERR_TRANSFERABLE c\n");
       return reportDataCloneError(JS_SCERR_TRANSFERABLE);
     }
     tObj = &v.toObject();
@@ -1213,12 +1216,14 @@ bool JSStructuredCloneWriter::parseTransferable() {
 
     else if (unwrappedObj->is<ArrayBufferObject>()) {
       if (unwrappedObj->as<ArrayBufferObject>().isExternal()) {
+        printf("!!! JS_SCERR_TRANSFERABLE d\n");
         return reportDataCloneError(JS_SCERR_TRANSFERABLE);
       }
     }
 
     else {
       if (!out.buf.callbacks_ || !out.buf.callbacks_->canTransfer) {
+        printf("!!! JS_SCERR_TRANSFERABLE e\n");
         return reportDataCloneError(JS_SCERR_TRANSFERABLE);
       }
 
@@ -1226,6 +1231,7 @@ bool JSStructuredCloneWriter::parseTransferable() {
       bool sameProcessScopeRequired = false;
       if (!out.buf.callbacks_->canTransfer(
               cx, unwrappedObj, &sameProcessScopeRequired, out.buf.closure_)) {
+        printf("!!! JS_SCERR_TRANSFERABLE f\n");
         return reportDataCloneError(JS_SCERR_TRANSFERABLE);
       }
 
@@ -2307,6 +2313,7 @@ bool JSStructuredCloneWriter::transferOwnership() {
       }
     } else {
       if (!out.buf.callbacks_ || !out.buf.callbacks_->writeTransfer) {
+        printf("!!! JS_SCERR_TRANSFERABLE g\n");
         return reportDataCloneError(JS_SCERR_TRANSFERABLE);
       }
       if (!out.buf.callbacks_->writeTransfer(cx, obj, out.buf.closure_, &tag,
@@ -3285,6 +3292,7 @@ bool JSStructuredCloneReader::readTransferMap() {
     }
 
     if (tag == SCTAG_TRANSFER_MAP_PENDING_ENTRY) {
+      printf("!!! JS_SCERR_TRANSFERABLE h\n");
       ReportDataCloneError(cx, callbacks, JS_SCERR_TRANSFERABLE, closure);
       return false;
     }
@@ -3308,6 +3316,7 @@ bool JSStructuredCloneReader::readTransferMap() {
         // Transferred ArrayBuffers in a DifferentProcess clone buffer
         // are treated as if they weren't Transferred at all. We should
         // only see SCTAG_TRANSFER_MAP_STORED_ARRAY_BUFFER.
+        printf("!!! JS_SCERR_TRANSFERABLE i\n");
         ReportDataCloneError(cx, callbacks, JS_SCERR_TRANSFERABLE, closure);
         return false;
       }
@@ -3344,6 +3353,7 @@ bool JSStructuredCloneReader::readTransferMap() {
       }
       if (tag != SCTAG_ARRAY_BUFFER_OBJECT_V2 &&
           tag != SCTAG_ARRAY_BUFFER_OBJECT) {
+        printf("!!! JS_SCERR_TRANSFERABLE j\n");
         ReportDataCloneError(cx, callbacks, JS_SCERR_TRANSFERABLE, closure);
         return false;
       }
@@ -3355,12 +3365,14 @@ bool JSStructuredCloneReader::readTransferMap() {
       tailEndPos = mozilla::Some(in.tell());
     } else {
       if (!callbacks || !callbacks->readTransfer) {
+        printf("!!! JS_SCERR_TRANSFERABLE k\n");
         ReportDataCloneError(cx, callbacks, JS_SCERR_TRANSFERABLE, closure);
         return false;
       }
       if (!callbacks->readTransfer(cx, this, cloneDataPolicy, tag, content,
                                    extraData, closure, &obj)) {
         if (!cx->isExceptionPending()) {
+          printf("!!! JS_SCERR_TRANSFERABLE l\n");
           ReportDataCloneError(cx, callbacks, JS_SCERR_TRANSFERABLE, closure);
         }
         return false;
