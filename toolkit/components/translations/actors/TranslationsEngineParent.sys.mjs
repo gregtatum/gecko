@@ -28,8 +28,8 @@ export class TranslationsEngineParent extends JSWindowActorParent {
           toLanguage
         );
       }
-      case "TranslationsEngine:ReportEngineIsReady":
-        const { innerWindowId } = data;
+      case "TranslationsEngine:ReportEngineStatus":
+        const { innerWindowId, status } = data;
         const translationsParent = this.#translationsParents.get(innerWindowId);
         if (!translationsParent) {
           throw new Error(
@@ -37,7 +37,16 @@ export class TranslationsEngineParent extends JSWindowActorParent {
               innerWindowId
           );
         }
-        translationsParent.languageState.isEngineReady = true;
+        switch (status) {
+          case "ready":
+            translationsParent.languageState.isEngineReady = true;
+            break;
+          case "error":
+            translationsParent.languageState.error = "engine-load-failure";
+            break;
+          default:
+            throw new Error("Unknown engine status: " + status);
+        }
         return undefined;
       default:
         return undefined;

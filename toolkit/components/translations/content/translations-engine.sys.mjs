@@ -4,7 +4,7 @@
 
 /* eslint-env browser */
 /* globals TE_addProfilerMarker, TE_getLogLevel, TE_log, TE_logError, TE_getLogLevel,
-           TE_requestEnginePayload, TE_reportEngineIsReady */
+           TE_requestEnginePayload, TE_reportEngineStatus */
 
 /**
  * This file lives in the translation engine's content process. It is unpriviliged,
@@ -87,6 +87,7 @@ export class TranslationsEngine {
         void TranslationsEngine.keepAlive(languagePairKey);
       },
       error => {
+        TE_reportEngineStatus(innerWindowId, "error");
         TE_logError(
           `The engine failed to load for translating "${fromLanguage}" to "${toLanguage}". Removing it from the cache.`,
           error
@@ -359,7 +360,7 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
     if (isFirstLoad) {
       isFirstLoad = false;
       TE_log("The engine is ready for translations.", { innerWindowId });
-      TE_reportEngineIsReady(innerWindowId);
+      TE_reportEngineStatus(innerWindowId, "ready");
     }
     port.postMessage({
       messageId,

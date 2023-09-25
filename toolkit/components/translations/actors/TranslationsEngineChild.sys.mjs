@@ -57,7 +57,7 @@ export class TranslationsEngineChild extends JSWindowActorChild {
       "TE_log",
       "TE_logError",
       "TE_requestEnginePayload",
-      "TE_reportEngineIsReady",
+      "TE_reportEngineStatus",
     ];
     for (const defineAs of fns) {
       Cu.exportFunction(this[defineAs].bind(this), this.contentWindow, {
@@ -154,10 +154,12 @@ export class TranslationsEngineChild extends JSWindowActorChild {
 
   /**
    * @param {number} innerWindowId
+   * @param {"ready" | "error"} status
    */
-  TE_reportEngineIsReady(innerWindowId) {
-    this.sendAsyncMessage("TranslationsEngine:ReportEngineIsReady", {
+  TE_reportEngineStatus(innerWindowId, status) {
+    this.sendAsyncMessage("TranslationsEngine:ReportEngineStatus", {
       innerWindowId,
+      status,
     });
   }
 }
