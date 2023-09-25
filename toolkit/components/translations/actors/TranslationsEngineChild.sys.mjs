@@ -24,17 +24,19 @@ export class TranslationsEngineChild extends JSWindowActorChild {
     switch (name) {
       case "TranslationsEngine:StartTranslation": {
         const { fromLanguage, toLanguage, innerWindowId, port } = data;
-        this.#sendEventToContent({
+        const transferables = [port];
+        const message = {
           type: "StartTranslation",
           fromLanguage,
           toLanguage,
           innerWindowId,
-          port: Cu.cloneInto(port, this.contentWindow),
-        });
+          port,
+        };
+        this.contentWindow.postMessage(message, "*", transferables);
         break;
       }
       case "TranslationsEngine:EndTranslation":
-        this.#sendEventToContent({
+        this.contentWindow.postMessage({
           type: "EndTranslation",
           innerWindowId: data.innerWindowId,
         });
@@ -42,17 +44,6 @@ export class TranslationsEngineChild extends JSWindowActorChild {
       default:
         console.error("Unknown message received", name);
     }
-  }
-
-  /**
-   * @param {object} detail
-   */
-  #sendEventToContent(detail) {
-    this.contentWindow.dispatchEvent(
-      new this.contentWindow.CustomEvent("TranslationsEngineChromeToContent", {
-        detail: Cu.cloneInto(detail, this.contentWindow),
-      })
-    );
   }
 
   /**
@@ -66,6 +57,7 @@ export class TranslationsEngineChild extends JSWindowActorChild {
       "TE_log",
       "TE_logError",
       "TE_requestEnginePayload",
+      "TE_reportEngineIsReady",
     ];
     for (const defineAs of fns) {
       Cu.exportFunction(this[defineAs].bind(this), this.contentWindow, {
@@ -94,6 +86,7 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         }
         // Create an error in the content window, if the content window is still around.
         let message = "An error occured in the TranslationsEngine actor.";
+        console.log(`!!! error`, error);
         if (typeof error === "string") {
           message = error;
         }
@@ -114,8 +107,12 @@ export class TranslationsEngineChild extends JSWindowActorChild {
    * @param {number?} options.startTime
    * @param {string} options.message
    */
-  TE_addProfilerMarker({ startTime, message }) {
-    ChromeUtils.addProfilerMarker("TranslationsEngine", { startTime }, message);
+  TE_addProfilerMarker({ startTime, message, innerWindowId }) {
+    ChromeUtils.addProfilerMarker(
+      "TranslationsEngine",
+      { startTime, innerWindowId },
+      message
+    );
   }
 
   /**
@@ -149,10 +146,19 @@ export class TranslationsEngineChild extends JSWindowActorChild {
    */
   TE_requestEnginePayload(fromLanguage, toLanguage) {
     return this.#convertToContentPromise(
-      this.sendAsyncMessage("TranslationsEngine:RequestEnginePayload", {
+      this.sendQuery("TranslationsEngine:RequestEnginePayload", {
         fromLanguage,
         toLanguage,
       })
     );
+  }
+
+  /**
+   * @param {number} innerWindowId
+   */
+  TE_reportEngineIsReady(innerWindowId) {
+    this.sendAsyncMessage("TranslationsEngine:ReportEngineIsReady", {
+      innerWindowId,
+    });
   }
 }

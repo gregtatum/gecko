@@ -12,33 +12,56 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * marshalling of the data such as the engine payload and port passing.
  */
 export class TranslationsEngineParent extends JSWindowActorParent {
+  /**
+   * Keep track of the live actors by InnerWindowID.
+   *
+   * @type {Map<InnerWindowID, TranslationsParent>}
+   */
+  #translationsParents = new Map();
+
   async receiveMessage({ name, data }) {
     switch (name) {
-      case "Translations:GetTranslationsEnginePayload": {
+      case "TranslationsEngine:RequestEnginePayload": {
         const { fromLanguage, toLanguage } = data;
         return lazy.TranslationsParent.getTranslationsEnginePayload(
           fromLanguage,
           toLanguage
         );
       }
+      case "TranslationsEngine:ReportEngineIsReady":
+        const { innerWindowId } = data;
+        const translationsParent = this.#translationsParents.get(innerWindowId);
+        if (!translationsParent) {
+          throw new Error(
+            "Unable to find the translations parent from the innerWindowId: " +
+              innerWindowId
+          );
+        }
+        translationsParent.languageState.isEngineReady = true;
+        return undefined;
       default:
         return undefined;
     }
   }
 
   /**
+   * @param {TranslationsParent} translationsParent
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {number} innerWindowId
    * @param {MessagePort} port
    */
-  startTranslation(fromLanguage, toLanguage, innerWindowId, port) {
+  startTranslation(translationsParent, fromLanguage, toLanguage, port) {
+    this.#translationsParents.set(
+      translationsParent.innerWindowId,
+      translationsParent
+    );
     this.sendAsyncMessage(
       "TranslationsEngine:StartTranslation",
       {
         fromLanguage,
         toLanguage,
-        innerWindowId,
+        innerWindowId: translationsParent.innerWindowId,
         port,
       },
       [port]
@@ -49,6 +72,7 @@ export class TranslationsEngineParent extends JSWindowActorParent {
    * @param {number} innerWindowId
    */
   endTranslation(innerWindowId) {
+    this.#translationsParents.delete(innerWindowId);
     this.sendAsyncMessage("TranslationsEngine:EndTranslation", {
       innerWindowId,
     });

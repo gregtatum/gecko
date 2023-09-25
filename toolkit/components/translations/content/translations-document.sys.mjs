@@ -197,9 +197,6 @@ export class TranslationsDocument {
    */
   viewportTranslated = null;
 
-  /** @type {MessagePort} */
-  #port;
-
   /**
    * Construct a new TranslationsDocument. It is tied to a specific Document and cannot
    * be re-used. The translation functions are injected since this class shouldn't
@@ -1357,15 +1354,17 @@ class QueuedTranslator {
   constructor(port) {
     this.#port = port;
     // Match up a response on the port to message that was sent.
-    port.addEventListener("message", ({ targetText, messageId }) => {
-      const resolve = this.#requests[messageId];
-      if (!resolve) {
+    port.onmessage = ({ data }) => {
+      const { targetText, messageId } = data;
+      const requests = this.#requests[messageId];
+      if (!requests) {
         throw new Error(
           "Could not find a resolve function for the messageId " + messageId
         );
       }
-      resolve(targetText);
-    });
+      console.log(`!!! resolve`, targetText);
+      requests.resolve(targetText);
+    };
   }
 
   /**
@@ -1383,6 +1382,7 @@ class QueuedTranslator {
       return new Promise((resolve, reject) => {
         const staleRequest = this.#queue.get(node);
         if (staleRequest) {
+          console.log(`!!! staleRequest`, node);
           // Stale requests get resolved as null.
           staleRequest.resolve(null);
           // Delete the entry so that the order of the queue is maintained. The
@@ -1405,7 +1405,7 @@ class QueuedTranslator {
    * @return {{ translateText: TranslationFunction, translateHTML: TranslationFunction}}
    */
   #postTranslationRequest(sourceText, isHTML) {
-    new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const messageId = this.#nextMessageId++;
       // Store the "resolve" for the promise. It will be matched back up with the
       // `messageId` in #handlePortMessage.

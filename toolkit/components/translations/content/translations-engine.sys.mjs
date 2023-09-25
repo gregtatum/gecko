@@ -4,7 +4,7 @@
 
 /* eslint-env browser */
 /* globals TE_addProfilerMarker, TE_getLogLevel, TE_log, TE_logError, TE_getLogLevel,
-           TE_requestEnginePayload */
+           TE_requestEnginePayload, TE_reportEngineIsReady */
 
 /**
  * This file lives in the translation engine's content process. It is unpriviliged,
@@ -62,18 +62,24 @@ export class TranslationsEngine {
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {number} innerWindowId
-   * @returns {Promise<TranslationsEngine | null>}
+   * @returns {Promise<TranslationsEngine>}
    */
-  static getOrCreate(fromLanguage, toLanguage) {
+  static getOrCreate(fromLanguage, toLanguage, innerWindowId) {
     const languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
-    if (this.#cachedEngine?.languagePairKey === languagePairKey) {
-      return this.#cachedEngine.enginePromise;
+    if (TranslationsEngine.#cachedEngine?.languagePairKey === languagePairKey) {
+      return TranslationsEngine.#cachedEngine.enginePromise;
     }
 
-    // A new engine needs to be created.
-    const enginePromise = TranslationsEngine.create(fromLanguage, toLanguage);
+    TE_log(`Creating a new engine for "${fromLanguage}" to "${toLanguage}".`);
 
-    this.#cachedEngine = { languagePairKey, enginePromise };
+    // A new engine needs to be created.
+    const enginePromise = TranslationsEngine.create(
+      fromLanguage,
+      toLanguage,
+      innerWindowId
+    );
+
+    TranslationsEngine.#cachedEngine = { languagePairKey, enginePromise };
     TranslationsEngine.keepAlive(languagePairKey);
 
     enginePromise.then(
@@ -86,7 +92,7 @@ export class TranslationsEngine {
           error
         );
         // Remove the engine if it fails to initialize.
-        this.#cachedEngine = null;
+        TranslationsEngine.#cachedEngine = null;
       }
     );
 
@@ -98,24 +104,28 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {number} innerWindowId
    * @returns {Promise<TranslationsEngine>}
    */
-  static async create(fromLanguage, toLanguage) {
+  static async create(fromLanguage, toLanguage, innerWindowId) {
     const startTime = performance.now();
 
-    const engine = new TranslationsEngine(
-      fromLanguage,
-      toLanguage,
-      await TE_requestEnginePayload()
-    );
+    TE_log(`!!! TranslationsEngine.create TE_requestEnginePayload`);
+    const payload = await TE_requestEnginePayload(fromLanguage, toLanguage);
 
+    TE_log(`!!! TranslationsEngine.create TranslationsEngine`);
+    const engine = new TranslationsEngine(fromLanguage, toLanguage, payload);
+
+    TE_log(`!!! TranslationsEngine.create engine.isReady`);
     await engine.isReady;
 
     TE_addProfilerMarker({
       startTime,
       message: `Translations engine loaded for "${fromLanguage}" to "${toLanguage}"`,
+      innerWindowId,
     });
 
+    TE_log(`!!! TranslationsEngine.create return engine`);
     return engine;
   }
 
@@ -124,10 +134,10 @@ export class TranslationsEngine {
    */
   static getFromCache(fromLanguage, toLanguage) {
     if (
-      this.#cachedEngine?.languagePairKey ===
+      TranslationsEngine.#cachedEngine?.languagePairKey ===
       getLanguagePairKey(fromLanguage, toLanguage)
     ) {
-      return this.#cachedEngine.enginePromise;
+      return TranslationsEngine.#cachedEngine.enginePromise;
     }
     return null;
   }
@@ -149,9 +159,10 @@ export class TranslationsEngine {
 
     TranslationsEngine.#keepAliveTimeout = setTimeout(() => {
       // Terminate the engine worker.
-      TranslationsEngine.#cachedEngine?.enginePromise.then(engine =>
-        engine.terminate()
-      );
+      TranslationsEngine.#cachedEngine?.enginePromise.then(engine => {
+        TE_log(`Terminating engine "${languagePairKey}".`);
+        engine.terminate();
+      });
     }, CACHE_TIMEOUT_MS);
   }
 
@@ -287,6 +298,7 @@ export class TranslationsEngine {
     TranslationsEngine.#cachedEngine?.enginePromise.then(engine => {
       TE_addProfilerMarker({
         message: "Request to discard translation queue",
+        innerWindowId,
       });
       engine.discardTranslationQueue(innerWindowId);
     });
@@ -323,45 +335,75 @@ function getLanguagePairKey(fromLanguage, toLanguage) {
 const ports = new Map();
 
 /**
+ * Listen to the port to the content process for incoming messages, and pass
+ * them to the TranslationsEngine manager. The other end of the port is held
+ * in the content process by the TranslationsDocument.
+ * @param {string} fromLanguage
+ * @param {string} toLanguage
+ * @param {number} innerWindowId
+ * @param {MessagePort} port
+ */
+function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
+  let isFirstLoad = true;
+
+  async function handleMessage({ data }) {
+    const { sourceText, isHTML, messageId } = data;
+    const engine = await TranslationsEngine.getOrCreate(
+      fromLanguage,
+      toLanguage,
+      innerWindowId
+    );
+    TE_log(`!!! translation engine handleMessage before`, sourceText);
+    const targetText = await engine.translate(
+      sourceText,
+      isHTML,
+      innerWindowId
+    );
+    TE_log(`!!! translation engine handleMessage after`, targetText);
+    if (isFirstLoad) {
+      isFirstLoad = false;
+      TE_log("The engine is ready for translations.", { innerWindowId });
+      TE_reportEngineIsReady(innerWindowId);
+    }
+    port.postMessage({
+      messageId,
+      targetText,
+    });
+  }
+
+  if (port.onmessage) {
+    TE_logError(
+      new Error("The MessagePort onmessage handler was already present.")
+    );
+  }
+
+  port.onmessage = event => {
+    handleMessage(event).catch(error => TE_logError(error));
+  };
+}
+
+/**
  * Listen for events coming from the TranslationsEngine actor.
  */
-window.addEventListener("TranslationsEngineChromeToContent", ({ detail }) => {
-  switch (detail.type) {
+window.addEventListener("message", ({ data }) => {
+  switch (data.type) {
     case "StartTranslation": {
-      const { fromLanguage, toLanguage, innerWindowId, port } = detail;
-      // Listen to the port to the content process for incoming messages, and pass
-      // them to the TranslationsEngine manager.
-      port.onmessage = async ({ sourceText, isHTML, messageId }) => {
-        const engine = await TranslationsEngine.getOrCreate(
-          fromLanguage,
-          toLanguage
-        );
-        if (!engine) {
-          return;
-        }
-        const targetText = await engine.translate(
-          sourceText,
-          isHTML,
-          innerWindowId
-        );
-        port.postMessage({
-          messageId,
-          targetText,
-        });
-      };
-
+      const { fromLanguage, toLanguage, innerWindowId, port } = data;
+      TE_log("Starting translation", innerWindowId);
+      listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port);
       ports.set(innerWindowId, port);
       break;
     }
     case "EndTranslation": {
-      const { innerWindowId } = detail;
+      const { innerWindowId } = data;
+      TE_log("Ending translation", innerWindowId);
 
-      // Deleting a reference to the port and unsetting the onmessage handler may
-      // not be strictly necessary, but it's better to be safe that we aren't leaking.
-      const port = ports.delete(innerWindowId);
+      const port = ports.get(innerWindowId);
       if (port) {
-        port.onmessage = null;
+        port.close();
         ports.delete(innerWindowId);
+      } else {
+        TE_logError("Unable to find the port to close.");
       }
 
       // The page no longer needs its translations.

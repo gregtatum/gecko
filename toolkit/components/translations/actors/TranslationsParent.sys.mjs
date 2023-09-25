@@ -200,12 +200,14 @@ export class TranslationsParent extends JSWindowActorParent {
   static #previousDetectedLanguages = null;
 
   /**
-   * The
-   * @type {null | number}
+   * Keep track of the live actors by InnerWindowID.
+   *
+   * @type {Map<InnerWindowID, TranslationsParent>}
    */
-  #translationId = null;
+  static #actorsByInnerWindowId = new Map();
 
   actorCreated() {
+    this.innerWindowId = this.browsingContext.top.embedderElement.innerWindowID;
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -352,12 +354,22 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
    */
-  #engine = null;
+  static #engine = null;
 
-  async getEngineProcess() {
-    if (this.#engine) {
-      return this.#engine;
+  static getEngineProcess() {
+    if (!this.#engine) {
+      TranslationsParent.#engine = TranslationsParent.#getEngineProcessImpl();
     }
+    return this.#engine;
+  }
+
+  /**
+   * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
+   */
+  static async #getEngineProcessImpl() {
+    console.log(`!!! getEngineProcess - Creating a new engine process`);
+
+    // TODO(before landing) - Use some keep alive timers.
 
     // Create a windowless browser, which doesn't render to the screen. The
     // nsIWindowlessBrowser is a strong reference, that must be closed before dropping
@@ -508,7 +520,9 @@ export class TranslationsParent extends JSWindowActorParent {
         detectedLanguages
       );
 
-      this.getEngineProcess().catch(error => console.error(error));
+      TranslationsParent.getEngineProcess().catch(error =>
+        console.error(error)
+      );
 
       browser.dispatchEvent(
         new CustomEvent("TranslationsParent:OfferTranslation", {
@@ -1954,25 +1968,35 @@ export class TranslationsParent extends JSWindowActorParent {
 
       let engineProcess;
       try {
-        engineProcess = await this.getEngineProcess();
+        engineProcess = await TranslationsParent.getEngineProcess();
       } catch (error) {
         console.error("Failed to get the translation engine process", error);
         return;
       }
 
-      if (this.#translationId != null) {
+      if (this.requestedTranslationPair != null) {
         throw new Error(
           "A translation was started when there was already an existing one."
         );
       }
 
+      if (!this.innerWindowId) {
+        throw new Error(
+          "The innerWindowId for the TranslationsParent was not available."
+        );
+      }
+
+      // Once a translation is started, the innerWindowId needs to be remembered in
+      // order to report back from the eng
+      TranslationsParent.#actorsByInnerWindowId.set(this.innerWindowId, this);
+
       // The MessageChannel will be used for communicating directly between the content
       // process and the engine's process.
       const { port1, port2 } = new MessageChannel();
-      this.#translationId = engineProcess.actor.startTranslation(
+      engineProcess.actor.startTranslation(
+        this,
         fromLanguage,
         toLanguage,
-        this.innerWindowId,
         port1
       );
 
@@ -2457,15 +2481,24 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   didDestroy() {
-    if (this.#translationId != null) {
-      this.getEngineProcess().then(
-        engineProcess => {
-          engineProcess.actor.destroy;
-        },
-        error => {
-          console.error("Failed to get the translation engine process", error);
-        }
+    if (!this.innerWindowId) {
+      throw new Error(
+        "The innerWindowId for the TranslationsParent was not available."
       );
+    }
+
+    TranslationsParent.#actorsByInnerWindowId.delete(this.innerWindowId);
+
+    if (TranslationsParent.#engine) {
+      TranslationsParent.#engine
+        // If the engine fails to load, ignore it since we are destructing.
+        .catch(() => null)
+        .then(engineProcess => {
+          engineProcess?.actor.endTranslation(this.innerWindowId);
+        })
+        // This error will be one from the endTranslation code, which we need to
+        // surface.
+        .catch(error => lazy.console.error(error));
     }
 
     this.#isDestroyed = true;
