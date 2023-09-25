@@ -367,8 +367,6 @@ export class TranslationsParent extends JSWindowActorParent {
    * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
    */
   static async #getEngineProcessImpl() {
-    console.log(`!!! getEngineProcess - Creating a new engine process`);
-
     // TODO(before landing) - Use some keep alive timers.
 
     // Create a windowless browser, which doesn't render to the screen. The

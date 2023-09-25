@@ -86,7 +86,6 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         }
         // Create an error in the content window, if the content window is still around.
         let message = "An error occured in the TranslationsEngine actor.";
-        console.log(`!!! error`, error);
         if (typeof error === "string") {
           message = error;
         }

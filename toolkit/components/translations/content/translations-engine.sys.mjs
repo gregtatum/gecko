@@ -110,13 +110,12 @@ export class TranslationsEngine {
   static async create(fromLanguage, toLanguage, innerWindowId) {
     const startTime = performance.now();
 
-    TE_log(`!!! TranslationsEngine.create TE_requestEnginePayload`);
-    const payload = await TE_requestEnginePayload(fromLanguage, toLanguage);
+    const engine = new TranslationsEngine(
+      fromLanguage,
+      toLanguage,
+      await TE_requestEnginePayload(fromLanguage, toLanguage)
+    );
 
-    TE_log(`!!! TranslationsEngine.create TranslationsEngine`);
-    const engine = new TranslationsEngine(fromLanguage, toLanguage, payload);
-
-    TE_log(`!!! TranslationsEngine.create engine.isReady`);
     await engine.isReady;
 
     TE_addProfilerMarker({
@@ -125,7 +124,6 @@ export class TranslationsEngine {
       innerWindowId,
     });
 
-    TE_log(`!!! TranslationsEngine.create return engine`);
     return engine;
   }
 
@@ -353,13 +351,11 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
       toLanguage,
       innerWindowId
     );
-    TE_log(`!!! translation engine handleMessage before`, sourceText);
     const targetText = await engine.translate(
       sourceText,
       isHTML,
       innerWindowId
     );
-    TE_log(`!!! translation engine handleMessage after`, targetText);
     if (isFirstLoad) {
       isFirstLoad = false;
       TE_log("The engine is ready for translations.", { innerWindowId });

@@ -320,11 +320,9 @@ class Engine {
    * @returns {string}
    */
   #syncTranslate(sourceText, isHTML, innerWindowId) {
-    console.log(`@@@ syncTranslate sourceText`, sourceText, innerWindowId);
     const startTime = performance.now();
     let response;
     sourceText = sourceText.trim();
-    console.log(`@@@ syncTranslate sourceText getTranslationArgs`);
     const { messages, options } = BergamotUtils.getTranslationArgs(
       this.bergamot,
       sourceText,
@@ -332,7 +330,6 @@ class Engine {
     );
     try {
       if (messages.size() === 0) {
-        console.log(`@@@ syncTranslate - (uh oh) messages.size() === 0`);
         return [];
       }
 
@@ -340,7 +337,6 @@ class Engine {
       let responses;
 
       if (this.languageTranslationModels.length === 1) {
-        console.log(`@@@ syncTranslate before translate`);
         responses = this.translationService.translate(
           this.languageTranslationModels[0],
           messages,
@@ -359,7 +355,6 @@ class Engine {
         );
       }
 
-      console.log(`@@@ syncTranslate - Before profiler marker`);
       // Report on the time it took to do this translation.
       ChromeUtils.addProfilerMarker(
         "TranslationsWorker",
@@ -367,9 +362,7 @@ class Engine {
         `Translated ${sourceText.length} code units.`
       );
 
-      console.log(`@@@ syncTranslate - getTranslatedText`);
       const targetText = responses.get(0).getTranslatedText();
-      console.log(`@@@ syncTranslate - targetText`, targetText, innerWindowId);
       return targetText;
     } finally {
       // Free up any memory that was allocated. This will always run.

@@ -1362,7 +1362,6 @@ class QueuedTranslator {
           "Could not find a resolve function for the messageId " + messageId
         );
       }
-      console.log(`!!! resolve`, targetText);
       requests.resolve(targetText);
     };
   }
@@ -1382,7 +1381,6 @@ class QueuedTranslator {
       return new Promise((resolve, reject) => {
         const staleRequest = this.#queue.get(node);
         if (staleRequest) {
-          console.log(`!!! staleRequest`, node);
           // Stale requests get resolved as null.
           staleRequest.resolve(null);
           // Delete the entry so that the order of the queue is maintained. The
