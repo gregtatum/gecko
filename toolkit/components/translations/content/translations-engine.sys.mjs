@@ -40,7 +40,7 @@ export class TranslationsEngine {
   /** @type {null | TimeoutID} */
   static #keepAliveTimeout = null;
 
-  /** @type {Worker} */
+  /** @type {SharedWorker} */
   #translationsWorker;
 
   /**
@@ -179,7 +179,7 @@ export class TranslationsEngine {
     /** @type {string} */
     this.toLanguage = toLanguage;
     this.languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
-    this.#translationsWorker = new Worker(
+    this.#translationsWorker = new SharedWorker(
       "chrome://global/content/translations/translations-engine-worker.js"
     );
 
@@ -192,9 +192,9 @@ export class TranslationsEngine {
         } else if (data.type === "initialization-error") {
           reject(data.error);
         }
-        this.#translationsWorker.removeEventListener("message", onMessage);
+        this.#translationsWorker.port.removeEventListener("message", onMessage);
       };
-      this.#translationsWorker.addEventListener("message", onMessage);
+      this.#translationsWorker.port.addEventListener("message", onMessage);
     });
 
     // Make sure the ArrayBuffers are transferred, not cloned.
@@ -209,7 +209,7 @@ export class TranslationsEngine {
       }
     }
 
-    this.#translationsWorker.postMessage(
+    this.#translationsWorker.port.postMessage(
       {
         type: "initialize",
         fromLanguage,
@@ -243,7 +243,10 @@ export class TranslationsEngine {
           data.innerWindowId === innerWindowId
         ) {
           // The page was unloaded, and we no longer need to listen for a response.
-          this.#translationsWorker.removeEventListener("message", onMessage);
+          this.#translationsWorker.port.removeEventListener(
+            "message",
+            onMessage
+          );
           return;
         }
 
@@ -259,12 +262,12 @@ export class TranslationsEngine {
         if (data.type === "translation-error") {
           reject(data.error);
         }
-        this.#translationsWorker.removeEventListener("message", onMessage);
+        this.#translationsWorker.port.removeEventListener("message", onMessage);
       };
 
-      this.#translationsWorker.addEventListener("message", onMessage);
+      this.#translationsWorker.port.addEventListener("message", onMessage);
 
-      this.#translationsWorker.postMessage({
+      this.#translationsWorker.port.postMessage({
         type: "translation-request",
         isHTML,
         sourceText,

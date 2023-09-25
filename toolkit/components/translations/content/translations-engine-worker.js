@@ -49,74 +49,89 @@ const MODEL_FILE_ALIGNMENTS = {
  * The "initialize" message must be received before any other message handling
  * requests will be processed.
  */
-addEventListener("message", handleInitializationMessage);
 
-async function handleInitializationMessage({ data }) {
-  const startTime = performance.now();
-  if (data.type !== "initialize") {
-    console.error(
-      "The TranslationEngine worker received a message before it was initialized."
-    );
-    return;
-  }
+onconnect = e => {
+  const port = e.ports[0];
 
-  try {
-    const { fromLanguage, toLanguage, enginePayload, logLevel, innerWindowId } =
-      data;
+  port.addEventListener(
+    "message",
+    async function handleInitializationMessage({ data }) {
+      const startTime = performance.now();
+      if (data.type !== "initialize") {
+        console.error(
+          "The TranslationEngine worker received a message before it was initialized."
+        );
+        return;
+      }
 
-    if (!fromLanguage) {
-      throw new Error('Worker initialization missing "fromLanguage"');
+      try {
+        const {
+          fromLanguage,
+          toLanguage,
+          enginePayload,
+          logLevel,
+          innerWindowId,
+        } = data;
+
+        if (!fromLanguage) {
+          throw new Error('Worker initialization missing "fromLanguage"');
+        }
+        if (!toLanguage) {
+          throw new Error('Worker initialization missing "toLanguage"');
+        }
+
+        if (logLevel) {
+          // Respect the "browser.translations.logLevel" preference.
+          _loggingLevel = logLevel;
+        }
+
+        let engine;
+        if (enginePayload.isMocked) {
+          // The engine is testing mode, and no Bergamot wasm is available.
+          engine = new MockedEngine(fromLanguage, toLanguage);
+        } else {
+          const { bergamotWasmArrayBuffer, languageModelFiles } = enginePayload;
+          const bergamot = await BergamotUtils.initializeWasm(
+            bergamotWasmArrayBuffer
+          );
+          engine = new Engine(
+            fromLanguage,
+            toLanguage,
+            bergamot,
+            languageModelFiles
+          );
+        }
+
+        ChromeUtils.addProfilerMarker(
+          "TranslationsWorker",
+          { startTime, innerWindowId },
+          "Translations engine loaded."
+        );
+
+        handleMessages(port, engine);
+        port.postMessage({ type: "initialization-success" });
+      } catch (error) {
+        console.error(error);
+        port.postMessage({
+          type: "initialization-error",
+          error: error?.message,
+        });
+      }
+
+      removeEventListener("message", handleInitializationMessage);
     }
-    if (!toLanguage) {
-      throw new Error('Worker initialization missing "toLanguage"');
-    }
-
-    if (logLevel) {
-      // Respect the "browser.translations.logLevel" preference.
-      _loggingLevel = logLevel;
-    }
-
-    let engine;
-    if (enginePayload.isMocked) {
-      // The engine is testing mode, and no Bergamot wasm is available.
-      engine = new MockedEngine(fromLanguage, toLanguage);
-    } else {
-      const { bergamotWasmArrayBuffer, languageModelFiles } = enginePayload;
-      const bergamot = await BergamotUtils.initializeWasm(
-        bergamotWasmArrayBuffer
-      );
-      engine = new Engine(
-        fromLanguage,
-        toLanguage,
-        bergamot,
-        languageModelFiles
-      );
-    }
-
-    ChromeUtils.addProfilerMarker(
-      "TranslationsWorker",
-      { startTime, innerWindowId },
-      "Translations engine loaded."
-    );
-
-    handleMessages(engine);
-    postMessage({ type: "initialization-success" });
-  } catch (error) {
-    console.error(error);
-    postMessage({ type: "initialization-error", error: error?.message });
-  }
-
-  removeEventListener("message", handleInitializationMessage);
-}
+  );
+  port.start();
+};
 
 /**
  * Sets up the message handling for the worker.
  *
  * @param {Engine | MockedEngine} engine
  */
-function handleMessages(engine) {
+function handleMessages(port, engine) {
   let discardPromise;
-  addEventListener("message", async ({ data }) => {
+  port.addEventListener("message", async ({ data }) => {
     try {
       if (data.type === "initialize") {
         throw new Error("The Translations engine must not be re-initialized.");
@@ -157,7 +172,7 @@ function handleMessages(engine) {
               innerWindowId,
             });
 
-            postMessage({
+            port.postMessage({
               type: "translation-response",
               targetText,
               messageId,
@@ -172,7 +187,7 @@ function handleMessages(engine) {
             if (typeof error?.stack === "string") {
               stack = error.stack;
             }
-            postMessage({
+            port.postMessage({
               type: "translation-error",
               error: { message, stack },
               messageId,
@@ -193,7 +208,7 @@ function handleMessages(engine) {
           discardPromise = null;
 
           // Signal to the "message" listeners in the main thread to stop listening.
-          postMessage({
+          port.postMessage({
             type: "translations-discarded",
           });
           break;
