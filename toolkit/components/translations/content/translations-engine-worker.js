@@ -188,7 +188,7 @@ function handleMessages(engine) {
             "Translations discard requested"
           );
 
-          discardPromise = engine.discardTranslations();
+          discardPromise = engine.discardTranslations(data.innerWindowId);
           await discardPromise;
           discardPromise = null;
 
@@ -320,6 +320,7 @@ class Engine {
    * @returns {string}
    */
   #syncTranslate(sourceText, isHTML, innerWindowId) {
+    console.log(`@@@ syncTranslate`, innerWindowId);
     const startTime = performance.now();
     let response;
     sourceText = sourceText.trim();
@@ -703,7 +704,7 @@ class WorkQueue {
       }
 
       // Check this between every `await`.
-      if (this.#isWorkCancelled) {
+      if (this.#isWorkCancelled || !this.#tasks.length) {
         break;
       }
 

@@ -1314,6 +1314,17 @@ function* getAncestorsIterator(node) {
 }
 
 /**
+ * This contains all of the information needed to perform a translation request.
+ *
+ * @typedef {Object} TranslationRequest
+ * @prop {Node} node
+ * @prop {string} sourceText
+ * @prop {boolean} isHTML
+ * @prop {Function} resolve
+ * @prop {Function} reject
+ */
+
+/**
  * When a page is hidden, mutations may occur in the DOM. It doesn't make sense to
  * translate those elements while the page is hidden, especially as it may bring
  * a translations engine back to life, which can be quite expensive. Queue those
@@ -1337,14 +1348,14 @@ class QueuedTranslator {
 
   /**
    * Tie together a message id to a resolved response.
-   * @type {Record<number, { resolve: () => string, reject: Function }}
+   * @type {Map<number, TranslationRequest}
    */
-  #requests = {};
+  #requests = new Map();
 
   /**
    * If the translations are paused, they are queued here. This Map is ordered by
    * from oldest to newest requests with stale requests being removed.
-   * @type {Map<Node, Array<Object>>}
+   * @type {Map<Node, Array<TranslationRequest>>}
    */
   #queue = new Map();
 
@@ -1356,13 +1367,9 @@ class QueuedTranslator {
     // Match up a response on the port to message that was sent.
     port.onmessage = ({ data }) => {
       const { targetText, messageId } = data;
-      const requests = this.#requests[messageId];
-      if (!requests) {
-        throw new Error(
-          "Could not find a resolve function for the messageId " + messageId
-        );
-      }
-      requests.resolve(targetText);
+      // A request may not match match a messageId if there is a race during the pausing
+      // and discarding of the queue.
+      this.#requests.get(messageId)?.resolve(targetText);
     };
   }
 
@@ -1390,24 +1397,32 @@ class QueuedTranslator {
 
         // This Promises's resolve nad reject will be chained after the translation
         // request. For now add it to the queue along with the other arguments.
-        this.#queue.set(node, { sourceText, isHTML, resolve, reject });
+        this.#queue.set(node, { node, sourceText, isHTML, resolve, reject });
       });
     }
-    return this.#postTranslationRequest(sourceText, isHTML);
+    return this.#postTranslationRequest(node, sourceText, isHTML);
   }
 
   /**
    * Posts the translation to the translations engine through the MessagePort.
    *
-   * @param {MessagePort} port
+   * @param {Node} node
+   * @param {string} sourceText
+   * @param {boolean} isHTML
    * @return {{ translateText: TranslationFunction, translateHTML: TranslationFunction}}
    */
-  #postTranslationRequest(sourceText, isHTML) {
+  #postTranslationRequest(node, sourceText, isHTML) {
     return new Promise((resolve, reject) => {
       const messageId = this.#nextMessageId++;
       // Store the "resolve" for the promise. It will be matched back up with the
       // `messageId` in #handlePortMessage.
-      this.#requests[messageId] = { resolve, reject };
+      this.#requests.set(messageId, {
+        node,
+        sourceText,
+        isHTML,
+        resolve,
+        reject,
+      });
       this.#port.postMessage({
         messageId,
         sourceText,
@@ -1423,21 +1438,34 @@ class QueuedTranslator {
    * @param {boolean} paused
    */
   pause(paused) {
-    if (this.#paused && !paused) {
-      for (const [node, value] of this.#queue) {
-        const { sourceText, isHTML, resolve, reject } = value;
+    if (this.#paused === paused) {
+      lazy.console.error("The translations was paused or resumed twice.");
+      return;
+    }
+
+    this.#paused = paused;
+
+    if (paused) {
+      // Pause translations. Place all of the outstanding requests in a queue.
+      for (const request of this.#requests.values()) {
+        this.#queue.set(request.node, request);
+      }
+      this.#requests = new Map();
+    } else {
+      // Resume translations. Send the queued translations.
+      for (const value of this.#queue.values()) {
+        const { node, sourceText, isHTML, resolve, reject } = value;
         if (Cu.isDeadWrapper(node)) {
           // If the node is dead, resolve without any text. Do not reject as that
           // will be treated as an error.
           resolve(null);
         } else {
-          this.#postTranslationRequest(sourceText, isHTML).then(
+          this.#postTranslationRequest(node, sourceText, isHTML).then(
             resolve,
             reject
           );
         }
       }
     }
-    this.#paused = paused;
   }
 }

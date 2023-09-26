@@ -31,10 +31,17 @@ export class TranslationsChild extends JSWindowActorChild {
         });
         break;
       case "pageshow":
-        this.#translatedDoc?.translator.pause(false);
+        if (this.#translatedDoc) {
+          // Resume translations.
+          this.#translatedDoc.translator.pause(false);
+        }
         break;
       case "pagehide":
-        this.#translatedDoc?.translator.pause(true);
+        if (this.#translatedDoc) {
+          //  Pause translations.
+          this.#translatedDoc.translator.pause(true);
+          this.sendAsyncMessage("Translations:Pause");
+        }
         break;
     }
   }
@@ -47,7 +54,7 @@ export class TranslationsChild extends JSWindowActorChild {
           return undefined;
         }
 
-        this.translatedDoc = new lazy.TranslationsDocument(
+        this.#translatedDoc = new lazy.TranslationsDocument(
           this.document,
           data.fromLanguage,
           this.contentWindow.windowGlobalChild.innerWindowId,

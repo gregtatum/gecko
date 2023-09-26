@@ -480,8 +480,8 @@ let JSWINDOWACTORS = {
     },
   },
 
-  // The newer translations feature backed by local machine learning models.
-  // See Bug 971044.
+  // Determines if a page can be translated, and coordinates communication with the
+  // translations engine.
   Translations: {
     parent: {
       esModuleURI: "resource://gre/actors/TranslationsParent.sys.mjs",
@@ -506,6 +506,7 @@ let JSWINDOWACTORS = {
     enablePreference: "browser.translations.enable",
   },
 
+  // A single process that controls all of the translations.
   TranslationsEngine: {
     parent: {
       esModuleURI: "resource://gre/actors/TranslationsEngineParent.sys.mjs",

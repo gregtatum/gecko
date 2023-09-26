@@ -780,6 +780,10 @@ export class TranslationsParent extends JSWindowActorParent {
         this.languageState.error = data.reason;
         break;
       }
+      case "Translations:Pause": {
+        this.#discardTranslations(false /* keep the MessagePort open. */);
+        break;
+      }
       case "Translations:GetSupportedLanguages": {
         return TranslationsParent.getSupportedLanguages();
       }
@@ -1981,12 +1985,6 @@ export class TranslationsParent extends JSWindowActorParent {
         return;
       }
 
-      if (this.requestedTranslationPair != null) {
-        throw new Error(
-          "A translation was started when there was already an existing one."
-        );
-      }
-
       if (!this.innerWindowId) {
         throw new Error(
           "The innerWindowId for the TranslationsParent was not available."
@@ -2487,6 +2485,33 @@ export class TranslationsParent extends JSWindowActorParent {
     return true;
   }
 
+  /**
+   * @param {boolean} closePort - Set to true to close the MessagePort.
+   */
+  #discardTranslations(closePort) {
+    if (!TranslationsParent.#engine) {
+      return;
+    }
+    TranslationsParent.#engine
+      // If the engine fails to load, ignore it since we are ending translations.
+      .catch(() => null)
+      .then(engineProcess => {
+        if (engineProcess && this.languageState.requestedTranslationPair) {
+          const { fromLanguage, toLanguage } =
+            this.languageState.requestedTranslationPair;
+          engineProcess.actor.discardTranslations(
+            this.innerWindowId,
+            fromLanguage,
+            toLanguage,
+            closePort
+          );
+        }
+      })
+      // This error will be one from the endTranslation code, which we need to
+      // surface.
+      .catch(error => lazy.console.error(error));
+  }
+
   didDestroy() {
     if (!this.innerWindowId) {
       throw new Error(
@@ -2496,17 +2521,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
     TranslationsParent.#actorsByInnerWindowId.delete(this.innerWindowId);
 
-    if (TranslationsParent.#engine) {
-      TranslationsParent.#engine
-        // If the engine fails to load, ignore it since we are destructing.
-        .catch(() => null)
-        .then(engineProcess => {
-          engineProcess?.actor.endTranslation(this.innerWindowId);
-        })
-        // This error will be one from the endTranslation code, which we need to
-        // surface.
-        .catch(error => lazy.console.error(error));
-    }
+    this.#discardTranslations(true /* close the MessagePort */);
 
     this.#isDestroyed = true;
   }

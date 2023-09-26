@@ -10,11 +10,11 @@
  * This file lives in the translation engine's content process. It is unpriviliged,
  * and is in charge of managing the lifecycle the translations engine.
  *
- * TOD(before landing) - Document this process better.
+ * TODO(before landing) - Document this process better.
  */
 
 // How long the cache remains alive between uses, in milliseconds.
-const CACHE_TIMEOUT_MS = 10_000;
+const CACHE_TIMEOUT_MS = 3_000;
 
 /**
  * @typedef {import("./translations-document.sys.mjs").TranslationsDocument} TranslationsDocument
@@ -34,25 +34,25 @@ const CACHE_TIMEOUT_MS = 10_000;
  * heavy-weight, so we only want to keep one around at a time.
  */
 export class TranslationsEngine {
-  /** @type {null | { languagePairKey: string, enginePromise: Promise<TranslationsEngine> }} */
-  static #cachedEngine = null;
+  /**
+   * Maps a language pair key to a cached engine. Engines are kept around for a timeout
+   * before they are removed so that they can be re-used during navigation.
+   *
+   * @type {Map<string, TranslationsEngine>}
+   */
+  static #cachedEngines = new Map();
 
-  /** @type {null | TimeoutID} */
-  static #keepAliveTimeout = null;
+  /** @type {TimeoutID | null} */
+  #keepAliveTimeout = null;
 
   /** @type {Worker} */
-  #translationsWorker;
+  #worker;
 
   /**
    * Multiple messages can be sent before a response is received. This ID is used to keep
    * track of the messages. It is incremented on every use.
    */
   #messageId = 0;
-
-  /**
-   * @type {TranslationsDocument | null}
-   */
-  translatedDoc = null;
 
   /**
    * Returns a getter function that will create a translations engine on the first
@@ -66,36 +66,32 @@ export class TranslationsEngine {
    */
   static getOrCreate(fromLanguage, toLanguage, innerWindowId) {
     const languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
-    if (TranslationsEngine.#cachedEngine?.languagePairKey === languagePairKey) {
-      return TranslationsEngine.#cachedEngine.enginePromise;
+    let enginePromise = TranslationsEngine.#cachedEngines.get(languagePairKey);
+
+    if (enginePromise) {
+      return enginePromise;
     }
 
     TE_log(`Creating a new engine for "${fromLanguage}" to "${toLanguage}".`);
 
     // A new engine needs to be created.
-    const enginePromise = TranslationsEngine.create(
+    enginePromise = TranslationsEngine.create(
       fromLanguage,
       toLanguage,
       innerWindowId
     );
 
-    TranslationsEngine.#cachedEngine = { languagePairKey, enginePromise };
-    TranslationsEngine.keepAlive(languagePairKey);
+    TranslationsEngine.#cachedEngines.set(languagePairKey, enginePromise);
 
-    enginePromise.then(
-      () => {
-        void TranslationsEngine.keepAlive(languagePairKey);
-      },
-      error => {
-        TE_reportEngineStatus(innerWindowId, "error");
-        TE_logError(
-          `The engine failed to load for translating "${fromLanguage}" to "${toLanguage}". Removing it from the cache.`,
-          error
-        );
-        // Remove the engine if it fails to initialize.
-        TranslationsEngine.#cachedEngine = null;
-      }
-    );
+    enginePromise.catch(error => {
+      TE_reportEngineStatus(innerWindowId, "error");
+      TE_logError(
+        `The engine failed to load for translating "${fromLanguage}" to "${toLanguage}". Removing it from the cache.`,
+        error
+      );
+      // Remove the engine if it fails to initialize.
+      TranslationsEngine.#cachedEngines.delete(languagePairKey);
+    });
 
     return enginePromise;
   }
@@ -129,40 +125,26 @@ export class TranslationsEngine {
   }
 
   /**
-   * Only get the engine from the cache if it exists.
+   * Terminates the engine and its worker after a timeout.
    */
-  static getFromCache(fromLanguage, toLanguage) {
-    if (
-      TranslationsEngine.#cachedEngine?.languagePairKey ===
-      getLanguagePairKey(fromLanguage, toLanguage)
-    ) {
-      return TranslationsEngine.#cachedEngine.enginePromise;
-    }
-    return null;
-  }
+  terminate = () => {
+    const message = `Terminating translations engine "${this.languagePairKey}".`;
+    TE_addProfilerMarker({ message });
+    TE_log(message);
+    this.#worker.terminate();
+    this.#worker = null;
+    TranslationsEngine.#cachedEngines.delete(this.languagePairKey);
+  };
 
   /**
-   * @param {string} languagePairKey
+   * The worker needs to be shutdown after some amount of time of not being used.
    */
-  static keepAlive(languagePairKey) {
-    if (
-      !TranslationsEngine.#cachedEngine?.languagePairKey !== languagePairKey
-    ) {
-      // It appears that the engine is already dead or another language pair
-      // is being used.
-      return;
+  keepAlive() {
+    if (this.#keepAliveTimeout) {
+      // Clear any previous timeout.
+      clearTimeout(this.#keepAliveTimeout);
     }
-    if (TranslationsEngine.#keepAliveTimeout) {
-      clearTimeout(TranslationsEngine.#keepAliveTimeout);
-    }
-
-    TranslationsEngine.#keepAliveTimeout = setTimeout(() => {
-      // Terminate the engine worker.
-      TranslationsEngine.#cachedEngine?.enginePromise.then(engine => {
-        TE_log(`Terminating engine "${languagePairKey}".`);
-        engine.terminate();
-      });
-    }, CACHE_TIMEOUT_MS);
+    this.#keepAliveTimeout = setTimeout(this.terminate, CACHE_TIMEOUT_MS);
   }
 
   /**
@@ -179,7 +161,7 @@ export class TranslationsEngine {
     /** @type {string} */
     this.toLanguage = toLanguage;
     this.languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
-    this.#translationsWorker = new Worker(
+    this.#worker = new Worker(
       "chrome://global/content/translations/translations-engine-worker.js"
     );
 
@@ -192,9 +174,12 @@ export class TranslationsEngine {
         } else if (data.type === "initialization-error") {
           reject(data.error);
         }
-        this.#translationsWorker.removeEventListener("message", onMessage);
+        this.#worker.removeEventListener("message", onMessage);
       };
-      this.#translationsWorker.addEventListener("message", onMessage);
+      this.#worker.addEventListener("message", onMessage);
+
+      // Schedule the first timeout for keeping the engine alive.
+      this.keepAlive();
     });
 
     // Make sure the ArrayBuffers are transferred, not cloned.
@@ -209,7 +194,7 @@ export class TranslationsEngine {
       }
     }
 
-    this.#translationsWorker.postMessage(
+    this.#worker.postMessage(
       {
         type: "initialize",
         fromLanguage,
@@ -232,7 +217,7 @@ export class TranslationsEngine {
    * @returns {Promise<string[]>}
    */
   translate(sourceText, isHTML, innerWindowId) {
-    TranslationsEngine.keepAlive(this.languagePairKey);
+    this.keepAlive();
 
     const messageId = this.#messageId++;
 
@@ -243,7 +228,7 @@ export class TranslationsEngine {
           data.innerWindowId === innerWindowId
         ) {
           // The page was unloaded, and we no longer need to listen for a response.
-          this.#translationsWorker.removeEventListener("message", onMessage);
+          this.#worker.removeEventListener("message", onMessage);
           return;
         }
 
@@ -254,17 +239,20 @@ export class TranslationsEngine {
         }
 
         if (data.type === "translation-response") {
+          // Also keep the translation alive after getting a result, as many translations
+          // can queue up at once, and then it can take minutes to resolve them all.
+          this.keepAlive();
           resolve(data.targetText);
         }
         if (data.type === "translation-error") {
           reject(data.error);
         }
-        this.#translationsWorker.removeEventListener("message", onMessage);
+        this.#worker.removeEventListener("message", onMessage);
       };
 
-      this.#translationsWorker.addEventListener("message", onMessage);
+      this.#worker.addEventListener("message", onMessage);
 
-      this.#translationsWorker.postMessage({
+      this.#worker.postMessage({
         type: "translation-request",
         isHTML,
         sourceText,
@@ -275,32 +263,20 @@ export class TranslationsEngine {
   }
 
   /**
-   * The worker should be GCed just fine on its own, but go ahead and signal to
-   * the worker that it's no longer needed. This will immediately cancel any in-progress
-   * translations.
-   */
-  terminate() {
-    this.#translationsWorker.terminate();
-    TranslationsEngine.#cachedEngine?.then(engine => {
-      if (engine === this) {
-        TranslationsEngine.#cachedEngine = null;
-      }
-    });
-  }
-
-  /**
-   * Stop processing the translation queue. All in-progress messages will be discarded.
+   * Applies a function only if a cached engine exists.
    *
-   * @param {number} innerWindowId
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   * @param {(engine: TranslationsEngine) => void} fn
    */
-  static discardTranslationQueue(innerWindowId) {
-    TranslationsEngine.#cachedEngine?.enginePromise.then(engine => {
-      TE_addProfilerMarker({
-        message: "Request to discard translation queue",
-        innerWindowId,
-      });
-      engine.discardTranslationQueue(innerWindowId);
-    });
+  static withCachedEngine(fromLanguage, toLanguage, fn) {
+    const engine = TranslationsEngine.#cachedEngines.get(
+      getLanguagePairKey(fromLanguage, toLanguage)
+    );
+
+    if (engine) {
+      engine.then(fn).catch(() => {});
+    }
   }
 
   /**
@@ -309,15 +285,30 @@ export class TranslationsEngine {
    * @param {number} innerWindowId
    */
   discardTranslationQueue(innerWindowId) {
-    this.#translationsWorker.postMessage({
+    this.#worker.postMessage({
       type: "discard-translation-queue",
       innerWindowId,
     });
-    this.translatedDoc = null;
-
-    // Keep alive for another page laod.
-    TranslationsEngine.keepAlive(this.languagePairKey);
   }
+
+  /**
+   * Pause or resume the translations from a cached engine.
+   *
+   * @param {boolean} pause
+   * @param {string} fromLanguage
+   * @param {string} toLanguage
+   * @param {number} innerWindowId
+   */
+  static pause(pause, fromLanguage, toLanguage, innerWindowId) {
+    TranslationsEngine.withCachedEngine(fromLanguage, toLanguage, engine => {
+      engine.pause(pause, innerWindowId);
+    });
+  }
+
+  /**
+   * Pause or resume the translations.
+   */
+  pause(pause, innerWindowId) {}
 }
 
 /**
@@ -391,22 +382,31 @@ window.addEventListener("message", ({ data }) => {
       ports.set(innerWindowId, port);
       break;
     }
-    case "EndTranslation": {
-      const { innerWindowId } = data;
-      TE_log("Ending translation", innerWindowId);
+    case "DiscardTranslations": {
+      const { fromLanguage, toLanguage, innerWindowId, closePort } = data;
+      TE_log(
+        "Discarding translations",
+        fromLanguage,
+        toLanguage,
+        innerWindowId
+      );
 
-      const port = ports.get(innerWindowId);
-      if (port) {
-        port.close();
-        ports.delete(innerWindowId);
-      } else {
-        TE_logError("Unable to find the port to close.");
+      if (closePort) {
+        const port = ports.get(innerWindowId);
+        if (port) {
+          port.close();
+          ports.delete(innerWindowId);
+        } else {
+          TE_logError("Unable to find the port to close.");
+        }
       }
 
-      // The page no longer needs its translations.
-      TranslationsEngine.discardTranslationQueue(innerWindowId);
+      TranslationsEngine.withCachedEngine(fromLanguage, toLanguage, engine => {
+        engine.discardTranslationQueue(innerWindowId);
+      });
       break;
     }
+
     default:
       throw new Error("Unknown TranslationsEngineChromeToContent event.");
   }

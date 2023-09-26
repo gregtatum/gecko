@@ -35,12 +35,17 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         this.contentWindow.postMessage(message, "*", transferables);
         break;
       }
-      case "TranslationsEngine:EndTranslation":
+      case "TranslationsEngine:DiscardTranslations": {
+        const { fromLanguage, toLanguage, innerWindowId, closePort } = data;
         this.contentWindow.postMessage({
-          type: "EndTranslation",
-          innerWindowId: data.innerWindowId,
+          type: "DiscardTranslations",
+          fromLanguage,
+          toLanguage,
+          innerWindowId,
+          closePort,
         });
         break;
+      }
       default:
         console.error("Unknown message received", name);
     }
