@@ -320,7 +320,6 @@ class Engine {
    * @returns {string}
    */
   #syncTranslate(sourceText, isHTML, innerWindowId) {
-    console.log(`@@@ syncTranslate`, innerWindowId);
     const startTime = performance.now();
     let response;
     sourceText = sourceText.trim();

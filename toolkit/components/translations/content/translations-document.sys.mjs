@@ -303,6 +303,17 @@ export class TranslationsDocument {
     );
   }
 
+  isDestroyed = false;
+
+  /**
+   * Remove any dangling event handlers.
+   */
+  destroy() {
+    this.isDestroyed = true;
+    this.translator.destroy();
+    this.stopMutationObserver();
+  }
+
   /**
    * Add a new element to start translating. This root is tracked for mutations and
    * kept up to date with translations. This will be the body element and title tag
@@ -1334,7 +1345,7 @@ class QueuedTranslator {
   /**
    * Pause sending the translations, this will queue them until un-paused.
    */
-  #paused = false;
+  #paused = true;
 
   /**
    * @type {MessagePort}
@@ -1359,18 +1370,48 @@ class QueuedTranslator {
    */
   #queue = new Map();
 
+  engineStatus = "initializing";
+
   /**
    * @param {MessagePort} port
    */
-  constructor(port) {
+  constructor(port, resolveEngineReady) {
     this.#port = port;
     // Match up a response on the port to message that was sent.
     port.onmessage = ({ data }) => {
-      const { targetText, messageId } = data;
-      // A request may not match match a messageId if there is a race during the pausing
-      // and discarding of the queue.
-      this.#requests.get(messageId)?.resolve(targetText);
+      switch (data.type) {
+        case "TranslationsPort:TranslationResponse": {
+          const { targetText, messageId } = data;
+          // A request may not match match a messageId if there is a race during the pausing
+          // and discarding of the queue.
+          this.#requests.get(messageId)?.resolve(targetText);
+          break;
+        }
+        case "TranslationsPort:GetEngineStatusResponse": {
+          this.updateEngineStatus(data.status);
+          break;
+        }
+        default:
+          lazy.console.error("Unknown translations port message: " + data.type);
+          break;
+      }
     };
+
+    port.postMessage({ type: "TranslationsPort:GetEngineStatusRequest" });
+  }
+
+  updateEngineStatus(status) {
+    switch (status) {
+      case "ready":
+        // Start the initial translations.
+        this.pause(false);
+        break;
+      case "error":
+        break;
+      default:
+        throw new Error("Unknown engine status: " + status);
+    }
+    this.engineStatus = status;
   }
 
   /**
@@ -1424,6 +1465,7 @@ class QueuedTranslator {
         reject,
       });
       this.#port.postMessage({
+        type: "TranslationsPort:TranslationRequest",
         messageId,
         sourceText,
         isHTML,
@@ -1440,6 +1482,11 @@ class QueuedTranslator {
   pause(paused) {
     if (this.#paused === paused) {
       lazy.console.error("The translations was paused or resumed twice.");
+      return;
+    }
+
+    if (this.engineStatus === "error") {
+      // If the engine status in error, there is no reason to resume.
       return;
     }
 
@@ -1467,5 +1514,14 @@ class QueuedTranslator {
         }
       }
     }
+  }
+
+  /**
+   * Close the port and remove any pending or queued requests.
+   */
+  destroy() {
+    this.#port.close();
+    this.#requests = new Map();
+    this.#queue = new Map();
   }
 }

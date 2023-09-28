@@ -14,7 +14,7 @@
  */
 
 // How long the cache remains alive between uses, in milliseconds.
-const CACHE_TIMEOUT_MS = 3_000;
+const CACHE_TIMEOUT_MS = 15_000;
 
 /**
  * @typedef {import("./translations-document.sys.mjs").TranslationsDocument} TranslationsDocument
@@ -337,26 +337,63 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
   let isFirstLoad = true;
 
   async function handleMessage({ data }) {
-    const { sourceText, isHTML, messageId } = data;
-    const engine = await TranslationsEngine.getOrCreate(
-      fromLanguage,
-      toLanguage,
-      innerWindowId
-    );
-    const targetText = await engine.translate(
-      sourceText,
-      isHTML,
-      innerWindowId
-    );
-    if (isFirstLoad) {
-      isFirstLoad = false;
-      TE_log("The engine is ready for translations.", { innerWindowId });
-      TE_reportEngineStatus(innerWindowId, "ready");
+    switch (data.type) {
+      case "TranslationsPort:GetEngineStatusRequest": {
+        // This message gets sent first before the translation queue is processed.
+        // The engine is most likely to fail on the initial invocation. Any failure
+        // past the first one is not reported to the UI.
+        TranslationsEngine.getOrCreate(
+          fromLanguage,
+          toLanguage,
+          innerWindowId
+        ).then(
+          () => {
+            port.postMessage({
+              type: "TranslationsPort:GetEngineStatusResponse",
+              status: "ready",
+            });
+          },
+          () => {
+            port.postMessage({
+              type: "TranslationsPort:GetEngineStatusResponse",
+              status: "error",
+            });
+            // After an error no more translation requests will be sent. Go ahead
+            // and close the port.
+            port.close();
+            ports.delete(innerWindowId);
+          }
+        );
+        break;
+      }
+      case "TranslationsPort:TranslationRequest": {
+        const { sourceText, isHTML, messageId } = data;
+        const engine = await TranslationsEngine.getOrCreate(
+          fromLanguage,
+          toLanguage,
+          innerWindowId
+        );
+        const targetText = await engine.translate(
+          sourceText,
+          isHTML,
+          innerWindowId
+        );
+        if (isFirstLoad) {
+          isFirstLoad = false;
+          TE_log("The engine is ready for translations.", { innerWindowId });
+          TE_reportEngineStatus(innerWindowId, "ready");
+        }
+        port.postMessage({
+          type: "TranslationsPort:TranslationResponse",
+          messageId,
+          targetText,
+        });
+        break;
+      }
+      default:
+        TE_logError("Unknown translations port message: " + data.type);
+        break;
     }
-    port.postMessage({
-      messageId,
-      targetText,
-    });
   }
 
   if (port.onmessage) {

@@ -49,6 +49,11 @@ export class TranslationsChild extends JSWindowActorChild {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "Translations:TranslatePage": {
+        if (this.#translatedDoc?.translator.engineStatus === "error") {
+          this.#translatedDoc.destroy();
+          this.#translatedDoc = null;
+        }
+
         if (this.#translatedDoc) {
           console.error("This page was already translated.");
           return undefined;
