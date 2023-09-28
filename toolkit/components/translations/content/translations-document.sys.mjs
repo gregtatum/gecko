@@ -232,7 +232,7 @@ export class TranslationsDocument {
     }
 
     /** @type {QueuedTranslator} */
-    this.translator = new QueuedTranslator(port);
+    this.translator = new QueuedTranslator(port, document);
 
     /** @type {number} */
     this.innerWindowId = innerWindowId;
@@ -1353,6 +1353,11 @@ class QueuedTranslator {
   #port;
 
   /**
+   * @type {Document}
+   */
+  #document;
+
+  /**
    * An id for each message sent. This is used to match up the request and response.
    */
   #nextMessageId = 0;
@@ -1374,9 +1379,11 @@ class QueuedTranslator {
 
   /**
    * @param {MessagePort} port
+   * @param {Document} document
    */
-  constructor(port, resolveEngineReady) {
+  constructor(port, document) {
     this.#port = port;
+    this.#document = document;
     // Match up a response on the port to message that was sent.
     port.onmessage = ({ data }) => {
       switch (data.type) {
@@ -1403,8 +1410,10 @@ class QueuedTranslator {
   updateEngineStatus(status) {
     switch (status) {
       case "ready":
-        // Start the initial translations.
-        this.pause(false);
+        if (this.#document.visibilityState === "visible") {
+          // Start the initial translations if the page is visible.
+          this.pause(false);
+        }
         break;
       case "error":
         break;

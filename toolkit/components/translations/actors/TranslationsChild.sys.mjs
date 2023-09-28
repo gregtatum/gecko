@@ -30,20 +30,27 @@ export class TranslationsChild extends JSWindowActorChild {
           documentElementLang: this.document.documentElement.lang,
         });
         break;
-      case "pageshow":
+      case "visibilitychange":
         if (this.#translatedDoc) {
-          // Resume translations.
-          this.#translatedDoc.translator.pause(false);
-        }
-        break;
-      case "pagehide":
-        if (this.#translatedDoc) {
-          //  Pause translations.
-          this.#translatedDoc.translator.pause(true);
-          this.sendAsyncMessage("Translations:Pause");
+          if (this.document.visibilityState === "visible") {
+            this.addMarker("Resume translations");
+            this.#translatedDoc.translator.pause(false);
+          } else {
+            this.addMarker("Pause translations");
+            this.#translatedDoc.translator.pause(true);
+            this.sendAsyncMessage("Translations:Pause");
+          }
         }
         break;
     }
+  }
+
+  addMarker(message) {
+    ChromeUtils.addProfilerMarker(
+      "TranslationsChild",
+      { innerWindowId: this.contentWindow.windowGlobalChild.innerWindowId },
+      message
+    );
   }
 
   async receiveMessage({ name, data }) {

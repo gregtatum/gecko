@@ -490,8 +490,7 @@ let JSWINDOWACTORS = {
       esModuleURI: "resource://gre/actors/TranslationsChild.sys.mjs",
       events: {
         DOMContentLoaded: {},
-        pageshow: {},
-        pagehide: {},
+        visibilitychange: {},
       },
     },
     matches: [
