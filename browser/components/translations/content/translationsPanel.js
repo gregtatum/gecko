@@ -1114,6 +1114,14 @@ var TranslationsPanel = new (class {
       isFirstUserInteraction = null,
     }
   ) {
+    const window =
+      gBrowser.selectedBrowser.browsingContext.top.embedderElement.ownerGlobal;
+
+    await this.#ensureLangListsBuilt();
+
+    this.#populateSettingsMenuItems();
+
+    await window.ensureCustomElements("moz-support-link");
     await window.ensureCustomElements("moz-button-group");
 
     const { panel, appMenuButton } = this.elements;
@@ -1180,10 +1188,6 @@ var TranslationsPanel = new (class {
       return;
     }
 
-    const window =
-      gBrowser.selectedBrowser.browsingContext.top.embedderElement.ownerGlobal;
-    window.ensureCustomElements("moz-support-link");
-
     const { button } = this.buttonElements;
 
     const { requestedTranslationPair, locationChangeId } =
@@ -1191,8 +1195,6 @@ var TranslationsPanel = new (class {
 
     // Store this value because it gets modified when #showDefaultView is called below.
     const isFirstUserInteraction = !this._hasShownPanel;
-
-    await this.#ensureLangListsBuilt();
 
     if (requestedTranslationPair) {
       await this.#showRevisitView(requestedTranslationPair).catch(error => {
@@ -1203,8 +1205,6 @@ var TranslationsPanel = new (class {
         this.console?.error(error);
       });
     }
-
-    this.#populateSettingsMenuItems();
 
     const targetButton =
       button.contains(event.target) ||
@@ -1265,7 +1265,7 @@ var TranslationsPanel = new (class {
     actor.translate(
       this.elements.fromMenuList.value,
       this.elements.toMenuList.value,
-      false // reportAsAutoTranslate
+      false // isAutoTranslate
     );
   }
 
@@ -1584,12 +1584,14 @@ var TranslationsPanel = new (class {
               ? this.elements.appMenuButton
               : button;
 
-            // Re-open the menu on an error.
-            await this.#openPanelPopup(targetButton, {
-              autoShow: true,
-              viewName: "errorView",
-              maintainFlow: true,
-            });
+            if (!this.#getTranslationsActor().isAutoTranslate) {
+              // Re-open the menu on an error.
+              await this.#openPanelPopup(targetButton, {
+                autoShow: true,
+                viewName: "errorView",
+                maintainFlow: true,
+              });
+            }
             break;
           default:
             console.error("Unknown translation error", error);

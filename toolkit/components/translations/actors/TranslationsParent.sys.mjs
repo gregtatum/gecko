@@ -192,6 +192,11 @@ export class TranslationsParent extends JSWindowActorParent {
   #isDestroyed = false;
 
   /**
+   * Remember when the page was auto-translated.
+   */
+  isAutoTranslate = false;
+
+  /**
    * Remember the detected languages on a page reload. This will keep the translations
    * button from disappearing and reappearing, which causes the button to lose focus.
    *
@@ -219,7 +224,7 @@ export class TranslationsParent extends JSWindowActorParent {
       this.translate(
         fromLanguage,
         toLanguage,
-        false // reportAsAutoTranslate
+        false // isAutoTranslate
       );
     }
   }
@@ -725,11 +730,12 @@ export class TranslationsParent extends JSWindowActorParent {
 
         this.languageState.detectedLanguages = detectedLanguages;
 
-        if (this.shouldAutoTranslate(detectedLanguages)) {
+        const isAutoTranslate = this.shouldAutoTranslate(detectedLanguages);
+        if (isAutoTranslate) {
           this.translate(
             detectedLanguages.docLangTag,
             detectedLanguages.userLangTag,
-            true // reportAsAutoTranslate
+            isAutoTranslate
           );
         } else {
           this.maybeOfferTranslations(detectedLanguages);
@@ -1865,24 +1871,27 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
-   * @param {boolean} reportAsAutoTranslate - In telemetry, report this as
+   * @param {boolean} isAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
+  translate(fromLanguage, toLanguage, isAutoTranslate) {
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
-        { fromLanguage, toLanguage, reportAsAutoTranslate }
+        { fromLanguage, toLanguage, isAutoTranslate }
       );
       return;
     }
     if (!fromLanguage || !toLanguage) {
       lazy.console.error(
         "A translation was requested but the fromLanguage or toLanguage was not set.",
-        { fromLanguage, toLanguage, reportAsAutoTranslate }
+        { fromLanguage, toLanguage, isAutoTranslate }
       );
       return;
     }
+
+    this.isAutoTranslate = isAutoTranslate;
+
     if (this.languageState.requestedTranslationPair) {
       // This page has already been translated, restore it and translate it
       // again once the actor has been recreated.
@@ -1904,7 +1913,7 @@ export class TranslationsParent extends JSWindowActorParent {
         fromLanguage,
         toLanguage,
         topPreferredLanguage,
-        autoTranslate: reportAsAutoTranslate,
+        autoTranslate: isAutoTranslate,
       });
       this.sendAsyncMessage("Translations:TranslatePage", {
         fromLanguage,
