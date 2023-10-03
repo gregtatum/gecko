@@ -15,7 +15,7 @@ export class TranslationsEngineParent extends JSWindowActorParent {
   /**
    * Keep track of the live actors by InnerWindowID.
    *
-   * @type {Map<InnerWindowID, TranslationsParent>}
+   * @type {Map<InnerWindowID, TranslationsParent | AboutTranslationsParent>}
    */
   #translationsParents = new Map();
 
@@ -23,29 +23,33 @@ export class TranslationsEngineParent extends JSWindowActorParent {
     switch (name) {
       case "TranslationsEngine:RequestEnginePayload": {
         const { fromLanguage, toLanguage } = data;
-        return lazy.TranslationsParent.getTranslationsEnginePayload(
-          fromLanguage,
-          toLanguage
-        );
+        const payloadPromise =
+          lazy.TranslationsParent.getTranslationsEnginePayload(
+            fromLanguage,
+            toLanguage
+          );
+        payloadPromise.catch(error => {
+          lazy.TranslationsParent.telemetry().onError(String(error));
+        });
+        return payloadPromise;
       }
       case "TranslationsEngine:ReportEngineStatus":
         const { innerWindowId, status } = data;
         const translationsParent = this.#translationsParents.get(innerWindowId);
-        if (!translationsParent) {
-          throw new Error(
-            "Unable to find the translations parent from the innerWindowId: " +
-              innerWindowId
-          );
-        }
-        switch (status) {
-          case "ready":
-            translationsParent.languageState.isEngineReady = true;
-            break;
-          case "error":
-            translationsParent.languageState.error = "engine-load-failure";
-            break;
-          default:
-            throw new Error("Unknown engine status: " + status);
+
+        // about:translations will not have a TranslationsParent associated with
+        // this call.
+        if (translationsParent) {
+          switch (status) {
+            case "ready":
+              translationsParent.languageState.isEngineReady = true;
+              break;
+            case "error":
+              translationsParent.languageState.error = "engine-load-failure";
+              break;
+            default:
+              throw new Error("Unknown engine status: " + status);
+          }
         }
         return undefined;
       default:
@@ -53,24 +57,40 @@ export class TranslationsEngineParent extends JSWindowActorParent {
     }
   }
 
+  constructor() {
+    super();
+  }
+
   /**
-   * @param {TranslationsParent} translationsParent
    * @param {string} fromLanguage
    * @param {string} toLanguage
    * @param {number} innerWindowId
    * @param {MessagePort} port
+   * @param {number} innerWindowId
+   * @param {TranslationsParent} [translationsParent]
    */
-  startTranslation(translationsParent, fromLanguage, toLanguage, port) {
-    this.#translationsParents.set(
-      translationsParent.innerWindowId,
-      translationsParent
-    );
+  startTranslation(
+    fromLanguage,
+    toLanguage,
+    port,
+    innerWindowId,
+    translationsParent
+  ) {
+    if (translationsParent) {
+      this.#translationsParents.set(
+        translationsParent.innerWindowId,
+        translationsParent
+      );
+    }
+    if (this.#isDestroyed) {
+      throw new Error("The translation engine process was already destroyed.");
+    }
     this.sendAsyncMessage(
       "TranslationsEngine:StartTranslation",
       {
         fromLanguage,
         toLanguage,
-        innerWindowId: translationsParent.innerWindowId,
+        innerWindowId,
         port,
       },
       [port]
@@ -93,5 +113,20 @@ export class TranslationsEngineParent extends JSWindowActorParent {
       toLanguage,
       closePort,
     });
+  }
+
+  #isDestroyed = false;
+
+  didDestroy() {
+    this.#isDestroyed = true;
+  }
+
+  /**
+   * Destroys any engines, useful for consistent testing.
+   */
+  destroyEngines() {
+    if (!this.#isDestroyed) {
+      this.sendAsyncMessage("TranslationsEngine:DestroyEngines");
+    }
   }
 }

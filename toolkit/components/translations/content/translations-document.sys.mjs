@@ -284,7 +284,7 @@ export class TranslationsDocument {
     this.addRootElement(document.querySelector("title"));
     this.addRootElement(document.body, true /* reportWordsInViewport */);
 
-    this.viewportTranslated.then(() => {
+    this.viewportTranslated?.then(() => {
       ChromeUtils.addProfilerMarker(
         "TranslationsChild",
         { innerWindowId, startTime: now() },
@@ -299,7 +299,8 @@ export class TranslationsDocument {
 
     lazy.console.log(
       "Beginning to translate.",
-      document.defaultView.location.href
+      // The defaultView may not be there on tests.
+      document.defaultView?.location.href
     );
   }
 

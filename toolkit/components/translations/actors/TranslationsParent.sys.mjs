@@ -356,11 +356,45 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #engine = null;
 
-  static getEngineProcess() {
+  static async getEngineProcess() {
     if (!this.#engine) {
       TranslationsParent.#engine = TranslationsParent.#getEngineProcessImpl();
     }
+    const enginePromise = TranslationsParent.#engine;
+
+    // Determine if the actor was destroyed, or if there was an error. In this case
+    // attempt to rebuild the process.
+    let needsRebuilding = true;
+    try {
+      const { actor } = await enginePromise;
+      needsRebuilding = actor.isDestroyed;
+    } catch {}
+
+    if (enginePromise !== TranslationsParent.#engine) {
+      // This call lost the race, something else updated the engine promise, return that.
+      return TranslationsParent.#engine;
+    }
+
+    if (needsRebuilding) {
+      // The engine was destroyed, attempt to re-create the engine process.
+      this.#engine = (async () => {
+        await TranslationsParent.destroyEngineProcess();
+        return TranslationsParent.#getEngineProcessImpl();
+      })();
+    }
+
     return this.#engine;
+  }
+
+  static destroyEngineProcess() {
+    const enginePromise = this.#engine;
+    this.#engine = null;
+    if (enginePromise) {
+      return enginePromise.then(({ windowlessBrowser }) => {
+        windowlessBrowser.close();
+      });
+    }
+    return Promise.resolve();
   }
 
   /**
@@ -1994,10 +2028,11 @@ export class TranslationsParent extends JSWindowActorParent {
       // process and the engine's process.
       const { port1, port2 } = new MessageChannel();
       engineProcess.actor.startTranslation(
-        this,
         fromLanguage,
         toLanguage,
-        port1
+        port1,
+        this.innerWindowId,
+        this
       );
 
       this.languageState.requestedTranslationPair = {

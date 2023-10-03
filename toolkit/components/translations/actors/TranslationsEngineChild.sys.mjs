@@ -46,6 +46,10 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         });
         break;
       }
+      case "TranslationsEngine:DestroyEngines": {
+        this.contentWindow.postMessage({ type: "DestroyEngines" });
+        break;
+      }
       default:
         console.error("Unknown message received", name);
     }

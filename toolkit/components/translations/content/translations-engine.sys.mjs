@@ -38,7 +38,7 @@ export class TranslationsEngine {
    * Maps a language pair key to a cached engine. Engines are kept around for a timeout
    * before they are removed so that they can be re-used during navigation.
    *
-   * @type {Map<string, TranslationsEngine>}
+   * @type {Map<string, Promise<TranslationsEngine>>}
    */
   static #cachedEngines = new Map();
 
@@ -133,8 +133,20 @@ export class TranslationsEngine {
     TE_log(message);
     this.#worker.terminate();
     this.#worker = null;
+    if (this.#keepAliveTimeout) {
+      clearTimeout(this.#keepAliveTimeout);
+    }
     TranslationsEngine.#cachedEngines.delete(this.languagePairKey);
   };
+
+  /**
+   * Manually destroy the cached engines.
+   */
+  static destroyEngines() {
+    for (const enginePromise of TranslationsEngine.#cachedEngines.values()) {
+      enginePromise.then(engine => engine.terminate());
+    }
+  }
 
   /**
    * The worker needs to be shutdown after some amount of time of not being used.
@@ -443,7 +455,10 @@ window.addEventListener("message", ({ data }) => {
       });
       break;
     }
-
+    case "DestroyEngines": {
+      TranslationsEngine.destroyEngines();
+      break;
+    }
     default:
       throw new Error("Unknown TranslationsEngineChromeToContent event.");
   }
