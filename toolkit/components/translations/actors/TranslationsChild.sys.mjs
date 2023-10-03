@@ -111,11 +111,6 @@ export class TranslationsChild extends JSWindowActorChild {
     }
   }
 
-  sendTelemetryError(error) {
-    const errorMessage = String(error);
-    this.sendAsyncMessage("Translations:SendTelemetryError", { errorMessage });
-  }
-
   getOrCreateLanguageIdEngine() {
     return lazy.LanguageIdEngine.getOrCreate(() => {
       if (!this.manager || !this.manager.isCurrentGlobal) {

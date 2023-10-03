@@ -822,10 +822,6 @@ export class TranslationsParent extends JSWindowActorParent {
         this.#discardTranslations(false /* keep the MessagePort open. */);
         break;
       }
-      case "Translations:SendTelemetryError": {
-        TranslationsParent.telemetry().onError(data.errorMessage);
-        break;
-      }
       case "Translations:ReportLangTags": {
         const { documentElementLang, href } = data;
         const detectedLanguages = await this.getDetectedLanguages(
