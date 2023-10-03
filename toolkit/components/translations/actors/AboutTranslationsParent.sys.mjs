@@ -24,7 +24,7 @@ export class AboutTranslationsParent extends JSWindowActorParent {
         const { fromLanguage, toLanguage } = data;
         const engineProcess = await lazy.TranslationsParent.getEngineProcess();
         if (this.#isDestroyed) {
-          return;
+          return undefined;
         }
         const { port1, port2 } = new MessageChannel();
         engineProcess.actor.startTranslation(
@@ -47,8 +47,13 @@ export class AboutTranslationsParent extends JSWindowActorParent {
           },
           [port2] // Mark the port as transerable.
         );
-
-        break;
+        return undefined;
+      }
+      case "AboutTranslations:GetSupportedLanguages": {
+        return lazy.TranslationsParent.getSupportedLanguages();
+      }
+      case "AboutTranslations:IsTranslationsEngineSupported": {
+        return lazy.TranslationsParent.getIsTranslationsEngineSupported();
       }
       default:
         throw new Error("Unknown AboutTranslations message: " + name);

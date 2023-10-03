@@ -822,9 +822,6 @@ export class TranslationsParent extends JSWindowActorParent {
         this.#discardTranslations(false /* keep the MessagePort open. */);
         break;
       }
-      case "Translations:GetSupportedLanguages": {
-        return TranslationsParent.getSupportedLanguages();
-      }
       case "Translations:SendTelemetryError": {
         TranslationsParent.telemetry().onError(data.errorMessage);
         break;
@@ -860,9 +857,6 @@ export class TranslationsParent extends JSWindowActorParent {
           this.maybeOfferTranslations(detectedLanguages);
         }
         return undefined;
-      }
-      case "Translations:IsTranslationsEngineSupported": {
-        return TranslationsParent.getIsTranslationsEngineSupported();
       }
     }
     return undefined;

@@ -198,9 +198,9 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    */
   AT_getSupportedLanguages() {
     return this.#convertToContentPromise(
-      this.#getTranslationsChild()
-        .getSupportedLanguages()
-        .then(data => Cu.cloneInto(data, this.contentWindow))
+      this.sendQuery("AboutTranslations:GetSupportedLanguages").then(data =>
+        Cu.cloneInto(data, this.contentWindow)
+      )
     );
   }
 
@@ -210,7 +210,7 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    */
   AT_isTranslationEngineSupported() {
     return this.#convertToContentPromise(
-      this.#getTranslationsChild().isTranslationsEngineSupported()
+      this.sendQuery("AboutTranslations:IsTranslationsEngineSupported")
     );
   }
 
