@@ -417,7 +417,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
     // Manages the hidden ChromeWindow.
     const hiddenFrame = new lazy.HiddenFrame();
-    const chromeWindow = await hiddenFrame.get();
+    const chromeWindow = await hiddenFrame.getChromeWindow();
     const doc = chromeWindow.document;
 
     const browser = doc.createXULElement("browser");
