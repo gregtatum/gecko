@@ -419,7 +419,7 @@ add_task(async function checkAllTheCSS() {
     "resource://gre/modules/HiddenFrame.sys.mjs"
   );
   let hiddenFrame = new HiddenFrame();
-  let win = await hiddenFrame.get();
+  let win = await hiddenFrame.getChromeWindow();
   let iframe = win.document.createElementNS(
     "http://www.w3.org/1999/xhtml",
     "html:iframe"

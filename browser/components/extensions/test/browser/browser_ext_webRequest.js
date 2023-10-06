@@ -15,7 +15,7 @@ SimpleTest.requestCompleteLog();
 function createHiddenBrowser(url) {
   let frame = new HiddenFrame();
   return new Promise(resolve =>
-    frame.get().then(subframe => {
+    frame.getChromeWindow().then(subframe => {
       let doc = subframe.document;
       let browser = doc.createElementNS(XUL_NS, "browser");
       browser.setAttribute("type", "content");

@@ -96,9 +96,9 @@ async function takeScreenshot(
   let frame;
   try {
     frame = new HiddenFrame();
-    let windowlessBrowser = await frame.get();
+    let chromeWindow = await frame.getChromeWindow();
 
-    let doc = windowlessBrowser.document;
+    let doc = chromeWindow.document;
     let browser = doc.createXULElement("browser");
     browser.setAttribute("remote", "true");
     browser.setAttribute("type", "content");
