@@ -54,6 +54,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
   TranslationsTelemetry:
     "chrome://global/content/translations/TranslationsTelemetry.sys.mjs",
+  HiddenFrame: "resource://gre/modules/HiddenFrame.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -352,7 +353,7 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
-   * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
+   * @type {Promise<{ hiddenFrame: HiddenFrame, actor: TranslationsEngineParent }> | null}
    */
   static #engine = null;
 
@@ -395,15 +396,17 @@ export class TranslationsParent extends JSWindowActorParent {
         {},
         "Destroying the translations engine process"
       );
-      return enginePromise.then(({ windowlessBrowser }) => {
-        windowlessBrowser.close();
+      // TODO(before landing) - Send out a signal to the ports that they are being shut
+      // down, or maybe see if ports report that they are closed.
+      return enginePromise.then(({ hiddenFrame }) => {
+        hiddenFrame.destroy();
       });
     }
     return Promise.resolve();
   }
 
   /**
-   * @type {Promise<{ windowlessBrowser: nsIWindowlessBrowser, actor: TranslationsEngineParent }> | null}
+   * @type {Promise<{ hiddenFrame: HiddenFrame, actor: TranslationsEngineParent }> | null}
    */
   static async #getEngineProcessImpl() {
     ChromeUtils.addProfilerMarker(
@@ -412,52 +415,59 @@ export class TranslationsParent extends JSWindowActorParent {
       "Creating the translations engine process"
     );
 
-    // Create a windowless browser, which doesn't render to the screen. The
-    // nsIWindowlessBrowser is a strong reference, that must be closed before dropping
-    // the reference. It only provides access to a docShell and browsingContext.
-    /** @type {nsIWindowlessBrowser} */
-    const windowlessBrowser = Services.appShell.createWindowlessBrowser(false);
-    const { docShell, browsingContext } = windowlessBrowser;
+    // Manages the hidden ChromeWindow.
+    const hiddenFrame = new lazy.HiddenFrame();
+    const chromeWindow = await hiddenFrame.get();
+    const doc = chromeWindow.document;
 
-    // Load the nsIWebNavigation interface onto the windowless browser to enable
-    // the loading of a document.
-    docShell.QueryInterface(Ci.nsIWebNavigation);
-    docShell.loadURI(
-      Services.io.newURI(
-        "chrome://global/content/translations/translations-engine.html"
-      ),
-      {
-        triggeringPrincipal:
-          Services.scriptSecurityManager.getSystemPrincipal(),
-        loadFlags: Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_HISTORY,
-      }
+    const browser = doc.createXULElement("browser");
+    browser.setAttribute("remote", "true");
+    browser.setAttribute("remoteType", "web");
+    browser.setAttribute("disableglobalhistory", "true");
+    browser.setAttribute("type", "content");
+    browser.setAttribute(
+      "src",
+      "chrome://global/content/translations/translations-engine.html"
     );
+    doc.documentElement.appendChild(browser);
 
-    // Wait for the chrome document global to be created.
+    // Wait for the translations engine to be loaded.
     await new Promise(resolve => {
-      const observer = (window, topic, _data) => {
-        if (window.document === docShell.document) {
-          Services.obs.removeObserver(observer, topic);
-          resolve();
-        }
+      const listener = {
+        QueryInterface: ChromeUtils.generateQI([
+          "nsIWebProgressListener",
+          "nsIWebProgressListener2",
+          "nsISupportsWeakReference",
+        ]),
+
+        /**
+         * @param {nsIWebProgress} _webProgress
+         * @param {nsIRequest} request
+         * @param {number} stateFlags
+         * @param {nsresult} _status
+         */
+        onStateChange(_webProgress, request, stateFlags, _status) {
+          if (!request) {
+            return;
+          }
+          if (
+            stateFlags & Ci.nsIWebProgressListener.STATE_STOP &&
+            stateFlags & Ci.nsIWebProgressListener.STATE_IS_NETWORK
+          ) {
+            browser.removeProgressListener(listener);
+            resolve();
+          }
+        },
       };
-      Services.obs.addObserver(observer, "chrome-document-global-created");
+      browser.addProgressListener(listener, Ci.nsIWebProgress.NOTIFY_STATE_ALL);
     });
 
-    // Wait for the document to be ready.
-    const document = windowlessBrowser.document;
-    if (document.readyState !== "complete") {
-      await new Promise(resolve => {
-        document.defaultView.addEventListener("load", () => resolve(), {
-          once: true,
-        });
-      });
-    }
-
     const actor =
-      browsingContext.currentWindowGlobal.getActor("TranslationsEngine");
+      browser.browsingContext.currentWindowGlobal.getActor(
+        "TranslationsEngine"
+      );
 
-    return { windowlessBrowser, actor };
+    return { hiddenFrame, browser, actor };
   }
 
   /**

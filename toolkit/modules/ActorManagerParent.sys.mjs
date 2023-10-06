@@ -513,7 +513,11 @@ let JSWINDOWACTORS = {
     child: {
       esModuleURI: "resource://gre/actors/TranslationsEngineChild.sys.mjs",
     },
-    matches: ["chrome://global/content/translations/translations-engine.html"],
+    includeChrome: true,
+    matches: [
+      "about:translations-engine",
+      "chrome://global/content/translations/translations-engine.html",
+    ],
     enablePreference: "browser.translations.enable",
   },
 

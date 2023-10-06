@@ -68,10 +68,6 @@ export class TranslationsEngineParent extends JSWindowActorParent {
     }
   }
 
-  constructor() {
-    super();
-  }
-
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage

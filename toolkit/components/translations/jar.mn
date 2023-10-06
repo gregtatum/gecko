@@ -3,6 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 toolkit.jar:
+%   resource translations %res/translations/ contentaccessible=yes
+    res/translations/translations-engine.sys.mjs   (content/translations-engine.sys.mjs)
+    res/translations/translations-engine-worker.js (content/translations-engine-worker.js)
+
+toolkit.jar:
     content/global/translations/bergamot-translator.js        (bergamot-translator/bergamot-translator.js)
     content/global/translations/fasttext.js                   (fasttext/fasttext.js)
     content/global/translations/fasttext_wasm.js              (fasttext/fasttext_wasm.js)
