@@ -63,7 +63,8 @@ export class TranslationsEngineChild extends JSWindowActorChild {
       "TE_logError",
       "TE_requestEnginePayload",
       "TE_reportEngineStatus",
-      "TE_destroyEngineProcess",
+      "TE_notifyAllEnginesRemoved",
+      "TE_notifyEnginesPresent",
     ];
     for (const defineAs of fns) {
       Cu.exportFunction(this[defineAs].bind(this), this.contentWindow, {
@@ -170,9 +171,18 @@ export class TranslationsEngineChild extends JSWindowActorChild {
   }
 
   /**
-   * No engines are still alive, destroy the process.
+   * When all the engines are removed, this process can be removed. The process
+   * will only be removed when the TranslationsParent decides to do so.
    */
-  TE_destroyEngineProcess() {
-    this.sendAsyncMessage("TranslationsEngine:DestroyEngineProcess");
+  TE_notifyAllEnginesRemoved() {
+    this.sendAsyncMessage("TranslationsEngine:AllEnginesRemoved");
+  }
+
+  /**
+   * A content page can retain a handle on a message port, and when used will
+   * recreate a translations engine.
+   */
+  TE_notifyEnginesPresent() {
+    this.sendAsyncMessage("TranslationsEngine:EnginesPresent");
   }
 }

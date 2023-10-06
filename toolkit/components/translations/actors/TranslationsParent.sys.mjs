@@ -335,6 +335,13 @@ export class TranslationsParent extends JSWindowActorParent {
   static testAutomaticPopup = false;
 
   /**
+   * The count of how many ports are open to the translations engine process.
+   */
+  static #translationPortsCount = 0;
+
+  static areEnginesPresent = false;
+
+  /**
    * Telemetry functions for Translations
    * @returns {TranslationsTelemetry}
    */
@@ -2049,6 +2056,8 @@ export class TranslationsParent extends JSWindowActorParent {
         toLanguage,
       };
 
+      TranslationsParent.#translationPortsCount++;
+
       const preferredLanguages = TranslationsParent.getPreferredLanguages();
       const topPreferredLanguage =
         preferredLanguages && preferredLanguages.length
@@ -2528,16 +2537,16 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {boolean} closePort - Set to true to close the MessagePort.
    */
   #discardTranslations(closePort) {
-    if (!TranslationsParent.#engine) {
+    const { requestedTranslationPair } = this.languageState;
+    if (!TranslationsParent.#engine || !requestedTranslationPair) {
       return;
     }
     TranslationsParent.#engine
       // If the engine fails to load, ignore it since we are ending translations.
       .catch(() => null)
       .then(engineProcess => {
-        if (engineProcess && this.languageState.requestedTranslationPair) {
-          const { fromLanguage, toLanguage } =
-            this.languageState.requestedTranslationPair;
+        if (engineProcess) {
+          const { fromLanguage, toLanguage } = requestedTranslationPair;
           engineProcess.actor.discardTranslations(
             this.innerWindowId,
             fromLanguage,
@@ -2562,7 +2571,35 @@ export class TranslationsParent extends JSWindowActorParent {
 
     this.#discardTranslations(true /* close the MessagePort */);
 
+    // Reduce the port count, and maybe destroy the engine.
+    if (this.languageState.requestedTranslationPair) {
+      TranslationsParent.#translationPortsCount--;
+      if (TranslationsParent.#translationPortsCount < 0) {
+        TranslationsParent.#translationPortsCount = 0;
+      }
+      TranslationsParent.maybeDestroyEngineProcess();
+    }
+
     this.#isDestroyed = true;
+  }
+
+  /**
+   * The engines are kept alive for a time, so only destroy the process if they are
+   * all actually killed. For instance, there can be no active translation ports,
+   * but then an engine is retained for the next page load.
+   */
+  static maybeDestroyEngineProcess() {
+    if (
+      TranslationsParent.#translationPortsCount === 0 &&
+      !TranslationsParent.areEnginesPresent
+    ) {
+      lazy.console.log(
+        "There are no more translation ports open. Destroying the engine process."
+      );
+      TranslationsParent.destroyEngineProcess().catch(error =>
+        lazy.console.error(error)
+      );
+    }
   }
 }
 

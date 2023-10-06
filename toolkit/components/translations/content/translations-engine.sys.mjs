@@ -4,7 +4,8 @@
 
 /* eslint-env browser */
 /* globals TE_addProfilerMarker, TE_getLogLevel, TE_log, TE_logError, TE_getLogLevel,
-           TE_destroyEngineProcess, TE_requestEnginePayload, TE_reportEngineStatus */
+           TE_notifyEnginesPresent, TE_notifyAllEnginesRemoved, TE_requestEnginePayload,
+           TE_reportEngineStatus */
 
 /**
  * This file lives in the translation engine's content process. It is unpriviliged,
@@ -83,6 +84,10 @@ export class TranslationsEngine {
 
     TranslationsEngine.#cachedEngines.set(languagePairKey, enginePromise);
 
+    if (TranslationsEngine.#cachedEngines.size === 1) {
+      TE_notifyEnginesPresent();
+    }
+
     enginePromise.catch(error => {
       TE_reportEngineStatus(innerWindowId, "error");
       TE_logError(
@@ -103,8 +108,8 @@ export class TranslationsEngine {
   static #removeEngineFromCache(languagePairKey) {
     TranslationsEngine.#cachedEngines.delete(languagePairKey);
     if (TranslationsEngine.#cachedEngines.size === 0) {
-      TE_log("The last engine was removed, destroying this process.");
-      TE_destroyEngineProcess();
+      TE_log("The last engine was removed.");
+      TE_notifyAllEnginesRemoved();
     }
   }
 

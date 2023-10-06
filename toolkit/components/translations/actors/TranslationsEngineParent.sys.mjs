@@ -53,15 +53,17 @@ export class TranslationsEngineParent extends JSWindowActorParent {
         }
         return undefined;
       }
-      case "TranslationsEngine:DestroyEngineProcess":
+      case "TranslationsEngine:AllEnginesRemoved":
         ChromeUtils.addProfilerMarker(
           "TranslationsEngine",
           {},
-          "Loading bergamot wasm array buffer"
+          "All engines removed"
         );
-        lazy.TranslationsParent.destroyEngineProcess().catch(error =>
-          console.error(error)
-        );
+        lazy.TranslationsParent.are = false;
+        lazy.TranslationsParent.maybeDestroyEngineProcess();
+        return undefined;
+      case "TranslationsEngine:EnginesPresent":
+        lazy.TranslationsParent.areEnginesPresent = true;
         return undefined;
       default:
         return undefined;
