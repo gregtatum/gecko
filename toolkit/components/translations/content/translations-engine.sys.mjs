@@ -332,6 +332,10 @@ function getLanguagePairKey(fromLanguage, toLanguage) {
   return `${fromLanguage},${toLanguage}`;
 }
 
+/**
+ * Maps the innerWindowId to the port.
+ * @type {Map<number, { fromLanguage: string, toLanguage: string, port: MessagePort }}
+ */
 const ports = new Map();
 
 /**
@@ -400,6 +404,10 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
         });
         break;
       }
+      case "TranslationsPort:DiscardTranslations": {
+        discardTranslations(innerWindowId);
+        break;
+      }
       default:
         TE_logError("Unknown translations port message: " + data.type);
         break;
@@ -418,6 +426,26 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
 }
 
 /**
+ * Discards the queue and removes the port.
+ *
+ * @param {innerWindowId} number
+ */
+function discardTranslations(innerWindowId) {
+  TE_log("Discarding translations, innerWindowId:", innerWindowId);
+
+  const portData = ports.get(innerWindowId);
+  if (portData) {
+    const { port, fromLanguage, toLanguage } = portData;
+    port.close();
+    ports.delete(innerWindowId);
+
+    TranslationsEngine.withCachedEngine(fromLanguage, toLanguage, engine => {
+      engine.discardTranslationQueue(innerWindowId);
+    });
+  }
+}
+
+/**
  * Listen for events coming from the TranslationsEngine actor.
  */
 window.addEventListener("message", ({ data }) => {
@@ -426,31 +454,12 @@ window.addEventListener("message", ({ data }) => {
       const { fromLanguage, toLanguage, innerWindowId, port } = data;
       TE_log("Starting translation", innerWindowId);
       listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port);
-      ports.set(innerWindowId, port);
+      ports.set(innerWindowId, { port, fromLanguage, toLanguage });
       break;
     }
     case "DiscardTranslations": {
-      const { fromLanguage, toLanguage, innerWindowId, closePort } = data;
-      TE_log(
-        "Discarding translations",
-        fromLanguage,
-        toLanguage,
-        innerWindowId
-      );
-
-      if (closePort) {
-        const port = ports.get(innerWindowId);
-        if (port) {
-          port.close();
-          ports.delete(innerWindowId);
-        } else {
-          TE_logError("Unable to find the port to close.");
-        }
-      }
-
-      TranslationsEngine.withCachedEngine(fromLanguage, toLanguage, engine => {
-        engine.discardTranslationQueue(innerWindowId);
-      });
+      const { innerWindowId } = data;
+      discardTranslations(innerWindowId);
       break;
     }
     default:

@@ -105,20 +105,15 @@ export class TranslationsEngineParent extends JSWindowActorParent {
   }
 
   /**
-   * Remove all the translations that are currently queued.
+   * Remove all the translations that are currently queued, and remove
+   * the communication port.
    *
    * @param {number} innerWindowId
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
-   * @param {boolean} closePort - Close the MessagePort as well.
    */
-  discardTranslations(innerWindowId, fromLanguage, toLanguage, closePort) {
+  discardTranslations(innerWindowId) {
     this.#translationsParents.delete(innerWindowId);
     this.sendAsyncMessage("TranslationsEngine:DiscardTranslations", {
       innerWindowId,
-      fromLanguage,
-      toLanguage,
-      closePort,
     });
   }
 

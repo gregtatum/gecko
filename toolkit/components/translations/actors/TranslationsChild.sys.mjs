@@ -33,12 +33,10 @@ export class TranslationsChild extends JSWindowActorChild {
       case "visibilitychange":
         if (this.#translatedDoc) {
           if (this.document.visibilityState === "visible") {
-            this.addMarker("Resume translations");
-            this.#translatedDoc.translator.pause(false);
+            this.sendAsyncMessage("Translations:RequestPort");
           } else {
-            this.addMarker("Pause translations");
-            this.#translatedDoc.translator.pause(true);
-            this.sendAsyncMessage("Translations:Pause");
+            this.addMarker("Pausing translations and discarding the port");
+            this.#translatedDoc.translator.discardPort();
           }
         }
         break;
@@ -105,6 +103,11 @@ export class TranslationsChild extends JSWindowActorChild {
         } catch (error) {
           return null;
         }
+      }
+      case "Translations:AcquirePort": {
+        this.addMarker("Acquired a port, resuming translations");
+        this.#translatedDoc.translator.acquirePort(data.port);
+        return undefined;
       }
       default:
         throw new Error("Unknown message.", name);

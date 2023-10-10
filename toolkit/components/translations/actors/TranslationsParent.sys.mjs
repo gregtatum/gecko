@@ -200,13 +200,6 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static #previousDetectedLanguages = null;
 
-  /**
-   * Keep track of the live actors by InnerWindowID.
-   *
-   * @type {Map<InnerWindowID, TranslationsParent>}
-   */
-  static #actorsByInnerWindowId = new Map();
-
   actorCreated() {
     this.innerWindowId = this.browsingContext.top.embedderElement.innerWindowID;
     this.languageState = new TranslationsLanguageState(
@@ -828,10 +821,6 @@ export class TranslationsParent extends JSWindowActorParent {
         this.languageState.error = data.reason;
         break;
       }
-      case "Translations:Pause": {
-        this.#discardTranslations(false /* keep the MessagePort open. */);
-        break;
-      }
       case "Translations:ReportLangTags": {
         const { documentElementLang, href } = data;
         const detectedLanguages = await this.getDetectedLanguages(
@@ -862,6 +851,48 @@ export class TranslationsParent extends JSWindowActorParent {
         } else {
           this.maybeOfferTranslations(detectedLanguages);
         }
+        return undefined;
+      }
+      case "Translations:RequestPort": {
+        const { requestedTranslationPair } = this.languageState;
+        if (!requestedTranslationPair) {
+          lazy.console.error(
+            "A port was requested by no translation pair was previously requested"
+          );
+          return undefined;
+        }
+
+        let engineProcess;
+        try {
+          engineProcess = await TranslationsParent.getEngineProcess();
+        } catch (error) {
+          console.error("Failed to get the translation engine process", error);
+          return undefined;
+        }
+
+        if (!this.innerWindowId) {
+          throw new Error(
+            "The innerWindowId for the TranslationsParent was not available."
+          );
+        }
+
+        // The MessageChannel will be used for communicating directly between the content
+        // process and the engine's process.
+        const { port1, port2 } = new MessageChannel();
+        engineProcess.actor.startTranslation(
+          requestedTranslationPair.fromLanguage,
+          requestedTranslationPair.toLanguage,
+          port1,
+          this.innerWindowId,
+          this
+        );
+
+        this.sendAsyncMessage(
+          "Translations:AcquirePort",
+          { port: port2 },
+          [port2] // Mark the port as transferable.
+        );
+
         return undefined;
       }
     }
@@ -2029,10 +2060,6 @@ export class TranslationsParent extends JSWindowActorParent {
         );
       }
 
-      // Once a translation is started, the innerWindowId needs to be remembered in
-      // order to report back from the eng
-      TranslationsParent.#actorsByInnerWindowId.set(this.innerWindowId, this);
-
       // The MessageChannel will be used for communicating directly between the content
       // process and the engine's process.
       const { port1, port2 } = new MessageChannel();
@@ -2525,9 +2552,10 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
-   * @param {boolean} closePort - Set to true to close the MessagePort.
+   * Ensure that the translations are always destroyed, even if the content translations
+   * are misbehaving.
    */
-  #discardTranslations(closePort) {
+  #ensureTranslationsDiscarded() {
     if (!TranslationsParent.#engine) {
       return;
     }
@@ -2536,14 +2564,7 @@ export class TranslationsParent extends JSWindowActorParent {
       .catch(() => null)
       .then(engineProcess => {
         if (engineProcess && this.languageState.requestedTranslationPair) {
-          const { fromLanguage, toLanguage } =
-            this.languageState.requestedTranslationPair;
-          engineProcess.actor.discardTranslations(
-            this.innerWindowId,
-            fromLanguage,
-            toLanguage,
-            closePort
-          );
+          engineProcess.actor.discardTranslations(this.innerWindowId);
         }
       })
       // This error will be one from the endTranslation code, which we need to
@@ -2558,9 +2579,7 @@ export class TranslationsParent extends JSWindowActorParent {
       );
     }
 
-    TranslationsParent.#actorsByInnerWindowId.delete(this.innerWindowId);
-
-    this.#discardTranslations(true /* close the MessagePort */);
+    this.#ensureTranslationsDiscarded();
 
     this.#isDestroyed = true;
   }

@@ -36,13 +36,10 @@ export class TranslationsEngineChild extends JSWindowActorChild {
         break;
       }
       case "TranslationsEngine:DiscardTranslations": {
-        const { fromLanguage, toLanguage, innerWindowId, closePort } = data;
+        const { innerWindowId } = data;
         this.contentWindow.postMessage({
           type: "DiscardTranslations",
-          fromLanguage,
-          toLanguage,
           innerWindowId,
-          closePort,
         });
         break;
       }

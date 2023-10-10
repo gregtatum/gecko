@@ -1349,9 +1349,9 @@ class QueuedTranslator {
   #paused = true;
 
   /**
-   * @type {MessagePort}
+   * @type {MessagePort | null}
    */
-  #port;
+  #port = null;
 
   /**
    * @type {Document}
@@ -1376,36 +1376,19 @@ class QueuedTranslator {
    */
   #queue = new Map();
 
-  engineStatus = "initializing";
+  /**
+   * @type {"uninitialized" | "ready" | "error"}
+   */
+  engineStatus = "uninitialized";
 
   /**
    * @param {MessagePort} port
    * @param {Document} document
    */
   constructor(port, document) {
-    this.#port = port;
     this.#document = document;
-    // Match up a response on the port to message that was sent.
-    port.onmessage = ({ data }) => {
-      switch (data.type) {
-        case "TranslationsPort:TranslationResponse": {
-          const { targetText, messageId } = data;
-          // A request may not match match a messageId if there is a race during the pausing
-          // and discarding of the queue.
-          this.#requests.get(messageId)?.resolve(targetText);
-          break;
-        }
-        case "TranslationsPort:GetEngineStatusResponse": {
-          this.updateEngineStatus(data.status);
-          break;
-        }
-        default:
-          lazy.console.error("Unknown translations port message: " + data.type);
-          break;
-      }
-    };
 
-    port.postMessage({ type: "TranslationsPort:GetEngineStatusRequest" });
+    this.acquirePort(port);
   }
 
   updateEngineStatus(status) {
@@ -1483,32 +1466,89 @@ class QueuedTranslator {
     });
   }
 
+  discardPort() {
+    this.#port.postMessage({ type: "TranslationsPort:DiscardTranslations" });
+    this.#port.close();
+    this.#port = null;
+    this.engineStatus = "uninitialized";
+    this.pause(true);
+  }
+
+  /**
+   * Acquires a port, checks on the engine status, and then starts or resumes
+   * translations.
+   * @param {MessagePort} port
+   */
+  acquirePort(port) {
+    if (this.#port) {
+      if (this.engineStatus === "ready") {
+        lazy.console.error(
+          "Received a new translation port while one already existed."
+        );
+      }
+      this.discardPort();
+    }
+
+    this.#port = port;
+
+    // Match up a response on the port to message that was sent.
+    port.onmessage = ({ data }) => {
+      switch (data.type) {
+        case "TranslationsPort:TranslationResponse": {
+          const { targetText, messageId } = data;
+          // A request may not match match a messageId if there is a race during the pausing
+          // and discarding of the queue.
+          this.#requests.get(messageId)?.resolve(targetText);
+          break;
+        }
+        case "TranslationsPort:GetEngineStatusResponse": {
+          this.updateEngineStatus(data.status);
+          break;
+        }
+        default:
+          lazy.console.error("Unknown translations port message: " + data.type);
+          break;
+      }
+    };
+
+    port.postMessage({ type: "TranslationsPort:GetEngineStatusRequest" });
+  }
+
   /**
    * Pause translations, or resume. Translations are de-duplicated based on the DOM
-   * node, and only live translations will be posted.
+   * node, and only live translations will be posted. This is a public method only
+   * for tests, otherwise it should be managed internally.
    *
-   * @param {boolean} paused
+   * @param {boolean} doPause
    */
-  pause(paused) {
-    if (this.#paused === paused) {
-      lazy.console.error("The translations was paused or resumed twice.");
+  pause(doPause) {
+    if (this.#paused === doPause) {
       return;
     }
+
+    this.#paused = doPause;
 
     if (this.engineStatus === "error") {
-      // If the engine status in error, there is no reason to resume.
       return;
     }
 
-    this.#paused = paused;
-
-    if (paused) {
+    if (doPause) {
+      if (this.#requests.size) {
+        lazy.console.log(
+          "Pausing translations with pending translation requests."
+        );
+      }
       // Pause translations. Place all of the outstanding requests in a queue.
       for (const request of this.#requests.values()) {
         this.#queue.set(request.node, request);
       }
       this.#requests = new Map();
     } else {
+      if (this.#queue.size) {
+        lazy.console.log(
+          "Resuming translations with a pending translation queue."
+        );
+      }
       // Resume translations. Send the queued translations.
       for (const value of this.#queue.values()) {
         const { node, sourceText, isHTML, resolve, reject } = value;
