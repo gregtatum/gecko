@@ -33,6 +33,9 @@ async function createDoc(html, options) {
     "en",
     0, // This is a fake innerWindowID
     options?.mockedTranslatorPort ?? createMockedTranslatorPort(),
+    () => {
+      throw new Error("Cannot request a new port");
+    },
     performance.now(),
     () => performance.now()
   );

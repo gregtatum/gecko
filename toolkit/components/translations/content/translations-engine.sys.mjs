@@ -7,10 +7,60 @@
            TE_destroyEngineProcess, TE_requestEnginePayload, TE_reportEngineStatus */
 
 /**
- * This file lives in the translation engine's content process. It is unpriviliged,
- * and is in charge of managing the lifecycle the translations engine.
+ * This file lives in the translation engine's process and is in charge of managing the
+ * lifecycle of the translations engines. This process is a singletone Web Content
+ * process that can be created and destroyed as needed.
  *
- * TODO(before landing) - Document this process better.
+ * The goal of the code in this file is to be as unprivileged as possible, which should
+ * unlock Bug 1813789, which will make this file fully unprivileged.
+ *
+ * Each translation needs an engine for that specific translation pair. This engine is
+ * kept around as long as the CACHE_TIMEOUT_MS, after this if some keepAlive event does
+ * not happen, the engine is destroyed. An engine may be destroyed even when a page is
+ * still open and may need translations in the future. This is handled gracefully by
+ * creating new engines and MessagePorts on the fly.
+ *
+ * The engine communicates directly with the content page via a MessagePort. Each end
+ * of the port is transfered from the parent process to the content process, and this
+ * engine process. This port is transitory, and may be closed at any time. Only when a
+ * translation has been requested once (which is initiated by the parent process) can
+ * the content process re-request translation ports. This ensures a rogue content process
+ * only has the capabilities to perform tasks that the parent process has given it.
+ *
+ * The messaging flow can get a little convoluted to handle all of the correctness cases,
+ * but ideally communication passes through the message port as much as possible. There
+ * are many scenarios such as:
+ *
+ *  - Translation pages becoming idle
+ *  - Tab changing causing "pageshow" and "pagehide" visibility changes
+ *  - Translation actor destruction (this can happen long after the page has been
+ *                                   navigated away from, but is still alive in the
+ *                                   page history)
+ *  - Error states
+ *  - Engine Process being graceful shut down (no engines left)
+ *  - Engine Process being killed by the OS.
+ *
+ * The following is a diagram that attempts to illustrate the structure of the processes
+ * and the communication channels that exist between them.
+ *
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │ PARENT PROCESS                                              │
+ * │                                                             │
+ * │  [TranslationsParent]  ←────→  [TranslationsEngineParent]   │
+ * │                  ↑                                    ↑     │
+ * └──────────────────│────────────────────────────────────│─────┘
+ *                    │ JSWindowActor IPC calls            │ JSWindowActor IPC calls
+ *                    │                                    │
+ * ┌──────────────────│────────┐                     ┌─────│─────────────────────────────┐
+ * │ CONTENT PROCESS  │        │                     │     │    ENGINE PROCESS           │
+ * │                  │        │                     │     ↓                             │
+ * │  [french.html]   │        │                     │ [TranslationsEngineChild]         │
+ * │        ↕         ↓        │                     │            ↕                      │
+ * │  [TranslationsChild]      │                     │ [translations-engine.html]        │
+ * │  └──TranslationsDocument  │                     │    ├── "fr to en" engine          │
+ * │     └──port1     « ═══════════ MessageChannel ════ » │   └── port2                  │
+ * │                           │                     │    └── "de to en" engine (idle)   │
+ * └───────────────────────────┘                     └───────────────────────────────────┘
  */
 
 // How long the cache remains alive between uses, in milliseconds.
@@ -29,9 +79,10 @@ const CACHE_TIMEOUT_MS = 15_000;
  * The actual work for the translations happens in a worker. This class manages
  * instantiating and messaging the worker.
  *
- * Keep 1 language engine around in the TranslationsEngine.#cachedEngine cache in case
- * page navigation happens and we can re-use the previous engine. The engines are very
- * heavy-weight, so we only want to keep one around at a time.
+ * Keep unused engines around in the TranslationsEngine.#cachedEngine cache in case
+ * page navigation happens and we can re-use previous engines. The engines are very
+ * heavy-weight, so get rid of them after a timeout. Once all are destroyed the
+ * TranslationsEngineParent is notified that it can be destroyed.
  */
 export class TranslationsEngine {
   /**
@@ -147,6 +198,18 @@ export class TranslationsEngine {
     this.#worker = null;
     if (this.#keepAliveTimeout) {
       clearTimeout(this.#keepAliveTimeout);
+    }
+    for (const [innerWindowId, data] of ports) {
+      const { fromLanguage, toLanguage, port } = data;
+      if (
+        fromLanguage === this.fromLanguage &&
+        toLanguage === this.toLanguage
+      ) {
+        // This port is still active but being closed.
+        ports.delete(innerWindowId);
+        port.postMessage({ type: "TranslationsPort:EngineTerminated" });
+        port.close();
+      }
     }
     TranslationsEngine.#removeEngineFromCache(this.languagePairKey);
   };

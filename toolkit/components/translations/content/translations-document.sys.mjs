@@ -206,6 +206,8 @@ export class TranslationsDocument {
    * @param {string} documentLanguage - The BCP 47 language tag.
    * @param {number} innerWindowId - This is used for better profiler marker reporting.
    * @param {MessagePort} port - The port to the translations engine.
+   * @param {() => void} requestNewPort - Used when an engine times out and a new
+   *                                      translation request comes in.
    * @param {number} translationsStart
    * @param {() => number} now
    */
@@ -214,6 +216,7 @@ export class TranslationsDocument {
     documentLanguage,
     innerWindowId,
     port,
+    requestNewPort,
     translationsStart,
     now
   ) {
@@ -232,7 +235,7 @@ export class TranslationsDocument {
     }
 
     /** @type {QueuedTranslator} */
-    this.translator = new QueuedTranslator(port, document);
+    this.translator = new QueuedTranslator(port, document, requestNewPort);
 
     /** @type {number} */
     this.innerWindowId = innerWindowId;
@@ -1359,6 +1362,11 @@ class QueuedTranslator {
   #document;
 
   /**
+   * @type {() => void}
+   */
+  #requestNewPort;
+
+  /**
    * An id for each message sent. This is used to match up the request and response.
    */
   #nextMessageId = 0;
@@ -1377,35 +1385,36 @@ class QueuedTranslator {
   #queue = new Map();
 
   /**
-   * @type {"uninitialized" | "ready" | "error"}
+   * @type {"uninitialized" | "ready" | "error" | "closed"}
    */
   engineStatus = "uninitialized";
 
   /**
    * @param {MessagePort} port
    * @param {Document} document
+   * @param {() => void} requestNewPort
    */
-  constructor(port, document) {
+  constructor(port, document, requestNewPort) {
     this.#document = document;
+    this.#requestNewPort = requestNewPort;
 
     this.acquirePort(port);
   }
 
-  updateEngineStatus(status) {
-    switch (status) {
-      case "ready":
-        if (this.#document.visibilityState === "visible") {
-          // Start the initial translations if the page is visible.
-          this.pause(false);
-        }
-        break;
-      case "error":
-        break;
-      default:
-        throw new Error("Unknown engine status: " + status);
-    }
-    this.engineStatus = status;
-  }
+  /**
+   * When an engine gets closed while still in use, a new one will need to be requested.
+   *
+   * @type {Promise<void> | null}
+   */
+  #pendingEngineReconstruction = null;
+
+  /**
+   * Called when an engine is reconstructed to resolve the
+   * #pendingEngineReconstruction promise.
+   *
+   * @type {() => void}
+   */
+  #resolvePendingEngineReconstruction;
 
   /**
    * Send a request to translate text to the Translations Engine. If it returns `null`
@@ -1416,7 +1425,27 @@ class QueuedTranslator {
    * @param {string} sourceText
    * @param {boolean} isHTML
    */
-  translate(node, sourceText, isHTML) {
+  async translate(node, sourceText, isHTML) {
+    if (
+      this.engineStatus === "closed" &&
+      !this.#paused &&
+      !this.#pendingEngineReconstruction
+    ) {
+      // The engine was closed while we're not paused. This can happen if the page
+      // is idle, but then a MutationObserver event will trigger a new translation.
+      // For the first call to translate, request a new port.
+      this.#pendingEngineReconstruction = new Promise(resolve => {
+        this.#resolvePendingEngineReconstruction = resolve;
+        // Send a request through the actor for a new port. The request response will
+        // trigger the method `QueuedTranslator.prototype.acquirePort`
+        this.#requestNewPort();
+      });
+    }
+
+    // If there is a pending port request, await on it.
+    await this.#pendingEngineReconstruction;
+    this.#pendingEngineReconstruction = null;
+
     if (this.#paused) {
       // Queue the request while we are paused.
       return new Promise((resolve, reject) => {
@@ -1466,6 +1495,9 @@ class QueuedTranslator {
     });
   }
 
+  /**
+   * Close the port and move any pending translations onto a queue.
+   */
   discardPort() {
     this.#port.postMessage({ type: "TranslationsPort:DiscardTranslations" });
     this.#port.close();
@@ -1502,7 +1534,26 @@ class QueuedTranslator {
           break;
         }
         case "TranslationsPort:GetEngineStatusResponse": {
-          this.updateEngineStatus(data.status);
+          if (data.status === "ready") {
+            if (this.#resolvePendingEngineReconstruction) {
+              // A port was requested, and now the engine is ready.
+              this.#resolvePendingEngineReconstruction();
+              this.#resolvePendingEngineReconstruction = null;
+            }
+            if (this.#document.visibilityState === "visible") {
+              // Start the initial translations if the page is visible.
+              this.pause(false);
+            }
+          }
+          this.engineStatus = data.status;
+          break;
+        }
+        case "TranslationsPort:EngineTerminated": {
+          // The engine was terminated, and if a translation is needed a new port
+          // will need to be requested.
+          this.#port.close();
+          this.#port = null;
+          this.engineStatus = "closed";
           break;
         }
         default:

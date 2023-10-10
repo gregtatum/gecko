@@ -69,6 +69,7 @@ export class TranslationsChild extends JSWindowActorChild {
           data.fromLanguage,
           this.contentWindow.windowGlobalChild.innerWindowId,
           data.port,
+          () => this.sendAsyncMessage("Translations:RequestPort"),
           data.translationsStart,
           () => this.docShell.now()
         );

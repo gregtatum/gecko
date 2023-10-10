@@ -389,8 +389,6 @@ export class TranslationsParent extends JSWindowActorParent {
         {},
         "Destroying the translations engine process"
       );
-      // TODO(before landing) - Send out a signal to the ports that they are being shut
-      // down, or maybe see if ports report that they are closed.
       return enginePromise.then(({ hiddenFrame }) => {
         hiddenFrame.destroy();
       });
