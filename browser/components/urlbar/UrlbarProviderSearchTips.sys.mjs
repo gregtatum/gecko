@@ -491,7 +491,7 @@ class ProviderSearchTips extends UrlbarProvider {
   }
 }
 
-async function isBrowserShowingNotification(window) {
+export async function isBrowserShowingNotification(window) {
   // urlbar view and notification box (info bar)
   if (
     window.gURLBar.view.isOpen ||

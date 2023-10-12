@@ -1449,7 +1449,12 @@ var TranslationsPanel = new (class {
   handleEvent = async event => {
     switch (event.type) {
       case "TranslationsParent:OfferTranslation": {
-        if (Services.wm.getMostRecentBrowserWindow()?.gBrowser === gBrowser) {
+        if (
+          Services.wm.getMostRecentBrowserWindow()?.gBrowser === gBrowser &&
+          !(await TranslationsPanel.isBrowserShowingNotification(
+            gBrowser.selectedBrowser.browsingContext.currentWindowGlobal
+          ))
+        ) {
           this.open(event, /* reportAsAutoShow */ true);
         }
         break;
@@ -1605,3 +1610,8 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "browser.translations.panelShown",
   false
 );
+
+ChromeUtils.defineESModuleGetters(TranslationsPanel, {
+  isBrowserShowingNotification:
+    "resource:///modules/UrlbarProviderSearchTips.sys.mjs",
+});
