@@ -550,6 +550,15 @@ export class TranslationsDocument {
       return NodeStatus.NOT_TRANSLATABLE;
     }
 
+    // Bug 1819205: Outreachy Code Meera
+    // Add nodes to Translate Attributes: "title"
+    if (node.nodeType !== Node.TEXT_NODE) {
+      if (node.hasAttribute("title")) {
+        return NodeStatus.READY_TO_TRANSLATE;
+      }
+    }
+    // Bug 1819205 -----------------------------
+
     if (node.textContent.trim().length === 0) {
       // Do not use subtrees that are empty of text. This textContent call is fairly
       // expensive.
@@ -697,8 +706,20 @@ export class TranslationsDocument {
 
     let text, translate;
     if (node.nodeType === Node.ELEMENT_NODE) {
-      text = node.innerHTML;
-      translate = this.translateHTML;
+      // Bug 1819205: Outreachy Code Meera
+      // Add nodes to Translate Attributes: "title"
+      // Translating title attribute as a text instead of HTML
+      if (node.hasAttribute("title")) {
+        text = node.getAttribute("title");
+        translate = this.translateText;
+      } else {
+        // Previous code
+        text = node.innerHTML;
+        translate = this.translateHTML;
+      }
+      // Bug 1819205 -----------------------------
+
+
     } else {
       text = node.textContent;
       translate = this.translateText;
@@ -782,6 +803,16 @@ export class TranslationsDocument {
           // TODO (Bug 1820625) - This is slow compared to the original implementation
           // in the addon which set the innerHTML directly. We can't set the innerHTML
           // here, but perhaps there is another way to get back some of the performance.
+
+          // Bug 1819205: Outreachy Code Meera
+          // Add nodes to Translate Attributes: "title"
+          // Translating title attribute as a text instead of HTML
+          // Update the attribute of the node with translated text
+          if (node.hasAttribute("title")) {
+            node.setAttribute("title", translatedHTML);
+          }
+          // Bug 1819205 -----------------------------
+
           const translationsDocument = this.domParser.parseFromString(
             `<!DOCTYPE html><div>${translatedHTML}</div>`,
             "text/html"
