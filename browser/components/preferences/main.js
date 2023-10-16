@@ -1000,11 +1000,14 @@ var gMainPane = {
         this.supportedLanguages = supportedLanguages;
         this.languageList = languageList;
         this.downloadPhases = downloadPhases;
+        //add the locale change observer
+        Services.obs.addObserver(this, "intl:app-locales-changed");
       }
 
       /**
        * Handles all of the async initialization logic.
        */
+
       static async create() {
         const supportedLanguages =
           await TranslationsParent.getSupportedLanguages();
@@ -1049,7 +1052,8 @@ var gMainPane = {
 
         // Don't offer to download the app's language.
         displayNames.delete(appLangTag);
-
+        //Remove the language observer
+        Services.obs.removeObserver(this, "intl:app-locales-changed");
         // Sort the list of languages by the display names.
         return [...displayNames.entries()]
           .map(([langTag, displayName]) => ({
@@ -1057,6 +1061,25 @@ var gMainPane = {
             displayName,
           }))
           .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      }
+
+      //the language change event observer
+      observe(_subject, topic, _data) {
+        switch (topic) {
+          case "intl:app-locales-changed":
+            // Rebuild the language list
+            TranslationsParent.getSupportedLanguages()
+              .then(supportedLanguages => {
+                const updatedLanguageList =
+                  TranslationsState.getLanguageList(supportedLanguages);
+                this.languageList = updatedLanguageList;
+              })
+              .catch(error => {
+                console.error("Error updating language list: ", error);
+              });
+
+            break;
+        }
       }
 
       /**
