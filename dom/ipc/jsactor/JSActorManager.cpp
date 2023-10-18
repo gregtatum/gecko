@@ -155,6 +155,24 @@ void JSActorManager::ReceiveRawMessage(
   auto autoSetException =
       MakeScopeExit([&] { Unused << error.MaybeSetPendingException(cx); });
 
+  // Ensure that any MessagePorts that are not consumed (because of any early
+  // return code paths) are removed. There is an assertion in the
+  // StructuredCloneHolder destructor that the list of ports is empty. This
+  // check is important for the MessageEvent API[1] as the data is not
+  // thread-safe, but here in the JSActor this code is all running on the same
+  // thread.
+  //
+  // 1: https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent
+  auto discardPortsOnExit = MakeScopeExit([&] {
+    if (aData) {
+      // Move the ports out of the StructuredCloneHolder.
+      nsTArray<RefPtr<MessagePort>> ports = aData->TakeTransferredPorts();
+      // Cast to void so that the ports will actually be moved, and then
+      // discarded.
+      (void)ports;
+    }
+  });
+
   // If an async stack was provided, set up our async stack state.
   JS::Rooted<JSObject*> stack(cx);
   Maybe<JS::AutoSetAsyncStackForNewCalls> stackSetter;
