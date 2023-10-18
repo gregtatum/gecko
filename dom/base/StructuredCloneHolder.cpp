@@ -347,10 +347,24 @@ StructuredCloneHolder::StructuredCloneHolder(
       mCreationEventTarget(GetCurrentSerialEventTarget())
 #endif
 {
+  if (XRE_IsContentProcess()) {
+    printf(
+        "!!! StructuredCloneHolder::StructuredCloneHolder() constructor %d "
+        "%p\n",
+        getpid(), this);
+  }
 }
 
 StructuredCloneHolder::~StructuredCloneHolder() {
   Clear();
+  if (!mTransferredPorts.IsEmpty()) {
+    if (XRE_IsContentProcess()) {
+      printf(
+          "!!! StructuredCloneHolder::~StructuredCloneHolder "
+          "mTransferredPorts.IsEmpty() content:%d %p\n",
+          getpid(), this);
+    }
+  }
   MOZ_ASSERT(mTransferredPorts.IsEmpty());
 }
 

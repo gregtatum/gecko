@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include <unistd.h>
 #include "js/StructuredClone.h"
 #include "js/TypeDecls.h"
 #include "mozilla/Assertions.h"
@@ -254,6 +255,7 @@ class StructuredCloneHolder : public StructuredCloneHolderBase {
   // where they are created.
   nsTArray<RefPtr<MessagePort>>&& TakeTransferredPorts() {
     MOZ_ASSERT(mSupportsTransferring);
+    printf("!!! Taking transferred ports %d %p\n", getpid(), this);
     return std::move(mTransferredPorts);
   }
 

@@ -93,6 +93,10 @@ export class TranslationsEngineParent extends JSWindowActorParent {
       throw new Error("The translation engine process was already destroyed.");
     }
     const transferables = [port];
+    console.log(
+      `!!! TranslationsEngineParent.sys.mjs before postMessage`,
+      this.browsingContext?.currentWindowGlobal?.osPid
+    );
     this.sendAsyncMessage(
       "TranslationsEngine:StartTranslation",
       {
@@ -102,6 +106,10 @@ export class TranslationsEngineParent extends JSWindowActorParent {
         port,
       },
       transferables
+    );
+    console.log(
+      `!!! TranslationsEngineParent.sys.mjs after postMessage`,
+      this.browsingContext?.currentWindowGlobal?.osPid
     );
   }
 
@@ -121,6 +129,10 @@ export class TranslationsEngineParent extends JSWindowActorParent {
   #isDestroyed = false;
 
   didDestroy() {
+    console.log(
+      `!!! TranslationsEngineParent didDestroy`,
+      this.browsingContext?.currentWindowGlobal?.osPid
+    );
     this.#isDestroyed = true;
   }
 }

@@ -136,6 +136,13 @@ void JSActorManager::ReceiveRawMessage(
     const JSActorMessageMeta& aMetadata,
     Maybe<ipc::StructuredCloneData>&& aData,
     Maybe<ipc::StructuredCloneData>&& aStack) {
+  if (XRE_IsContentProcess()) {
+    if (aData) {
+      printf("!!! ReceiveRawMessage aData\n");
+    } else {
+      printf("!!! ReceiveRawMessage no aData\n");
+    }
+  }
   MOZ_ASSERT(nsContentUtils::IsSafeToRunScript());
 
   CrashReporter::AutoAnnotateCrashReport autoActorName(
@@ -174,6 +181,7 @@ void JSActorManager::ReceiveRawMessage(
       if (!js::IsSavedFrame(stack)) {
         CHILD_DIAGNOSTIC_ASSERT(false, "Stack must be a SavedFrame object");
         error.ThrowDataError("Actor async stack must be a SavedFrame object");
+        if (aData) aData->TakeTransferredPorts();
         return;
       }
       stackSetter.emplace(cx, stack, "JSActor query");
@@ -187,8 +195,23 @@ void JSActorManager::ReceiveRawMessage(
 
   JS::Rooted<JS::Value> data(cx);
   if (aData) {
+    if (XRE_IsContentProcess()) {
+      printf("!!! JSActorManager::ReceiveRawMessage - aData->>read %d %p\n",
+             getpid(), &aData);
+    }
     aData->Read(cx, &data, error);
+    auto ports = aData->TakeTransferredPorts();
+    if (XRE_IsContentProcess()) {
+      printf(
+          "!!! JSActorManager::ReceiveRawMessage - TakeTransferredPorts %d %p, "
+          "%zu\n",
+          getpid(), &aData, ports.Length());
+    }
     if (error.Failed()) {
+      if (XRE_IsContentProcess()) {
+        printf("!!! JSActorManager::ReceiveRawMessage - error %d %p\n",
+               getpid(), &aData);
+      }
       CHILD_DIAGNOSTIC_ASSERT(CycleCollectedJSRuntime::Get()->OOMReported(),
                               "Should not receive non-decodable data");
       return;
@@ -211,6 +234,10 @@ void JSActorManager::ReceiveRawMessage(
 
     default:
       MOZ_ASSERT_UNREACHABLE();
+  }
+  if (XRE_IsContentProcess()) {
+    printf("!!! JSActorManager::ReceiveRawMessage - method done %d %p\n",
+           getpid(), &aData);
   }
 }
 

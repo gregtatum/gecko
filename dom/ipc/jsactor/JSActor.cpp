@@ -273,11 +273,20 @@ void JSActor::CallReceiveMessage(JSContext* aCx,
   RootedDictionary<ReceiveMessageArgument> argument(aCx);
   argument.mTarget = this;
   argument.mName = aMetadata.messageName();
+  if (XRE_IsContentProcess()) {
+    printf("!!! Before assignment %d %p\n", getpid(), &aData);
+  }
+
   argument.mData = aData;
   argument.mJson = aData;
   argument.mSync = false;
 
   if (GetWrapperPreserveColor()) {
+    if (XRE_IsContentProcess()) {
+      printf("!!! JSActor::CallReceiveMessage - invoke the callback %d %p\n",
+             getpid(), &aData);
+    }
+
     // Invoke the actual callback.
     JS::Rooted<JSObject*> global(aCx, JS::GetNonCCWObjectGlobal(GetWrapper()));
     RefPtr<MessageListener> messageListener =
@@ -286,6 +295,11 @@ void JSActor::CallReceiveMessage(JSContext* aCx,
                                     "JSActor receive message",
                                     MessageListener::eRethrowExceptions);
   } else {
+    if (XRE_IsContentProcess()) {
+      printf("!!! JSActor::CallReceiveMessage - MSG_NOT_CALLABLE %d %p\n",
+             getpid(), &aData);
+    }
+
     aRv.ThrowTypeError<MSG_NOT_CALLABLE>("Property 'receiveMessage'");
   }
 }

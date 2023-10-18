@@ -32,7 +32,15 @@ export class TranslationsEngineChild extends JSWindowActorChild {
           innerWindowId,
           port,
         };
+        console.log(
+          `!!! TranslationsEngineChild.sys.mjs before postMessage`,
+          this.contentWindow?.osPid
+        );
         this.contentWindow.postMessage(message, "*", transferables);
+        console.log(
+          `!!! TranslationsEngineChild.sys.mjs after postMessage`,
+          this.contentWindow?.osPid
+        );
         break;
       }
       case "TranslationsEngine:DiscardTranslations": {

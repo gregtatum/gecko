@@ -537,8 +537,25 @@ IPCResult WindowGlobalChild::RecvRawMessage(
     const Maybe<ClonedMessageData>& aStack) {
   Maybe<StructuredCloneData> data;
   if (aData) {
+    if (XRE_IsContentProcess()) {
+      printf("!!! WindowGlobalChild::RecvRawMessage aData exists %d %p\n",
+             getpid(), &data);
+    }
     data.emplace();
+    if (XRE_IsContentProcess()) {
+      printf("!!! WindowGlobalChild::RecvRawMessage data emplace %d %p\n",
+             getpid(), &data);
+    }
     data->BorrowFromClonedMessageData(*aData);
+    if (XRE_IsContentProcess()) {
+      printf(
+          "!!! WindowGlobalChild::RecvRawMessage BorrowFromClonedMessageData "
+          "%d %p\n",
+          getpid(), &data);
+    }
+    // printf("!!! WindowGlobalChild::RecvRawMessage take transferred ports
+    // %p\n",
+    //        &aData);
   }
   Maybe<StructuredCloneData> stack;
   if (aStack) {
@@ -546,6 +563,8 @@ IPCResult WindowGlobalChild::RecvRawMessage(
     stack->BorrowFromClonedMessageData(*aStack);
   }
   ReceiveRawMessage(aMeta, std::move(data), std::move(stack));
+  printf("!!! WindowGlobalChild::RecvRawMessage IPC_OK %d %p\n", getpid(),
+         &data);
   return IPC_OK();
 }
 
