@@ -189,7 +189,10 @@ class StructuredCloneHolder : public StructuredCloneHolderBase {
                                  StructuredCloneScope aStructuredCloneScope);
   virtual ~StructuredCloneHolder();
 
-  StructuredCloneHolder(StructuredCloneHolder&& aOther) = delete;
+  // Delete the copy and move operators, as the MessagePorts are exclusively
+  // owned by this class until transfered via TakeTransferredPorts.
+  StructuredCloneHolder(const StructuredCloneHolder&) = delete;
+  StructuredCloneHolder& operator=(const StructuredCloneHolder&) = delete;
 
   // Normally you should just use Write() and Read().
 
