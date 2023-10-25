@@ -476,7 +476,7 @@ export class TranslationsParent extends JSWindowActorParent {
         break;
       }
       lazy.console.error(
-        "Could not find translations engine actor, it does not appear ready yet, trying again."
+        "Could not find TranslationsEngine actor, it does not appear ready yet, trying again."
       );
       await new Promise(resolve => lazy.setTimeout(resolve, 0));
     }

@@ -489,6 +489,8 @@ async function createAndMockRemoteSettings({
   };
 }
 
+let hasPolledRemoteSettings = false;
+
 async function loadTestPage({
   languagePairs,
   autoDownloadFromRemoteSettings = false,
@@ -499,6 +501,13 @@ async function loadTestPage({
   autoOffer,
   permissionsUrls = [],
 }) {
+  if (!hasPolledRemoteSettings) {
+    // Don't poll remote settings while running a test, do it at least once before.
+    const { RemoteSettings } = ChromeUtils.importESModule(
+      "resource://services-settings/remote-settings.sys.mjs"
+    );
+    await RemoteSettings.pollChanges().catch(() => {});
+  }
   info(`Loading test page starting at url: ${page}`);
   // Ensure no engine is being carried over from a previous test.
   await TranslationsParent.destroyEngineProcess();
@@ -517,6 +526,11 @@ async function loadTestPage({
       ["browser.translations.logLevel", "All"],
       ["browser.translations.panelShown", true],
       ["browser.translations.automaticallyPopup", true],
+      // [
+      //   // Do not poll for remote settings settings by default.
+      //   "app.update.lastUpdateTime.services-settings-poll-changes",
+      //   tenDaysInFuture,
+      // ],
       ...(prefs ?? []),
     ],
   });
