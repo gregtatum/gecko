@@ -466,10 +466,24 @@ export class TranslationsParent extends JSWindowActorParent {
       browser.addProgressListener(listener, Ci.nsIWebProgress.NOTIFY_STATE_ALL);
     });
 
-    const actor =
-      browser.browsingContext.currentWindowGlobal.getActor(
-        "TranslationsEngine"
+    let actor;
+    for (let i = 0; i < 10; i++) {
+      actor =
+        browser.browsingContext.currentWindowGlobal.getActor(
+          "TranslationsEngine"
+        );
+      if (actor) {
+        break;
+      }
+      lazy.console.error(
+        "Could not find translations engine actor, it does not appear ready yet, trying again."
       );
+      await new Promise(resolve => lazy.setTimeout(resolve, 0));
+    }
+
+    if (!actor) {
+      throw new Error("Could not get the TranslationsEngine actor.");
+    }
 
     return { hiddenFrame, browser, actor };
   }
@@ -1016,10 +1030,12 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!TranslationsParent.#languageIdModelRecord) {
       // Place the records into a promise to prevent any races.
       TranslationsParent.#languageIdModelRecord = (async () => {
+        console.log(`!!! before language id model array buffer`);
         /** @type {LanguageIdModelRecord[]} */
         let modelRecords = await TranslationsParent.getMaxVersionRecords(
           client
         );
+        console.log(`!!! after language id model array buffer`);
 
         if (modelRecords.length === 0) {
           throw new Error(
@@ -1093,6 +1109,7 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!TranslationsParent.#languageIdWasmRecord) {
       // Place the records into a promise to prevent any races.
       TranslationsParent.#languageIdWasmRecord = (async () => {
+        console.log(`!!! before get fasttext`);
         /** @type {WasmRecord[]} */
         let wasmRecords = await TranslationsParent.getMaxVersionRecords(
           client,
@@ -1100,6 +1117,7 @@ export class TranslationsParent extends JSWindowActorParent {
             filters: { name: "fasttext-wasm" },
           }
         );
+        console.log(`!!! after get fasttext`);
 
         if (wasmRecords.length === 0) {
           // The remote settings client provides an empty list of records when there is
@@ -1129,10 +1147,12 @@ export class TranslationsParent extends JSWindowActorParent {
 
       await chaosMode(1 / 3);
 
+      console.log(`!!! before download fasttext`);
       /** @type {{buffer: ArrayBuffer}} */
       const { buffer } = await client.attachments.download(
         await TranslationsParent.#languageIdWasmRecord
       );
+      console.log(`!!! after download fasttext`);
 
       const duration = (Date.now() - start) / 1000;
       lazy.console.log(
@@ -1286,6 +1306,7 @@ export class TranslationsParent extends JSWindowActorParent {
   static async #handleTranslationsModelsSync({
     data: { created, updated, deleted },
   }) {
+    console.log(`!!! handleTranslationsModelsSync`);
     const client = TranslationsParent.#translationModelsRemoteClient;
     if (!client) {
       lazy.console.error(
@@ -1433,6 +1454,7 @@ export class TranslationsParent extends JSWindowActorParent {
         // Rely on Remote Settings for the syncing strategy for receiving updates.
         lazy.console.log(`Getting remote language models.`);
 
+        console.log(`!!! before translation model records`);
         /** @type {TranslationModelRecord[]} */
         const translationModelRecords =
           await TranslationsParent.getMaxVersionRecords(client, {
@@ -1444,6 +1466,7 @@ export class TranslationsParent extends JSWindowActorParent {
                 record.toLang
               )}`,
           });
+        console.log(`!!! after translation model records`);
 
         if (translationModelRecords.length === 0) {
           throw new Error("Unable to retrieve the translation models.");
@@ -1570,6 +1593,7 @@ export class TranslationsParent extends JSWindowActorParent {
     TranslationsParent.#translationsWasmRemoteClient = client;
 
     client.on("sync", async ({ data: { created, updated, deleted } }) => {
+      console.log(`!!! translations wasm sync`);
       lazy.console.log(`"sync" event for remote bergamot wasm `, {
         created,
         updated,
@@ -1613,6 +1637,7 @@ export class TranslationsParent extends JSWindowActorParent {
         // Load the wasm binary from remote settings, if it hasn't been already.
         lazy.console.log(`Getting remote bergamot-translator wasm records.`);
 
+        console.log(`!!! before bergamot wasm download`);
         /** @type {WasmRecord[]} */
         const wasmRecords = await TranslationsParent.getMaxVersionRecords(
           client,
@@ -1620,6 +1645,7 @@ export class TranslationsParent extends JSWindowActorParent {
             filters: { name: "bergamot-translator" },
           }
         );
+        console.log(`!!! after bergamot wasm download`);
 
         if (wasmRecords.length === 0) {
           // The remote settings client provides an empty list of records when there is
@@ -1648,10 +1674,12 @@ export class TranslationsParent extends JSWindowActorParent {
     try {
       await chaosModeError(1 / 3);
 
+      console.log(`!!! before bergamot wasm download`);
       /** @type {{buffer: ArrayBuffer}} */
       const { buffer } = await client.attachments.download(
         await TranslationsParent.#bergamotWasmRecord
       );
+      console.log(`!!! after bergamot wasm download`);
 
       const duration = Date.now() - start;
       lazy.console.log(
@@ -1893,8 +1921,10 @@ export class TranslationsParent extends JSWindowActorParent {
 
         await chaosMode(1 / 3);
 
+        console.log(`!!! before model download records`);
         /** @type {{buffer: ArrayBuffer }} */
         const { buffer } = await client.attachments.download(record);
+        console.log(`!!! after model download records`);
 
         results[record.fileType] = {
           buffer,

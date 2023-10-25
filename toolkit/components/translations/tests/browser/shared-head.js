@@ -503,6 +503,13 @@ async function loadTestPage({
   // Ensure no engine is being carried over from a previous test.
   await TranslationsParent.destroyEngineProcess();
   Services.fog.testResetFOG();
+  const tenDaysInFuture = Math.floor(Date.now() / 1000) + 8_640_000;
+  // Do not poll for remote settings changes.
+  Services.prefs.setIntPref(
+    "app.update.lastUpdateTime.services-settings-poll-changes",
+    tenDaysInFuture
+  );
+
   await SpecialPowers.pushPrefEnv({
     set: [
       // Enabled by default.

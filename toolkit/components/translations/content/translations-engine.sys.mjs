@@ -156,6 +156,7 @@ export class TranslationsEngine {
   static #removeEngineFromCache(languagePairKey) {
     TranslationsEngine.#cachedEngines.delete(languagePairKey);
     if (TranslationsEngine.#cachedEngines.size === 0) {
+      console.trace("!!! removeEngineFromCache");
       TE_log("The last engine was removed, destroying this process.");
       TE_destroyEngineProcess();
     }

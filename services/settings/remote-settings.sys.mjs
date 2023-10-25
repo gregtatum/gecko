@@ -194,6 +194,7 @@ function remoteSettingsFunction() {
     trigger = "manual",
     full = false,
   } = {}) => {
+    console.log(`!!! Start polling`, trigger);
     // When running in full mode, we ignore last polling status.
     if (full) {
       lazy.gPrefs.clearUserPref(PREF_SETTINGS_SERVER_BACKOFF);
@@ -317,6 +318,7 @@ function remoteSettingsFunction() {
         reportStatus,
         pollTelemetryArgs
       );
+      console.trace("!!! remote settings poll failed, ignoring error");
       // No need to go further.
       throw new Error(`Polling for changes failed: ${e.message}.`);
     }
