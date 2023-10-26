@@ -358,6 +358,10 @@ export class TranslationsParent extends JSWindowActorParent {
   static #engine = null;
 
   static async getEngineProcess() {
+    console.log(
+      `!!! TranslationsParent.getEngineProcess - TranslationsParent.#engine`,
+      !!TranslationsParent.#engine
+    );
     if (!TranslationsParent.#engine) {
       TranslationsParent.#engine = TranslationsParent.#getEngineProcessImpl();
     }
@@ -380,6 +384,7 @@ export class TranslationsParent extends JSWindowActorParent {
     }
 
     if (needsRebuilding) {
+      console.log(`!!! TranslationsParent.getEngineProcess needsRebuilding`);
       // The engine was destroyed, attempt to re-create the engine process.
       const rebuild = TranslationsParent.destroyEngineProcess().then(() =>
         TranslationsParent.#getEngineProcessImpl()
@@ -421,6 +426,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @type {Promise<{ hiddenFrame: HiddenFrame, actor: TranslationsEngineParent }> | null}
    */
   static async #getEngineProcessImpl() {
+    console.log(`!!! TranslationsParent.#getEngineProcessImpl`);
     ChromeUtils.addProfilerMarker(
       "TranslationsParent",
       {},
@@ -447,9 +453,10 @@ export class TranslationsParent extends JSWindowActorParent {
     );
     doc.documentElement.appendChild(browser);
 
+    console.log(`!!! TranslationsParent.#getEngineProcessImpl - before actor`);
     const actor = await actorPromise;
+    console.log(`!!! TranslationsParent.#getEngineProcessImpl - after actor`);
     this.resolveEngine = null;
-
     return { hiddenFrame, browser, actor };
   }
 
@@ -863,6 +870,10 @@ export class TranslationsParent extends JSWindowActorParent {
           );
         }
 
+        console.log(
+          `!!! TranslationsParent.receieveMessage - engineProcess`,
+          !!engineProcess
+        );
         // The MessageChannel will be used for communicating directly between the content
         // process and the engine's process.
         const { port1, port2 } = new MessageChannel();
