@@ -1622,6 +1622,7 @@ class QueuedTranslator {
    * @param {MessagePort} port
    */
   acquirePort(port) {
+    console.log(`!!! acquirePort`, this.engineStatus);
     if (this.#port) {
       if (this.engineStatus === "ready") {
         lazy.console.error(
@@ -1664,6 +1665,10 @@ class QueuedTranslator {
           this.#port.close();
           this.#port = null;
           this.engineStatus = "closed";
+          console.log(`!!! TranslationsPort:EngineTerminated`, {
+            requests: [...this.#requests.values()].map(r => r.sourceText),
+            queue: [...this.#queue.values()].map(r => r.sourceText),
+          });
 
           // If there are outstanding requests that haven't received a response,
           // request a new engine. There can be a race condition where an engine

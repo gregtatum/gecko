@@ -351,6 +351,10 @@ export class TranslationsParent extends JSWindowActorParent {
   static #engine = null;
 
   static async getEngineProcess() {
+    console.log(
+      `!!! getEngineProcess - TranslationsParent.#engine`,
+      !!TranslationsParent.#engine
+    );
     if (!TranslationsParent.#engine) {
       TranslationsParent.#engine = TranslationsParent.#getEngineProcessImpl();
     }
@@ -373,6 +377,7 @@ export class TranslationsParent extends JSWindowActorParent {
     }
 
     if (needsRebuilding) {
+      console.log(`!!! needsRebuilding`);
       // The engine was destroyed, attempt to re-create the engine process.
       TranslationsParent.#engine = (async () => {
         await TranslationsParent.destroyEngineProcess();
@@ -413,6 +418,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @type {Promise<{ hiddenFrame: HiddenFrame, actor: TranslationsEngineParent }> | null}
    */
   static async #getEngineProcessImpl() {
+    console.log(`!!! #getEngineProcessImpl`);
     ChromeUtils.addProfilerMarker(
       "TranslationsParent",
       {},
@@ -436,6 +442,9 @@ export class TranslationsParent extends JSWindowActorParent {
     doc.documentElement.appendChild(browser);
 
     // Wait for the translations engine to be loaded.
+    console.log(
+      `!!! #getEngineProcessImpl - Wait for the translations engine to be loaded.`
+    );
     await new Promise(resolve => {
       const listener = {
         QueryInterface: ChromeUtils.generateQI([
@@ -471,6 +480,7 @@ export class TranslationsParent extends JSWindowActorParent {
         "TranslationsEngine"
       );
 
+    console.log(`!!! #getEngineProcessImpl - actor`, !!actor);
     return { hiddenFrame, browser, actor };
   }
 

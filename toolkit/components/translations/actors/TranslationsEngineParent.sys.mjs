@@ -7,11 +7,19 @@ ChromeUtils.defineESModuleGetters(lazy, {
   TranslationsParent: "resource://gre/actors/TranslationsParent.sys.mjs",
 });
 
+console.log(
+  `!!! toolkit/components/translations/actors/TranslationsEngineParent.sys.mjs`
+);
+
 /**
  * The translations engine is in its own content process. This actor handles the
  * marshalling of the data such as the engine payload and port passing.
  */
 export class TranslationsEngineParent extends JSWindowActorParent {
+  constructor() {
+    super();
+    console.log(`!!! TranslationsEngineParent constructor`);
+  }
   /**
    * Keep track of the live actors by InnerWindowID.
    *

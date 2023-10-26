@@ -10,6 +10,9 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
     prefix: "Translations",
   });
 });
+console.log(
+  `!!! toolkit/components/translations/actors/TranslationsEngineChild.sys.mjs`
+);
 
 /**
  * The engine child is responsible for exposing privileged code to the un-privileged

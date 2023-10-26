@@ -531,6 +531,10 @@ function discardTranslations(innerWindowId) {
   }
 }
 
+console.log(
+  `!!! toolkit/components/translations/content/translations-engine.sys.mjs`
+);
+
 /**
  * Listen for events coming from the TranslationsEngine actor.
  */
