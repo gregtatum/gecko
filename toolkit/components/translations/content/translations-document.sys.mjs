@@ -1525,6 +1525,15 @@ class QueuedTranslator {
   #resolvePendingEngineReconstruction;
 
   /**
+   * Note when a new port is being requested so we don't re-request it.
+   */
+  markPortRequestPending() {
+    this.#pendingEngineReconstruction = new Promise(resolve => {
+      this.#resolvePendingEngineReconstruction = resolve;
+    });
+  }
+
+  /**
    * Send a request to translate text to the Translations Engine. If it returns `null`
    * then the request is stale. A rejection means there was an error in the translation.
    * This request may be queued.
@@ -1611,6 +1620,7 @@ class QueuedTranslator {
       this.#port.postMessage({ type: "TranslationsPort:DiscardTranslations" });
       this.#port.close();
       this.#port = null;
+      this.#pendingEngineReconstruction = null;
     }
     this.engineStatus = "uninitialized";
     this.pause(true);
