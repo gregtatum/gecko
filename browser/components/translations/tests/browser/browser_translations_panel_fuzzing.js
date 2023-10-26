@@ -138,6 +138,9 @@ add_task(async function test_translations_engine_destroy_pending() {
         info("Mutate the page's content to re-trigger a translation.");
         await runInSpanishPage(async TranslationsTest => {
           const { getH1 } = TranslationsTest.getSelectors();
+          console.log(
+            `!!! browser_translations_panel_fuzzing.js Actually mutate the page`
+          );
           getH1().innerText = "New text for the H1";
         });
 

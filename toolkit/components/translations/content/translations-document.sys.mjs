@@ -1515,6 +1515,7 @@ class QueuedTranslator {
    * Note when a new port is being requested so we don't re-request it.
    */
   showPage() {
+    console.log(`!!! TranslationsDocument showPage`);
     this.#isPageShown = true;
     if (this.#port) {
       throw new Error(
@@ -1522,6 +1523,11 @@ class QueuedTranslator {
       );
     }
     if (this.#queue.size) {
+      console.log(
+        `!!! Requesting a new port, since the queue size was ${
+          this.#queue.size
+        }`
+      );
       // There are queued translations, request a new port. After the port is retrieved
       // the pending queue will be processed.
       this.#requestNewPort();
@@ -1532,6 +1538,7 @@ class QueuedTranslator {
    * Hide the page, and move any outstanding translation requests to a queue.
    */
   hidePage() {
+    console.log(`!!! TranslationsDocument hidePage`);
     this.#isPageShown = false;
     this.discardPort();
 
@@ -1555,6 +1562,9 @@ class QueuedTranslator {
   #requestNewPort() {
     if (this.#portRequest) {
       // A port was already requested.
+      console.log(
+        `!!! TranslationsDocument requestNewPort - A port was already requested.`
+      );
       return this.#portRequest.promise;
     }
     console.log(`!!! TranslationsDocument requestNewPort`);
@@ -1673,6 +1683,10 @@ class QueuedTranslator {
    * Close the port and move any pending translations onto a queue.
    */
   discardPort() {
+    console.log(
+      `!!! TranslationsDocument discard port, has port:`,
+      !!this.#port
+    );
     if (this.#port) {
       this.#port.postMessage({ type: "TranslationsPort:DiscardTranslations" });
       this.#port.close();
@@ -1688,6 +1702,7 @@ class QueuedTranslator {
    */
   #moveRequestsToQueue() {
     if (this.#requests.size) {
+      console.log(`!!! Moving ${this.#requests.size} to the queue`);
       for (const request of this.#requests.values()) {
         this.#queue.set(request.node, request);
       }
@@ -1701,6 +1716,7 @@ class QueuedTranslator {
    * @param {MessagePort} port
    */
   acquirePort(port) {
+    console.log(`!!! TranslationsDocument acquirePort`, this.engineStatus);
     if (this.#port) {
       if (this.engineStatus === "ready") {
         lazy.console.error(
@@ -1721,6 +1737,10 @@ class QueuedTranslator {
           const { targetText, messageId } = data;
           // A request may not match match a messageId if there is a race during the pausing
           // and discarding of the queue.
+          console.log(
+            `!!! TranslationsDocument TranslationsPort:TranslationResponse`,
+            targetText
+          );
           this.#requests.get(messageId)?.resolve(targetText);
           this.#requests.delete(messageId);
           break;
@@ -1729,8 +1749,10 @@ class QueuedTranslator {
           if (portRequest) {
             const { resolve, reject } = portRequest;
             if (data.status === "ready") {
+              console.log(`!!! TranslationsDocument - Engine is ready.`);
               resolve();
             } else {
+              console.log(`!!! TranslationsDocument - Engine failed to load.`);
               reject(new Error("The engine failed to load."));
             }
           }
@@ -1738,6 +1760,14 @@ class QueuedTranslator {
           break;
         }
         case "TranslationsPort:EngineTerminated": {
+          console.log(
+            `!!! TranslationsDocument TranslationsPort:EngineTerminated`,
+            {
+              requests: [...this.#requests.values()].map(r => r.sourceText),
+              queue: [...this.#queue.values()].map(r => r.sourceText),
+            }
+          );
+
           // The engine was terminated, and if a translation is needed a new port
           // will need to be requested.
           this.engineStatus = "closed";
