@@ -156,6 +156,11 @@ export class TranslationsDocument {
   documentLanguage;
 
   /**
+   * The BCP 47 language tag being translated to.
+   */
+  toLanguage;
+
+  /**
    * The timeout between the first translation received and the call to update the DOM
    * with translations.
    */
@@ -223,6 +228,7 @@ export class TranslationsDocument {
   constructor(
     document,
     documentLanguage,
+    toLanguage,
     innerWindowId,
     translateHTML,
     translateText
@@ -234,10 +240,17 @@ export class TranslationsDocument {
      * @type {string}
      */
     this.documentLanguage = documentLanguage;
+    this.toLanguage = toLanguage;
     if (documentLanguage.length !== 2) {
       throw new Error(
-        "Expected the language to be a valid 2 letter BCP 47 language tag: " +
+        "Expected the document language to be a valid 2 letter BCP 47 language tag: " +
           documentLanguage
+      );
+    }
+    if (toLanguage.length !== 2) {
+      throw new Error(
+        "Expected the destination language to be a valid 2 letter BCP 47 language tag: " +
+          toLanguage
       );
     }
 
@@ -358,6 +371,18 @@ export class TranslationsDocument {
     this.observer.observe(node, MUTATION_OBSERVER_OPTIONS);
 
     this.addShadowRootsToObserver(node);
+
+    if (
+      this.viewportTranslated &&
+      node.nodeName === "BODY" &&
+      node.ownerDocument.documentElement.hasAttribute("lang")
+    ) {
+      this.viewportTranslated.then(() => {
+        if (!Cu.isDeadWrapper(node)) {
+          node.ownerDocument.documentElement.lang = this.toLanguage;
+        }
+      });
+    }
   }
 
   /**

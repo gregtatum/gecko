@@ -205,6 +205,7 @@ export class TranslationsEngine {
     const translatedDoc = new lazy.TranslationsDocument(
       document,
       fromLanguage,
+      toLanguage,
       innerWindowId,
       html =>
         getEngine().then(engine =>
