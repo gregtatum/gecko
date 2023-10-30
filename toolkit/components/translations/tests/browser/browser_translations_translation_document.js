@@ -921,12 +921,264 @@ add_task(async function test_attributes() {
   `;
 
   await htmlMatches(
-    "Placeholders support needs to be added",
+    "Placeholders support added",
     /* html */ `
-      <label title="Titles are user visible">
+      <label title="TITLES ARE USER VISIBLE">
         ENTER INFORMATION:
       </label>
-      <input type="text" placeholder="This is a placeholder">
+      <input type="text" placeholder="THIS IS A PLACEHOLDER">
+    `
+  );
+
+  cleanup();
+});
+
+// TODO(Bug 1819205) - Attribute support needs to be added.ç
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div title="Titles are user visible">
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : title",
+    /* html */ `
+      <div title="TITLES ARE USER VISIBLE">
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+// TODO(Bug 1819205) - Attribute support needs to be added.ç
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div title="Titles are user visible">
+    Simple translation.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : title",
+    /* html */ `
+    <div title="TITLES ARE USER VISIBLE">
+    SIMPLE TRANSLATION.
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+// TODO(Bug 1819205) - Attribute support needs to be added.ç
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+        <input type="text" placeholder="This is a placeholder" title="Titles are user visible">
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : title inside placeholder",
+    /* html */ `
+        <input type="text" placeholder="THIS IS A PLACEHOLDER" title="TITLES ARE USER VISIBLE">
+    `
+  );
+  cleanup();
+});
+
+// TODO(Bug 1819205) - Attribute support needs to be added.ç
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+        <input type="text" placeholder="This is a placeholder">
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : placeholder",
+    /* html */ `
+        <input type="text" placeholder="THIS IS A PLACEHOLDER">
+    `
+  );
+  cleanup();
+});
+
+add_task(async function test_translated_title() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div title="The title is translated" class="do-not-translate-this">
+      Inner text is translated.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Language matching of elements behaves as expected.",
+    /* html */ `
+    <div title="THE TITLE IS TRANSLATED" class="do-not-translate-this">
+      INNER TEXT IS TRANSLATED.
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_title_attribute_subnodes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div>
+      <span>Span text 1</span>
+      <span>Span text 2</span>
+      <span>Span text 3</span>
+      <span>Span text 4</span>
+      <span>Span text 5</span>
+      This is text.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Titles are translated",
+    /* html */ `
+      <div>
+        <span data-moz-translations-id="0">SPAN TEXT 1</span>
+        <span data-moz-translations-id="1">SPAN TEXT 2</span>
+        <span data-moz-translations-id="2">SPAN TEXT 3</span>
+        <span data-moz-translations-id="3">SPAN TEXT 4</span>
+        <span data-moz-translations-id="4">SPAN TEXT 5</span>
+        THIS IS TEXT.
+      </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_title_attribute_subnodes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div title="Title in div">
+      <span title="Title 1">Span text 1</span>
+      <span title="Title 2">Span text 2</span>
+      <span title="Title 3">Span text 3</span>
+      <span title="Title 4">Span text 4</span>
+      <span title="Title 5">Span text 5</span>
+      This is text.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "Titles are translated",
+    /* html */ `
+      <div title="TITLE IN DIV">
+        <span title="TITLE 1" data-moz-translations-id="0">SPAN TEXT 1</span>
+        <span title="TITLE 2" data-moz-translations-id="1">SPAN TEXT 2</span>
+        <span title="TITLE 3" data-moz-translations-id="2">SPAN TEXT 3</span>
+        <span title="TITLE 4" data-moz-translations-id="3">SPAN TEXT 4</span>
+        <span title="TITLE 5" data-moz-translations-id="4">SPAN TEXT 5</span>
+        THIS IS TEXT.
+      </div>
+    `
+  );
+
+  cleanup();
+});
+
+// TODO(Bug 1819205) - Attribute support needs to be added.ç
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div>
+      This is the outer div
+      <label>
+        Enter information:
+        <input type="text">
+      </label>
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : Nested with text",
+    /* html */ `
+      <div>
+      THIS IS THE OUTER DIV
+      <label data-moz-translations-id="0">
+      ENTER INFORMATION:
+        <input type="text" data-moz-translations-id="1">
+      </label>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+// TODO(Bug 1819205) - Attribute support needs to be added.ç
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div title="Titles are user visible">
+      This is the outer div
+      <label>
+        Enter information:
+        <input type="text" placeholder="This is a placeholder">
+      </label>
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : Nested Attributes",
+    /* html */ `
+      <div title="TITLES ARE USER VISIBLE">
+      THIS IS THE OUTER DIV
+      <label>
+      ENTER INFORMATION:
+        <input type="text" placeholder="THIS IS A PLACEHOLDER"  data-moz-translations-id="1">
+      </label>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_attributes() {
+  const { translate, htmlMatches, cleanup } = await createDoc(/* html */ `
+    <div>
+      This is the outer div
+      <label>
+        Enter information 1:
+        <label>
+          Enter information 2:
+        </label>
+      </label>
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "new test case : Nested elements",
+    /* html */ `
+      <div>
+        THIS IS THE OUTER DIV
+        <label data-moz-translations-id="0">
+          ENTER INFORMATION 1:
+          <label data-moz-translations-id="1">
+            ENTER INFORMATION 2:
+          </label>
+        </label>
+    </div>
     `
   );
 

@@ -171,6 +171,15 @@ export class TranslationsDocument {
   #queuedNodes = new Map();
 
   /**
+   * The nodes that need Attribute translations. They are queued when the document tree is walked,
+   * and then they are dispatched for translation based on their visibility. The viewport
+   * nodes are given the highest priority.
+   *
+   * @type {Map<Node, NodeVisibility>}
+   */
+  #queuedAttrNodes = new Map();
+
+  /**
    * The count of how many pending translations have been sent to the translations
    * engine.
    */
@@ -183,6 +192,14 @@ export class TranslationsDocument {
    * @type {Set<{ node: Node, translatedHTML: string }}
    */
   #nodesWithTranslatedHTML = new Set();
+
+  /**
+   * The list of nodes that need updating with the translated Attribute HTML. These are batched
+   * into an update.
+   *
+   * @type {Set<{ node: Node, translatedHTML: string }}
+   */
+  #nodesWithTranslatedAttr = new Set();
 
   /**
    * The set of nodes that have been subdivided and processed for translation. They
@@ -382,6 +399,16 @@ export class TranslationsDocument {
         this.processSubdivide(shadowRoot);
       } else {
         this.queueNodeForTranslation(currentNode);
+
+        // If an element has attributes add it to dedicated queue for translation
+        if (currentNode.nodeType !== Node.TEXT_NODE) {
+          if (
+            currentNode.hasAttribute("title") ||
+            currentNode.hasAttribute("placeholder")
+          ) {
+            this.queueAttrNodeForTranslation(currentNode);
+          }
+        }
       }
     }
   }
@@ -437,6 +464,16 @@ export class TranslationsDocument {
           // is no reason to run the TreeWalker, it can be directly submitted for
           // translation.
           this.queueNodeForTranslation(node);
+
+          // // If an element has attributes add it to dedicated queue for translation
+          if (node.nodeType !== Node.TEXT_NODE) {
+            if (
+              node.hasAttribute("title") ||
+              node.hasAttribute("placeholder")
+            ) {
+              this.queueAttrNodeForTranslation(node);
+            }
+          }
         }
         break;
 
@@ -536,6 +573,13 @@ export class TranslationsDocument {
    *   These values also work as a `NodeFilter` value.
    */
   determineTranslationStatus(node) {
+    // Add nodes to Translate Attributes: "title", "placeholder"
+    if (node.nodeType !== Node.TEXT_NODE) {
+      if (node.hasAttribute("title") || node.hasAttribute("placeholder")) {
+        this.queueAttrNodeForTranslation(node);
+      }
+    }
+
     if (node.openOrClosedShadowRoot) {
       return NodeStatus.SHADOW_HOST;
     }
@@ -594,6 +638,21 @@ export class TranslationsDocument {
   }
 
   /**
+   * Queue a node for Attribute translation.
+   * @param {Node} node
+   */
+  queueAttrNodeForTranslation(node) {
+    /** @type {NodeVisibility} */
+    let visibility = "out-of-viewport";
+    if (isNodeHidden(node)) {
+      visibility = "hidden";
+    } else if (isNodeInViewport(node)) {
+      visibility = "in-viewport";
+    }
+    this.#queuedAttrNodes.set(node, visibility);
+  }
+
+  /**
    * Submit the translations giving priority to nodes in the viewport.
    */
   async dispatchQueuedTranslations() {
@@ -628,6 +687,29 @@ export class TranslationsDocument {
       }
     }
 
+    // Submit the nodes with Attrbutes to be translated
+    for (const [node, visibility] of this.#queuedAttrNodes) {
+      if (visibility === "in-viewport") {
+        inViewportCounts++;
+        const promise = this.submitAttrTranslation(node);
+        if (inViewportTranslations) {
+          inViewportTranslations.push(promise);
+        }
+      }
+    }
+    for (const [node, visibility] of this.#queuedAttrNodes) {
+      if (visibility === "out-of-viewport") {
+        outOfViewportCounts++;
+        this.submitAttrTranslation(node);
+      }
+    }
+    for (const [node, visibility] of this.#queuedAttrNodes) {
+      if (visibility === "hidden") {
+        hiddenCounts++;
+        this.submitAttrTranslation(node);
+      }
+    }
+
     ChromeUtils.addProfilerMarker(
       "Translations",
       { innerWindowId: this.innerWindowId },
@@ -638,6 +720,9 @@ export class TranslationsDocument {
     );
 
     this.#queuedNodes.clear();
+
+    // Clearing the Attribute queue
+    this.#queuedAttrNodes.clear();
 
     if (!this.viewportTranslated && inViewportTranslations) {
       // Provide a promise that can be used to determine when the initial viewport has
@@ -696,6 +781,7 @@ export class TranslationsDocument {
     }
 
     let text, translate;
+
     if (node.nodeType === Node.ELEMENT_NODE) {
       text = node.innerHTML;
       translate = this.translateHTML;
@@ -720,6 +806,69 @@ export class TranslationsDocument {
     } catch (error) {
       this.#pendingTranslationsCount--;
       lazy.console.error("Translation failed", error);
+    }
+  }
+
+  /**
+   * Submit a node for Attribute translation to the translations engine.
+   *
+   * @param {Node} node
+   * @returns {Promise<void>}
+   */
+  async submitAttrTranslation(node) {
+    // Give each element an id that gets passed through the translation so it can be
+    // reunited later on.
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      node.querySelectorAll("*").forEach((el, i) => {
+        el.dataset.mozTranslationsId = i;
+      });
+    }
+
+    let text, translate;
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.hasAttribute("title")) {
+        text = node.getAttribute("title");
+        translate = this.translateText;
+
+        if (text.trim().length === 0) {
+          return;
+        }
+
+        // Mark this node as not to be translated again unless the contents are changed
+        // (which the observer will pick up on)
+        // this.#processedNodes.add(node);
+
+        this.#pendingTranslationsCount++;
+        try {
+          const [translatedHTML] = await translate(text);
+          this.#pendingTranslationsCount--;
+
+          // Updating attributes directly instead of scheduling
+          this.#nodesWithTranslatedAttr.add({ node, translatedHTML });
+          this.updateNodesWithTranslationsAttr("title");
+        } catch (error) {
+          this.#pendingTranslationsCount--;
+          lazy.console.error("Translation failed", error);
+        }
+      }
+      if (node.hasAttribute("placeholder")) {
+        text = node.getAttribute("placeholder");
+        translate = this.translateText;
+
+        this.#pendingTranslationsCount++;
+        try {
+          const [translatedHTML] = await translate(text);
+          this.#pendingTranslationsCount--;
+
+          // Updating attributes directly instead of scheduling
+          this.#nodesWithTranslatedAttr.add({ node, translatedHTML });
+          this.updateNodesWithTranslationsAttr("placeholder");
+        } catch (error) {
+          this.#pendingTranslationsCount--;
+          lazy.console.error("Translation failed", error);
+        }
+      }
     }
   }
 
@@ -793,6 +942,34 @@ export class TranslationsDocument {
     }
 
     this.#nodesWithTranslatedHTML.clear();
+    this.#updateTimeout = null;
+
+    // Done mutating the DOM.
+    this.startMutationObserver();
+  }
+
+  // Adding parameter to indicate attribute to the translated
+  updateNodesWithTranslationsAttr(attribute = null) {
+    // Stop the mutations so that the updates won't trigger observations.
+    this.stopMutationObserver();
+
+    for (const { node, translatedHTML } of this.#nodesWithTranslatedAttr) {
+      if (Cu.isDeadWrapper(node)) {
+        // The node is no longer alive.
+        ChromeUtils.addProfilerMarker(
+          "Translations",
+          { innerWindowId: this.innerWindowId },
+          "Node is no long alive."
+        );
+        continue;
+      }
+      // Update the attribute of the node with translated attribute
+      if (attribute) {
+        node.setAttribute(attribute, translatedHTML);
+      }
+    }
+
+    this.#nodesWithTranslatedAttr.clear();
     this.#updateTimeout = null;
 
     // Done mutating the DOM.
@@ -999,6 +1176,7 @@ function updateElement(translationsDocument, element) {
 
     // Remove all the nodes from the liveTree, and categorize them by Text node or
     // Element node.
+
     let node;
     while ((node = liveTree.firstChild)) {
       node.remove();
