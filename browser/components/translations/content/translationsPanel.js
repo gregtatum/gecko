@@ -1447,11 +1447,32 @@ var TranslationsPanel = new (class {
   }
 
   /**
+   * Chain together the handleEvent calls so that they always run sequentially to guard
+   * against race conditions.
+   *
+   * @type {Promise<void>}
+   */
+  handleEventChain = Promise.resolve();
+
+  /**
+   * Handle the chaining
+   *
+   * @param {CustomEvent} event
+   */
+  handleEvent = event => {
+    const win = gBrowser.selectedBrowser.browsingContext.currentWindowGlobal;
+    this.handleEventChain = this.handleEventChain
+      .catch(() => {})
+      .then(() => this.handleEventImpl(event, win));
+    return this.handleEventChain;
+  };
+
+  /**
    * Set the state of the translations button in the URL bar.
    *
    * @param {CustomEvent} event
    */
-  handleEvent = async event => {
+  async handleEventImpl(event) {
     switch (event.type) {
       case "TranslationsParent:OfferTranslation": {
         if (Services.wm.getMostRecentBrowserWindow()?.gBrowser === gBrowser) {
@@ -1460,14 +1481,6 @@ var TranslationsPanel = new (class {
         break;
       }
       case "TranslationsParent:LanguageState": {
-        // Check these values after every `await` to guard against race conditions.
-        const handleEventId = ++this.handleEventId;
-        const win =
-          gBrowser.selectedBrowser.browsingContext.currentWindowGlobal;
-        const isRequestStale = () =>
-          handleEventId !== this.handleEventId ||
-          win !== gBrowser.selectedBrowser.browsingContext.currentWindowGlobal;
-
         const {
           detectedLanguages,
           requestedTranslationPair,
@@ -1507,9 +1520,6 @@ var TranslationsPanel = new (class {
           (hasSupportedLanguage &&
             (await TranslationsParent.getIsTranslationsEngineSupported()))
         ) {
-          if (isRequestStale()) {
-            return;
-          }
           button.hidden = false;
           if (requestedTranslationPair) {
             // The translation is active, update the urlbar button.
@@ -1574,9 +1584,6 @@ var TranslationsPanel = new (class {
             PageActions.sendPlacedInUrlbarTrigger(button);
           }
         } else {
-          if (isRequestStale()) {
-            return;
-          }
           this.#hideTranslationsButton();
         }
 
@@ -1611,7 +1618,7 @@ var TranslationsPanel = new (class {
         break;
       }
     }
-  };
+  }
 })();
 
 XPCOMUtils.defineLazyPreferenceGetter(
