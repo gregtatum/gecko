@@ -613,9 +613,10 @@ var TranslationsPanel = new (class {
   /**
    * Show the default view of choosing a source and target language.
    *
+   * @param {TranslationsParent} [actor]
    * @param {boolean} force - Force the page to show translation options.
    */
-  async #showDefaultView(force = false) {
+  async #showDefaultView(actor, force = false) {
     const {
       fromMenuList,
       multiview,
@@ -676,7 +677,9 @@ var TranslationsPanel = new (class {
       this.updateUIForReTranslation(false /* isReTranslation */);
       cancelButton.hidden = false;
       multiview.setAttribute("mainViewId", "translations-panel-view-default");
-      let actor = this.#getTranslationsActor();
+      if (!actor) {
+        actor = this.#getTranslationsActor();
+      }
 
       if (!this._hasShownPanel) {
         actor.firstShowUriSpec = gBrowser.currentURI.spec;
@@ -974,7 +977,7 @@ var TranslationsPanel = new (class {
     const { panel } = this.elements;
     PanelMultiView.hidePopup(panel);
 
-    await this.#showDefaultView(true /* force this view to be shown */);
+    await this.#showDefaultView(null, true /* force this view to be shown */);
 
     await this.#openPanelPopup(this.elements.appMenuButton, {
       event,
@@ -1461,13 +1464,15 @@ var TranslationsPanel = new (class {
    *
    * @param {CustomEvent} event
    */
-  handleEvent = event => {
+  handleEvent = (event, ...args) => {
     this.i++;
     const i = this.i;
     console.log(`!!! translationsPanel.js handleEvent`, event.type, i, this.i);
+    const actor =
+      event.target.browsingContext.currentWindowGlobal.getActor("Translations");
     this.handleEventChain = this.handleEventChain
       .catch(() => {})
-      .then(() => this.handleEventImpl(event, i));
+      .then(() => this.handleEventImpl(event, actor, i));
     return this.handleEventChain;
   };
 
@@ -1476,7 +1481,7 @@ var TranslationsPanel = new (class {
    *
    * @param {CustomEvent} event
    */
-  async handleEventImpl(event, i) {
+  async handleEventImpl(event, actor, i) {
     console.log(
       `!!! translationsPanel.js handleEventImpl`,
       event.type,
@@ -1575,8 +1580,7 @@ var TranslationsPanel = new (class {
             // button's accessible tooltip label.
             if (
               this._hasShownPanel &&
-              gBrowser.currentURI.spec !==
-                this.#getTranslationsActor().firstShowUriSpec
+              gBrowser.currentURI.spec !== actor.firstShowUriSpec
             ) {
               document.l10n.setAttributes(
                 button,
@@ -1625,7 +1629,7 @@ var TranslationsPanel = new (class {
           case "engine-load-failure":
             await this.#ensureLangListsBuilt();
             if (!this.#isShowingDefaultView()) {
-              await this.#showDefaultView().catch(e => {
+              await this.#showDefaultView(actor).catch(e => {
                 this.console?.error(e);
               });
             }
