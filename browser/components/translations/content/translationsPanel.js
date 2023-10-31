@@ -404,6 +404,7 @@ var TranslationsPanel = new (class {
    * @returns {TranslationsParent}
    */
   #getTranslationsActor() {
+    console.trace();
     const actor =
       gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
         "Translations"
