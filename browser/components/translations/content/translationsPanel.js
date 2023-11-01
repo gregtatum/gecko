@@ -404,6 +404,7 @@ var TranslationsPanel = new (class {
    * @returns {TranslationsParent}
    */
   #getTranslationsActor() {
+    console.trace();
     const actor =
       gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
         "Translations"
@@ -1457,17 +1458,22 @@ var TranslationsPanel = new (class {
    */
   handleEventChain = Promise.resolve();
 
+  i = 0;
+
   /**
    * Handle the chaining
    *
    * @param {CustomEvent} event
    */
-  handleEvent = (event) => {
+  handleEvent = (event, ...args) => {
+    this.i++;
+    const i = this.i;
+    console.log(`!!! translationsPanel.js handleEvent`, event.type, i, this.i);
     const actor =
       event.target.browsingContext.currentWindowGlobal.getActor("Translations");
     this.handleEventChain = this.handleEventChain
       .catch(() => {})
-      .then(() => this.handleEventImpl(event, actor));
+      .then(() => this.handleEventImpl(event, actor, i));
     return this.handleEventChain;
   };
 
@@ -1476,7 +1482,13 @@ var TranslationsPanel = new (class {
    *
    * @param {CustomEvent} event
    */
-  async handleEventImpl(event, actor) {
+  async handleEventImpl(event, actor, i) {
+    console.log(
+      `!!! translationsPanel.js handleEventImpl`,
+      event.type,
+      i,
+      this.i
+    );
     switch (event.type) {
       case "TranslationsParent:OfferTranslation": {
         if (Services.wm.getMostRecentBrowserWindow()?.gBrowser === gBrowser) {
@@ -1586,8 +1598,30 @@ var TranslationsPanel = new (class {
           if (!button.hidden) {
             PageActions.sendPlacedInUrlbarTrigger(button);
           }
+          console.log(
+            `!!! translationsPanel.js handleEventImpl - show button`,
+            event.type,
+            i,
+            this.i
+          );
         } else {
+          console.log(
+            `!!! translationsPanel.js handleEventImpl - hide button`,
+            event.type,
+            i,
+            this.i
+          );
           this.#hideTranslationsButton();
+        }
+
+        if (error) {
+          console.log(
+            `!!! translationsPanel.js handleEventImpl - error`,
+            event.type,
+            i,
+            this.i,
+            error
+          );
         }
 
         switch (error) {

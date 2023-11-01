@@ -12,6 +12,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * marshalling of the data such as the engine payload and port passing.
  */
 export class TranslationsEngineParent extends JSWindowActorParent {
+  constructor() {
+    super();
+    console.log(`!!! TranslationsEngineParent constructor`);
+  }
   /**
    * Keep track of the live actors by InnerWindowID.
    *
