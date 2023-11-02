@@ -6,6 +6,7 @@ package org.mozilla.geckoview.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
+import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -151,14 +152,12 @@ class TranslationsTest : BaseSessionTest() {
 
     @Test
     fun testIsTranslationsEngineSupported() {
-        sessionRule.setPrefsUntilTestEnd(mapOf("browser.translations.simulateUnsupportedEngine" to false))
+        sessionRule.setPrefsUntilTestEnd(mapOf("browser.translations.simulateUnsupportedEngine" to true))
         val isSupportedResult = TranslationsController.RuntimeTranslation.isTranslationsEngineSupported()
-        assertTrue(
+        assertFalse(
             "The translations engine is correctly reporting as supported.",
             sessionRule.waitForResult(isSupportedResult),
         )
-        // ToDo: Bug 1853469
-        // Setting "browser.translations.simulateUnsupportedEngine" to true did not return false.
     }
 
     @Test
