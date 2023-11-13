@@ -53,6 +53,7 @@ export class TranslationsChild extends JSWindowActorChild {
         this.#translatedDoc = new lazy.TranslationsDocument(
           this.document,
           data.fromLanguage,
+          data.toLanguage,
           this.contentWindow.windowGlobalChild.innerWindowId,
           data.port,
           () => this.sendAsyncMessage("Translations:RequestPort"),
