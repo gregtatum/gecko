@@ -107,6 +107,8 @@ const MUTATION_OBSERVER_OPTIONS = {
   characterData: true,
   childList: true,
   subtree: true,
+  attributes: true,
+  attributeFilter: TRANSLATABLE_ATTRIBUTES,
 };
 
 /**
@@ -278,6 +280,13 @@ export class TranslationsDocument {
         switch (mutation.type) {
           case "childList":
             for (const node of mutation.addedNodes) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const attributeList = getTranslatableAttributes(node);
+                if (attributeList.length) {
+                  this.queueAttributeNodeForTranslation(node, attributeList);
+                  this.dispatchQueuedAttributeTranslations();
+                }
+              }
               this.#processedNodes.delete(node);
               this.subdivideNodeForTranslations(node);
             }
@@ -285,6 +294,16 @@ export class TranslationsDocument {
           case "characterData":
             this.#processedNodes.delete(mutation);
             this.subdivideNodeForTranslations(mutation.target);
+            break;
+          case "attributes":
+            const attributeList = getTranslatableAttributes(mutation.target);
+            if (attributeList.length) {
+              this.queueAttributeNodeForTranslation(
+                mutation.target,
+                attributeList
+              );
+              this.dispatchQueuedAttributeTranslations();
+            }
             break;
           default:
             break;

@@ -1283,3 +1283,94 @@ add_task(async function test_attributes() {
 
   cleanup();
 });
+
+add_task(async function test_mutations() {
+  const { translate, htmlMatches, cleanup, document } =
+    await createDoc(/* html */ `
+    <div>
+      This is a simple translation.
+    </div>
+  `);
+
+  translate();
+
+  await htmlMatches(
+    "It translates.",
+    /* html */ `
+      <div>
+        THIS IS A SIMPLE TRANSLATION.
+      </div>
+    `
+  );
+
+  info('Trigger the "childList" mutation.');
+  const div = document.createElement("div");
+  div.innerText = "This is an added node.";
+  div.setAttribute("title", "title is added");
+  document.body.appendChild(div);
+
+  await htmlMatches(
+    "The added node gets translated.",
+    /* html */ `
+      <div>
+        THIS IS A SIMPLE TRANSLATION.
+      </div>
+      <div title="TITLE IS ADDED">
+        THIS IS AN ADDED NODE.
+      </div>
+    `
+  );
+
+  info('Trigger the "characterData" mutation.');
+  document.querySelector("div").firstChild.nodeValue =
+    "This is a changed node.";
+
+  await htmlMatches(
+    "The changed node gets translated",
+    /* html */ `
+      <div>
+        THIS IS A CHANGED NODE.
+      </div>
+      <div title="TITLE IS ADDED">
+        THIS IS AN ADDED NODE.
+      </div>
+    `
+  );
+
+  info('Trigger the "childList" mutation.');
+  const inp = document.createElement("input");
+  inp.setAttribute("placeholder", "input placeholder is added");
+  document.body.appendChild(inp);
+
+  await htmlMatches(
+    "The placeholder in input node gets translated.",
+    /* html */ `
+      <div>
+          THIS IS A CHANGED NODE.
+      </div>
+      <div title="TITLE IS ADDED">
+        THIS IS AN ADDED NODE.
+      </div>
+      <input placeholder="INPUT PLACEHOLDER IS ADDED">
+    `
+  );
+
+  info('Trigger the "characterData" mutation.');
+  // adding attribute to first div
+  document.querySelector("div").setAttribute("title", "New attribute");
+
+  await htmlMatches(
+    "The new attribute gets translated.",
+    /* html */ `
+      <div title="NEW ATTRIBUTE">
+          THIS IS A CHANGED NODE.
+      </div>
+      <div title="TITLE IS ADDED">
+        THIS IS AN ADDED NODE.
+      </div>
+      <input placeholder="INPUT PLACEHOLDER IS ADDED">
+    `
+  );
+
+  cleanup();
+});
