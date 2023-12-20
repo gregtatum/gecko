@@ -109,6 +109,55 @@ async function handleInitializationMessage({ data }) {
 }
 
 /**
+ * Create a translation cache with a limit. It implements a "least recently used" strategy
+ * to remove old translations.
+ */
+class LRUCache {
+  /** @type {Map<string, string>} */
+  #cache = new Map();
+
+  // This value can be quite large, as most likely this process will be killed after
+  // some time, and the cache will go away.
+  limit = 5_000;
+
+  /**
+   * @param {string} sourceString
+   * @returns {string}
+   */
+  get(sourceString) {
+    const targetString = this.#cache.get(sourceString);
+
+    if (targetString === undefined) {
+      return undefined;
+    }
+
+    // Maps are ordered, move this item to the end of the list so it will stay
+    // alive longer.
+    this.#cache.delete(sourceString);
+    this.#cache.set(sourceString, targetString);
+
+    return targetString;
+  }
+
+  /**
+   * @param {string} sourceString
+   * @param {string} targetString
+   */
+  set(sourceString, targetString) {
+    if (this.#cache.size === this.limit) {
+      // If the cache is at the limit, get the least recently used translation and
+      // remove it. This works since Maps have keys ordered by insertion order.
+      const key = this.#cache.keys().next().value;
+      this.#cache.delete(key);
+    }
+    this.#cache.set(sourceString, targetString);
+  }
+}
+
+const htmlCache = new LRUCache();
+const textCache = new LRUCache();
+
+/**
  * Sets up the message handling for the worker.
  *
  * @param {Engine | MockedEngine} engine
@@ -136,15 +185,20 @@ function handleMessages(engine) {
             await discardPromise;
           }
           try {
-            // Add a translation to the work queue, and when it returns, post the message
-            // back. The translation may never return if the translations are discarded
-            // before it have time to be run. In this case this await is just never
-            // resolved, and the postMessage is never run.
-            const targetText = await engine.translate(
-              sourceText,
-              isHTML,
-              innerWindowId
-            );
+            const cache = isHTML ? htmlCache : textCache;
+            let targetText = cache.get(sourceText);
+            if (targetText === undefined) {
+              // Add a translation to the work queue, and when it returns, post the message
+              // back. The translation may never return if the translations are discarded
+              // before it have time to be run. In this case this await is just never
+              // resolved, and the postMessage is never run.
+              targetText = await engine.translate(
+                sourceText,
+                isHTML,
+                innerWindowId
+              );
+              cache.set(sourceText, targetText);
+            }
 
             // This logging level can be very verbose and slow, so only do it under the
             // "Trace" level, which is the most verbose. Set the logging level to "Info" to avoid
