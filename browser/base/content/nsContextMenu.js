@@ -820,6 +820,7 @@ class nsContextMenu {
     }
 
     this.showAndFormatSearchContextItem();
+    this.showTranslateSelectionItem();
 
     // srcdoc cannot be opened separately due to concerns about web
     // content with about:srcdoc in location bar masquerading as trusted
@@ -2447,6 +2448,25 @@ class nsContextMenu {
       dest = "tab";
     }
     openTrustedLinkIn(drmInfoURL, dest);
+  }
+
+  /**
+   * Displays or hides as well as localizes the translate-selection item in the context menu.
+   */
+  async showTranslateSelectionItem() {
+    const translateSelectionItem = document.getElementById(
+      "context-translate-selection"
+    );
+    const translationsEnabled = Services.prefs.getBoolPref(
+      "browser.translations.enable"
+    );
+    const selectTranslationsEnabled = Services.prefs.getBoolPref(
+      "browser.translations.select.enable"
+    );
+
+    translateSelectionItem.hidden = !(
+      translationsEnabled && selectTranslationsEnabled
+    );
   }
 
   // Formats the 'Search <engine> for "<selection or link text>"' context menu.
