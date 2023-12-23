@@ -1017,6 +1017,10 @@ function assertIsVisible(expected, { element, id, l10nId }) {
  * @param {boolean} options.openAtFirstParagraph - Opens the context menu at the first paragraph in the test page.
  * @param {boolean} options.openAtSpanishParagraph - Opens the context menu at the Spanish paragraph in the test page.
  *                                                   This is only available in SPANISH_TEST_PAGE.
+ * @param {boolean} options.openAtEnglishHyperlink - Opens the context menu at the English hyperlink in the test page.
+ *                                                   This is only available in SPANISH_TEST_PAGE.
+ * @param {boolean} options.openAtSpanishHyperlink - Opens the context menu at the Spanish hyperlink in the test page.
+ *                                                   This is only available in SPANISH_TEST_PAGE.
  * @throws Throws an error if no valid option was provided for opening the menu.
  */
 async function openContextMenu(
@@ -1026,6 +1030,8 @@ async function openContextMenu(
     selectSpanishParagraph,
     openAtFirstParagraph,
     openAtSpanishParagraph,
+    openAtEnglishHyperlink,
+    openAtSpanishHyperlink,
   }
 ) {
   if (selectFirstParagraph === true) {
@@ -1062,6 +1068,26 @@ async function openContextMenu(
     return;
   }
 
+  if (openAtEnglishHyperlink === true) {
+    await runInPage(async TranslationsTest => {
+      const { getEnglishHyperlink } = TranslationsTest.getSelectors();
+      const hyperlink = getEnglishHyperlink();
+      console.log("English hyperlink text:", hyperlink.textContent);
+      await TranslationsTest.rightClickContentElement(hyperlink);
+    });
+    return;
+  }
+
+  if (openAtSpanishHyperlink === true) {
+    await runInPage(async TranslationsTest => {
+      const { getSpanishHyperlink } = TranslationsTest.getSelectors();
+      const hyperlink = getSpanishHyperlink();
+      console.log("Spanish hyperlink text:", hyperlink.textContent);
+      await TranslationsTest.rightClickContentElement(hyperlink);
+    });
+    return;
+  }
+
   ok(
     false,
     "openContextMenu was not provided a declaration for which element to open the menu at."
@@ -1082,6 +1108,10 @@ async function openContextMenu(
  * @param {boolean} options.openAtFirstParagraph - Opens the context menu at the first paragraph in the test page.
  * @param {boolean} options.openAtSpanishParagraph - Opens the context menu at the Spanish paragraph in the test page.
  *                                                   This is only available in SPANISH_TEST_PAGE.
+ * @param {boolean} options.openAtEnglishHyperlink - Opens the context menu at the English hyperlink in the test page.
+ *                                                   This is only available in SPANISH_TEST_PAGE.
+ * @param {boolean} options.openAtSpanishHyperlink - Opens the context menu at the Spanish hyperlink in the test page.
+ *                                                   This is only available in SPANISH_TEST_PAGE.
  * @param {string} [message] - A message to log to info.
  * @throws Throws an error if the properties of the translate-selection item do not match the expected options.
  */
@@ -1094,6 +1124,8 @@ async function assertContextMenuTranslateSelectionItem(
     expectedTargetLanguage,
     openAtFirstParagraph,
     openAtSpanishParagraph,
+    openAtEnglishHyperlink,
+    openAtSpanishHyperlink,
   },
   message
 ) {
@@ -1109,6 +1141,8 @@ async function assertContextMenuTranslateSelectionItem(
     selectSpanishParagraph,
     openAtFirstParagraph,
     openAtSpanishParagraph,
+    openAtEnglishHyperlink,
+    openAtSpanishHyperlink,
   });
 
   const menuItem = maybeGetById(
@@ -1124,7 +1158,9 @@ async function assertContextMenuTranslateSelectionItem(
     if (expectedTargetLanguage) {
       // Target language expected, check for the data-l10n-id with a `{$language}` argument.
       const expectedL10nId =
-        "main-context-menu-translate-selection-to-language";
+        selectFirstParagraph === true || selectSpanishParagraph === true
+          ? "main-context-menu-translate-selection-to-language"
+          : "main-context-menu-translate-link-text-to-language";
       await waitForCondition(
         () => menuItem.getAttribute("data-l10n-id") === expectedL10nId,
         `Waiting for translate-selection context menu item to localize with target language ${expectedTargetLanguage}`
@@ -1144,7 +1180,10 @@ async function assertContextMenuTranslateSelectionItem(
       );
     } else {
       // No target language expected, check for the data-l10n-id that has no `{$language}` argument.
-      const expectedL10nId = "main-context-menu-translate-selection";
+      const expectedL10nId =
+        selectFirstParagraph === true || selectSpanishParagraph === true
+          ? "main-context-menu-translate-selection"
+          : "main-context-menu-translate-link-text";
       await waitForCondition(
         () => menuItem.getAttribute("data-l10n-id") === expectedL10nId,
         "Waiting for translate-selection context menu item to localize without target language."
