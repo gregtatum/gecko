@@ -2467,6 +2467,44 @@ class nsContextMenu {
     translateSelectionItem.hidden = !(
       translationsEnabled && selectTranslationsEnabled
     );
+
+    const translatableText = this.selectedText.trim();
+
+    translateSelectionItem.hidden =
+      // Only show the item if the feature is enabled.
+      !(translationsEnabled && selectTranslationsEnabled) ||
+      // If there is no text to translate, we have nothing to do.
+      translatableText.length === 0;
+
+    if (translateSelectionItem.hidden) {
+      return;
+    }
+
+    const preferredLanguages =
+      nsContextMenu.TranslationsParent.getPreferredLanguages();
+    const topPreferredLanguage = preferredLanguages?.[0] ?? null;
+
+    if (topPreferredLanguage) {
+      const { language } = await nsContextMenu.LanguageDetector.detectLanguage(
+        translatableText
+      );
+      if (topPreferredLanguage !== language) {
+        const dn = new Services.intl.DisplayNames(undefined, {
+          type: "language",
+        });
+        document.l10n.setAttributes(
+          translateSelectionItem,
+          "main-context-menu-translate-selection-to-language",
+          { language: dn.of(topPreferredLanguage) }
+        );
+        return;
+      }
+    }
+
+    document.l10n.setAttributes(
+      translateSelectionItem,
+      "main-context-menu-translate-selection"
+    );
   }
 
   // Formats the 'Search <engine> for "<selection or link text>"' context menu.
@@ -2571,8 +2609,11 @@ class nsContextMenu {
 
 ChromeUtils.defineESModuleGetters(nsContextMenu, {
   DevToolsShim: "chrome://devtools-startup/content/DevToolsShim.sys.mjs",
+  LanguageDetector:
+    "resource://gre/modules/translation/LanguageDetector.sys.mjs",
   LoginManagerContextMenu:
     "resource://gre/modules/LoginManagerContextMenu.sys.mjs",
+  TranslationsParent: "resource://gre/actors/TranslationsParent.sys.mjs",
   WebNavigationFrames: "resource://gre/modules/WebNavigationFrames.sys.mjs",
 });
 
