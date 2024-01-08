@@ -13,6 +13,7 @@ from textwrap import dedent
 import mozunit
 import pytest
 from mozlog.formatters import (
+    FocusedFormatter,
     GroupingFormatter,
     HTMLFormatter,
     MachFormatter,
@@ -669,6 +670,72 @@ Unexpected results: 3
         # has been killed by signal on posix.
         self.logger.process_exit(1234, -signal.SIGTERM)
         self.assertIn("1234: killed by SIGTERM", self.loglines[0])
+
+class TestFocusedFormatter(FormatterTest):
+    def get_formatter(self):
+        return FocusedFormatter(disable_colors=True)
+
+    def test_mochitest(self):
+        """Tests the serialized test output behavior"""
+        self.logger.suite_start([], "mochitest")
+        self.logger.group_start("fake-test.toml")
+        self.logger.test_start("test1")
+        self.logger.test_status("test1", "subtest1", status="PASS")
+        self.logger.test_status("test1", "subtest2", status="PASS")
+        self.logger.test_end("test1", status="OK")
+        self.logger.test_start("test2")
+        self.logger.test_status(
+            "test2",
+            "subtest3",
+            status="FAIL",
+            expected="PASS",
+            known_intermittent=["FAIL"],
+        )
+        self.logger.test_end("test2", status="FAIL", expected="OK")
+        self.logger.suite_end(dict(name="mochitest"))
+        self.logger.group_end("fake-test.toml")
+
+        self.assertIn('    SUITE:  mochitest', self.loglines)
+        self.assertIn(' MANIFEST:  fake-test.toml', self.loglines)
+        self.assertIn('     TEST:  test1', self.loglines)
+        self.assertIn('  ✓ subtest1', self.loglines)
+        self.assertIn('  ✓ subtest2', self.loglines)
+        self.assertIn('   RESULT:  OK', self.loglines)
+        self.assertIn('     TEST:  test2', self.loglines)
+        self.assertIn('  ✕ subtest3', self.loglines)
+        self.assertIn('   RESULT:  FAIL', self.loglines)
+
+    def test_xpcshell(self):
+        """Tests the parallelized test output behavior"""
+        self.logger.suite_start([], "xpcshell")
+        self.logger.group_start("fake-test.toml")
+        self.logger.test_start("test1")
+        self.logger.test_status("test1", "subtest1", status="PASS")
+        self.logger.test_status("test1", "subtest2", status="PASS")
+        self.logger.test_end("test1", status="OK")
+        self.logger.test_start("test2")
+        self.logger.test_status(
+            "test2",
+            "subtest3",
+            status="FAIL",
+            expected="PASS",
+            known_intermittent=["FAIL"],
+        )
+        self.logger.test_end("test2", status="FAIL", expected="OK")
+        self.logger.suite_end(dict(name="xpcshell"))
+        self.logger.group_end("fake-test.toml")
+
+        self.assertIn('    SUITE:  xpcshell', self.loglines)
+        self.assertIn(' MANIFEST:  fake-test.toml', self.loglines)
+        self.assertIn('     TEST:  test1', self.loglines)
+        self.assertIn('  ✓ subtest1', self.loglines)
+        self.assertIn('  ✓ subtest2', self.loglines)
+        # xpcshell reports the test name on the results
+        self.assertIn('   RESULT:  OK test1', self.loglines)
+        self.assertIn('     TEST:  test2', self.loglines)
+        self.assertIn('  ✕ subtest3', self.loglines)
+        # xpcshell reports the test name on the results
+        self.assertIn('   RESULT:  FAIL test2', self.loglines)
 
 
 class TestGroupingFormatter(FormatterTest):

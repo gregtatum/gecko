@@ -26,6 +26,7 @@ log_formatters = {
         formatters.XUnitFormatter,
         "xUnit compatible XML " "(provided by mozlog)",
     ),
+    "focused": (formatters.FocusedFormatter, "Human-readable focused test output " "(provided by mozlog)"),
     "html": (formatters.HTMLFormatter, "HTML report " "(provided by mozlog)"),
     "mach": (formatters.MachFormatter, "Human-readable output " "(provided by mozlog)"),
     "tbpl": (formatters.TbplFormatter, "TBPL style log format " "(provided by mozlog)"),
@@ -55,7 +56,6 @@ def verbose_wrapper(formatter, verbose):
 def compact_wrapper(formatter, compact):
     formatter.compact = compact
     return formatter
-
 
 def buffer_handler_wrapper(handler, buffer_limit):
     if buffer_limit == "UNLIMITED":
