@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from .errorsummary import ErrorSummaryFormatter
+from .focused import FocusedFormatter
 from .grouping import GroupingFormatter
 from .html import HTMLFormatter
 from .machformatter import MachFormatter
@@ -29,4 +30,5 @@ __all__ = [
     "ErrorSummaryFormatter",
     "JSONFormatter",
     "GroupingFormatter",
+    "FocusedFormatter",
 ]
