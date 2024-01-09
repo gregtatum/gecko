@@ -73,20 +73,27 @@ XULStore.prototype = {
   _writeTimer: Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer),
 
   load() {
-    Services.obs.addObserver(this, "profile-before-change", true);
-
     try {
       this._storeFile = Services.dirsvc.get("ProfD", Ci.nsIFile);
-    } catch (ex) {
+    } catch {
       try {
         this._storeFile = Services.dirsvc.get("ProfDS", Ci.nsIFile);
-      } catch (ex) {
-        throw new Error("Can't find profile directory.");
+      } catch {
+        if (
+          Services.appinfo.processType == Ci.nsIXULRuntime.PROCESS_TYPE_DEFAULT
+        ) {
+          // Only report this error in the parent process.
+          throw new Error("Can't find profile directory.");
+        }
       }
     }
-    this._storeFile.append(STOREDB_FILENAME);
+    if (this._storeFile) {
+      Services.obs.addObserver(this, "profile-before-change", true);
 
-    this.readFile();
+      this._storeFile.append(STOREDB_FILENAME);
+
+      this.readFile();
+    }
   },
 
   observe(subject, topic, data) {
