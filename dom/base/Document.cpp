@@ -12197,7 +12197,7 @@ void Document::SetReadyStateInternal(ReadyState aReadyState,
 
   if (READYSTATE_INTERACTIVE == aReadyState &&
       NodePrincipal()->IsSystemPrincipal()) {
-    if (!mXULPersist) {
+    if (!mXULPersist && XRE_IsParentProcess()) {
       mXULPersist = new XULPersist(this);
       mXULPersist->Init();
     }
