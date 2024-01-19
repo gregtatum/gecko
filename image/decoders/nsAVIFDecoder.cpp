@@ -837,116 +837,12 @@ class AOMDecoder final : AVIFDecoderInterface {
     MOZ_LOG(sAVIFLog, LogLevel::Verbose, ("Create AOMDecoder=%p", this));
   }
 
-  aom_codec_err_t Init(bool aHasAlpha) {
-    MOZ_ASSERT(mColorContext.isNothing());
-    MOZ_ASSERT(mAlphaContext.isNothing());
-
-    aom_codec_iface_t* iface = aom_codec_av1_dx();
-
-    // Init color decoder context
-    mColorContext.emplace();
-    aom_codec_err_t r = aom_codec_dec_init(
-        mColorContext.ptr(), iface, /* cfg = */ nullptr, /* flags = */ 0);
-
-    MOZ_LOG(sAVIFLog, r == AOM_CODEC_OK ? LogLevel::Verbose : LogLevel::Error,
-            ("[this=%p] color decoder: aom_codec_dec_init -> %d, name = %s",
-             this, r, mColorContext->name));
-
-    if (r != AOM_CODEC_OK) {
-      mColorContext.reset();
-      return r;
-    }
-
-    if (aHasAlpha) {
-      // Init alpha decoder context
-      mAlphaContext.emplace();
-      r = aom_codec_dec_init(mAlphaContext.ptr(), iface, /* cfg = */ nullptr,
-                             /* flags = */ 0);
-
-      MOZ_LOG(sAVIFLog, r == AOM_CODEC_OK ? LogLevel::Verbose : LogLevel::Error,
-              ("[this=%p] color decoder: aom_codec_dec_init -> %d, name = %s",
-               this, r, mAlphaContext->name));
-
-      if (r != AOM_CODEC_OK) {
-        mAlphaContext.reset();
-        return r;
-      }
-    }
-
-    return r;
-  }
+  aom_codec_err_t Init(bool aHasAlpha) { return AOM_CODEC_OK; }
 
   static DecodeResult GetImage(aom_codec_ctx_t& aContext,
                                const MediaRawData& aData, aom_image_t** aImage,
                                bool aShouldSendTelemetry) {
-    aom_codec_err_t r =
-        aom_codec_decode(&aContext, aData.Data(), aData.Size(), nullptr);
-
-    MOZ_LOG(sAVIFLog, r == AOM_CODEC_OK ? LogLevel::Verbose : LogLevel::Error,
-            ("aom_codec_decode -> %d", r));
-
-    if (aShouldSendTelemetry) {
-      switch (r) {
-        case AOM_CODEC_OK:
-          // No need to record any telemetry for the common case
-          break;
-        case AOM_CODEC_ERROR:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::error);
-          break;
-        case AOM_CODEC_MEM_ERROR:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::mem_error);
-          break;
-        case AOM_CODEC_ABI_MISMATCH:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::abi_mismatch);
-          break;
-        case AOM_CODEC_INCAPABLE:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::incapable);
-          break;
-        case AOM_CODEC_UNSUP_BITSTREAM:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::unsup_bitstream);
-          break;
-        case AOM_CODEC_UNSUP_FEATURE:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::unsup_feature);
-          break;
-        case AOM_CODEC_CORRUPT_FRAME:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::corrupt_frame);
-          break;
-        case AOM_CODEC_INVALID_PARAM:
-          AccumulateCategorical(LABELS_AVIF_AOM_DECODE_ERROR::invalid_param);
-          break;
-        default:
-          MOZ_ASSERT_UNREACHABLE(
-              "Unknown aom_codec_err_t value from aom_codec_decode");
-      }
-    }
-
-    if (r != AOM_CODEC_OK) {
-      return AsVariant(AOMResult(r));
-    }
-
-    aom_codec_iter_t iter = nullptr;
-    aom_image_t* img = aom_codec_get_frame(&aContext, &iter);
-
-    MOZ_LOG(sAVIFLog, img == nullptr ? LogLevel::Error : LogLevel::Verbose,
-            ("aom_codec_get_frame -> %p", img));
-
-    if (img == nullptr) {
-      return AsVariant(AOMResult(NonAOMCodecError::NoFrame));
-    }
-
-    const CheckedInt<int> decoded_width = img->d_w;
-    const CheckedInt<int> decoded_height = img->d_h;
-
-    if (!decoded_height.isValid() || !decoded_width.isValid()) {
-      MOZ_LOG(sAVIFLog, LogLevel::Debug,
-              ("image dimensions can't be stored in int: d_w: %u, "
-               "d_h: %u",
-               img->d_w, img->d_h));
-      return AsVariant(AOMResult(NonAOMCodecError::SizeOverflow));
-    }
-
-    *aImage = img;
-    return AsVariant(AOMResult(r));
+    return AsVariant(AOMResult(AOM_CODEC_OK));
   }
 
   static UniquePtr<AVIFDecodedData> AOMImageToToDecodedData(

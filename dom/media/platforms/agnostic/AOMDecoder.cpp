@@ -53,36 +53,6 @@ using gfx::CICP::TransferCharacteristics;
 
 static MediaResult InitContext(AOMDecoder& aAOMDecoder, aom_codec_ctx_t* aCtx,
                                const VideoInfo& aInfo) {
-  aom_codec_iface_t* dx = aom_codec_av1_dx();
-  if (!dx) {
-    return MediaResult(NS_ERROR_DOM_MEDIA_FATAL_ERR,
-                       RESULT_DETAIL("Couldn't get AV1 decoder interface."));
-  }
-
-  size_t decode_threads = 2;
-  if (aInfo.mDisplay.width >= 2048) {
-    decode_threads = 8;
-  } else if (aInfo.mDisplay.width >= 1024) {
-    decode_threads = 4;
-  }
-  decode_threads = std::min(decode_threads, GetNumberOfProcessors());
-
-  aom_codec_dec_cfg_t config;
-  PodZero(&config);
-  config.threads = static_cast<unsigned int>(decode_threads);
-  config.w = config.h = 0;  // set after decode
-  config.allow_lowbitdepth = true;
-
-  aom_codec_flags_t flags = 0;
-
-  auto res = aom_codec_dec_init(aCtx, dx, &config, flags);
-  if (res != AOM_CODEC_OK) {
-    LOGEX_RESULT(&aAOMDecoder, res, "Codec initialization failed, res=%d",
-                 int(res));
-    return MediaResult(NS_ERROR_DOM_MEDIA_FATAL_ERR,
-                       RESULT_DETAIL("AOM error initializing AV1 decoder: %s",
-                                     aom_codec_err_to_string(res)));
-  }
   return NS_OK;
 }
 
@@ -150,22 +120,11 @@ RefPtr<MediaDataDecoder::DecodePromise> AOMDecoder::ProcessDecode(
                                "AOMDecoder"_ns, aId, flag);
   });
 
-  if (aom_codec_err_t r = aom_codec_decode(&mCodec, aSample->Data(),
-                                           aSample->Size(), nullptr)) {
-    LOG_RESULT(r, "Decode error!");
-    return DecodePromise::CreateAndReject(
-        MediaResult(NS_ERROR_DOM_MEDIA_DECODE_ERR,
-                    RESULT_DETAIL("AOM error decoding AV1 sample: %s",
-                                  aom_codec_err_to_string(r))),
-        __func__);
-  }
-
-  aom_codec_iter_t iter = nullptr;
   aom_image_t* img;
   UniquePtr<aom_image_t, AomImageFree> img8;
   DecodedData results;
 
-  while ((img = aom_codec_get_frame(&mCodec, &iter))) {
+  while (false) {
     NS_ASSERTION(
         img->fmt == AOM_IMG_FMT_I420 || img->fmt == AOM_IMG_FMT_I42016 ||
             img->fmt == AOM_IMG_FMT_I444 || img->fmt == AOM_IMG_FMT_I44416,
@@ -305,13 +264,14 @@ bool AOMDecoder::IsKeyframe(Span<const uint8_t> aBuffer) {
   aom_codec_stream_info_t info;
   PodZero(&info);
 
-  auto res = aom_codec_peek_stream_info(aom_codec_av1_dx(), aBuffer.Elements(),
-                                        aBuffer.Length(), &info);
-  if (res != AOM_CODEC_OK) {
-    LOG_STATIC_RESULT(
-        res, "couldn't get keyframe flag with aom_codec_peek_stream_info");
-    return false;
-  }
+  // auto res = aom_codec_peek_stream_info(aom_codec_av1_dx(),
+  // aBuffer.Elements(),
+  //                                       aBuffer.Length(), &info);
+  // if (res != AOM_CODEC_OK) {
+  //   LOG_STATIC_RESULT(
+  //       res, "couldn't get keyframe flag with aom_codec_peek_stream_info");
+  //   return false;
+  // }
 
   return bool(info.is_kf);
 }
