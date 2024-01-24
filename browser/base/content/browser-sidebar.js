@@ -33,6 +33,14 @@ var SidebarUI = {
         }),
       ],
       [
+        "viewNowSidebar",
+        makeSidebar({
+          elementId: "sidebar-switcher-bookmarks",
+          url: "chrome://browser/content/firefoxview/nowSidebar.html",
+          menuId: "menu_bookmarksSidebar",
+        }),
+      ],
+      [
         "viewBookmarksSidebar",
         makeSidebar({
           elementId: "sidebar-switcher-bookmarks",
