@@ -120,6 +120,8 @@ toolkit.jar:
    content/global/elements/popupnotification.js  (widgets/popupnotification.js)
    content/global/elements/arrowscrollbox.js     (widgets/arrowscrollbox.js)
    content/global/elements/search-textbox.js     (widgets/search-textbox.js)
+   content/global/elements/sidebar-launcher.css    (widgets/sidebar-launcher/sidebar-launcher.css)
+   content/global/elements/sidebar-launcher.mjs    (widgets/sidebar-launcher/sidebar-launcher.mjs)
    content/global/elements/stringbundle.js     (widgets/stringbundle.js)
    content/global/elements/tabbox.js           (widgets/tabbox.js)
    content/global/elements/text.js             (widgets/text.js)
