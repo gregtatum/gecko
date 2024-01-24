@@ -11,7 +11,7 @@
 /* TODO(bug 1845150): Remove notification-message from the host selectors in
  * this file */
 
-:host(:is(.anonymous-content-host, notification-message)),
+:host(:is(.anonymous-content-host, notification-message, sidebar-launcher)),
 :root {
   --in-content-page-color: rgb(21, 20, 26);
   --in-content-page-background: #fff;
