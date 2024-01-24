@@ -1,0 +1,21 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 48px;
+  height: 100%;
+  padding: 8px;
+  border-right: 1px solid var(--sidebar-border-color);
+  background-color: var(--sidebar-background-color);
+}
+
+moz-button {
+  &::part(button) {
+    background-image: var(--action-icon);
+  }
+}

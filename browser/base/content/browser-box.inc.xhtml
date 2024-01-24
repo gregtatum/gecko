@@ -3,8 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 <hbox flex="1" id="browser">
+  <html:sidebar-launcher flex="1"></html:sidebar-launcher>
   <vbox id="sidebar-box" hidden="true" class="chromeclass-extrachrome">
-    <box id="sidebar-header" align="center">
+    <box id="sidebar-header" align="center" hidden="true">
       <toolbarbutton id="sidebar-switcher-target" class="tabbable" aria-expanded="false">
         <image id="sidebar-icon" consumeanchor="sidebar-switcher-target"/>
         <label id="sidebar-title" crop="end" control="sidebar"/>

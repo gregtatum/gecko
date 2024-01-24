@@ -41,6 +41,7 @@
 }
 
 .fxview-tab-row-main:hover,
+:host([selected]) .fxview-tab-row-main,
 .fxview-tab-row-button.ghost-button.icon-button:enabled:hover {
   background-color: var(--fxviewtabrow-element-background-hover);
   color: var(--fxviewtabrow-text-color-hover);

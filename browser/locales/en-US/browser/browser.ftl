@@ -1069,3 +1069,12 @@ popup-warning-button =
 #   $popupURI (String): the URI for the pop-up window
 popup-show-popup-menuitem =
     .label = Show “{ $popupURI }”
+
+sidebar-launcher-bookmarks =
+  .tooltiptext = Bookmarks
+sidebar-launcher-history =
+  .tooltiptext = History
+sidebar-launcher-syncedtabs =
+  .tooltiptext = Synced tabs
+sidebar-launcher-home =
+  .tooltiptext = Home

@@ -54,6 +54,8 @@ skip-if = [
 
 ["test_popupreflows.xhtml"]
 
+["test_sidebar_launcher.html"]
+
 ["test_tree_column_reorder.xhtml"]
 
 ["test_videocontrols_focus.html"]

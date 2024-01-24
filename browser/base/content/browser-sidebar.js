@@ -25,6 +25,14 @@ var SidebarUI = {
 
     return (this._sidebars = new Map([
       [
+        "viewHomeSidebar",
+        makeSidebar({
+          elementId: "sidebar-switcher-bookmarks",
+          url: "chrome://browser/content/firefoxview/homeSidebar.html",
+          menuId: "menu_bookmarksSidebar",
+        }),
+      ],
+      [
         "viewBookmarksSidebar",
         makeSidebar({
           elementId: "sidebar-switcher-bookmarks",
@@ -99,6 +107,8 @@ var SidebarUI = {
   },
 
   init() {
+    window.ensureCustomElements("sidebar-launcher");
+
     this._box = document.getElementById("sidebar-box");
     this._splitter = document.getElementById("sidebar-splitter");
     this._reversePositionButton = document.getElementById(
@@ -108,12 +118,12 @@ var SidebarUI = {
     this._switcherTarget = document.getElementById("sidebar-switcher-target");
     this._switcherArrow = document.getElementById("sidebar-switcher-arrow");
 
-    this._switcherTarget.addEventListener("command", () => {
-      this.toggleSwitcherPanel();
-    });
-    this._switcherTarget.addEventListener("keydown", event => {
-      this.handleKeydown(event);
-    });
+    // this._switcherTarget.addEventListener("command", () => {
+    //   this.toggleSwitcherPanel();
+    // });
+    // this._switcherTarget.addEventListener("keydown", event => {
+    //   this.handleKeydown(event);
+    // });
 
     this._inited = true;
 
@@ -563,6 +573,9 @@ var SidebarUI = {
    */
   _show(commandID) {
     return new Promise(resolve => {
+      this._box.dispatchEvent(
+        new CustomEvent("sidebar-show", { detail: { viewId: commandID } })
+      );
       this.selectMenuItem(commandID);
 
       this._box.hidden = this._splitter.hidden = false;
@@ -617,6 +630,7 @@ var SidebarUI = {
 
     this.hideSwitcherPanel();
 
+    this._box.dispatchEvent(new CustomEvent("sidebar-hide"));
     this.selectMenuItem("");
 
     // Replace the document currently displayed in the sidebar with about:blank

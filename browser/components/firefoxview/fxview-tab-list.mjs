@@ -74,6 +74,7 @@ export default class FxviewTabList extends MozLitElement {
     tabItems: { type: Array },
     updatesPaused: { type: Boolean },
     searchQuery: { type: String },
+    showSelected: { type: Boolean },
   };
 
   static queries = {
@@ -288,6 +289,7 @@ export default class FxviewTabList extends MozLitElement {
         exportparts="secondary-button"
         ?active=${i == this.activeIndex}
         ?compact=${this.compactRows}
+        ?selected=${this.showSelected && tabItem.tabElement.selected}
         .hasPopup=${this.hasPopup}
         .containerObj=${tabItem.containerObj}
         .currentActiveElementId=${this.currentActiveElementId}
@@ -329,6 +331,7 @@ export default class FxviewTabList extends MozLitElement {
       <div
         id="fxview-tab-list"
         class="fxview-tab-list"
+        part="list"
         role="list"
         @keydown=${this.handleFocusElementInRow}
       >
