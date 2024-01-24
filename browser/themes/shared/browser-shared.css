@@ -1199,10 +1199,42 @@ panel toolbarseparator {
 
 /* Shopping sidebar */
 
+/* experimental splitter */
+
+.horizontal-sidebar-splitter {
+  display: inline-block;
+  border-top: 1px solid light-dark(rgb(240, 240, 244), rgb(82,82,94));
+  width: 100%;
+  cursor: ns-resize;
+}
+
 shopping-sidebar {
   border-inline-start: 1px solid var(--chrome-content-separator-color);
   min-width: 16.92em;
   max-width: 32.31em;
-  width: 320px;
-  box-sizing: content-box;
+  width: var(--shopping-sidebar-width);
+  visibility: visible;
+  inset-inline-end: 0;
+
+  /* sidebar experiment: try half-height with a splitter */
+  height: 50%;
+
+  &[closed] {
+    transform: translateX(var(--shopping-sidebar-width-translate-x));
+    visibility: collapse;
+    position: absolute;
+    /* Because of absolute positioning, height would normally be set to 0 and break animations.
+     * Set height to 100% so that animations are smooth and the sidebar maintains its original size. */
+    height: 100%;
+
+    &:-moz-locale-dir(rtl) {
+      transform: translateX(calc(-1 * var(--shopping-sidebar-width-translate-x)));
+    }
+  }
+}
+
+@media not (prefers-reduced-motion) {
+  shopping-sidebar {
+    transition: visibility 0.3s, transform 0.3s ease-in-out;
+  }
 }

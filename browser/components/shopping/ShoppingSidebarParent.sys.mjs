@@ -28,12 +28,15 @@ export class ShoppingSidebarParent extends JSWindowActorParent {
   async receiveMessage(message) {
     switch (message.name) {
       case "GetProductURL":
-        let sidebarBrowser = this.browsingContext.top.embedderElement;
-        let panel = sidebarBrowser.closest(".browserSidebarContainer");
-        let associatedTabbedBrowser = panel.querySelector(
-          "browser[messagemanagergroup=browsers]"
-        );
-        return associatedTabbedBrowser.currentURI?.spec ?? null;
+        //let sidebarBrowser = this.browsingContext.top.embedderElement;
+        //let panel = sidebarBrowser.closest(".browserSidebarContainer");
+        //let associatedTabbedBrowser = panel.querySelector(
+        //  "browser[messagemanagergroup=browsers]"
+        //);
+        //return associatedTabbedBrowser.currentURI?.spec ?? null;
+        // TODO looks like we need to get the selected browser here instead.
+        let window = this.browsingContext.top.embedderElement.ownerGlobal;
+        return window.gBrowser.selectedBrowser.currentURI?.spec ?? null;
     }
     return null;
   }
@@ -184,8 +187,13 @@ class ShoppingSidebarManagerClass {
       return;
     }
 
-    let browserPanel = gBrowser.getPanel(aBrowser);
-    let sidebar = browserPanel.querySelector("shopping-sidebar");
+    // let's instead shove it in the existing sidebar
+    let globalSidebar = document.querySelector("#sidebar-box");
+    let globalSidebarBrowser = globalSidebar.querySelector("#sidebar");
+
+    // let browserPanel = gBrowser.getPanel(aBrowser);
+    // let sidebar = browserPanel.querySelector("shopping-sidebar");
+    let sidebar = globalSidebar.querySelector("shopping-sidebar");
     let actor;
     if (sidebar) {
       let { browsingContext } = sidebar.querySelector("browser");
@@ -197,10 +205,16 @@ class ShoppingSidebarManagerClass {
       if (!sidebar) {
         sidebar = document.createXULElement("shopping-sidebar");
         sidebar.hidden = false;
+        sidebar.removeAttribute("closed");
+
         let splitter = document.createXULElement("splitter");
-        splitter.classList.add("sidebar-splitter");
-        browserPanel.appendChild(splitter);
-        browserPanel.appendChild(sidebar);
+        //splitter.classList.add("sidebar-splitter");
+        splitter.classList.add("horizontal-sidebar-splitter", "chromeclass-extrachrome");
+
+        globalSidebar.insertBefore(sidebar, globalSidebarBrowser);
+        globalSidebar.insertBefore(splitter, globalSidebarBrowser);
+        // browserPanel.appendChild(splitter);
+        // browserPanel.appendChild(sidebar);
       } else {
         actor?.updateProductURL(aLocationURI, aFlags);
         sidebar.hidden = false;
