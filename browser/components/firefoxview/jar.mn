@@ -11,6 +11,8 @@ browser.jar:
     content/browser/firefoxview/history.mjs
     content/browser/firefoxview/homeSidebar.html
     content/browser/firefoxview/home-sidebar.mjs
+    content/browser/firefoxview/nowSidebar.html
+    content/browser/firefoxview/now-sidebar.mjs
     content/browser/firefoxview/opentabs.mjs
     content/browser/firefoxview/view-opentabs.css
     content/browser/firefoxview/syncedtabs.mjs
@@ -37,6 +39,7 @@ browser.jar:
     content/browser/firefoxview/category-recentlyclosed.svg (content/category-recentlyclosed.svg)
     content/browser/firefoxview/category-syncedtabs.svg (content/category-syncedtabs.svg)
     content/browser/firefoxview/recentlyclosed-empty.svg (content/recentlyclosed-empty.svg)
+    content/browser/firefoxview/sparkles.svg (content/sparkles.svg)
     content/browser/firefoxview/synced-tabs-error.svg (content/synced-tabs-error.svg)
     content/browser/callout-tab-pickup.svg (content/callout-tab-pickup.svg)
     content/browser/callout-tab-pickup-dark.svg (content/callout-tab-pickup-dark.svg)

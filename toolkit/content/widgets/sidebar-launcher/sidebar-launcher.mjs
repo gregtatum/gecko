@@ -31,6 +31,11 @@ export default class SidebarLauncher extends MozLitElement {
         view: "viewHomeSidebar",
       },
       {
+        l10nId: "sidebar-launcher-now",
+        icon: `url("chrome://browser/content/firefoxview/sparkles.svg")`,
+        view: "viewNowSidebar",
+      },
+      {
         l10nId: "sidebar-launcher-bookmarks",
         icon: `url("chrome://browser/skin/bookmark-hollow.svg")`,
         view: "viewBookmarksSidebar",
