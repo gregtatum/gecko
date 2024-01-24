@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 .wrapper {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
   box-sizing: border-box;
   width: 48px;
   height: 100%;
@@ -14,8 +13,27 @@
   background-color: var(--sidebar-background-color);
 }
 
-moz-button {
-  &::part(button) {
-    background-image: var(--action-icon);
-  }
+.bottom-actions:not([empty]),
+.open-tabs {
+  border-top: 1px solid var(--border-interactive-color);
+  padding-top: 2px;
+  margin-top: 2px;
+}
+
+.open-tabs {
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+button {
+  background-image: var(--action-icon);
+  margin: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+button[selected] {
+  color: var(--color-accent-primary);
+  outline: 1px solid var(--color-accent-primary);
+  outline-offset: -1px;
 }

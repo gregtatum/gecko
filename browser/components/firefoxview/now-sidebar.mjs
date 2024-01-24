@@ -3,44 +3,59 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import {
-  classMap,
   css,
   html,
-  map,
-  when,
 } from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
-import "./fxview-tab-list.mjs";
 
-function getTabListItems(tabs) {
-  return tabs
-    ?.filter(tab => !tab.closing && !tab.hidden && !tab.pinned)
-    .map(tab => ({
-      icon: tab.getAttribute("image"),
-      primaryL10nId: "firefoxview-opentabs-tab-row",
-      primaryL10nArgs: JSON.stringify({
-        url: tab.linkedBrowser?.currentURI?.spec,
-      }),
-      secondaryL10nId: "fxviewtabrow-options-menu-button",
-      secondaryL10nArgs: JSON.stringify({ tabTitle: tab.label }),
-      tabElement: tab,
-      title: tab.label,
-      url: tab.linkedBrowser?.currentURI?.spec,
-    }));
-}
+// eslint-disable-next-line import/no-unassigned-import
+import "chrome://global/content/elements/moz-card.mjs";
 
 class NowSidebar extends MozLitElement {
   static properties = {
-    tabs: { type: Array },
+    notifications: { type: Array },
+  };
+
+  static queries = {
+    textPromptEl: "textarea",
   };
 
   static styles = css`
-    fxview-tab-list::part(secondary-button) {
-      background-image: url("chrome://global/skin/icons/close.svg");
+    :host {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    fxview-tab-list::part(list) {
-      gap: 0;
+    .footer-button {
+      margin: 0 !important;
+    }
+
+    .prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .assistant-text-prompt {
+      display: flex;
+      align-items: stretch;
+      gap: 4px;
+      margin-top: 4px;
+
+      & > textarea {
+        padding: 4px;
+        flex-grow: 1;
+        border: 1px solid var(--border-interactive-color);
+        border-radius: var(--button-border-radius);
+      }
+
+      & > button {
+        background-image: url("chrome://browser/skin/forward.svg");
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 32px;
+      }
     }
   `;
 
@@ -48,37 +63,67 @@ class NowSidebar extends MozLitElement {
     super();
     this.parentWindow = window.docShell.chromeEventHandler.ownerGlobal;
     this.gBrowser = this.parentWindow.gBrowser;
-    this.tabs = this.gBrowser.tabs;
-
-    const tabContainer = this.gBrowser.tabContainer;
-    tabContainer.addEventListener("TabSelect", this);
-    tabContainer.addEventListener("TabAttrModified", this);
-    tabContainer.addEventListener("TabClose", this);
-    tabContainer.addEventListener("TabMove", this);
-    tabContainer.addEventListener("TabOpen", this);
-    tabContainer.addEventListener("TabPinned", this);
-    tabContainer.addEventListener("TabUnpinned", this);
+    this.notifications = [];
   }
 
-  onCloseTab(e) {
-    this.gBrowser.removeTab(e.detail.item.tabElement);
+  addNotification(notif) {
+    this.notifications.push(notif);
+    this.requestUpdate();
   }
 
-  onSelectTab(e) {
-    this.gBrowser.selectedTab = e.detail.item.tabElement;
+  summarize() {
+    this.addNotification({
+      heading: `Summary of ${this.gBrowser.selectedTab.label}`,
+      content: "It's a page about some stuff",
+    });
   }
 
-  handleEvent(e) {
-    if (e.type.startsWith("Tab")) {
-      this.tabs = this.gBrowser.tabs;
-      this.requestUpdate();
-    }
+  email() {
+    let title = this.gBrowser.selectedTab.label;
+    let url = this.gBrowser.selectedBrowser?.currentURI?.spec;
+
+    this.gBrowser.addTab(`mailto:,subject=${title},body=Check out this site I found about ${title}: ${url}`);
+  }
+
+  cafes() {}
+  save() {}
+
+  textPrompt(e) {
+    let text = this.textPromptEl.value;
+    if (!text) return;
+    this.addNotification({
+      heading: text,
+      content: "Loading...",
+    });
+    this.textPromptEl.value = "";
   }
 
   render() {
-    return html`<p>this is the NOW view</p>
-    <p>the current tab's URL is <b>${this.gBrowser.selectedBrowser.currentURI.spec}</b></p>
-    <p>any component in this page could access the current page info</p>`;
+    return html`
+      <link rel="stylesheet" href="chrome://global/skin/global.css" />
+      <moz-card heading="Now view">
+        <p>the current tab's URL is <b>${this.gBrowser.selectedBrowser.currentURI.spec}</b></p>
+        <p>any component in this page could access the current page info</p>
+      </moz-card>
+      <moz-card heading="Firefox Assistant">
+        <p>Firefox Assistant can help with tasks on this page.</p>
+        <div class="prompts">
+          <button class="footer-button small-button" @click=${this.summarize}>Summarize content</button>
+          <button class="footer-button small-button" @click=${this.email}>Email this page</button>
+          <button class="footer-button small-button" @click=${this.cafes}>Find best cafes in Tokyo</button>
+          <button class="footer-button small-button" @click=${this.save}>Save to "Tokyo" bookmark folder</button>
+        </div>
+        <div class="assistant-text-prompt">
+          <textarea placeholder="Give me a task related to this page or ask follow up question"></textarea>
+          <button class="footer-button" @click=${this.textPrompt}></button>
+        </div>
+      </moz-card>
+      ${this.notifications.map(notif => html`
+        <moz-card .heading=${notif.heading}>
+          <p>${notif.content}</p>
+        </moz-card>
+      `)}
+    `;
   }
 }
 customElements.define("now-sidebar", NowSidebar);
