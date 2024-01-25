@@ -1,0 +1,41 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+body, #prompts, #results {
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+ul {
+  padding-inline-start: 20px;
+}
+
+ul button {
+  max-width: 95%;
+}
+
+p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+div:not(:last-child) {
+  border-bottom: 1px solid var(--in-content-box-border-color);
+  padding-bottom: 1em;
+}
+
+div[running] {
+  background: url(chrome://browser/skin/fxa/fxa-spinner.svg) top / 1em no-repeat;
+  min-height: 1em;
+}
+
+.debug {
+  font-style: italic;
+}

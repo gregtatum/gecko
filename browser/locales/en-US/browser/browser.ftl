@@ -1076,3 +1076,5 @@ sidebar-launcher-syncedtabs =
   .tooltiptext = Synced tabs
 sidebar-launcher-home =
   .tooltiptext = Home
+sidebar-launcher-genaidebug =
+  .tooltiptext = GenAI debug
