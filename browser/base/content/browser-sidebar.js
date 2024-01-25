@@ -65,6 +65,14 @@ var SidebarUI = {
           menuId: "menu_tabsSidebar",
         }),
       ],
+      [
+        "viewGenaiDebugSidebar",
+        makeSidebar({
+          elementId: "sidebar-switcher-bookmarks",
+          url: "chrome://browser/content/genai/debug.html",
+          menuId: "menu_bookmarksSidebar",
+        }),
+      ],
     ]));
   },
 

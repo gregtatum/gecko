@@ -1814,6 +1814,15 @@ pref("nimbus.validation.enabled", true);
 pref("nimbus.qa.pref-1", "default");
 pref("nimbus.qa.pref-2", "default");
 
+pref("genai.context.currentTabTitle", true);
+pref("genai.context.openTabs", true);
+pref("genai.debug", false);
+pref("genai.debug.prompts.0", 'Specifically focusing on the current tab as the primary context, analyze the browsing context and consider which are more related to the current tab and potential larger tasks these might be part of to respond valid JSON (escape quotes within strings) with 5 keys: "debug" string internal thought process considering which tabs are more relevant to the current tab, "label" string general topic of the more related tabs, "description" string sentence describing potential larger tasks of these more relevant tabs in 2nd person, "tabs" array of strings for the tab ids (domain and index, e.g., mozilla.org2) of the 5 most related tabs, "queries" array of string 5 followup context-less (i.e., search engine will not know what is "this") search queries to continue exploring the topic. { %currentTabTitle%, %openTabs% }');
+pref("genai.enabled", false);
+pref("genai.http.bearer", "");
+pref("genai.http.endpoint", "http://localhost:8080/completion");
+pref("genai.http.model", "");
+
 // Startup Crash Tracking
 // number of startup crashes that can occur before starting into safe mode automatically
 // (this pref has no effect if more than 6 hours have passed since the last crash)

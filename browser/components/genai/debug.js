@@ -1,0 +1,137 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  GenAI: "resource:///modules/GenAI.sys.mjs",
+});
+
+const { XPCOMUtils } = ChromeUtils.importESModule(
+  "resource://gre/modules/XPCOMUtils.sys.mjs"
+);
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "debug",
+  "genai.debug",
+  null,
+  renderPrompts
+);
+
+const win = window.browsingContext.topChromeWindow;
+const { gBrowser } = win;
+
+function renderPrompts() {
+  const prompts = document.getElementById("prompts");
+  prompts.innerHTML = "";
+  if (!lazy.debug) {
+    return;
+  }
+
+  const prefs = Services.prefs.getChildList("genai.debug.prompts.").sort();
+  for (const pref of prefs) {
+    if (Services.prefs.getPrefType(pref) == Services.prefs.PREF_STRING) {
+      const button = prompts.appendChild(document.createElement("button"));
+      button.textContent = button.title = Services.prefs.getStringPref(pref);
+    }
+  }
+}
+
+async function renderResult(prompt) {
+  const startTime = new Date();
+  const result = document.createElement("div");
+  result.setAttribute("running", true);
+  result.textContent = `Started ${startTime}`;
+  document.getElementById("results").prepend(result);
+
+  const tabMap = {};
+  const context = {
+    currentTabTitle: gBrowser.selectedTab.label,
+    openTabs: gBrowser.tabs
+      .slice(-300)
+      .reverse()
+      .reduce((o, t, i) => {
+        try {
+          if (t.label != "New Tab") {
+            const key =
+              t.linkedBrowser.currentURI.host.replace(/^www\./, "") + i;
+            o[key] = t.label.slice(0, 100);
+            tabMap[key] = t;
+          }
+        } catch (ex) {}
+        return o;
+      }, {}),
+  };
+  let text = "";
+  try {
+    text = await lazy.GenAI.completion(prompt, context);
+  } catch (ex) {
+    text = ex;
+  }
+
+  const parts = { debug: "" };
+  try {
+    Object.assign(parts, JSON.parse(text));
+  } catch (ex) {
+    parts.debug = ex + "\n\n" + text;
+  }
+  parts.debug += `\n\n${
+    (prompt + JSON.stringify(context) + text).length
+  } chars, ${((Date.now() - startTime) / 1000).toFixed(1)} sec`;
+
+  result.removeAttribute("running");
+  result.textContent = "";
+
+  if (parts.label) {
+    const node = result.appendChild(document.createElement("h4"));
+    node.textContent = parts.label;
+  }
+
+  if (parts.description) {
+    const node = result.appendChild(document.createElement("p"));
+    node.textContent = parts.description;
+  }
+
+  if (parts.tabs) {
+    const node = result.appendChild(document.createElement("ul"));
+    parts.tabs.forEach(key => {
+      const tab = tabMap[key];
+      if (tab) {
+        const button = node
+          .appendChild(document.createElement("li"))
+          .appendChild(document.createElement("button"));
+        button.textContent = button.title = tab.label;
+        button.tab = tab;
+      }
+    });
+  }
+
+  if (parts.queries) {
+    const node = result.appendChild(document.createElement("ul"));
+    parts.queries.forEach(query => {
+      const link = node
+        .appendChild(document.createElement("li"))
+        .appendChild(document.createElement("a"));
+      link.textContent = query;
+      link.href = Services.search.defaultEngine.getSubmission(query).uri.spec;
+    });
+  }
+
+  const debug = result.appendChild(document.createElement("p"));
+  debug.classList.add("debug");
+  debug.textContent = parts.debug;
+}
+
+addEventListener("click", ({ target }) => {
+  if (target.parentNode.id == "prompts") {
+    renderResult(target.textContent);
+  } else if (target.tab) {
+    gBrowser.selectedTab = target.tab;
+  } else if (target.href) {
+    win.openLinkIn(target.href, "tabshifted", {
+      triggeringPrincipal: win._createNullPrincipalFromTabUserContextId(),
+    });
+  }
+});
+
+addEventListener("load", renderPrompts);

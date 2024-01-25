@@ -65,6 +65,11 @@ export default class SidebarLauncher extends MozLitElement {
         icon: `url("chrome://browser/content/firefoxview/category-syncedtabs.svg")`,
         view: "viewTabsSidebar",
       },
+      {
+        l10nId: "sidebar-launcher-genaidebug",
+        icon: `url("chrome://browser/skin/tab-crashed.svg")`,
+        view: "viewGenaiDebugSidebar",
+      },
     ];
 
     this.bottomActions = [];

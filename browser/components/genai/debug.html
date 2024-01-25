@@ -1,0 +1,22 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this file,
+   - You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" role="document">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="chrome://global/skin/in-content/common.css" />
+    <link rel="stylesheet" href="chrome://browser/content/genai/debug.css" />
+    <script src="chrome://browser/content/genai/debug.js"></script>
+  </head>
+  <body>
+    <span>
+      GenAI debug mode. Send prompts to http endpoint as configured in
+      about:config "genai." AI generated responses may contain errors such as
+      incorrect format or information. Try again or adjust configurations.
+    </span>
+    <div id="prompts"></div>
+    <div id="results"></div>
+  </body>
+</html>
