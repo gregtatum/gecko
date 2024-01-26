@@ -569,6 +569,17 @@ let JSWINDOWACTORS = {
     allFrames: true,
   },
 
+  GenAI: {
+    parent: {
+      esModuleURI: "resource:///actors/GenAIParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "resource:///actors/GenAIChild.sys.mjs",
+    },
+    allFrames: true,
+    enablePreference: "genai.enabled",
+  },
+
   LightweightTheme: {
     child: {
       esModuleURI: "resource:///actors/LightweightThemeChild.sys.mjs",
