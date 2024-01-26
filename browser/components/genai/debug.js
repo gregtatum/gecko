@@ -44,6 +44,14 @@ async function renderResult(prompt) {
   result.textContent = `Started ${startTime}`;
   document.getElementById("results").prepend(result);
 
+  let actor;
+  try {
+    actor =
+      gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
+        "GenAI"
+      );
+  } catch (ex) {}
+
   const tabMap = {};
   const context = {
     currentTabTitle: gBrowser.selectedTab.label,
@@ -61,7 +69,10 @@ async function renderResult(prompt) {
         } catch (ex) {}
         return o;
       }, {}),
+    pageText: await actor?.getPageText(),
+    selection: await actor?.getSelection(),
   };
+
   let text = "";
   try {
     text = await lazy.GenAI.completion(prompt, context);

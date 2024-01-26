@@ -23,6 +23,16 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "openTabs",
   "genai.context.openTabs"
 );
+XPCOMUtils.defineLazyPreferenceGetter(
+  allowContext,
+  "pageText",
+  "genai.context.pageText"
+);
+XPCOMUtils.defineLazyPreferenceGetter(
+  allowContext,
+  "selection",
+  "genai.context.selection"
+);
 
 export const GenAI = {
   async completion(prompt, context = {}) {
