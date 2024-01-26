@@ -60,6 +60,9 @@ export const GenAI = {
     } else if (lazy.endpoint.endsWith(":predict")) {
       body.instances = [{ content: prompt }];
       body.parameters = { maxOutputTokens: 1024 };
+    } else if (lazy.endpoint.endsWith(":streamGenerateContent")) {
+      body.contents = [{ parts: [{ text: prompt }], role: "user" }];
+      body.generation_config = { maxOutputTokens: 1024 };
     } else {
       body.prompt = prompt;
       if (expectJSON) {
@@ -85,10 +88,18 @@ export const GenAI = {
       ret =
         response.response ??
         response.content ??
+        response.choices?.[0].message.content ??
         response.predictions?.[0].content ??
-        response.choices[0].message.content;
+        response.map(r => r.candidates[0].content.parts[0].text).join("");
+
+      // Some wrap JSON responses in code block
+      if (expectJSON) {
+        ret = ret.replace(/^\s*```(json)?/, "").replace(/```$/, "");
+      }
     } catch (ex) {
-      ret = request?.status + "\n\n" + ex;
+      ret = [lazy.endpoint, request?.status, ex, JSON.stringify(response)].join(
+        "\n\n"
+      );
     }
     return ret;
   },
