@@ -2925,7 +2925,7 @@ function openLocation(event) {
   );
 }
 
-function BrowserOpenTab({ event, url } = {}) {
+function BrowserOpenTab({ event, url, index } = {}) {
   let werePassedURL = !!url;
   url ??= BROWSER_NEW_TAB_URL;
   let searchClipboard = gMiddleClickNewTabUsesPasteboard && event?.button == 1;
@@ -2966,6 +2966,9 @@ function BrowserOpenTab({ event, url } = {}) {
           relatedToCurrent,
           resolveOnNewTabCreated: resolve,
         };
+        if (index !== undefined) {
+          options.index = index;
+        }
         if (!werePassedURL && searchClipboard) {
           let clipboard = readFromClipboard();
           clipboard = UrlbarUtils.stripUnsafeProtocolOnPaste(clipboard).trim();

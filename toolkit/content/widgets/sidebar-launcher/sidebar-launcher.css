@@ -4,7 +4,7 @@
 
 .wrapper {
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto auto 1fr auto auto;
   box-sizing: border-box;
   width: 48px;
   height: 100%;
@@ -13,10 +13,20 @@
   background-color: var(--sidebar-background-color);
 }
 
+.add-button-wrapper {
+  position: sticky;
+  top: 0;
+  background-color: var(--toolbar-bgcolor);
+}
+
+.top-actions > button:last-of-type {
+  border: 1px dashed var(--border-interactive-color);
+}
+
 .open-tabs {
   border-top: 1px solid var(--border-interactive-color);
-  padding-top: 2px;
-  margin-top: 2px;
+  padding-top: 4px;
+  margin-top: 4px;
 }
 
 .open-tabs {

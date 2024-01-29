@@ -571,6 +571,7 @@ export const URILoadingHelper = {
           referrerInfo: params.referrerInfo,
           charset,
           postData,
+          index: params.index,
           inBackground: loadInBackground,
           allowThirdPartyFixup,
           relatedToCurrent,

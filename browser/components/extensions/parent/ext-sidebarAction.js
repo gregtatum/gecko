@@ -174,6 +174,7 @@ this.sidebarAction = class extends ExtensionAPI {
     menuitem.setAttribute("oncommand", `SidebarUI.toggle("${this.id}");`);
     menuitem.setAttribute("class", "menuitem-iconic webextension-menuitem");
     menuitem.setAttribute("key", keyId);
+    menuitem.extension = this.extension;
     this.setMenuIcon(menuitem, details);
 
     // Insert a toolbarbutton for the sidebar dropdown selector.
