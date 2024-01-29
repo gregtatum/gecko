@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { html, styleMap } from "../vendor/lit.all.mjs";
+import { html, ifDefined, styleMap } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 
 // eslint-disable-next-line
@@ -240,6 +240,22 @@ export default class SidebarLauncher extends MozLitElement {
     BrowserOpenTab({ event, index: 0 });
   }
 
+  onTabMouseenter(e) {
+    if (!e.target.tab.pinned) {
+      const previewContainer = document.getElementById(
+        "tabbrowser-tab-preview"
+      );
+      previewContainer.anchor = e.target;
+      previewContainer.tab = e.target.tab;
+    }
+  }
+
+  onTabMouseleave(e) {
+    const previewContainer = document.getElementById("tabbrowser-tab-preview");
+    previewContainer.anchor = null;
+    previewContainer.tab = null;
+  }
+
   tabsTemplate(tabs) {
     return tabs.map(
       t => html`
@@ -247,8 +263,10 @@ export default class SidebarLauncher extends MozLitElement {
           class="ghost-button icon-button"
           ?selected=${t.selected}
           @click=${this.onTabClick}
+          @mouseenter=${this.onTabMouseenter}
+          @mouseleave=${this.onTabMouseleave}
           .tab=${t}
-          title=${t.label}
+          title=${ifDefined(t.pinned ? t.label : null)}
           style=${styleMap({
             "--action-icon": `url("${this.getImageUrl(
               t.getAttribute("image"),

@@ -22,6 +22,8 @@ const TAB_PREVIEW_DELAY_PREF = "browser.tabs.cardPreview.delayMs";
  * @fires TabPreview#previewThumbnailUpdated
  */
 export default class TabPreview extends MozLitElement {
+  #anchor = null;
+
   static properties = {
     tab: { type: Object },
 
@@ -81,6 +83,14 @@ export default class TabPreview extends MozLitElement {
     );
   }
 
+  get anchor() {
+    return this.#anchor || this.tab;
+  }
+
+  set anchor(val) {
+    this.#anchor = val;
+  }
+
   getPrettyURI(uri) {
     try {
       const url = new URL(uri);
@@ -108,8 +118,8 @@ export default class TabPreview extends MozLitElement {
   }
 
   showPreview() {
-    this.panel.openPopup(this.tab, {
-      position: "bottomleft topleft",
+    this.panel.openPopup(this.anchor, {
+      position: this.currentPanelPosition,
       y: -2,
       isContextMenu: false,
     });
@@ -162,6 +172,13 @@ export default class TabPreview extends MozLitElement {
     });
   }
 
+  get currentPanelPosition() {
+    if (this.#anchor) {
+      return "topright topleft";
+    }
+    return "bottomleft topleft";
+  }
+
   updated(changedProperties) {
     if (changedProperties.has("tab")) {
       // handle preview delay
@@ -191,7 +208,7 @@ export default class TabPreview extends MozLitElement {
     ) {
       this.updateComplete.then(() => {
         if (this.panel.state == "open" || this.panel.state == "showing") {
-          this.panel.moveToAnchor(this.tab, "bottomleft topleft", 0, -2);
+          this.panel.moveToAnchor(this.anchor, this.currentPanelPosition, 0, -2);
         } else {
           this.showPreview();
         }
