@@ -33,6 +33,7 @@ export default class SidebarLauncher extends MozLitElement {
     selectedView: { type: String },
     open: { type: Boolean },
     tabs: { type: Array },
+    expanded: { type: Boolean },
   };
 
   static queries = {
@@ -96,6 +97,20 @@ export default class SidebarLauncher extends MozLitElement {
       },
     ];
 
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "expandOnHover",
+      "browser.sidebar-launcher.expand-on-hover.enabled",
+      false
+    );
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "expandOnHoverDelay",
+      "browser.sidebar-launcher.expand-on-hover.delay",
+      500
+    );
+
+    this.expanded = false;
     this.selectedView = window.SidebarUI.currentID;
     this.open = window.SidebarUI.isOpen;
     this.updateTabs();
@@ -202,6 +217,8 @@ export default class SidebarLauncher extends MozLitElement {
         triggeringPrincipal:
           window.Services.scriptSecurityManager.getSystemPrincipal(),
       });
+    } else if (!this.expandOnHover && view == "viewHomeSidebar") {
+      this.expanded = !this.expanded;
     } else {
       window.SidebarUI.toggle(view);
     }
@@ -240,6 +257,10 @@ export default class SidebarLauncher extends MozLitElement {
     BrowserOpenTab({ event, index: 0 });
   }
 
+  onCloseClick(event) {
+    gBrowser.removeTab(event.target.tab);
+  }
+
   onTabMouseenter(e) {
     if (!e.target.tab.pinned) {
       const previewContainer = document.getElementById(
@@ -256,29 +277,78 @@ export default class SidebarLauncher extends MozLitElement {
     previewContainer.tab = null;
   }
 
+  onWrapperMouseenter(e) {
+    if (!this.expandOnHover) {
+      return;
+    }
+    if (!this._wrapperMouseenterTimeout) {
+      this._wrapperMouseenterTimeout = setTimeout(() => {
+        this.expanded = true;
+        this._wrapperMouseenterTimeout = null;
+      }, this.expandOnHoverDelay);
+    }
+    clearTimeout(this._wrapperMouseleaveTimeout);
+    this._wrapperMouseleaveTimeout = null;
+  }
+
+  onWrapperMouseleave(e) {
+    if (!this.expandOnHover) {
+      return;
+    }
+    if (this._wrapperMouseenterTimeout) {
+      // If we haven't opened yet then cancel opening.
+      clearTimeout(this._wrapperMouseenterTimeout);
+      this._wrapperMouseenterTimeout = null;
+      this.expanded = false;
+      return;
+    }
+    if (!this._wrapperMouseleaveTimeout) {
+      this._wrapperMouseleaveTimeout = setTimeout(() => {
+        this.expanded = false;
+        this._wrapperMouseleaveTimeout = null;
+      }, this.expandOnHoverDelay);
+    }
+  }
+
   tabsTemplate(tabs) {
     return tabs.map(
       t => html`
-        <button
-          class="ghost-button icon-button"
-          ?selected=${t.selected}
-          @click=${this.onTabClick}
-          @mouseenter=${this.onTabMouseenter}
-          @mouseleave=${this.onTabMouseleave}
-          .tab=${t}
-          title=${ifDefined(t.pinned ? t.label : null)}
-          style=${styleMap({
-            "--action-icon": `url("${this.getImageUrl(
-              t.getAttribute("image"),
-              t.linkedBrowser?.currentURI?.spec
-            )}")`,
-          })}
-        ></button>
+        <div class="open-tab-wrapper">
+          <button
+            class="ghost-button icon-button"
+            ?selected=${t.selected}
+            @click=${this.onTabClick}
+            @mouseenter=${this.onTabMouseenter}
+            @mouseleave=${this.onTabMouseleave}
+            .tab=${t}
+            title=${ifDefined(t.pinned ? t.label : null)}
+            style=${styleMap({
+              "--action-icon": `url("${this.getImageUrl(
+                t.getAttribute("image"),
+                t.linkedBrowser?.currentURI?.spec
+              )}")`,
+            })}
+          >
+            ${this.expanded ? t.label : ""}
+          </button>
+          ${this.expanded && !t.pinned
+            ? html`<button
+                class="ghost-button icon-button close-tab-button"
+                @click=${this.onCloseClick}
+                .tab=${t}
+                style=${styleMap({
+                  "--action-icon": `url("chrome://global/skin/icons/close-12.svg")`,
+                })}
+                title="Close tab"
+              ></button>`
+            : ""}
+        </div>
       `
     );
   }
 
   render() {
+    this.toggleAttribute("expanded", this.expanded);
     return html`
       <link
         rel="stylesheet"
@@ -291,8 +361,12 @@ export default class SidebarLauncher extends MozLitElement {
       <panel-list id="pinned-tab-menu">
         <panel-item id="pinned-tab-open-sidebar">Open in sidebar</panel-item>
       </panel-list>
-      <div class="wrapper">
-        <div class="top-actions">
+      <div
+        class="wrapper"
+        @mouseenter=${this.onWrapperMouseenter}
+        @mouseleave=${this.onWrapperMouseleave}
+      >
+        <div class="top-actions actions-list">
           ${this.topActions.map(
             action =>
               html`<button
@@ -303,11 +377,11 @@ export default class SidebarLauncher extends MozLitElement {
                 view=${action.view}
                 data-l10n-id=${action.l10nId}
                 style=${styleMap({ "--action-icon": action.icon })}
-              ></button>`
+              >New shortcut</button>`
           )}
         </div>
-        <div class="open-tabs">${this.tabsTemplate(this.pinnedTabs)}</div>
-        <div class="open-tabs">
+        <div class="open-tabs pinned-tabs actions-list">${this.tabsTemplate(this.pinnedTabs)}</div>
+        <div class="open-tabs unpinned-tabs actions-list">
           <div class="add-button-wrapper">
             <button
               class="ghost-button icon-button sidebar-add-tab"
@@ -317,15 +391,16 @@ export default class SidebarLauncher extends MozLitElement {
               style=${styleMap({
                 "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
               })}
-            ></button>
+            >New tab</button>
           </div>
           ${this.tabsTemplate(this.tabs)}
         </div>
-        <div class="bottom-actions">
+        <div class="bottom-actions actions-list">
           ${this.bottomActions.map(
             action =>
               html`<button
                 class="ghost-button icon-button"
+                data-l10n-id=${action.l10nId}
                 ?selected=${this.open && action.view == this.selectedView}
                 type=${this.buttonType(action)}
                 @click=${action.view ? this.showView : null}

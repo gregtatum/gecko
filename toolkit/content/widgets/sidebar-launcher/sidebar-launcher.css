@@ -2,6 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+:host(:not([expanded])) button {
+  /* FIXME: mega hack to hide labels when not expanded */
+  font-size: 0;
+}
+
 .wrapper {
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
@@ -11,6 +16,11 @@
   padding: 8px;
   border-right: 1px solid var(--sidebar-border-color);
   background-color: var(--sidebar-background-color);
+  transition: width 100ms;
+
+  :host([expanded]) & {
+    width: 250px;
+  }
 }
 
 .add-button-wrapper {
@@ -29,6 +39,11 @@
   margin-top: 4px;
 }
 
+.actions-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .open-tabs {
   overflow-y: scroll;
   scrollbar-width: none;
@@ -39,6 +54,24 @@ button {
   margin: 0 !important;
   width: 32px !important;
   height: 32px !important;
+  font-weight: normal !important;
+
+  :host([expanded]) .actions-list & {
+    background-position: 7px center !important;
+    text-align: start !important;
+    overflow-x: hidden;
+    white-space: nowrap;
+
+    &:not(.close-tab-button) {
+      width: 100% !important;
+      padding-inline-start: 28px !important;
+    }
+  }
+}
+
+:host([expanded]) .unpinned-tabs .open-tab-wrapper {
+  display: grid;
+  grid-template-columns: auto 32px;
 }
 
 button[selected] {

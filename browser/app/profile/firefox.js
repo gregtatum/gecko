@@ -936,6 +936,9 @@ pref("browser.tabs.firefox-view-newIcon", true);
 pref("browser.tabs.firefox-view.logLevel", "Warn");
 pref("browser.tabs.firefox-view.notify-for-tabs", false);
 
+pref("browser.sidebar-launcher.expand-on-hover.enabled", false);
+pref("browser.sidebar-launcher.expand-on-hover.delay", 500);
+
 // allow_eval_* is enabled on Firefox Desktop only at this
 // point in time
 pref("security.allow_eval_with_system_principal", false);
