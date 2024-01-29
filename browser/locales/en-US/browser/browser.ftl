@@ -1082,3 +1082,7 @@ sidebar-launcher-home =
   .tooltiptext = Home
 sidebar-launcher-genaidebug =
   .tooltiptext = GenAI debug
+sidebar-launcher-downloads =
+  .tooltiptext = Downloads
+sidebar-launcher-account =
+  .tooltiptext = Account

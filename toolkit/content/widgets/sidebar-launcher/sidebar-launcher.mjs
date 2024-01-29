@@ -50,21 +50,7 @@ export default class SidebarLauncher extends MozLitElement {
         icon: `url("chrome://browser/content/firefoxview/sparkles.svg")`,
         view: "viewNowSidebar",
       },
-      {
-        l10nId: "sidebar-launcher-bookmarks",
-        icon: `url("chrome://browser/skin/bookmark-hollow.svg")`,
-        view: "viewBookmarksSidebar",
-      },
-      {
-        l10nId: "sidebar-launcher-history",
-        icon: `url("chrome://browser/content/firefoxview/category-history.svg")`,
-        view: "viewHistorySidebar",
-      },
-      {
-        l10nId: "sidebar-launcher-syncedtabs",
-        icon: `url("chrome://browser/content/firefoxview/category-syncedtabs.svg")`,
-        view: "viewTabsSidebar",
-      },
+
       {
         l10nId: "sidebar-launcher-genaidebug",
         icon: `url("chrome://browser/skin/tab-crashed.svg")`,
@@ -72,7 +58,34 @@ export default class SidebarLauncher extends MozLitElement {
       },
     ];
 
-    this.bottomActions = [];
+    // TODO add downloads, and sign-in icons
+    this.bottomActions = [
+      {
+        l10nId: "sidebar-launcher-history",
+        icon: `url("chrome://browser/content/firefoxview/category-history.svg")`,
+        view: "viewHistorySidebar",
+      },
+      {
+        l10nId: "sidebar-launcher-bookmarks",
+        icon: `url("chrome://browser/skin/bookmark-hollow.svg")`,
+        view: "viewBookmarksSidebar",
+      },
+      {
+        l10nId: "sidebar-launcher-downloads",
+        icon: `url("chrome://browser/skin/downloads/downloads.svg")`,
+        view: null,
+      },
+      {
+        l10nId: "sidebar-launcher-syncedtabs",
+        icon: `url("chrome://browser/skin/device-phone.svg")`,
+        view: "viewTabsSidebar",
+      },
+      {
+        l10nId: "sidebar-launcher-account",
+        icon: `url("chrome://browser/skin/fxa/avatar-empty.svg")`,
+        view: null,
+      },
+    ];
 
     this.selectedView = window.SidebarUI.currentID;
     this.open = window.SidebarUI.isOpen;
@@ -85,14 +98,14 @@ export default class SidebarLauncher extends MozLitElement {
     this._sidebarBox.addEventListener("sidebar-show", this);
     this._sidebarBox.addEventListener("sidebar-hide", this);
     this._sidebarMenu = document.getElementById("viewSidebarMenu");
-    let menuMutationObserver = new MutationObserver(() =>
-      this.#setExtensionItems()
-    );
-    menuMutationObserver.observe(this._sidebarMenu, {
-      childList: true,
-      subtree: true,
-    });
-    this.#setExtensionItems();
+    // let menuMutationObserver = new MutationObserver(() =>
+    //   this.#setExtensionItems()
+    // );
+    // menuMutationObserver.observe(this._sidebarMenu, {
+    //   childList: true,
+    //   subtree: true,
+    // });
+    // this.#setExtensionItems();
     for (let eventName of TAB_EVENTS.values()) {
       window.gBrowser.tabContainer.addEventListener(eventName, this);
     }
@@ -127,22 +140,23 @@ export default class SidebarLauncher extends MozLitElement {
     return icon;
   }
 
-  #setExtensionItems() {
-    this.bottomActions = [];
-    for (let item of this._sidebarMenu.children) {
-      if (item.id.endsWith("-sidebar-action")) {
-        this.bottomActions.push({
-          tooltiptext: item.label,
-          icon: item.style.getPropertyValue("--webextension-menuitem-image"),
-          view: item.id.slice("menubar_menu_".length),
-        });
-      }
-    }
-  }
+  // #setExtensionItems() {
+  //   this.bottomActions = [];
+  //   for (let item of this._sidebarMenu.children) {
+  //     if (item.id.endsWith("-sidebar-action")) {
+  //       this.bottomActions.push({
+  //         tooltiptext: item.label,
+  //         icon: item.style.getPropertyValue("--webextension-menuitem-image"),
+  //         view: item.id.slice("menubar_menu_".length),
+  //       });
+  //     }
+  //   }
+  // }
 
   handleEvent(e) {
     if (TAB_EVENTS.has(e.type)) {
-      this.tabSelectEvent = this.tabSelectEvent || e.type == "TabSelect" || e.type == "TabOpen";
+      this.tabSelectEvent =
+        this.tabSelectEvent || e.type == "TabSelect" || e.type == "TabOpen";
       this.tabs = window.gBrowser.tabs;
       this.requestUpdate();
       return;
@@ -202,6 +216,14 @@ export default class SidebarLauncher extends MozLitElement {
           )}
         </div>
         <div class="open-tabs">
+          <button
+            class="ghost-button icon-button"
+            @click=${event => BrowserOpenTab({ event })}
+            title="Open a new tab"
+            style=${styleMap({
+              "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
+            })}
+          ></button>
           ${this.tabs.map(
             t => html`
               <button
@@ -219,22 +241,14 @@ export default class SidebarLauncher extends MozLitElement {
             `
           )}
         </div>
-        <button
-          class="ghost-button icon-button"
-          @click=${event => BrowserOpenTab({ event })}
-          title="Open a new tab"
-          style=${styleMap({
-            "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
-          })}
-        ></button>
-        <div class="bottom-actions" ?empty=${!this.bottomActions.length}>
+        <div class="bottom-actions">
           ${this.bottomActions.map(
             action =>
               html`<button
                 class="ghost-button icon-button"
                 ?selected=${this.open && action.view == this.selectedView}
                 type=${this.buttonType(action)}
-                @click=${this.showView}
+                @click=${action.view ? this.showView : null}
                 view=${action.view}
                 .tooltiptext=${action.tooltiptext}
                 title=${action.tooltiptext}
