@@ -42,7 +42,7 @@ add_task(async function test_ml_engine_basics() {
   info("Get summarizer");
   const summarizer = mlEngineParent.getEngine(
     "summarizer",
-    SummarizerModel.getModel
+    TransformersModel.getModel
   );
 
   info("Run the summarizer");
@@ -78,7 +78,7 @@ add_task(async function test_ml_engine_model_rejection() {
   info("Get summarizer");
   const summarizer = mlEngineParent.getEngine(
     "summarizer",
-    SummarizerModel.getModel
+    TransformersModel.getModel
   );
 
   info("Run the summarizer");
@@ -112,7 +112,7 @@ add_task(async function test_ml_engine_wasm_rejection() {
   info("Get summarizer");
   const summarizer = mlEngineParent.getEngine(
     "summarizer",
-    SummarizerModel.getModel
+    TransformersModel.getModel
   );
 
   info("Run the summarizer");
@@ -138,7 +138,7 @@ add_task(async function test_ml_engine_wasm_rejection() {
 });
 
 /**
- * Tests that the SummarizerModel's internal errors are correctly surfaced.
+ * Tests that the TransformersModel's internal errors are correctly surfaced.
  */
 add_task(async function test_ml_engine_model_error() {
   const { cleanup, remoteClients } = await setup();
@@ -149,7 +149,7 @@ add_task(async function test_ml_engine_model_error() {
   info("Get summarizer");
   const summarizer = mlEngineParent.getEngine(
     "summarizer",
-    SummarizerModel.getModel
+    TransformersModel.getModel
   );
 
   info("Run the summarizer with a throwing example.");
@@ -189,7 +189,7 @@ add_task(async function test_ml_engine_destruction() {
   info("Get summarizer");
   const summarizer = mlEngineParent.getEngine(
     "summarizer",
-    SummarizerModel.getModel
+    TransformersModel.getModel
   );
 
   info("Run the summarizer");

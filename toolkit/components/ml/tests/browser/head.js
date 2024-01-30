@@ -6,10 +6,10 @@
 "use strict";
 
 /**
- * @type {import("../../content/SummarizerModel.sys.mjs")}
+ * @type {import("../../content/TransformersModel.sys.mjs")}
  */
-const { SummarizerModel } = ChromeUtils.importESModule(
-  "chrome://global/content/ml/SummarizerModel.sys.mjs"
+const { TransformersModel } = ChromeUtils.importESModule(
+  "chrome://global/content/ml/TransformersModel.sys.mjs"
 );
 
 /**
@@ -30,7 +30,7 @@ function getDefaultModelRecords() {
   return [
     {
       name: "summarizer-model",
-      version: SummarizerModel.MODEL_MAJOR_VERSION + ".0",
+      version: TransformersModel.MODEL_MAJOR_VERSION + ".0",
     },
   ];
 }
@@ -103,7 +103,7 @@ async function createAndMockMLRemoteSettings({
   };
 
   MLEngineParent.mockRemoteSettings(remoteClients.wasm.client);
-  SummarizerModel.mockRemoteSettings(remoteClients.models.client);
+  TransformersModel.mockRemoteSettings(remoteClients.models.client);
 
   return {
     async removeMocks() {
@@ -113,7 +113,7 @@ async function createAndMockMLRemoteSettings({
       await remoteClients.wasm.client.db.clear();
 
       MLEngineParent.removeMocks();
-      SummarizerModel.removeMocks();
+      TransformersModel.removeMocks();
     },
     remoteClients,
   };

@@ -19,7 +19,7 @@ const mlEngineParent = await EngineProcess.getMLEngineParent();
  * that is responsible for providing the `ArrayBuffer` of the model. Typically this
  * download is managed by RemoteSettings.
  */
-class SummarizerModel {
+class TransformersModel {
   /**
    * @returns {ArrayBuffer}
    */
@@ -30,7 +30,7 @@ class SummarizerModel {
 // to get the model. This class handles the life cycle of the engine.
 const summarizer = mlEngineParent.getEngine(
   "summarizer",
-  SummarizerModel.getModel
+  TransformersModel.getModel
 );
 
 // In order to run the model, use the `run` method. This will initiate the engine if

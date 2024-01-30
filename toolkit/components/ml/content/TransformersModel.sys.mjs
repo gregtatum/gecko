@@ -22,7 +22,7 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
   });
 });
 
-export class SummarizerModel {
+export class TransformersModel {
   /**
    * The RemoteSettingsClient that downloads the summarizer model.
    *
@@ -48,18 +48,18 @@ export class SummarizerModel {
    * Remote settings isn't available in tests, so provide mocked responses.
    */
   static mockRemoteSettings(remoteClient) {
-    lazy.console.log("Mocking remote client in SummarizerModel.");
-    SummarizerModel.#remoteClient = remoteClient;
-    SummarizerModel.#modelRecord = null;
+    lazy.console.log("Mocking remote client in TransformersModel.");
+    TransformersModel.#remoteClient = remoteClient;
+    TransformersModel.#modelRecord = null;
   }
 
   /**
    * Remove anything that could have been mocked.
    */
   static removeMocks() {
-    lazy.console.log("Removing mocked remote client in SummarizerModel.");
-    SummarizerModel.#remoteClient = null;
-    SummarizerModel.#modelRecord = null;
+    lazy.console.log("Removing mocked remote client in TransformersModel.");
+    TransformersModel.#remoteClient = null;
+    TransformersModel.#modelRecord = null;
   }
   /**
    * Download or load the model from remote settings.
@@ -67,11 +67,11 @@ export class SummarizerModel {
    * @returns {Promise<ArrayBuffer>}
    */
   static async getModel() {
-    const client = SummarizerModel.#getRemoteClient();
+    const client = TransformersModel.#getRemoteClient();
 
-    if (!SummarizerModel.#modelRecord) {
+    if (!TransformersModel.#modelRecord) {
       // Place the records into a promise to prevent any races.
-      SummarizerModel.#modelRecord = (async () => {
+      TransformersModel.#modelRecord = (async () => {
         // Load the wasm binary from remote settings, if it hasn't been already.
         lazy.console.log(`Getting the summarizer model record.`);
 
@@ -83,7 +83,7 @@ export class SummarizerModel {
         const wasmRecords = await getMaxVersionRecords(client, {
           // TODO - This record needs to be created with the engine wasm payload.
           filters: { name: "summarizer-model" },
-          majorVersion: SummarizerModel.MODEL_MAJOR_VERSION,
+          majorVersion: TransformersModel.MODEL_MAJOR_VERSION,
         });
 
         if (wasmRecords.length === 0) {
@@ -93,7 +93,7 @@ export class SummarizerModel {
         }
 
         if (wasmRecords.length > 1) {
-          SummarizerModel.reportError(
+          TransformersModel.reportError(
             new Error("Expected the ml engine to only have 1 record."),
             wasmRecords
           );
@@ -110,12 +110,12 @@ export class SummarizerModel {
     try {
       /** @type {{buffer: ArrayBuffer}} */
       const { buffer } = await client.attachments.download(
-        await SummarizerModel.#modelRecord
+        await TransformersModel.#modelRecord
       );
 
       return buffer;
     } catch (error) {
-      SummarizerModel.#modelRecord = null;
+      TransformersModel.#modelRecord = null;
       throw error;
     }
   }
@@ -126,14 +126,14 @@ export class SummarizerModel {
    * @returns {RemoteSettingsClient}
    */
   static #getRemoteClient() {
-    if (SummarizerModel.#remoteClient) {
-      return SummarizerModel.#remoteClient;
+    if (TransformersModel.#remoteClient) {
+      return TransformersModel.#remoteClient;
     }
 
     /** @type {RemoteSettingsClient} */
     const client = lazy.RemoteSettings("ml-model");
 
-    SummarizerModel.#remoteClient = client;
+    TransformersModel.#remoteClient = client;
 
     client.on("sync", async ({ data: { created, updated, deleted } }) => {
       lazy.console.log(`"sync" event for ml-model`, {
