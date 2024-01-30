@@ -82,7 +82,7 @@ export default class SidebarLauncher extends MozLitElement {
       {
         l10nId: "sidebar-launcher-downloads",
         icon: `url("chrome://browser/skin/downloads/downloads.svg")`,
-        view: null,
+        view: "viewDownloadsSidebar",
       },
       {
         l10nId: "sidebar-launcher-syncedtabs",

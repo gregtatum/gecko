@@ -66,6 +66,14 @@ var SidebarUI = {
         }),
       ],
       [
+        "viewDownloadsSidebar",
+        makeSidebar({
+          elementId: "sidebar-switcher-bookmarks",
+          url: "chrome://browser/content/downloads/contentAreaDownloadsView.xhtml",
+          menuId: "menu_bookmarksSidebar",
+        }),
+      ],
+      [
         "viewGenaiDebugSidebar",
         makeSidebar({
           elementId: "sidebar-switcher-bookmarks",
