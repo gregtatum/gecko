@@ -9,6 +9,8 @@ import { MozLitElement } from "../lit-utils.mjs";
 import "chrome://global/content/elements/panel-list.js";
 // import "chrome://global/content/elements/moz-button.mjs";
 
+const COLLAPSE_ICON_URL = `url("chrome://global/skin/icons/collapse.svg")`;
+const EXPAND_ICON_URL = `url("chrome://global/skin/icons/expand.svg")`;
 const SIDE_VIEW_AMO_URL = "addons.mozilla.org/en-US/firefox/addon/side-view/";
 const TAB_EVENTS = new Set([
   "TabSelect",
@@ -34,6 +36,7 @@ export default class SidebarLauncher extends MozLitElement {
     open: { type: Boolean },
     tabs: { type: Array },
     expanded: { type: Boolean },
+    expandedPinned: { type: Boolean },
   };
 
   static queries = {
@@ -110,6 +113,7 @@ export default class SidebarLauncher extends MozLitElement {
     );
 
     this.expanded = false;
+    this.expandedPinned = false;
     this.selectedView = window.SidebarUI.currentID;
     this.open = window.SidebarUI.isOpen;
     this.updateTabs();
@@ -208,6 +212,20 @@ export default class SidebarLauncher extends MozLitElement {
     this.tabSelectEvent = false;
   }
 
+  get expandIconUrl() {
+    if (this.expandOnHover) {
+      return this.expandedPinned ? COLLAPSE_ICON_URL : EXPAND_ICON_URL;
+    }
+    return this.expanded ? COLLAPSE_ICON_URL : EXPAND_ICON_URL;
+  }
+
+  get expandText() {
+    if (this.expandOnHover) {
+      return this.expandedPinned ? "Collapse" : "Keep expanded";
+    }
+    return this.expanded ? "Collapse" : "Expand";
+  }
+
   showView(e) {
     let view = e.target.getAttribute("view");
     if (view.startsWith("@")) {
@@ -216,10 +234,16 @@ export default class SidebarLauncher extends MozLitElement {
         triggeringPrincipal:
           window.Services.scriptSecurityManager.getSystemPrincipal(),
       });
-    } else if (!this.expandOnHover && view == "viewHomeSidebar") {
-      this.expanded = !this.expanded;
     } else {
       window.SidebarUI.toggle(view);
+    }
+  }
+
+  toggleExpanded() {
+    if (this.expandOnHover) {
+      this.expanded = this.expandedPinned = !this.expandedPinned;
+    } else {
+      this.expanded = !this.expanded;
     }
   }
 
@@ -277,7 +301,7 @@ export default class SidebarLauncher extends MozLitElement {
   }
 
   onWrapperMouseenter(e) {
-    if (!this.expandOnHover) {
+    if (!this.expandOnHover || this.expandedPinned) {
       return;
     }
     if (!this._wrapperMouseenterTimeout) {
@@ -291,7 +315,7 @@ export default class SidebarLauncher extends MozLitElement {
   }
 
   onWrapperMouseleave(e) {
-    if (!this.expandOnHover) {
+    if (!this.expandOnHover || this.expandedPinned) {
       return;
     }
     if (this._wrapperMouseenterTimeout) {
@@ -365,7 +389,16 @@ export default class SidebarLauncher extends MozLitElement {
         @mouseenter=${this.onWrapperMouseenter}
         @mouseleave=${this.onWrapperMouseleave}
       >
-        <div class="top-actions actions-list">
+        <div class="expand-button-wrapper">
+          <button
+            class="ghost-button icon-button"
+            @click=${this.toggleExpanded}
+            style=${styleMap({ "--action-icon": this.expandIconUrl })}
+          >
+            ${this.expandText}
+          </button>
+        </div>
+        <div class="top-actions actions-list top-border">
           ${this.topActions.map(
             action =>
               html`<button
