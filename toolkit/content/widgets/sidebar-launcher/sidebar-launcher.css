@@ -23,17 +23,11 @@
   }
 }
 
-.add-button-wrapper {
-  position: sticky;
-  top: 0;
-  background-color: var(--toolbar-bgcolor);
-}
-
 .top-actions > button:last-of-type {
   border: 1px dashed var(--border-interactive-color);
 }
 
-.open-tabs {
+.top-border {
   border-top: 1px solid var(--border-interactive-color);
   padding-top: 4px;
   margin-top: 4px;
@@ -56,7 +50,7 @@ button {
   height: 32px !important;
   font-weight: normal !important;
 
-  :host([expanded]) .actions-list & {
+  :host([expanded]) & {
     background-position: 7px center !important;
     text-align: start !important;
     overflow-x: hidden;

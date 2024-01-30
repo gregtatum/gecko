@@ -381,23 +381,27 @@ export default class SidebarLauncher extends MozLitElement {
               </button>`
           )}
         </div>
-        <div class="open-tabs pinned-tabs actions-list">
-          ${this.tabsTemplate(this.pinnedTabs)}
+        ${this.pinnedTabs.length
+          ? html`
+              <div class="open-tabs pinned-tabs actions-list top-border">
+                ${this.tabsTemplate(this.pinnedTabs)}
+              </div>
+            `
+          : ""}
+        <div class="add-button-wrapper top-border">
+          <button
+            class="ghost-button icon-button sidebar-add-tab"
+            @click=${this.onAddTabClick}
+            @contextmenu=${this.onTabContextmenu}
+            title="Open a new tab"
+            style=${styleMap({
+              "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
+            })}
+          >
+            New tab
+          </button>
         </div>
         <div class="open-tabs unpinned-tabs actions-list">
-          <div class="add-button-wrapper">
-            <button
-              class="ghost-button icon-button sidebar-add-tab"
-              @click=${this.onAddTabClick}
-              @contextmenu=${this.onTabContextmenu}
-              title="Open a new tab"
-              style=${styleMap({
-                "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
-              })}
-            >
-              New tab
-            </button>
-          </div>
           ${this.tabsTemplate(this.tabs)}
         </div>
         <div class="bottom-actions actions-list">
