@@ -46,7 +46,8 @@ add_task(async function test_ml_engine_basics() {
   );
 
   info("Run the summarizer");
-  const summarizePromise = summarizer.run("This gets cut in half.");
+  console.log(summarizer.run);
+  const summarizePromise = summarizer.run("I love Firefox!");
 
   info("Wait for the pending downloads.");
   await remoteClients.models.resolvePendingDownloads(1);
@@ -54,7 +55,7 @@ add_task(async function test_ml_engine_basics() {
 
   is(
     await summarizePromise,
-    "This gets c",
+    "POSITIVE",
     "The text gets cut in half simulating summarizing"
   );
 
@@ -192,7 +193,7 @@ add_task(async function test_ml_engine_destruction() {
   );
 
   info("Run the summarizer");
-  const summarizePromise = summarizer.run("This gets cut in half.");
+  const summarizePromise = summarizer.run("I hate eating liver");
 
   info("Wait for the pending downloads.");
   await remoteClients.models.resolvePendingDownloads(1);
@@ -200,7 +201,7 @@ add_task(async function test_ml_engine_destruction() {
 
   is(
     await summarizePromise,
-    "This gets c",
+    "NEGATIVE",
     "The text gets cut in half simulating summarizing"
   );
 

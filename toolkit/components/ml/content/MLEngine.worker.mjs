@@ -4,6 +4,8 @@
 
 import { PromiseWorker } from "resource://gre/modules/workers/PromiseWorker.mjs";
 
+import { env, pipeline } from "chrome://global/content/ml/transformers.min.js";
+
 const lazy = {};
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
@@ -34,7 +36,7 @@ class MLEngineWorker {
     this.#wasm = wasm;
     this.#model = model;
     // TODO - Initialize the engine for real here.
-    lazy.console.log("MLEngineWorker is initalized");
+    lazy.console.log("MLEngineWorker is initialized");
   }
 
   /**
@@ -42,20 +44,30 @@ class MLEngineWorker {
    *
    * @param {string} request
    */
-  run(request) {
+  async run(request) {
+    /*
     if (!this.#wasm) {
       throw new Error("Expected the wasm to exist.");
     }
     if (!this.#model) {
       throw new Error("Expected the model to exist");
     }
+    */
     if (request === "throw") {
       throw new Error(
         'Received the message "throw", so intentionally throwing an error.'
       );
     }
+
     lazy.console.debug("inference run requested with:", request);
-    return request.slice(0, Math.floor(request.length / 2));
+    env.allowRemoteModels = false;
+    env.localModelPath = "chrome://global/content/ml/models";
+    env.backends.onnx.wasm.wasmPaths = "chrome://global/content/ml/ort/";
+
+    // calling the inference pipeline
+    let pipe = await pipeline("sentiment-analysis");
+    let output = await pipe(request);
+    return output[0].label;
   }
 
   /**
@@ -75,7 +87,7 @@ class MLEngineWorker {
     };
 
     self.addEventListener("message", msg => worker.handleMessage(msg));
-    self.addEventListener("unhandledrejection", function (error) {
+    self.addEventListener("unhandledrejection", function(error) {
       throw error.reason;
     });
   }
