@@ -68,7 +68,6 @@ export default class SidebarLauncher extends MozLitElement {
       },
     ];
 
-    // TODO add downloads, and sign-in icons
     this.bottomActions = [
       {
         l10nId: "sidebar-launcher-history",
@@ -88,7 +87,7 @@ export default class SidebarLauncher extends MozLitElement {
       {
         l10nId: "sidebar-launcher-syncedtabs",
         icon: `url("chrome://browser/skin/device-phone.svg")`,
-        view: "viewTabsSidebar",
+        view: "viewSyncedTabsSidebar",
       },
       {
         l10nId: "sidebar-launcher-account",
@@ -377,10 +376,14 @@ export default class SidebarLauncher extends MozLitElement {
                 view=${action.view}
                 data-l10n-id=${action.l10nId}
                 style=${styleMap({ "--action-icon": action.icon })}
-              >New shortcut</button>`
+              >
+                New shortcut
+              </button>`
           )}
         </div>
-        <div class="open-tabs pinned-tabs actions-list">${this.tabsTemplate(this.pinnedTabs)}</div>
+        <div class="open-tabs pinned-tabs actions-list">
+          ${this.tabsTemplate(this.pinnedTabs)}
+        </div>
         <div class="open-tabs unpinned-tabs actions-list">
           <div class="add-button-wrapper">
             <button
@@ -391,7 +394,9 @@ export default class SidebarLauncher extends MozLitElement {
               style=${styleMap({
                 "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
               })}
-            >New tab</button>
+            >
+              New tab
+            </button>
           </div>
           ${this.tabsTemplate(this.tabs)}
         </div>

@@ -52,6 +52,7 @@ class SyncedTabsInView extends ViewPage {
     this.searchQuery = "";
     this.showAll = false;
     this.cumulativeSearches = 0;
+    this.useInSidebar = false;
   }
 
   static properties = {
@@ -63,6 +64,7 @@ class SyncedTabsInView extends ViewPage {
     searchQuery: { type: String },
     showAll: { type: Boolean },
     cumulativeSearches: { type: Number },
+    useInSidebar: { type: Boolean },
   };
 
   static queries = {
@@ -74,6 +76,9 @@ class SyncedTabsInView extends ViewPage {
 
   connectedCallback() {
     super.connectedCallback();
+    if (this.useInSidebar) {
+      this.enter();
+    }
     this.addEventListener("click", this);
   }
 
@@ -124,6 +129,9 @@ class SyncedTabsInView extends ViewPage {
   }
 
   disconnectedCallback() {
+    if (this.useInSidebar) {
+      this.exit();
+    }
     super.disconnectedCallback();
     this.stop();
   }
@@ -417,18 +425,27 @@ class SyncedTabsInView extends ViewPage {
         <span class="icon ${deviceType}" role="presentation"></span>
         ${deviceName}
       </h3>
-      <fxview-tab-list
-        slot="main"
-        class="with-context-menu"
-        hasPopup="menu"
-        .tabItems=${ifDefined(tabItems)}
-        .searchQuery=${this.searchQuery}
-        maxTabsLength=${this.showAll ? -1 : this.maxTabsLength}
-        @fxview-tab-list-primary-action=${this.onOpenLink}
-        @fxview-tab-list-secondary-action=${this.onContextMenu}
-      >
-        ${this.panelListTemplate()}
-      </fxview-tab-list>`;
+      ${this.useInSidebar
+        ? html`<fxview-tab-list
+            slot="main"
+            compactRows=${this.useInSidebar}
+            .tabItems=${ifDefined(tabItems)}
+            .searchQuery=${this.searchQuery}
+            maxTabsLength=${this.showAll ? -1 : this.maxTabsLength}
+            @fxview-tab-list-primary-action=${this.onOpenLink}
+          ></fxview-tab-list>`
+        : html`<fxview-tab-list
+            slot="main"
+            class="with-context-menu"
+            hasPopup="menu"
+            .tabItems=${ifDefined(tabItems)}
+            .searchQuery=${this.searchQuery}
+            maxTabsLength=${this.showAll ? -1 : this.maxTabsLength}
+            @fxview-tab-list-primary-action=${this.onOpenLink}
+            @fxview-tab-list-secondary-action=${this.onContextMenu}
+          >
+            ${this.panelListTemplate()}
+          </fxview-tab-list>`} `;
   }
 
   generateTabList() {
@@ -581,7 +598,7 @@ class SyncedTabsInView extends ViewPage {
       href="chrome://browser/content/firefoxview/firefoxview.css"
     />`);
 
-    if (!this.recentBrowsing) {
+    if (!this.recentBrowsing && !this.useInSidebar) {
       renderArray.push(html`<div class="sticky-container bottom-fade">
         <h2
           class="page-header heading-large"
@@ -605,7 +622,7 @@ class SyncedTabsInView extends ViewPage {
               </div>`
             )}
             ${when(
-              this._currentSetupStateIndex === 4,
+              this._currentSetupStateIndex === 4 && !this.useInSidebar,
               () => html`
                 <button
                   class="small-button"
@@ -668,8 +685,12 @@ class SyncedTabsInView extends ViewPage {
       url: tab.url,
       primaryL10nId: "firefoxview-tabs-list-tab-button",
       primaryL10nArgs: JSON.stringify({ targetURI: tab.url }),
-      secondaryL10nId: "fxviewtabrow-options-menu-button",
-      secondaryL10nArgs: JSON.stringify({ tabTitle: tab.title }),
+      secondaryL10nId: !this.useInSidebar
+        ? "fxviewtabrow-options-menu-button"
+        : null,
+      secondaryL10nArgs: !this.useInSidebar
+        ? JSON.stringify({ tabTitle: tab.title })
+        : null,
     }));
   }
 

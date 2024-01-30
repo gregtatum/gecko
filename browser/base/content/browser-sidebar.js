@@ -58,10 +58,10 @@ var SidebarUI = {
         }),
       ],
       [
-        "viewTabsSidebar",
+        "viewSyncedTabsSidebar",
         makeSidebar({
           elementId: "sidebar-switcher-tabs",
-          url: "chrome://browser/content/syncedtabs/sidebar.xhtml",
+          url: "chrome://browser/content/firefoxview/syncedTabsSidebar.html",
           menuId: "menu_tabsSidebar",
         }),
       ],

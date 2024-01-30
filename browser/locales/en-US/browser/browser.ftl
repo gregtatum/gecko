@@ -1086,3 +1086,5 @@ sidebar-launcher-downloads = Downloads
   .tooltiptext = Downloads
 sidebar-launcher-account = Account
   .tooltiptext = Account
+sidebar-launcher-side-view = Sideview
+  .tooltiptext = SideView
