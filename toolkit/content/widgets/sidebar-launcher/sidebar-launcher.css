@@ -11,7 +11,7 @@
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
   box-sizing: border-box;
-  width: 48px;
+  width: var(--sidebar-launcher-width);
   height: 100%;
   padding: 8px;
   border-right: 1px solid var(--sidebar-border-color);
@@ -19,7 +19,7 @@
   transition: width 100ms;
 
   :host([expanded]) & {
-    width: 250px;
+    width: var(--sidebar-launcher-width-expanded);
   }
 }
 
