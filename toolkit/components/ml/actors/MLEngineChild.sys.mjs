@@ -125,7 +125,7 @@ class EngineDispatcher {
     this.#engine = Promise.all([
       this.mlEngineChild.getWasmArrayBuffer(),
       this.getModel(port),
-    ]).then(([wasm, model]) => FakeEngine.create(wasm, model));
+    ]).then(([wasm, model]) => TransformersEngine.create(wasm, model));
 
     this.#engine
       .then(() => void this.keepAlive())
@@ -268,9 +268,9 @@ class EngineDispatcher {
 }
 
 /**
- * Fake the engine by slicing the text in half.
+ * TransformersEngine - see `MLEngine.worker.mjs` for the actual code
  */
-class FakeEngine {
+class TransformersEngine {
   /** @type {BasePromiseWorker} */
   #worker;
 
@@ -279,7 +279,7 @@ class FakeEngine {
    *
    * @param {ArrayBuffer} wasm
    * @param {ArrayBuffer} model
-   * @returns {FakeEngine}
+   * @returns {TransformersEngine}
    */
   static async create(wasm, model) {
     /** @type {BasePromiseWorker} */
@@ -292,7 +292,7 @@ class FakeEngine {
     const closure = {};
     const transferables = [wasm, model];
     await worker.post("initializeEngine", args, closure, transferables);
-    return new FakeEngine(worker);
+    return new TransformersEngine(worker);
   }
 
   /**
