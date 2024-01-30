@@ -109,7 +109,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :host(:is(.anonymous-content-host, notification-message)),
+  :host(:is(.anonymous-content-host, notification-message, sidebar-launcher)),
   :root {
     /* Keep these in sync with:
      *
@@ -165,7 +165,7 @@
 }
 
 @media (prefers-contrast) {
-  :host(:is(.anonymous-content-host, notification-message)),
+  :host(:is(.anonymous-content-host, notification-message, sidebar-launcher)),
   :root {
     --in-content-page-color: CanvasText;
     --in-content-page-background: Canvas;
