@@ -6,7 +6,6 @@ import { html, ifDefined, styleMap } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 
 // eslint-disable-next-line
-import "chrome://global/content/elements/panel-list.js";
 // import "chrome://global/content/elements/moz-button.mjs";
 
 const COLLAPSE_ICON_URL = `url("chrome://global/skin/icons/collapse.svg")`;
@@ -267,15 +266,6 @@ export default class SidebarLauncher extends MozLitElement {
     }
   }
 
-  onTabContextmenu(e) {
-    let { tab } = e.target;
-    if (!tab.pinned) {
-      return;
-    }
-    this.pinnedTabMenuSidebarItem.checked = tab._openInSidebar;
-    this.pinedTabMenu.toggle(e);
-  }
-
   onAddTabClick(event) {
     BrowserOpenTab({ event, index: 0 });
   }
@@ -381,9 +371,6 @@ export default class SidebarLauncher extends MozLitElement {
         rel="stylesheet"
         href="chrome://global/skin/in-content/common.css"
       />
-      <panel-list id="pinned-tab-menu">
-        <panel-item id="pinned-tab-open-sidebar">Open in sidebar</panel-item>
-      </panel-list>
       <div
         class="wrapper"
         @mouseenter=${this.onWrapperMouseenter}
@@ -425,7 +412,6 @@ export default class SidebarLauncher extends MozLitElement {
           <button
             class="ghost-button icon-button sidebar-add-tab"
             @click=${this.onAddTabClick}
-            @contextmenu=${this.onTabContextmenu}
             title="Open a new tab"
             style=${styleMap({
               "--action-icon": `url(chrome://global/skin/icons/plus.svg)`,
