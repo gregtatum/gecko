@@ -110,6 +110,12 @@ export default class SidebarLauncher extends MozLitElement {
       "browser.sidebar-launcher.expand-on-hover.delay",
       500
     );
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "keepTabOnShortcut",
+      "browser.sidebar-launcher.keep-tab-on-shortcut.enabled",
+      false
+    );
     this.extensions = [];
     this.expanded = false;
     this.expandedPinned = false;
@@ -262,8 +268,39 @@ export default class SidebarLauncher extends MozLitElement {
       : "icon ghost";
   }
 
+  onAddShortcutClick(e) {
+    if (this.keepTabOnShortcut) {
+      // This is not the default case.
+      let existingTab = gBrowser.selectedTab;
+      let duplicateTab = gBrowser.duplicateTab(existingTab, true);
+      gBrowser.pinTab(existingTab);
+      this.showTab(existingTab);
+      gBrowser.selectedTab = duplicateTab;
+    } else {
+      // This is the default case.
+      let tabToPin = gBrowser.selectedTab;
+      let tabToFocus = gBrowser.selectedTab.nextElementSibling;
+      if (tabToFocus?.localName != "tab" || tabToFocus.pinned) {
+        tabToFocus = gBrowser.selectedTab.previousElementSibling;
+        if (tabToFocus?.localName != "tab" || tabToFocus.pinned) {
+          tabToFocus = null;
+        }
+      }
+      gBrowser.pinTab(tabToPin);
+      if (tabToFocus) {
+        gBrowser.selectedTab = tabToFocus;
+      } else {
+        this.onAddTabClick(e);
+      }
+      this.showTab(tabToPin);
+    }
+  }
+
   onTabClick(e) {
-    let { tab } = e.target;
+    this.showTab(e.target.tab);
+  }
+
+  showTab(tab) {
     if (tab.pinned) {
       let { selectedTab } = gBrowser;
       gBrowser.selectedTab = tab;
@@ -410,14 +447,10 @@ export default class SidebarLauncher extends MozLitElement {
           )}
         </div>
         <div class="open-tabs pinned-tabs actions-list top-border">
-          ${
-            this.pinnedTabs.length
-              ? html` ${this.tabsTemplate(this.pinnedTabs)} `
-              : ""
-          }
-
-        ${
-          this.extensions.length
+          ${this.pinnedTabs.length
+            ? html` ${this.tabsTemplate(this.pinnedTabs)} `
+            : ""}
+          ${this.extensions.length
             ? this.extensions.map(
                 action =>
                   html`<button
@@ -431,12 +464,12 @@ export default class SidebarLauncher extends MozLitElement {
                     style=${styleMap({ "--action-icon": action.icon })}
                   ></button>`
               )
-            : null
-        }
-      
+            : null}
+
           <button
             class="ghost-button icon-button add-shortcut"
             title="Add a shortcut"
+            @click=${this.onAddShortcutClick}
             style=${styleMap({
               "--action-icon": "url(chrome://global/skin/icons/plus.svg)",
             })}
