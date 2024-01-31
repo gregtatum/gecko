@@ -35,6 +35,14 @@ export class ShoppingSidebarParent extends JSWindowActorParent {
   static SHOW_KEEP_SIDEBAR_CLOSED_MESSAGE_PREF =
     "browser.shopping.experience2023.showKeepSidebarClosedMessage";
 
+  constructor(...args) {
+    super(...args);
+
+    // FIXME: We shouldn't force these on, but the opt-in prompt isn't showing.
+    Services.prefs.setBoolPref(this.constructor.SHOPPING_ACTIVE_PREF, true);
+    Services.prefs.setIntPref(this.constructor.SHOPPING_OPTED_IN_PREF, 1);
+  }
+
   updateProductURL(uri, flags) {
     this.sendAsyncMessage("ShoppingSidebar:UpdateProductURL", {
       url: uri?.spec ?? null,
@@ -52,8 +60,12 @@ export class ShoppingSidebarParent extends JSWindowActorParent {
         //);
         //return associatedTabbedBrowser.currentURI?.spec ?? null;
         // TODO looks like we need to get the selected browser here instead.
-        let window = this.browsingContext.top.embedderElement.ownerGlobal;
-        return window.gBrowser.selectedBrowser.currentURI?.spec ?? null;
+        let window = this.browsingContext.embedderElement.ownerGlobal;
+        let url = window.gBrowser.selectedBrowser.currentURI?.spec ?? null;
+        if (lazy.isProductURL(new URL(url))) {
+          return url;
+        }
+        return null;
     }
     return null;
   }

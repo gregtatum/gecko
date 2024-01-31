@@ -297,7 +297,7 @@ export class ShoppingSidebarChild extends RemotePageChild {
         let url = await this.sendQuery("GetProductURL");
 
         // Bail out if we opted out in the meantime, or don't have a URI.
-        if (!canContinue(null, false)) {
+        if (!url || !canContinue(null, false)) {
           return;
         }
 

@@ -99,7 +99,7 @@ export class ShoppingContainer extends MozLitElement {
 
   updated() {
     if (this.focusCloseButton) {
-      this.closeButtonEl.focus();
+      this.closeButtonEl?.focus();
     }
   }
 

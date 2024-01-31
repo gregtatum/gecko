@@ -741,14 +741,14 @@ pref("browser.search.serpEventTelemetryCategorization.enabled", false);
 // Enable new experimental shopping features. This is solely intended as a
 // rollout/"emergency stop" button - it will go away once the feature has
 // rolled out. There will be separate controls for user opt-in/opt-out.
-pref("browser.shopping.experience2023.enabled", false);
+pref("browser.shopping.experience2023.enabled", true);
 
 // Ternary int-valued pref indicating if the user has opted into the new
 // experimental shopping feature.
 // 0 means the user has not opted in or out.
 // 1 means the user has opted in.
 // 2 means the user has opted out.
-pref("browser.shopping.experience2023.optedIn", 0);
+pref("browser.shopping.experience2023.optedIn", 1);
 
 // Activates the new experimental shopping sidebar.
 // True by default. This is handled by ShoppingUtils.handleAutoActivateOnProduct
