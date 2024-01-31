@@ -25,14 +25,6 @@ var SidebarUI = {
 
     return (this._sidebars = new Map([
       [
-        "viewHomeSidebar",
-        makeSidebar({
-          elementId: "sidebar-switcher-bookmarks",
-          url: "chrome://browser/content/firefoxview/homeSidebar.html",
-          menuId: "menu_bookmarksSidebar",
-        }),
-      ],
-      [
         "viewNowSidebar",
         makeSidebar({
           elementId: "sidebar-switcher-bookmarks",

@@ -50,11 +50,6 @@ export default class SidebarLauncher extends MozLitElement {
     super();
     this.topActions = [
       {
-        l10nId: "sidebar-launcher-home",
-        icon: `url("chrome://browser/content/firefoxview/category-opentabs.svg")`,
-        view: "viewHomeSidebar",
-      },
-      {
         l10nId: "sidebar-launcher-now",
         icon: "url(chrome://global/skin/icons/insights.svg)",
         view: "viewNowSidebar",
