@@ -60,7 +60,7 @@ export default class SidebarLauncher extends MozLitElement {
 
       {
         l10nId: "sidebar-launcher-genaidebug",
-        icon: `url("chrome://browser/skin/tab-crashed.svg")`,
+        icon: "url(chrome://global/skin/icons/developer.svg)",
         view: "viewGenaiDebugSidebar",
       },
       {
