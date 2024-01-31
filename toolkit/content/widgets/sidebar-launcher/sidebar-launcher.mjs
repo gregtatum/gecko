@@ -11,6 +11,7 @@ import { MozLitElement } from "../lit-utils.mjs";
 const COLLAPSE_ICON_URL = `url("chrome://global/skin/icons/collapse.svg")`;
 const EXPAND_ICON_URL = `url("chrome://global/skin/icons/expand.svg")`;
 const SIDE_VIEW_AMO_URL = "addons.mozilla.org/en-US/firefox/addon/side-view/";
+const SIDE_VIEW_VIEW_ID = "side-view_mozilla_org-sidebar-action";
 const TAB_EVENTS = new Set([
   "TabSelect",
   "TabAttrModified",
@@ -36,6 +37,7 @@ export default class SidebarLauncher extends MozLitElement {
     tabs: { type: Array },
     expanded: { type: Boolean },
     expandedPinned: { type: Boolean },
+    lastSideViewTab: { type: Object },
   };
 
   static queries = {
@@ -66,7 +68,7 @@ export default class SidebarLauncher extends MozLitElement {
       {
         l10nId: "sidebar-launcher-side-view",
         icon: "url(chrome://global/skin/icons/side-view.svg)",
-        view: "@side-view",
+        view: SIDE_VIEW_VIEW_ID,
       },
     ];
 
@@ -155,6 +157,12 @@ export default class SidebarLauncher extends MozLitElement {
     this.menuMutationObserver.disconnect();
   }
 
+  get sideViewIsOpen() {
+    return (
+      window.SidebarUI.isOpen && window.SidebarUI.currentID == SIDE_VIEW_VIEW_ID
+    );
+  }
+
   updateTabs() {
     this.pinnedTabs = window.gBrowser.tabs.filter(t => t.pinned && !t.closing);
     this.tabs = window.gBrowser.tabs.filter(t => !t.pinned && !t.closing);
@@ -184,9 +192,9 @@ export default class SidebarLauncher extends MozLitElement {
     this.extensions = [];
     for (let item of this._sidebarMenu.children) {
       this.sideViewInstalled =
-        item.id.slice("menubar_menu_".length) ==
-        "side-view_mozilla_org-sidebar-action";
-      if (item.id.endsWith("-sidebar-action") && !this.sideViewInstalled) {
+        this.sideViewInstalled ||
+        item.id.slice("menubar_menu_".length) == SIDE_VIEW_VIEW_ID;
+      if (item.id.endsWith("-sidebar-action") && !item.id.endsWith(SIDE_VIEW_VIEW_ID)) {
         this.extensions.push({
           tooltiptext: item.label,
           icon: item.style.getPropertyValue("--webextension-menuitem-image"),
@@ -239,11 +247,7 @@ export default class SidebarLauncher extends MozLitElement {
 
   showView(e) {
     let view = e.target.getAttribute("view");
-    if (view.startsWith("@")) {
-      if (this.sideViewInstalled) {
-        window.SidebarUI.toggle("side-view_mozilla_org-sidebar-action");
-        return;
-      }
+    if (view == SIDE_VIEW_VIEW_ID && !this.sideViewInstalled) {
       window.gBrowser.addTab(SIDE_VIEW_AMO_URL, {
         inBackground: false,
         triggeringPrincipal:
@@ -302,6 +306,7 @@ export default class SidebarLauncher extends MozLitElement {
 
   showTab(tab) {
     if (tab.pinned) {
+      this.lastSideViewTab = tab;
       let { selectedTab } = gBrowser;
       gBrowser.selectedTab = tab;
       document
@@ -376,7 +381,9 @@ export default class SidebarLauncher extends MozLitElement {
         <div class="open-tab-wrapper">
           <button
             class="ghost-button icon-button"
-            ?selected=${t.selected}
+            ?selected=${t.pinned
+              ? this.sideViewIsOpen && t == this.lastSideViewTab
+              : t.selected}
             @click=${this.onTabClick}
             @mouseenter=${this.onTabMouseenter}
             @mouseleave=${this.onTabMouseleave}
