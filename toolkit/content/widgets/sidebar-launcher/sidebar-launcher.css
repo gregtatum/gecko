@@ -23,7 +23,7 @@
   }
 }
 
-.top-actions > button:last-of-type {
+.add-shortcut {
   border: 1px dashed var(--border-interactive-color);
 }
 

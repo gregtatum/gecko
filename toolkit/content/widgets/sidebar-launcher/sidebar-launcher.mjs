@@ -65,7 +65,7 @@ export default class SidebarLauncher extends MozLitElement {
       },
       {
         l10nId: "sidebar-launcher-side-view",
-        icon: "url(chrome://global/skin/icons/plus.svg)",
+        icon: "url(chrome://global/skin/icons/side-view.svg)",
         view: "@side-view",
       },
     ];
@@ -110,12 +110,16 @@ export default class SidebarLauncher extends MozLitElement {
       "browser.sidebar-launcher.expand-on-hover.delay",
       500
     );
-
+    this.extensions = [];
     this.expanded = false;
     this.expandedPinned = false;
+    this.sideViewInstalled = false;
     this.selectedView = window.SidebarUI.currentID;
     this.open = window.SidebarUI.isOpen;
     this.updateTabs();
+    this.menuMutationObserver = new MutationObserver(() =>
+      this.#setExtensionItems()
+    );
   }
 
   connectedCallback() {
@@ -124,14 +128,12 @@ export default class SidebarLauncher extends MozLitElement {
     this._sidebarBox.addEventListener("sidebar-show", this);
     this._sidebarBox.addEventListener("sidebar-hide", this);
     this._sidebarMenu = document.getElementById("viewSidebarMenu");
-    // let menuMutationObserver = new MutationObserver(() =>
-    //   this.#setExtensionItems()
-    // );
-    // menuMutationObserver.observe(this._sidebarMenu, {
-    //   childList: true,
-    //   subtree: true,
-    // });
-    // this.#setExtensionItems();
+
+    this.menuMutationObserver.observe(this._sidebarMenu, {
+      childList: true,
+      subtree: true,
+    });
+    this.#setExtensionItems();
     for (let eventName of TAB_EVENTS.values()) {
       window.gBrowser.tabContainer.addEventListener(eventName, this);
     }
@@ -144,6 +146,7 @@ export default class SidebarLauncher extends MozLitElement {
     for (let eventName of TAB_EVENTS.values()) {
       window.gBrowser.tabContainer.removeEventListener(eventName, this);
     }
+    this.menuMutationObserver.disconnect();
   }
 
   updateTabs() {
@@ -171,18 +174,21 @@ export default class SidebarLauncher extends MozLitElement {
     return icon;
   }
 
-  // #setExtensionItems() {
-  //   this.bottomActions = [];
-  //   for (let item of this._sidebarMenu.children) {
-  //     if (item.id.endsWith("-sidebar-action")) {
-  //       this.bottomActions.push({
-  //         tooltiptext: item.label,
-  //         icon: item.style.getPropertyValue("--webextension-menuitem-image"),
-  //         view: item.id.slice("menubar_menu_".length),
-  //       });
-  //     }
-  //   }
-  // }
+  #setExtensionItems() {
+    this.extensions = [];
+    for (let item of this._sidebarMenu.children) {
+      this.sideViewInstalled =
+        item.id.slice("menubar_menu_".length) ==
+        "side-view_mozilla_org-sidebar-action";
+      if (item.id.endsWith("-sidebar-action") && !this.sideViewInstalled) {
+        this.extensions.push({
+          tooltiptext: item.label,
+          icon: item.style.getPropertyValue("--webextension-menuitem-image"),
+          view: item.id.slice("menubar_menu_".length),
+        });
+      }
+    }
+  }
 
   handleEvent(e) {
     if (TAB_EVENTS.has(e.type)) {
@@ -228,6 +234,10 @@ export default class SidebarLauncher extends MozLitElement {
   showView(e) {
     let view = e.target.getAttribute("view");
     if (view.startsWith("@")) {
+      if (this.sideViewInstalled) {
+        window.SidebarUI.toggle("side-view_mozilla_org-sidebar-action");
+        return;
+      }
       window.gBrowser.addTab(SIDE_VIEW_AMO_URL, {
         inBackground: false,
         triggeringPrincipal:
@@ -396,18 +406,44 @@ export default class SidebarLauncher extends MozLitElement {
                 view=${action.view}
                 data-l10n-id=${action.l10nId}
                 style=${styleMap({ "--action-icon": action.icon })}
-              >
-                New shortcut
-              </button>`
+              ></button>`
           )}
         </div>
-        ${this.pinnedTabs.length
-          ? html`
-              <div class="open-tabs pinned-tabs actions-list top-border">
-                ${this.tabsTemplate(this.pinnedTabs)}
-              </div>
-            `
-          : ""}
+        <div class="open-tabs pinned-tabs actions-list top-border">
+          ${
+            this.pinnedTabs.length
+              ? html` ${this.tabsTemplate(this.pinnedTabs)} `
+              : ""
+          }
+
+        ${
+          this.extensions.length
+            ? this.extensions.map(
+                action =>
+                  html`<button
+                    class="ghost-button icon-button"
+                    ?selected=${this.open && action.view == this.selectedView}
+                    type=${this.buttonType(action)}
+                    @click=${this.showView}
+                    view=${action.view}
+                    .tooltiptext=${action.tooltiptext}
+                    title=${action.tooltiptext}
+                    style=${styleMap({ "--action-icon": action.icon })}
+                  ></button>`
+              )
+            : null
+        }
+      
+          <button
+            class="ghost-button icon-button add-shortcut"
+            title="Add a shortcut"
+            style=${styleMap({
+              "--action-icon": "url(chrome://global/skin/icons/plus.svg)",
+            })}
+          >
+            Add a shortcut
+          </button>
+        </div>
         <div class="add-button-wrapper top-border">
           <button
             class="ghost-button icon-button sidebar-add-tab"
