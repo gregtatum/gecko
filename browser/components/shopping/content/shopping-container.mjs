@@ -48,6 +48,7 @@ export class ShoppingContainer extends MozLitElement {
     isAnalysisInProgress: { type: Boolean },
     analysisProgress: { type: Number },
     isOverflow: { type: Boolean },
+    inSidebar: { type: Boolean },
     autoOpenEnabled: { type: Boolean },
     autoOpenEnabledByUser: { type: Boolean },
     showingKeepClosedMessage: { type: Boolean },
@@ -359,24 +360,31 @@ export class ShoppingContainer extends MozLitElement {
         href="chrome://browser/content/shopping/shopping-page.css"
       />
       <div id="shopping-container">
-        <div
-          id="header-wrapper"
-          class=${this.isOverflow ? "shopping-header-overflow" : ""}
-        >
-          <header id="shopping-header" data-l10n-id="shopping-a11y-header">
-            <h1
-              id="shopping-header-title"
-              data-l10n-id="shopping-main-container-title"
-            ></h1>
-            <p id="beta-marker" data-l10n-id="shopping-beta-marker"></p>
-          </header>
-          <button
-            id="close-button"
-            class="ghost-button shopping-button"
-            data-l10n-id="shopping-close-button"
-            @click=${this.handleCloseButtonClick}
-          ></button>
-        </div>
+        ${this.inSidebar
+          ? ""
+          : html`
+              <div
+                id="header-wrapper"
+                class=${this.isOverflow ? "shopping-header-overflow" : ""}
+              >
+                <header
+                  id="shopping-header"
+                  data-l10n-id="shopping-a11y-header"
+                >
+                  <h1
+                    id="shopping-header-title"
+                    data-l10n-id="shopping-main-container-title"
+                  ></h1>
+                  <p id="beta-marker" data-l10n-id="shopping-beta-marker"></p>
+                </header>
+                <button
+                  id="close-button"
+                  class="ghost-button shopping-button"
+                  data-l10n-id="shopping-close-button"
+                  @click=${this.handleCloseButtonClick}
+                ></button>
+              </div>
+            `}
         <div id="content" aria-live="polite" aria-busy=${!this.data}>
           <slot name="multi-stage-message-slot"></slot>
           ${this.keepClosedMessageTemplate()}${sidebarContent}
@@ -432,6 +440,9 @@ export class ShoppingContainer extends MozLitElement {
           type="analysis-in-progress"
           progress=${this.analysisProgress}
         ></shopping-message-bar>`;
+      } else if (this.inSidebar) {
+        // Don't show a loading state in the sidebar.
+        return "";
       } else {
         content = this.getLoadingTemplate();
         hideFooter = true;
@@ -439,6 +450,7 @@ export class ShoppingContainer extends MozLitElement {
     } else {
       content = this.getContentTemplate();
     }
+    hideFooter = hideFooter || this.inSidebar;
     return this.renderContainer(content, hideFooter);
   }
 

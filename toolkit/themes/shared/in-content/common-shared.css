@@ -11,7 +11,7 @@
 /* TODO(bug 1845150): Remove notification-message from the host selectors in
  * this file */
 
-:host(:is(.anonymous-content-host, notification-message, sidebar-launcher)),
+:host(:is(.anonymous-content-host, notification-message, sidebar-launcher, shopping-container)),
 :root {
   --in-content-page-color: rgb(21, 20, 26);
   --in-content-page-background: #fff;
@@ -109,7 +109,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :host(:is(.anonymous-content-host, notification-message, sidebar-launcher)),
+  :host(:is(.anonymous-content-host, notification-message, sidebar-launcher, shopping-container)),
   :root {
     /* Keep these in sync with:
      *
@@ -165,7 +165,7 @@
 }
 
 @media (prefers-contrast) {
-  :host(:is(.anonymous-content-host, notification-message, sidebar-launcher)),
+  :host(:is(.anonymous-content-host, notification-message, sidebar-launcher, shopping-container)),
   :root {
     --in-content-page-color: CanvasText;
     --in-content-page-background: Canvas;

@@ -260,38 +260,38 @@ class ShoppingSidebarManagerClass {
 
     // let browserPanel = gBrowser.getPanel(aBrowser);
     // let sidebar = browserPanel.querySelector("shopping-sidebar");
-    let sidebar = globalSidebar.querySelector("shopping-sidebar");
+    let sidebar = globalSidebarBrowser;
+    let isNowSidebar = sidebar.src.endsWith("nowSidebar.html");
     let actor;
-    if (sidebar) {
-      let { browsingContext } = sidebar.querySelector("browser");
+    if (sidebar && isNowSidebar) {
+      // let { browsingContext } = sidebar.querySelector("browser");
+      let { browsingContext } = sidebar;
       let global = browsingContext.currentWindowGlobal;
       actor = global.getExistingActor("ShoppingSidebar");
     }
     let isProduct = lazy.isProductURL(aLocationURI);
     if (isProduct && this.isActive) {
       if (!sidebar) {
-        sidebar = document.createXULElement("shopping-sidebar");
-        sidebar.hidden = false;
-        sidebar.removeAttribute("closed");
-
-        let splitter = document.createXULElement("splitter");
-        //splitter.classList.add("sidebar-splitter");
-        splitter.classList.add(
-          "horizontal-sidebar-splitter",
-          "chromeclass-extrachrome"
-        );
-
-        globalSidebar.insertBefore(sidebar, globalSidebarBrowser);
-        globalSidebar.insertBefore(splitter, globalSidebarBrowser);
-        // browserPanel.appendChild(splitter);
-        // browserPanel.appendChild(sidebar);
+        // Don't do anything if its hidden.
+        // sidebar = document.createXULElement("shopping-sidebar");
+        // sidebar.hidden = false;
+        // sidebar.removeAttribute("closed");
+        //
+        // let splitter = document.createXULElement("splitter");
+        // //splitter.classList.add("sidebar-splitter");
+        // splitter.classList.add("horizontal-sidebar-splitter", "chromeclass-extrachrome");
+        //
+        // globalSidebar.insertBefore(sidebar, globalSidebarBrowser);
+        // globalSidebar.insertBefore(splitter, globalSidebarBrowser);
+        // // browserPanel.appendChild(splitter);
+        // // browserPanel.appendChild(sidebar);
       } else {
         actor?.updateProductURL(aLocationURI, aFlags);
-        sidebar.hidden = false;
+        // sidebar.hidden = false;
       }
     } else if (sidebar && !sidebar.hidden) {
       actor?.updateProductURL(null);
-      sidebar.hidden = true;
+      // sidebar.hidden = true;
     }
 
     this._updateBCActiveness(aBrowser);

@@ -774,8 +774,12 @@ let JSWINDOWACTORS = {
         AdImpression: { wantUntrusted: true },
       },
     },
-    matches: ["about:shoppingsidebar"],
-    remoteTypes: ["privilegedabout"],
+    matches: [
+      "about:shoppingsidebar",
+      "chrome://browser/content/firefoxview/nowSidebar.html",
+    ],
+    includeChrome: true,
+    allFrames: true,
   },
 
   SpeechDispatcher: {

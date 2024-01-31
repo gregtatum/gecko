@@ -12,13 +12,13 @@
   --shopping-card-summary-border-radius: calc(var(--shopping-card-border-radius) - var(--shopping-card-border-width));
   --shopping-card-padding: 12px;
   border-radius: var(--shopping-card-border-radius);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   box-sizing: border-box;
 }
 
 .shopping-card {
   display: flex;
-  border: var(--shopping-card-border-width) solid var(--shopping-card-border-color);
+  /* border: var(--shopping-card-border-width) solid var(--shopping-card-border-color); */
   border-radius: var(--shopping-card-border-radius);
   background-color: var(--in-content-page-background);
   flex-direction: column;

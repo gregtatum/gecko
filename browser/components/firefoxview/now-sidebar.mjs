@@ -102,6 +102,7 @@ class NowSidebar extends MozLitElement {
   render() {
     return html`
       <link rel="stylesheet" href="chrome://global/skin/global.css" />
+      <shopping-container insidebar></shopping-container>
       <moz-card heading="Now view">
         <p>
           the current tab's URL is
