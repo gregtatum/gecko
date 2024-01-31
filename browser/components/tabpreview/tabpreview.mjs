@@ -208,7 +208,12 @@ export default class TabPreview extends MozLitElement {
     ) {
       this.updateComplete.then(() => {
         if (this.panel.state == "open" || this.panel.state == "showing") {
-          this.panel.moveToAnchor(this.anchor, this.currentPanelPosition, 0, -2);
+          this.panel.moveToAnchor(
+            this.anchor,
+            this.currentPanelPosition,
+            0,
+            -2
+          );
         } else {
           this.showPreview();
         }

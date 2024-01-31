@@ -9,11 +9,9 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 import "chrome://global/content/elements/moz-card.mjs";
 
 class HomeSidebar extends MozLitElement {
-  static properties = {
-  };
+  static properties = {};
 
-  static styles = css`
-  `;
+  static styles = css``;
 
   constructor() {
     super();

@@ -276,7 +276,10 @@ class ShoppingSidebarManagerClass {
 
         let splitter = document.createXULElement("splitter");
         //splitter.classList.add("sidebar-splitter");
-        splitter.classList.add("horizontal-sidebar-splitter", "chromeclass-extrachrome");
+        splitter.classList.add(
+          "horizontal-sidebar-splitter",
+          "chromeclass-extrachrome"
+        );
 
         globalSidebar.insertBefore(sidebar, globalSidebarBrowser);
         globalSidebar.insertBefore(splitter, globalSidebarBrowser);
