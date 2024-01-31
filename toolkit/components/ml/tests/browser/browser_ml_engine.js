@@ -3,26 +3,34 @@
 
 "use strict";
 
-/// <reference path="head.js" />
+const CLASSIFIER_REQUEST = JSON.stringify({
+  queries: [
+    "How many people live in Berlin?",
+    "How many people live in Berlin?",
+  ],
+  text_pair: [
+    "Berlin has a population of 3,520,031 registered inhabitants in an area of 891.82 square kilometers.",
+    "New York City is famous for the Metropolitan Museum of Art.",
+  ],
+});
+
+const CLASSIFIER_RESULT = JSON.stringify({
+  scores: [7.210887908935547, -11.559350967407227],
+});
 
 async function setup({ disabled = false, prefs = [] } = {}) {
-  const { removeMocks, remoteClients } = await createAndMockMLRemoteSettings({
-    autoDownloadFromRemoteSettings: false,
-  });
-
   await SpecialPowers.pushPrefEnv({
     set: [
       // Enabled by default.
       ["browser.ml.enable", !disabled],
       ["browser.ml.logLevel", "All"],
+      ["browser.ml.testing", true],
       ...prefs,
     ],
   });
 
   return {
-    remoteClients,
     async cleanup() {
-      await removeMocks();
       await waitForCondition(
         () => EngineProcess.areAllEnginesTerminated(),
         "Waiting for all of the engines to be terminated.",
@@ -34,29 +42,19 @@ async function setup({ disabled = false, prefs = [] } = {}) {
 }
 
 add_task(async function test_ml_engine_basics() {
-  const { cleanup, remoteClients } = await setup();
+  const { cleanup } = await setup();
 
   info("Get the engine process");
   const mlEngineParent = await EngineProcess.getMLEngineParent();
 
   info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine(
-    "summarizer",
-    SummarizerModel.getModel
-  );
+  const summarizer = mlEngineParent.getEngine("summarizer");
 
   info("Run the summarizer");
-  const summarizePromise = summarizer.run("This gets cut in half.");
 
-  info("Wait for the pending downloads.");
-  await remoteClients.models.resolvePendingDownloads(1);
-  await remoteClients.wasm.resolvePendingDownloads(1);
+  const summarizePromise = summarizer.run(CLASSIFIER_REQUEST);
 
-  is(
-    await summarizePromise,
-    "This gets c",
-    "The text gets cut in half simulating summarizing"
-  );
+  is(await summarizePromise, CLASSIFIER_RESULT, "The queries gets classified");
 
   ok(
     !EngineProcess.areAllEnginesTerminated(),
@@ -68,95 +66,20 @@ add_task(async function test_ml_engine_basics() {
   await cleanup();
 });
 
-add_task(async function test_ml_engine_model_rejection() {
-  const { cleanup, remoteClients } = await setup();
-
-  info("Get the engine process");
-  const mlEngineParent = await EngineProcess.getMLEngineParent();
-
-  info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine(
-    "summarizer",
-    SummarizerModel.getModel
-  );
-
-  info("Run the summarizer");
-  const summarizePromise = summarizer.run("This gets cut in half.");
-
-  info("Wait for the pending downloads.");
-  await remoteClients.wasm.resolvePendingDownloads(1);
-  await remoteClients.models.rejectPendingDownloads(1);
-
-  let error;
-  try {
-    await summarizePromise;
-  } catch (e) {
-    error = e;
-  }
-  is(
-    error?.message,
-    "Intentionally rejecting downloads.",
-    "The error is correctly surfaced."
-  );
-
-  await cleanup();
-});
-
-add_task(async function test_ml_engine_wasm_rejection() {
-  const { cleanup, remoteClients } = await setup();
-
-  info("Get the engine process");
-  const mlEngineParent = await EngineProcess.getMLEngineParent();
-
-  info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine(
-    "summarizer",
-    SummarizerModel.getModel
-  );
-
-  info("Run the summarizer");
-  const summarizePromise = summarizer.run("This gets cut in half.");
-
-  info("Wait for the pending downloads.");
-  await remoteClients.wasm.rejectPendingDownloads(1);
-  await remoteClients.models.resolvePendingDownloads(1);
-
-  let error;
-  try {
-    await summarizePromise;
-  } catch (e) {
-    error = e;
-  }
-  is(
-    error?.message,
-    "Intentionally rejecting downloads.",
-    "The error is correctly surfaced."
-  );
-
-  await cleanup();
-});
-
 /**
  * Tests that the SummarizerModel's internal errors are correctly surfaced.
  */
 add_task(async function test_ml_engine_model_error() {
-  const { cleanup, remoteClients } = await setup();
+  const { cleanup } = await setup();
 
   info("Get the engine process");
   const mlEngineParent = await EngineProcess.getMLEngineParent();
 
   info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine(
-    "summarizer",
-    SummarizerModel.getModel
-  );
+  const summarizer = mlEngineParent.getEngine("summarizer");
 
   info("Run the summarizer with a throwing example.");
   const summarizePromise = summarizer.run("throw");
-
-  info("Wait for the pending downloads.");
-  await remoteClients.wasm.resolvePendingDownloads(1);
-  await remoteClients.models.resolvePendingDownloads(1);
 
   let error;
   try {
@@ -171,49 +94,6 @@ add_task(async function test_ml_engine_model_error() {
   );
 
   summarizer.terminate();
-
-  await cleanup();
-});
-
-/**
- * This test is really similar to the "basic" test, but tests manually destroying
- * the summarizer.
- */
-add_task(async function test_ml_engine_destruction() {
-  const { cleanup, remoteClients } = await setup();
-
-  info("Get the engine process");
-  const mlEngineParent = await EngineProcess.getMLEngineParent();
-
-  info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine(
-    "summarizer",
-    SummarizerModel.getModel
-  );
-
-  info("Run the summarizer");
-  const summarizePromise = summarizer.run("This gets cut in half.");
-
-  info("Wait for the pending downloads.");
-  await remoteClients.models.resolvePendingDownloads(1);
-  await remoteClients.wasm.resolvePendingDownloads(1);
-
-  is(
-    await summarizePromise,
-    "This gets c",
-    "The text gets cut in half simulating summarizing"
-  );
-
-  ok(
-    !EngineProcess.areAllEnginesTerminated(),
-    "The engine process is still active."
-  );
-
-  summarizer.terminate();
-
-  info(
-    "The summarizer is manually destroyed. The cleanup function should wait for the engine process to be destroyed."
-  );
 
   await cleanup();
 });

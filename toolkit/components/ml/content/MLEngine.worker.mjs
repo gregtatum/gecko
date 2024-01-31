@@ -4,7 +4,14 @@
 
 import { PromiseWorker } from "resource://gre/modules/workers/PromiseWorker.mjs";
 
+import {
+  env,
+  AutoTokenizer,
+  AutoModelForSequenceClassification,
+} from "chrome://global/content/ml/transformers.min.js";
+
 const lazy = {};
+
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
   return console.createInstance({
     maxLogLevelPref: "browser.ml.logLevel",
@@ -16,10 +23,8 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
  * The actual MLEngine lives here in a worker.
  */
 class MLEngineWorker {
-  /** @type {ArrayBuffer} */
-  #wasm;
-  /** @type {ArrayBuffer} */
   #model;
+  #tokenizer;
 
   constructor() {
     // Connect the provider to the worker.
@@ -30,11 +35,24 @@ class MLEngineWorker {
    * @param {ArrayBuffer} wasm
    * @param {ArrayBuffer} model
    */
-  initializeEngine(wasm, model) {
-    this.#wasm = wasm;
-    this.#model = model;
-    // TODO - Initialize the engine for real here.
-    lazy.console.log("MLEngineWorker is initalized");
+  async initializeEngine(options) {
+    env.useBrowserCache = false;
+
+    if (options.testing) {
+      // when running in tests we don't hit the network
+      env.allowRemoteModels = false;
+      env.localModelPath = "chrome://global/content/ml/models";
+      env.backends.onnx.wasm.wasmPaths = "chrome://global/content/ml/ort/";
+    }
+    // initializing the inference engine
+    this.#model = await AutoModelForSequenceClassification.from_pretrained(
+      "Xenova/ms-marco-TinyBERT-L-2-v2"
+    );
+    this.#tokenizer = await AutoTokenizer.from_pretrained(
+      "Xenova/ms-marco-TinyBERT-L-2-v2"
+    );
+
+    lazy.console.log("MLEngineWorker is initialized");
   }
 
   /**
@@ -42,20 +60,27 @@ class MLEngineWorker {
    *
    * @param {string} request
    */
-  run(request) {
-    if (!this.#wasm) {
-      throw new Error("Expected the wasm to exist.");
-    }
-    if (!this.#model) {
-      throw new Error("Expected the model to exist");
-    }
+  async run(request) {
     if (request === "throw") {
       throw new Error(
         'Received the message "throw", so intentionally throwing an error.'
       );
     }
-    lazy.console.debug("inference run requested with:", request);
-    return request.slice(0, Math.floor(request.length / 2));
+
+    const jsonRequest = JSON.parse(request);
+    lazy.console.debug("inference run requested with:", jsonRequest);
+
+    const features = this.#tokenizer(jsonRequest.queries, {
+      text_pair: jsonRequest.text_pair,
+      padding: true,
+      truncation: true,
+    });
+
+    const res = await this.#model(features);
+    const scores = Object.values(res.logits.data);
+    lazy.console.debug(scores);
+
+    return JSON.stringify({ scores: scores });
   }
 
   /**
@@ -75,7 +100,7 @@ class MLEngineWorker {
     };
 
     self.addEventListener("message", msg => worker.handleMessage(msg));
-    self.addEventListener("unhandledrejection", function (error) {
+    self.addEventListener("unhandledrejection", function(error) {
       throw error.reason;
     });
   }

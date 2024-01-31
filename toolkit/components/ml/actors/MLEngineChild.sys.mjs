@@ -28,6 +28,10 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
   });
 });
 
+ChromeUtils.defineLazyGetter(lazy, "TESTING", function() {
+  return Services.prefs.getBoolPref("browser.ml.testing", false);
+});
+
 /**
  * The engine child is responsible for the life cycle and instantiation of the local
  * machine learning inference engine.
@@ -44,6 +48,9 @@ export class MLEngineChild extends JSWindowActorChild {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "MLEngine:NewPort": {
+        if (this.#engineDispatchers == null) {
+          this.#engineDispatchers = new Map();
+        }
         const { engineName, port, timeoutMS } = data;
         this.#engineDispatchers.set(
           engineName,
@@ -67,13 +74,6 @@ export class MLEngineChild extends JSWindowActorChild {
         this.sendAsyncMessage("MLEngine:Ready");
         break;
     }
-  }
-
-  /**
-   * @returns {ArrayBuffer}
-   */
-  getWasmArrayBuffer() {
-    return this.sendQuery("MLEngine:GetWasmArrayBuffer");
   }
 
   /**
@@ -122,10 +122,7 @@ class EngineDispatcher {
 
     this.#engineName = engineName;
 
-    this.#engine = Promise.all([
-      this.mlEngineChild.getWasmArrayBuffer(),
-      this.getModel(port),
-    ]).then(([wasm, model]) => FakeEngine.create(wasm, model));
+    this.#engine = FakeEngine.create();
 
     this.#engine
       .then(() => void this.keepAlive())
@@ -181,22 +178,6 @@ class EngineDispatcher {
         }
         case "EnginePort:Terminate": {
           this.terminate();
-          break;
-        }
-        case "EnginePort:ModelResponse": {
-          if (this.#modelRequest) {
-            const { model, error } = data;
-            if (model) {
-              this.#modelRequest.resolve(model);
-            } else {
-              this.#modelRequest.reject(error);
-            }
-            this.#modelRequest = null;
-          } else {
-            lazy.console.error(
-              "Got a EnginePort:ModelResponse but no model resolvers"
-            );
-          }
           break;
         }
         case "EnginePort:Run": {
@@ -277,20 +258,21 @@ class FakeEngine {
   /**
    * Initialize the worker.
    *
-   * @param {ArrayBuffer} wasm
-   * @param {ArrayBuffer} model
    * @returns {FakeEngine}
    */
-  static async create(wasm, model) {
+  static async create() {
     /** @type {BasePromiseWorker} */
     const worker = new lazy.BasePromiseWorker(
       "chrome://global/content/ml/MLEngine.worker.mjs",
       { type: "module" }
     );
 
-    const args = [wasm, model];
+    const options = {
+      testing: lazy.TESTING,
+    };
+    const args = [options];
     const closure = {};
-    const transferables = [wasm, model];
+    const transferables = [];
     await worker.post("initializeEngine", args, closure, transferables);
     return new FakeEngine(worker);
   }
