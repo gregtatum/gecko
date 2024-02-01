@@ -56,6 +56,7 @@ export default class SidebarLauncher extends MozLitElement {
       },
 
       {
+        enablePreference: "genai.debug",
         l10nId: "sidebar-launcher-genaidebug",
         icon: "url(chrome://global/skin/icons/developer.svg)",
         view: "viewGenaiDebugSidebar",
@@ -95,6 +96,19 @@ export default class SidebarLauncher extends MozLitElement {
       },
     ];
 
+    this.topActions.forEach(action => {
+      if (action.enablePreference) {
+        XPCOMUtils.defineLazyPreferenceGetter(
+          action,
+          "enabled",
+          action.enablePreference,
+          null,
+          () => this.isConnected && this.requestUpdate()
+        );
+      } else {
+        action.enabled = true;
+      }
+    });
     XPCOMUtils.defineLazyPreferenceGetter(
       this,
       "expandOnHover",
@@ -438,17 +452,18 @@ export default class SidebarLauncher extends MozLitElement {
           </button>
         </div>
         <div class="top-actions actions-list top-border">
-          ${this.topActions.map(
-            action =>
-              html`<button
-                class="ghost-button icon-button"
-                ?selected=${this.open && action.view == this.selectedView}
-                type=${this.buttonType(action)}
-                @click=${this.showView}
-                view=${action.view}
-                data-l10n-id=${action.l10nId}
-                style=${styleMap({ "--action-icon": action.icon })}
-              ></button>`
+          ${this.topActions.map(action =>
+            action.enabled
+              ? html`<button
+                  class="ghost-button icon-button"
+                  ?selected=${this.open && action.view == this.selectedView}
+                  type=${this.buttonType(action)}
+                  @click=${this.showView}
+                  view=${action.view}
+                  data-l10n-id=${action.l10nId}
+                  style=${styleMap({ "--action-icon": action.icon })}
+                ></button>`
+              : null
           )}
         </div>
         <div class="open-tabs pinned-tabs actions-list top-border">
