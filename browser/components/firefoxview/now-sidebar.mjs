@@ -38,8 +38,8 @@ class NowSidebar extends MozLitElement {
     }
 
     .assistant-text-prompt {
-      display: flex;
       align-items: stretch;
+      display: none;
       gap: 4px;
       margin-top: 4px;
 
@@ -93,25 +93,25 @@ class NowSidebar extends MozLitElement {
 
     this.prompts = [
       {
-        button: "Find tabs",
-        label: "Tabs similar to ",
+        button: "Find related open tabs",
+        label: "Tabs related to ",
         description: "Analyzing page title and open tabs…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.0"),
       },
       {
-        button: "Summarize content",
+        button: "Summarize page",
         label: "Summary of ",
         description: "Analyzing selection and page text…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.1"),
       },
       {
-        button: "Suggest queries",
+        button: "Suggest related searches",
         label: "Follow-up searches for ",
         description: "Analyzing selection and page title…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.2"),
       },
       {
-        button: "Name entities",
+        button: "List people, places and topics mentioned",
         label: "Entities on ",
         description: "Analyzing page text…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.3"),
