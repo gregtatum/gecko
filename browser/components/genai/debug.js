@@ -4,18 +4,12 @@
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
+  EngineProcess: "chrome://global/content/ml/EngineProcess.sys.mjs",
   GenAI: "resource:///modules/GenAI.sys.mjs",
 });
 
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "debug",
-  "genai.debug",
-  null,
-  renderPrompts
 );
 
 const win = window.browsingContext.topChromeWindow;
@@ -23,21 +17,23 @@ const { gBrowser } = win;
 
 function renderPrompts() {
   const prompts = document.getElementById("prompts");
-  prompts.innerHTML = "";
-  if (!lazy.debug) {
-    return;
-  }
-
   const prefs = Services.prefs.getChildList("genai.debug.prompts.").sort();
   for (const pref of prefs) {
     if (Services.prefs.getPrefType(pref) == Services.prefs.PREF_STRING) {
       const button = prompts.appendChild(document.createElement("button"));
-      button.textContent = button.title = Services.prefs.getStringPref(pref);
+      const prefVal = Services.prefs.getStringPref(pref);
+      try {
+        button.config = JSON.parse(prefVal);
+      } catch (ex) {
+        button.config = { prompt: prefVal };
+      }
+      button.title = prefVal;
+      button.textContent = button.config?.label ?? prefVal;
     }
   }
 }
 
-async function renderResult(prompt) {
+async function renderResult({ engine, args, prompt }) {
   const startTime = new Date();
   const result = document.createElement("div");
   result.setAttribute("running", true);
@@ -75,7 +71,13 @@ async function renderResult(prompt) {
 
   let text = "";
   try {
-    text = await lazy.GenAI.completion(prompt, context);
+    if (engine) {
+      text = await (await lazy.EngineProcess.getMLEngineParent())
+        .getEngine(engine)
+        .run(JSON.stringify({ queries: [context[args]] }));
+    } else {
+      text = await lazy.GenAI.completion(prompt, context);
+    }
   } catch (ex) {
     text = ex;
   }
@@ -128,6 +130,13 @@ async function renderResult(prompt) {
     });
   }
 
+  if (parts.scores) {
+    const node = result.appendChild(document.createElement("ul"));
+    parts.scores.forEach(score => {
+      node.appendChild(document.createElement("li")).textContent = score;
+    });
+  }
+
   const debug = result.appendChild(document.createElement("p"));
   debug.classList.add("debug");
   debug.textContent = parts.debug;
@@ -135,7 +144,7 @@ async function renderResult(prompt) {
 
 addEventListener("click", ({ target }) => {
   if (target.parentNode.id == "prompts") {
-    renderResult(target.textContent);
+    renderResult(target.config);
   } else if (target.tab) {
     gBrowser.selectedTab = target.tab;
   } else if (target.href) {
