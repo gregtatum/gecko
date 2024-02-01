@@ -28,7 +28,7 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
   });
 });
 
-ChromeUtils.defineLazyGetter(lazy, "TESTING", function() {
+ChromeUtils.defineLazyGetter(lazy, "TESTING", function () {
   return Services.prefs.getBoolPref("browser.ml.testing", false);
 });
 
@@ -269,7 +269,7 @@ class FakeEngine {
 
     const options = {
       testing: lazy.TESTING,
-      task: task,
+      task,
     };
     const args = [options];
     const closure = {};

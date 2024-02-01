@@ -173,8 +173,8 @@ class MLEngineWorker {
 
     result.metrics = {
       initTime: this.#initTime,
-      tokenizingTime: tokenizingTime,
-      inferenceTime: inferenceTime,
+      tokenizingTime,
+      inferenceTime,
     };
 
     return JSON.stringify(result);
@@ -197,7 +197,7 @@ class MLEngineWorker {
     };
 
     self.addEventListener("message", msg => worker.handleMessage(msg));
-    self.addEventListener("unhandledrejection", function(error) {
+    self.addEventListener("unhandledrejection", function (error) {
       throw error.reason;
     });
   }
