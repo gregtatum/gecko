@@ -28,16 +28,13 @@ class MLEngineWorker {
   #model;
   #tokenizer;
   #task;
+  #initTime;
 
   constructor() {
     // Connect the provider to the worker.
     this.#connectToPromiseWorker();
   }
 
-  /**
-   * @param {ArrayBuffer} wasm
-   * @param {ArrayBuffer} model
-   */
   async initializeEngine(options) {
     env.useBrowserCache = false;
 
@@ -50,6 +47,8 @@ class MLEngineWorker {
 
     // initializing the inference engine
     this.#task = options.task;
+
+    const start = Date.now();
 
     switch (this.#task) {
       case "text-classification":
@@ -73,6 +72,7 @@ class MLEngineWorker {
       default:
         throw new Error(`Unknown task: ${this.#task}`);
     }
+    this.#initTime = Date.now() - start;
 
     lazy.console.log("MLEngineWorker is initialized");
   }
@@ -102,16 +102,26 @@ class MLEngineWorker {
     lazy.console.debug("inference run requested with:", jsonRequest);
 
     let result;
+    let tokenizingTime = 0;
+    let inferenceTime;
+    let start;
 
     switch (this.#task) {
       case "text-classification":
+        start = Date.now();
+
         const features = this.#tokenizer(jsonRequest.queries, {
           text_pair: jsonRequest.text_pair,
           padding: true,
           truncation: true,
         });
 
+        tokenizingTime = Date.now() - start;
+
+        start = Date.now();
         const res = await this.#model(features);
+        inferenceTime = Date.now() - start;
+
         const scores = Object.values(res.logits.data);
         lazy.console.debug(scores);
 
@@ -119,6 +129,7 @@ class MLEngineWorker {
         break;
 
       case "summarization":
+        start = Date.now();
         let { input_ids } = await this.#tokenizer(
           "summarize: " + jsonRequest.input,
           {
@@ -126,20 +137,33 @@ class MLEngineWorker {
             truncation: true,
           }
         );
+        tokenizingTime = Date.now() - start;
 
+        start = Date.now();
         let outputs = await this.#model.generate(input_ids, {
           max_length: 100,
           truncation: true,
         });
+        inferenceTime = Date.now() - start;
+
+        start = Date.now();
         let summary = this.#tokenizer.decode(outputs[0], {
           skip_special_tokens: true,
         });
+        tokenizingTime += Date.now() - start;
+
         result = { summary: this.cleanOutput(summary, 2) };
         break;
 
       default:
         throw new Error(`Unknown task: ${this.#task}`);
     }
+
+    result.metrics = {
+      initTime: this.#initTime,
+      tokenizingTime: tokenizingTime,
+      inferenceTime: inferenceTime,
+    };
 
     return JSON.stringify(result);
   }

@@ -18,6 +18,12 @@ const CLASSIFIER_RESULT = JSON.stringify({
   scores: [7.210887908935547, -11.559350967407227],
 });
 
+function removeMetrics(inputJsonString) {
+  let jsonObject = JSON.parse(inputJsonString);
+  delete jsonObject.metrics;
+  return JSON.stringify(jsonObject);
+}
+
 async function setup({ disabled = false, prefs = [] } = {}) {
   await SpecialPowers.pushPrefEnv({
     set: [
@@ -53,7 +59,11 @@ add_task(async function test_ml_engine_basics() {
   info("Run the classifier");
   const classifyPromise = classifier.run(CLASSIFIER_REQUEST);
 
-  is(await classifyPromise, CLASSIFIER_RESULT, "The queries gets classified");
+  is(
+    removeMetrics(await classifyPromise),
+    CLASSIFIER_RESULT,
+    "The queries gets classified"
+  );
 
   ok(
     !EngineProcess.areAllEnginesTerminated(),
