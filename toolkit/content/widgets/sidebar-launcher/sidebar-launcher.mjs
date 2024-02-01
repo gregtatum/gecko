@@ -189,7 +189,10 @@ export default class SidebarLauncher extends MozLitElement {
       this.sideViewInstalled =
         this.sideViewInstalled ||
         item.id.slice("menubar_menu_".length) == SIDE_VIEW_VIEW_ID;
-      if (item.id.endsWith("-sidebar-action") && !item.id.endsWith(SIDE_VIEW_VIEW_ID)) {
+      if (
+        item.id.endsWith("-sidebar-action") &&
+        !item.id.endsWith(SIDE_VIEW_VIEW_ID)
+      ) {
         this.extensions.push({
           tooltiptext: item.label,
           icon: item.style.getPropertyValue("--webextension-menuitem-image"),
