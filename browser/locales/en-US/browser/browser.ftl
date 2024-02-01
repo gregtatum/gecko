@@ -1070,8 +1070,8 @@ popup-warning-button =
 popup-show-popup-menuitem =
     .label = Show “{ $popupURI }”
 
-sidebar-launcher-now = Now
-  .tooltiptext = Now
+sidebar-launcher-now = Insights
+  .tooltiptext = Insights
 sidebar-launcher-bookmarks = Bookmarks
   .tooltiptext = Bookmarks
 sidebar-launcher-history = History
