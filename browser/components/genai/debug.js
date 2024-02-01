@@ -74,7 +74,7 @@ async function renderResult({ engine, args, prompt }) {
     if (engine) {
       text = await (await lazy.EngineProcess.getMLEngineParent())
         .getEngine(engine)
-        .run(JSON.stringify({ queries: [context[args]] }));
+        .run(JSON.stringify({ input: context[args] }));
     } else {
       text = await lazy.GenAI.completion(prompt, context);
     }
@@ -94,6 +94,17 @@ async function renderResult({ engine, args, prompt }) {
 
   result.removeAttribute("running");
   result.textContent = "";
+
+  if (engine) {
+    parts.description = parts.summary;
+    if (parts.metrics) {
+      parts.debug += ` (${(parts.metrics.initTime / 1000).toFixed(
+        1
+      )}s init, ${parts.metrics.tokenizingTime.toFixed(1)}ms tokenize, ${(
+        parts.metrics.inferenceTime / 1000
+      ).toFixed(1)}s inference)`;
+    }
+  }
 
   if (parts.label) {
     const node = result.appendChild(document.createElement("h4"));
@@ -127,13 +138,6 @@ async function renderResult({ engine, args, prompt }) {
         .appendChild(document.createElement("a"));
       link.textContent = query;
       link.href = Services.search.defaultEngine.getSubmission(query).uri.spec;
-    });
-  }
-
-  if (parts.scores) {
-    const node = result.appendChild(document.createElement("ul"));
-    parts.scores.forEach(score => {
-      node.appendChild(document.createElement("li")).textContent = score;
     });
   }
 

@@ -1827,7 +1827,8 @@ pref("genai.debug.prompts.0", 'Specifically focusing on the current tab as the p
 pref("genai.debug.prompts.1", 'Summarize and explain why the text `selection` (if any) is important or interesting in the context of the `pageText`. Respond with JSON with 3 keys: "debug" string internal thought process about the text selection and what is important to focus on in preparing a response, "description" string explanation and summary, "queries" array of string 5 followup web search queries to continue exploring. { %selection%, %pageText% }');
 pref("genai.debug.prompts.2", 'Suggest some web search queries for the selected text from the page. Respond with JSON with 3 keys: "debug" string internal thought process, "queries" array of string 5 followup web search to explore, "description" string 2nd-person explanation of why these are helpful for a potential larger task. { %selection%, %currentTabTitle% }');
 pref("genai.debug.prompts.3", 'Provide some named entities from this page responding with JSON 2 keys: "debug" string internal thought process of extracting named entities, "queries" array of strings of the named entities { %pageText% }');
-pref("genai.debug.prompts.4", '{ "engine": "classifier", "args": "selection", "label": "ML engine test" }');
+pref("genai.debug.prompts.4", '{ "engine": "summarization", "args": "selection", "label": "Engine: summarize selection" }');
+pref("genai.debug.prompts.5", '{ "engine": "summarization", "args": "pageText", "label": "Engine: summarize page" }');
 pref("genai.enabled", true);
 pref("genai.http.bearer", "");
 pref("genai.http.endpoint", "http://localhost:8080/completion");
