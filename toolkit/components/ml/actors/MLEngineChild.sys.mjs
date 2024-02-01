@@ -121,17 +121,17 @@ class EngineDispatcher {
     this.timeoutMS = timeoutMS;
 
     this.#engineName = engineName;
-
-    this.#engine = FakeEngine.create();
+    this.#engine = FakeEngine.create(engineName);
 
     this.#engine
       .then(() => void this.keepAlive())
       .catch(error => {
+        lazy.console.log(error);
         if (
           // Ignore errors from tests intentionally causing errors.
           !error?.message?.startsWith("Intentionally")
         ) {
-          lazy.console.error("Could not initalize the engine", error);
+          lazy.console.error("Could not initialize the engine", error);
         }
       });
 
@@ -260,7 +260,7 @@ class FakeEngine {
    *
    * @returns {FakeEngine}
    */
-  static async create() {
+  static async create(task) {
     /** @type {BasePromiseWorker} */
     const worker = new lazy.BasePromiseWorker(
       "chrome://global/content/ml/MLEngine.worker.mjs",
@@ -269,6 +269,7 @@ class FakeEngine {
 
     const options = {
       testing: lazy.TESTING,
+      task: task,
     };
     const args = [options];
     const closure = {};

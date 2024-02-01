@@ -47,14 +47,13 @@ add_task(async function test_ml_engine_basics() {
   info("Get the engine process");
   const mlEngineParent = await EngineProcess.getMLEngineParent();
 
-  info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine("summarizer");
+  info("Get the classifier");
+  const classifier = mlEngineParent.getEngine("text-classification");
 
-  info("Run the summarizer");
+  info("Run the classifier");
+  const classifyPromise = classifier.run(CLASSIFIER_REQUEST);
 
-  const summarizePromise = summarizer.run(CLASSIFIER_REQUEST);
-
-  is(await summarizePromise, CLASSIFIER_RESULT, "The queries gets classified");
+  is(await classifyPromise, CLASSIFIER_RESULT, "The queries gets classified");
 
   ok(
     !EngineProcess.areAllEnginesTerminated(),
@@ -66,8 +65,32 @@ add_task(async function test_ml_engine_basics() {
   await cleanup();
 });
 
+add_task(async function test_ml_engine_unknown_task() {
+  const { cleanup } = await setup();
+
+  info("Get the engine process");
+  const mlEngineParent = await EngineProcess.getMLEngineParent();
+  const classifier = mlEngineParent.getEngine("unknown");
+  const classifierPromise = classifier.run(CLASSIFIER_REQUEST);
+
+  let error;
+  try {
+    await classifierPromise;
+  } catch (e) {
+    error = e;
+  }
+
+  is(
+    error?.message,
+    "Error: Unknown task: unknown",
+    "The error is correctly surfaced."
+  );
+
+  await cleanup();
+});
+
 /**
- * Tests that the SummarizerModel's internal errors are correctly surfaced.
+ * Tests that the internal errors are correctly surfaced.
  */
 add_task(async function test_ml_engine_model_error() {
   const { cleanup } = await setup();
@@ -75,15 +98,15 @@ add_task(async function test_ml_engine_model_error() {
   info("Get the engine process");
   const mlEngineParent = await EngineProcess.getMLEngineParent();
 
-  info("Get summarizer");
-  const summarizer = mlEngineParent.getEngine("summarizer");
+  info("Get the classifier");
+  const classifier = mlEngineParent.getEngine("text-classification");
 
-  info("Run the summarizer with a throwing example.");
-  const summarizePromise = summarizer.run("throw");
+  info("Run the classifier with a throwing example.");
+  const classifierPromise = classifier.run("throw");
 
   let error;
   try {
-    await summarizePromise;
+    await classifierPromise;
   } catch (e) {
     error = e;
   }
@@ -93,7 +116,7 @@ add_task(async function test_ml_engine_model_error() {
     "The error is correctly surfaced."
   );
 
-  summarizer.terminate();
+  classifier.terminate();
 
   await cleanup();
 });

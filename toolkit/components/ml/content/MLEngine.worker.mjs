@@ -8,6 +8,8 @@ import {
   env,
   AutoTokenizer,
   AutoModelForSequenceClassification,
+  T5Tokenizer,
+  T5ForConditionalGeneration,
 } from "chrome://global/content/ml/transformers.min.js";
 
 const lazy = {};
@@ -25,6 +27,7 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
 class MLEngineWorker {
   #model;
   #tokenizer;
+  #task;
 
   constructor() {
     // Connect the provider to the worker.
@@ -44,15 +47,43 @@ class MLEngineWorker {
       env.localModelPath = "chrome://global/content/ml/models";
       env.backends.onnx.wasm.wasmPaths = "chrome://global/content/ml/ort/";
     }
+
     // initializing the inference engine
-    this.#model = await AutoModelForSequenceClassification.from_pretrained(
-      "Xenova/ms-marco-TinyBERT-L-2-v2"
-    );
-    this.#tokenizer = await AutoTokenizer.from_pretrained(
-      "Xenova/ms-marco-TinyBERT-L-2-v2"
-    );
+    this.#task = options.task;
+
+    switch (this.#task) {
+      case "text-classification":
+        this.#model = await AutoModelForSequenceClassification.from_pretrained(
+          "Xenova/ms-marco-TinyBERT-L-2-v2"
+        );
+        this.#tokenizer = await AutoTokenizer.from_pretrained(
+          "Xenova/ms-marco-TinyBERT-L-2-v2"
+        );
+        break;
+
+      case "summarization":
+        this.#model = await T5ForConditionalGeneration.from_pretrained(
+          "tarekziade/wikipedia-summaries-t5-efficient-tiny"
+        );
+        this.#tokenizer = await T5Tokenizer.from_pretrained(
+          "tarekziade/wikipedia-summaries-t5-efficient-tiny"
+        );
+        break;
+
+      default:
+        throw new Error(`Unknown task: ${this.#task}`);
+    }
 
     lazy.console.log("MLEngineWorker is initialized");
+  }
+
+  cleanOutput(text, maxLength = 2) {
+    let sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
+    sentences = sentences.slice(0, maxLength);
+    const capitalizedSentences = sentences.map(sentence => {
+      return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+    });
+    return capitalizedSentences.join(" ");
   }
 
   /**
@@ -70,17 +101,47 @@ class MLEngineWorker {
     const jsonRequest = JSON.parse(request);
     lazy.console.debug("inference run requested with:", jsonRequest);
 
-    const features = this.#tokenizer(jsonRequest.queries, {
-      text_pair: jsonRequest.text_pair,
-      padding: true,
-      truncation: true,
-    });
+    let result;
 
-    const res = await this.#model(features);
-    const scores = Object.values(res.logits.data);
-    lazy.console.debug(scores);
+    switch (this.#task) {
+      case "text-classification":
+        const features = this.#tokenizer(jsonRequest.queries, {
+          text_pair: jsonRequest.text_pair,
+          padding: true,
+          truncation: true,
+        });
 
-    return JSON.stringify({ scores: scores });
+        const res = await this.#model(features);
+        const scores = Object.values(res.logits.data);
+        lazy.console.debug(scores);
+
+        result = { scores: scores };
+        break;
+
+      case "summarization":
+        let { input_ids } = await this.#tokenizer(
+          "summarize: " + jsonRequest.input,
+          {
+            max_length: 512,
+            truncation: true,
+          }
+        );
+
+        let outputs = await this.#model.generate(input_ids, {
+          max_length: 100,
+          truncation: true,
+        });
+        let summary = this.#tokenizer.decode(outputs[0], {
+          skip_special_tokens: true,
+        });
+        result = { summary: this.cleanOutput(summary, 2) };
+        break;
+
+      default:
+        throw new Error(`Unknown task: ${this.#task}`);
+    }
+
+    return JSON.stringify(result);
   }
 
   /**
