@@ -43,6 +43,9 @@ class MLEngineWorker {
       env.allowRemoteModels = false;
       env.localModelPath = "chrome://global/content/ml/models";
       env.backends.onnx.wasm.wasmPaths = "chrome://global/content/ml/ort/";
+    } else {
+      // when running live, we don't use the disk.
+      env.allowLocalModels = false;
     }
 
     // initializing the inference engine
@@ -86,6 +89,13 @@ class MLEngineWorker {
     return capitalizedSentences.join(" ");
   }
 
+  cleanText(text) {
+    text = text.replace(/\s\s+/g, " ");
+    text = text.replace(/[^\w\s.,\/#!\?$%\^&\*;:{}=\-_`~()]/g, "");
+    lazy.console.debug(text);
+    return text.trim();
+  }
+
   /**
    * Run the worker.
    *
@@ -101,7 +111,7 @@ class MLEngineWorker {
     const jsonRequest = JSON.parse(request);
     lazy.console.debug("inference run requested with:", jsonRequest);
 
-    let result;
+    let result = {};
     let tokenizingTime = 0;
     let inferenceTime;
     let start;
@@ -110,11 +120,14 @@ class MLEngineWorker {
       case "text-classification":
         start = Date.now();
 
-        const features = this.#tokenizer(jsonRequest.queries, {
-          text_pair: jsonRequest.text_pair,
-          padding: true,
-          truncation: true,
-        });
+        const features = this.#tokenizer(
+          jsonRequest.queries.map(query => this.cleanText(query)),
+          {
+            text_pair: jsonRequest.text_pair.map(text => this.cleanText(text)),
+            padding: true,
+            truncation: true,
+          }
+        );
 
         tokenizingTime = Date.now() - start;
 
@@ -125,13 +138,13 @@ class MLEngineWorker {
         const scores = Object.values(res.logits.data);
         lazy.console.debug(scores);
 
-        result = { scores: scores };
+        result.scores = scores;
         break;
 
       case "summarization":
         start = Date.now();
         let { input_ids } = await this.#tokenizer(
-          "summarize: " + jsonRequest.input,
+          "summarize: " + this.cleanText(jsonRequest.input),
           {
             max_length: 512,
             truncation: true,
@@ -151,8 +164,7 @@ class MLEngineWorker {
           skip_special_tokens: true,
         });
         tokenizingTime += Date.now() - start;
-
-        result = { summary: this.cleanOutput(summary, 2) };
+        result.summary = this.cleanOutput(summary, 2);
         break;
 
       default:
