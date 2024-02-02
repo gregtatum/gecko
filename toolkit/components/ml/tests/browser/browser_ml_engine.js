@@ -71,7 +71,41 @@ add_task(async function test_ml_engine_basics() {
   );
 
   await EngineProcess.destroyMLEngine();
+  await cleanup();
+});
 
+add_task(async function test_ml_engine_summarizer() {
+  const { cleanup } = await setup();
+
+  info("Get the engine process");
+  const mlEngineParent = await EngineProcess.getMLEngineParent();
+
+  info("Get the summarizer");
+  const summarizer = mlEngineParent.getEngine("summarization", {
+    modelName: "mocked-t5",
+  });
+
+  info("Run the summarizer");
+  const summarizePromise = summarizer.run(
+    JSON.stringify({
+      input: "Hello my name is Bond, James Bond.",
+    })
+  );
+
+  const res = await JSON.parse(await summarizePromise);
+
+  is(
+    !!res.summary.length,
+    true,
+    "The summarizer engine was called and sent back a summary"
+  );
+
+  ok(
+    !EngineProcess.areAllEnginesTerminated(),
+    "The engine process is still active."
+  );
+
+  await EngineProcess.destroyMLEngine();
   await cleanup();
 });
 

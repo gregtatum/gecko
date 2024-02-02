@@ -12,6 +12,8 @@ import {
   T5ForConditionalGeneration,
 } from "chrome://global/content/ml/transformers.min.js";
 
+const DEFAULT_SUMMARIZER_MODEL = "tarekziade/text_summarization";
+
 const lazy = {};
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -50,9 +52,9 @@ class MLEngineWorker {
 
     // initializing the inference engine
     this.#task = options.task;
+    lazy.console.debug("Initializing ML engine for task:", this.#task);
 
     const start = Date.now();
-
     switch (this.#task) {
       case "text-classification":
         this.#model = await AutoModelForSequenceClassification.from_pretrained(
@@ -64,12 +66,14 @@ class MLEngineWorker {
         break;
 
       case "summarization":
+        const modelName = options.hasOwnProperty("modelName")
+          ? options.modelName
+          : DEFAULT_SUMMARIZER_MODEL;
+
         this.#model = await T5ForConditionalGeneration.from_pretrained(
-          "tarekziade/wikipedia-summaries-t5-efficient-tiny"
+          modelName
         );
-        this.#tokenizer = await T5Tokenizer.from_pretrained(
-          "tarekziade/wikipedia-summaries-t5-efficient-tiny"
-        );
+        this.#tokenizer = await T5Tokenizer.from_pretrained(modelName);
         break;
 
       default:
@@ -77,11 +81,14 @@ class MLEngineWorker {
     }
     this.#initTime = Date.now() - start;
 
-    lazy.console.log("MLEngineWorker is initialized");
+    lazy.console.log("MLEngineWorker is initialized, took ", this.#initTime);
   }
 
-  cleanOutput(text, maxLength = 2) {
+  cleanOutput(text, maxLength = 10) {
     let sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
+    if (sentences == null) {
+      return text.trim();
+    }
     sentences = sentences.slice(0, maxLength);
     const capitalizedSentences = sentences.map(sentence => {
       return sentence.charAt(0).toUpperCase() + sentence.slice(1);
@@ -90,9 +97,10 @@ class MLEngineWorker {
   }
 
   cleanText(text) {
+    text = text.replace(/\xA0/g, " ");
+    text = text.replace(/\r\n|\n|\r/g, " ");
     text = text.replace(/\s\s+/g, " ");
     text = text.replace(/[^\w\s.,\/#!\?$%\^&\*;:{}=\-_`~()]/g, "");
-    lazy.console.debug(text);
     return text.trim();
   }
 
@@ -109,7 +117,6 @@ class MLEngineWorker {
     }
 
     const jsonRequest = JSON.parse(request);
-    lazy.console.debug("inference run requested with:", jsonRequest);
 
     let result = {};
     let tokenizingTime = 0;
@@ -136,20 +143,17 @@ class MLEngineWorker {
         inferenceTime = Date.now() - start;
 
         const scores = Object.values(res.logits.data);
-        lazy.console.debug(scores);
-
         result.scores = scores;
         break;
 
       case "summarization":
+        const text = this.cleanText(jsonRequest.input);
+
         start = Date.now();
-        let { input_ids } = await this.#tokenizer(
-          "summarize: " + this.cleanText(jsonRequest.input),
-          {
-            max_length: 512,
-            truncation: true,
-          }
-        );
+        let { input_ids } = await this.#tokenizer("summarize: " + text, {
+          max_length: 512,
+          truncation: true,
+        });
         tokenizingTime = Date.now() - start;
 
         start = Date.now();

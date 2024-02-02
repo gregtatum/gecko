@@ -31,13 +31,18 @@ const DEFAULT_CACHE_TIMEOUT_MS = 15_000;
 export class MLEngineParent extends JSWindowActorParent {
   /**
    * @param {string} engineName
+   * @param {*} options
    * @param {number} cacheTimeoutMS - How long the engine cache remains alive between
    *   uses, in milliseconds. In automation the engine is manually created and destroyed
    *   to avoid timing issues.
    * @returns {MLEngine}
    */
-  getEngine(engineName, cacheTimeoutMS = DEFAULT_CACHE_TIMEOUT_MS) {
-    return new MLEngine(this, engineName, cacheTimeoutMS);
+  getEngine(
+    engineName,
+    options = {},
+    cacheTimeoutMS = DEFAULT_CACHE_TIMEOUT_MS
+  ) {
+    return new MLEngine(this, engineName, options, cacheTimeoutMS);
   }
 
   // eslint-disable-next-line consistent-return
@@ -114,15 +119,17 @@ class MLEngine {
   /**
    * @param {MLEngineParent} mlEngineParent
    * @param {string} engineName
+   * @param {*} options
    * @param {number} timeoutMS
    */
-  constructor(mlEngineParent, engineName, timeoutMS) {
+  constructor(mlEngineParent, engineName, options, timeoutMS) {
     /** @type {MLEngineParent} */
     this.mlEngineParent = mlEngineParent;
     /** @type {string} */
     this.engineName = engineName;
     /** @type {number} */
     this.timeoutMS = timeoutMS;
+    this.options = options;
 
     this.#setupPortCommunication();
   }
@@ -134,13 +141,13 @@ class MLEngine {
     const { port1: childPort, port2: parentPort } = new MessageChannel();
     const transferables = [childPort];
     this.#port = parentPort;
-
     this.#port.onmessage = this.handlePortMessage;
     this.mlEngineParent.sendAsyncMessage(
       "MLEngine:NewPort",
       {
         port: childPort,
         engineName: this.engineName,
+        options: this.options,
         timeoutMS: this.timeoutMS,
       },
       transferables

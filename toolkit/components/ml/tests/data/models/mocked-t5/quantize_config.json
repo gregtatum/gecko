@@ -1,0 +1,70 @@
+{
+  "per_model_config": {
+    "decoder_model": {
+      "op_types": [
+        "Relu",
+        "LessOrEqual",
+        "Sub",
+        "Softmax",
+        "Where",
+        "Log",
+        "Neg",
+        "Min",
+        "Concat",
+        "Identity",
+        "Unsqueeze",
+        "ConstantOfShape",
+        "Range",
+        "Gather",
+        "Reshape",
+        "Transpose",
+        "MatMul",
+        "Sqrt",
+        "ReduceMean",
+        "Tile",
+        "Div",
+        "Constant",
+        "Cast",
+        "Mul",
+        "Pow",
+        "Expand",
+        "Less",
+        "Add",
+        "Shape"
+      ],
+      "weight_type": "QInt8"
+    },
+    "encoder_model": {
+      "op_types": [
+        "Relu",
+        "Sub",
+        "Softmax",
+        "Where",
+        "Greater",
+        "Log",
+        "Min",
+        "Concat",
+        "Identity",
+        "Unsqueeze",
+        "ConstantOfShape",
+        "Range",
+        "Gather",
+        "Reshape",
+        "Transpose",
+        "MatMul",
+        "Sqrt",
+        "Abs",
+        "ReduceMean",
+        "Div",
+        "Constant",
+        "Cast",
+        "Mul",
+        "Pow",
+        "Less",
+        "Add",
+        "Shape"
+      ],
+      "weight_type": "QInt8"
+    }
+  }
+}

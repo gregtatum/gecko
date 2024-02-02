@@ -51,10 +51,10 @@ export class MLEngineChild extends JSWindowActorChild {
         if (this.#engineDispatchers == null) {
           this.#engineDispatchers = new Map();
         }
-        const { engineName, port, timeoutMS } = data;
+        const { engineName, options, port, timeoutMS } = data;
         this.#engineDispatchers.set(
           engineName,
-          new EngineDispatcher(this, port, engineName, timeoutMS)
+          new EngineDispatcher(this, port, engineName, options, timeoutMS)
         );
         break;
       }
@@ -111,9 +111,10 @@ class EngineDispatcher {
    * @param {MLEngineChild} mlEngineChild
    * @param {MessagePort} port
    * @param {string} engineName
+   * @param {*} options
    * @param {number} timeoutMS
    */
-  constructor(mlEngineChild, port, engineName, timeoutMS) {
+  constructor(mlEngineChild, port, engineName, options, timeoutMS) {
     /** @type {MLEngineChild} */
     this.mlEngineChild = mlEngineChild;
 
@@ -121,7 +122,7 @@ class EngineDispatcher {
     this.timeoutMS = timeoutMS;
 
     this.#engineName = engineName;
-    this.#engine = FakeEngine.create(engineName);
+    this.#engine = FakeEngine.create(engineName, options);
 
     this.#engine
       .then(() => void this.keepAlive())
@@ -260,17 +261,16 @@ class FakeEngine {
    *
    * @returns {FakeEngine}
    */
-  static async create(task) {
+  static async create(task, options = {}) {
     /** @type {BasePromiseWorker} */
     const worker = new lazy.BasePromiseWorker(
       "chrome://global/content/ml/MLEngine.worker.mjs",
       { type: "module" }
     );
 
-    const options = {
-      testing: lazy.TESTING,
-      task,
-    };
+    lazy.console.log("Initializing ML engine", task);
+    options.testing = lazy.TESTING;
+    options.task = task;
     const args = [options];
     const closure = {};
     const transferables = [];

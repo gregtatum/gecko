@@ -8,12 +8,22 @@ ChromeUtils.defineESModuleGetters(lazy, {
   GenAI: "resource:///modules/GenAI.sys.mjs",
 });
 
+ChromeUtils.defineLazyGetter(lazy, "console", () => {
+  let { ConsoleAPI } = ChromeUtils.importESModule(
+    "resource://gre/modules/Console.sys.mjs"
+  );
+  return new ConsoleAPI({
+    prefix: "GenAI",
+  });
+});
+
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
 
 const win = window.browsingContext.topChromeWindow;
 const { gBrowser } = win;
+const localEngines = {};
 
 function renderPrompts() {
   const prompts = document.getElementById("prompts");
@@ -46,7 +56,7 @@ async function renderResult({ engine, args, prompt }) {
       gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
         "GenAI"
       );
-  } catch (ex) {}
+  } catch (ex) { }
 
   const tabMap = {};
   const context = {
@@ -62,7 +72,7 @@ async function renderResult({ engine, args, prompt }) {
             o[key] = t.label.slice(0, 100);
             tabMap[key] = t;
           }
-        } catch (ex) {}
+        } catch (ex) { }
         return o;
       }, {}),
     pageText: await actor?.getPageText(),
@@ -72,9 +82,15 @@ async function renderResult({ engine, args, prompt }) {
   let text = "";
   try {
     if (engine) {
-      text = await (await lazy.EngineProcess.getMLEngineParent())
-        .getEngine(engine)
-        .run(JSON.stringify({ input: context[args] }));
+      let localEngine;
+      if (!localEngines[engine]) {
+        lazy.console.debug("Creating local inference engine");
+        const engineParent = await lazy.EngineProcess.getMLEngineParent();
+        localEngines[engine] = engineParent.getEngine(engine);
+      }
+      localEngine = localEngines[engine];
+      lazy.console.debug("Running local inference with ", engine);
+      text = await localEngine.run(JSON.stringify({ input: context[args] }));
     } else {
       text = await lazy.GenAI.completion(prompt, context);
     }
@@ -88,9 +104,8 @@ async function renderResult({ engine, args, prompt }) {
   } catch (ex) {
     parts.debug = ex + "\n\n" + text;
   }
-  parts.debug += `\n\n${
-    (prompt + JSON.stringify(context) + text).length
-  } chars, ${((Date.now() - startTime) / 1000).toFixed(1)} sec`;
+  parts.debug += `\n\n${(prompt + JSON.stringify(context) + text).length
+    } chars, ${((Date.now() - startTime) / 1000).toFixed(1)} sec`;
 
   result.removeAttribute("running");
   result.textContent = "";
