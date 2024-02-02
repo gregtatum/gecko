@@ -11,6 +11,7 @@ XPCOMUtils.defineLazyPreferenceGetter(lazy, "enabled", "genai.enabled");
 XPCOMUtils.defineLazyPreferenceGetter(lazy, "endpoint", "genai.http.endpoint");
 XPCOMUtils.defineLazyPreferenceGetter(lazy, "bearer", "genai.http.bearer");
 XPCOMUtils.defineLazyPreferenceGetter(lazy, "model", "genai.http.model");
+XPCOMUtils.defineLazyPreferenceGetter(lazy, "sequence", "genai.http.sequence");
 
 const allowContext = {};
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -35,9 +36,21 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 
 export const GenAI = {
+  // Promise for the last request to be finished
+  lastRequest: null,
+
   async completion(prompt, context = {}) {
     if (!lazy.enabled) {
       throw Error("GenAI disabled");
+    }
+
+    // Process requests in sequence waiting for the previous to finish -- useful
+    // for endpoints that handle only one at a time.
+    let done;
+    const previous = this.lastRequest;
+    this.lastRequest = new Promise(resolve => (done = resolve));
+    if (lazy.sequence) {
+      await previous;
     }
 
     let ret = "",
@@ -111,6 +124,9 @@ export const GenAI = {
         "\n\n"
       );
     }
+
+    // Allow the next request in sequence to start
+    done();
     return ret;
   },
 };

@@ -1833,6 +1833,7 @@ pref("genai.enabled", true);
 pref("genai.http.bearer", "");
 pref("genai.http.endpoint", "http://localhost:8080/completion");
 pref("genai.http.model", "");
+pref("genai.http.sequence", true);
 
 // Startup Crash Tracking
 // number of startup crashes that can occur before starting into safe mode automatically
