@@ -318,6 +318,7 @@
     z-index: 1;
   }
 
+  sidebar-launcher,
   .newTabBrowserPanel,
   #sidebar-box {
     /* Make room for the bookmarks toolbar so that it won't visibly overlap the
