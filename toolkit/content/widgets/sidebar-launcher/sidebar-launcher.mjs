@@ -250,11 +250,15 @@ export default class SidebarLauncher extends MozLitElement {
     return this.expanded ? COLLAPSE_ICON_URL : EXPAND_ICON_URL;
   }
 
-  get expandText() {
+  get expandL10nId() {
     if (this.expandOnHover) {
-      return this.expandedPinned ? "Collapse" : "Keep expanded";
+      return this.expandedPinned
+        ? "sidebar-launcher-tabs-collapse"
+        : "sidebar-launcher-tabs-pin";
     }
-    return this.expanded ? "Collapse" : "Expand";
+    return this.expanded
+      ? "sidebar-launcher-tabs-collapse"
+      : "sidebar-launcher-tabs-expand";
   }
 
   showView(e) {
@@ -455,10 +459,9 @@ export default class SidebarLauncher extends MozLitElement {
           <button
             class="ghost-button icon-button"
             @click=${this.toggleExpanded}
+            data-l10n-id=${this.expandL10nId}
             style=${styleMap({ "--action-icon": this.expandIconUrl })}
-          >
-            ${this.expandText}
-          </button>
+          ></button>
         </div>
         <div class="top-actions actions-list top-border">
           ${this.topActions.map(action =>
