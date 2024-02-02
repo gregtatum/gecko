@@ -270,6 +270,11 @@ export default class SidebarLauncher extends MozLitElement {
     }
   }
 
+  showViewAndCollapse(e) {
+    this.showView(e);
+    this.expanded = false;
+  }
+
   toggleExpanded() {
     if (this.expandOnHover) {
       this.expanded = this.expandedPinned = !this.expandedPinned;
@@ -458,7 +463,7 @@ export default class SidebarLauncher extends MozLitElement {
                   class="ghost-button icon-button"
                   ?selected=${this.open && action.view == this.selectedView}
                   type=${this.buttonType(action)}
-                  @click=${this.showView}
+                  @click=${this.showViewAndCollapse}
                   view=${action.view}
                   data-l10n-id=${action.l10nId}
                   style=${styleMap({ "--action-icon": action.icon })}
@@ -520,7 +525,7 @@ export default class SidebarLauncher extends MozLitElement {
                 data-l10n-id=${action.l10nId}
                 ?selected=${this.open && action.view == this.selectedView}
                 type=${this.buttonType(action)}
-                @click=${action.view ? this.showView : null}
+                @click=${action.view ? this.showViewAndCollapse : null}
                 view=${action.view}
                 .tooltiptext=${action.tooltiptext}
                 title=${action.tooltiptext}
