@@ -323,6 +323,10 @@ export default class SidebarLauncher extends MozLitElement {
 
   showTab(tab) {
     if (tab.pinned) {
+      if (this.sideViewIsOpen && this.lastSideViewTab == tab) {
+        window.SidebarUI.toggle(SIDE_VIEW_VIEW_ID);
+        return;
+      }
       this.lastSideViewTab = tab;
       let { selectedTab } = gBrowser;
       gBrowser.selectedTab = tab;
