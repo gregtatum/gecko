@@ -35,6 +35,14 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "genai.context.selection"
 );
 
+// Guide models to respond with readable / parseable JSON-ish grammar
+const kGrammar = `root ::= "{ " key ( ", " key )* " }"
+arr ::= "[ " str ( ", " str )* " ]"
+key ::= str ": " val
+str ::= ["] ( "\\\\" ["] | [^\\\\"] )+ ["]
+val ::= arr | str
+`;
+
 export const GenAI = {
   // Promise for the last request to be finished
   lastRequest: null,
@@ -89,7 +97,7 @@ export const GenAI = {
     } else {
       body.prompt = prompt;
       if (expectJSON) {
-        body.grammar = `root ::= "{" [^\\n]* "}"\n`;
+        body.grammar = kGrammar;
       }
     }
 
