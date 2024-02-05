@@ -95,6 +95,10 @@ body {
   visibility: collapse;
 }
 
+#nav-bar #toolbar-menubar {
+  visibility: visible;
+}
+
 panelmultiview {
   align-items: flex-start;
   min-width: 0;

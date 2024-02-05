@@ -110,6 +110,14 @@
         "privacy.exposeContentTitleInWindow.pbm",
         true
       );
+      this._tabStripHiddenPref = "browser.sidebar-launcher.tab-strip.hidden";
+      XPCOMUtils.defineLazyPreferenceGetter(
+        this,
+        "_tabStripHidden",
+        this._tabStripHiddenPref,
+        false,
+        () => this._updateTabStrip()
+      );
 
       if (AppConstants.MOZ_CRASHREPORTER) {
         ChromeUtils.defineESModuleGetters(this, {
@@ -148,7 +156,33 @@
       document.querySelector("title").removeAttribute("data-l10n-id");
 
       this._setupEventListeners();
+      this._updateTabStrip();
       this._initialized = true;
+    },
+
+    _toggleTabStrip() {
+      // Triggers this._updateTabStrip() from pref listener.
+      Services.prefs.setBoolPref(
+        this._tabStripHiddenPref,
+        !this._tabStripHidden
+      );
+    },
+
+    _updateTabStrip() {
+      let menubarItems = document.getElementById("toolbar-menubar");
+
+      let topBar = this._tabStripHidden
+        ? document.getElementById("nav-bar")
+        : document.getElementById("titlebar");
+      topBar.prepend(menubarItems);
+
+      document.getElementById("TabsToolbar").hidden = this._tabStripHidden;
+      document
+        .getElementById("toggle-tab-strip-button")
+        .setAttribute(
+          "tooltiptext",
+          this._tabStripHidden ? "Show tab strip" : "Hide tab strip"
+        );
     },
 
     ownerGlobal: window,

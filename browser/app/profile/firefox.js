@@ -939,6 +939,7 @@ pref("browser.tabs.firefox-view.notify-for-tabs", false);
 pref("browser.sidebar-launcher.expand-on-hover.enabled", false);
 pref("browser.sidebar-launcher.expand-on-hover.delay", 500);
 pref("browser.sidebar-launcher.keep-tab-on-shortcut.enabled", false);
+pref("browser.sidebar-launcher.tab-strip.hidden", false);
 
 // allow_eval_* is enabled on Firefox Desktop only at this
 // point in time

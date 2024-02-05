@@ -193,6 +193,10 @@
   list-style-image: url("chrome://browser/skin/home.svg");
 }
 
+#toggle-tab-strip-button {
+  list-style-image: url("chrome://browser/skin/window.svg");
+}
+
 #bookmarks-toolbar-button,
 #bookmarks-toolbar-placeholder {
   list-style-image: url("chrome://browser/skin/bookmarks-toolbar.svg");
