@@ -1244,3 +1244,7 @@ shopping-sidebar {
     transition: visibility 0.3s, transform 0.3s ease-in-out;
   }
 }
+
+sidebar-launcher {
+  margin-top: -1px;
+}

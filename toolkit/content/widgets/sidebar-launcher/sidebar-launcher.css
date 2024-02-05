@@ -14,8 +14,8 @@
   width: var(--sidebar-launcher-width);
   height: 100%;
   padding: 8px;
-  border-right: 1px solid var(--sidebar-border-color);
-  background-color: var(--sidebar-background-color);
+  border-right: 1px solid var(--chrome-content-separator-color);
+  background-color: var(--toolbar-bgcolor);
   transition: width 100ms;
 
   :host([expanded]) & {
@@ -72,4 +72,8 @@ button[selected] {
   box-shadow: var(--card-shadow);
   background-color: var(--in-content-box-background) !important;
   border-color: color-mix(in srgb, currentColor 10%, transparent) !important;
+}
+
+button {
+  color: var(--toolbar-color) !important;
 }
