@@ -3,6 +3,8 @@
 # See bug 1303184
 #
 # PLEASE DO NOT ADD MORE EXCEPTIONS TO THIS LIST
+chrome/toolkit/content/global/ml/models/mocked-t5/onnx/decoder_model_quantized.onnx
+chrome/toolkit/content/global/ml/models/mocked-t5/onnx/decoder_model_merged_quantized.onnx
 #
 
 # updater on osx is bug 1311194
