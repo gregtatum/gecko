@@ -9,10 +9,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
-  let { ConsoleAPI } = ChromeUtils.importESModule(
-    "resource://gre/modules/Console.sys.mjs"
-  );
-  return new ConsoleAPI({
+  return console.createInstance({
     prefix: "GenAI",
   });
 });
@@ -56,7 +53,7 @@ async function renderResult({ engine, args, prompt }) {
       gBrowser.selectedBrowser.browsingContext.currentWindowGlobal.getActor(
         "GenAI"
       );
-  } catch (ex) { }
+  } catch (ex) {}
 
   const tabMap = {};
   const context = {
@@ -72,7 +69,7 @@ async function renderResult({ engine, args, prompt }) {
             o[key] = t.label.slice(0, 100);
             tabMap[key] = t;
           }
-        } catch (ex) { }
+        } catch (ex) {}
         return o;
       }, {}),
     pageText: await actor?.getPageText(),
@@ -104,8 +101,9 @@ async function renderResult({ engine, args, prompt }) {
   } catch (ex) {
     parts.debug = ex + "\n\n" + text;
   }
-  parts.debug += `\n\n${(prompt + JSON.stringify(context) + text).length
-    } chars, ${((Date.now() - startTime) / 1000).toFixed(1)} sec`;
+  parts.debug += `\n\n${
+    (prompt + JSON.stringify(context) + text).length
+  } chars, ${((Date.now() - startTime) / 1000).toFixed(1)} sec`;
 
   result.removeAttribute("running");
   result.textContent = "";
