@@ -383,14 +383,14 @@ async function closeContextMenuIfOpen() {
  * Closes the translations panel settings menu if it is open.
  */
 async function closeSettingsMenuIfOpen() {
-  await closePopupIfOpen("translations-panel-settings-menupopup");
+  await closePopupIfOpen("full-page-translations-panel-settings-menupopup");
 }
 
 /**
  * Closes the translations panel if it is open.
  */
 async function closeTranslationsPanelIfOpen() {
-  await closePopupIfOpen("translations-panel");
+  await closePopupIfOpen("full-page-translations-panel");
 }
 
 /**
@@ -543,7 +543,7 @@ async function loadTestPage({
   if (autoOffer && TranslationsParent.shouldAlwaysOfferTranslations()) {
     info("Waiting for the popup to be automatically shown.");
     await waitForCondition(() => {
-      const panel = document.getElementById("translations-panel");
+      const panel = document.getElementById("full-page-translations-panel");
       return panel && panel.state === "open";
     });
   }
