@@ -419,6 +419,7 @@ export default class SidebarLauncher extends MozLitElement {
             ?selected=${t.pinned
               ? this.sideViewIsOpen && t == this.lastSideViewTab
               : t.selected}
+            @auxclick=${this.onCloseClick}
             @click=${this.onTabClick}
             @contextmenu=${this.onTabContextmenu}
             @mouseenter=${this.onTabMouseenter}
