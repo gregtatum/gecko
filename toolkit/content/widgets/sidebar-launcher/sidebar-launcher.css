@@ -61,6 +61,44 @@ button {
       padding-inline-start: 28px !important;
     }
   }
+
+  /* From https://searchfox.org/mozilla-central/rev/6b8a3f804789fb865f42af54e9d2fef9dd3ec74d/browser/themes/shared/tabs.css#767 */
+  @media (prefers-reduced-motion: reduce) {
+    &[busy] {
+      list-style-image: url("chrome://browser/skin/tabbrowser/hourglass.svg");
+      -moz-context-properties: fill;
+      fill: currentColor;
+      opacity: 0.4;
+    }
+
+    &[progress] {
+      opacity: 0.8;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &[busy] {
+      background-image: image-set(
+        url("chrome://browser/skin/tabbrowser/tab-connecting.png"),
+        url("chrome://browser/skin/tabbrowser/tab-connecting@2x.png") 2x
+      );
+    }
+
+    &[progress] {
+      background-image: image-set(
+        url("chrome://browser/skin/tabbrowser/tab-loading.png"),
+        url("chrome://browser/skin/tabbrowser/tab-loading@2x.png") 2x
+      );
+
+      /* FIXME: This should probably also apply in regular dark mode? */
+      :root[lwt-popup="dark"] &[progress]:not([selected]) {
+        background-image: image-set(
+          url("chrome://browser/skin/tabbrowser/tab-loading-inverted.png"),
+          url("chrome://browser/skin/tabbrowser/tab-loading-inverted@2x.png") 2x
+        );
+      }
+    }
+  }
 }
 
 :host([expanded]) .unpinned-tabs .open-tab-wrapper {

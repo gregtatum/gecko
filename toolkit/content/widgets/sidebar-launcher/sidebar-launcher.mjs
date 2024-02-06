@@ -419,6 +419,8 @@ export default class SidebarLauncher extends MozLitElement {
             ?selected=${t.pinned
               ? this.sideViewIsOpen && t == this.lastSideViewTab
               : t.selected}
+            ?busy=${t.getAttribute("busy")}
+            ?progress=${t.getAttribute("progress")}
             @auxclick=${this.onCloseClick}
             @click=${this.onTabClick}
             @contextmenu=${this.onTabContextmenu}
