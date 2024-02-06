@@ -3,16 +3,24 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { PromiseWorker } from "resource://gre/modules/workers/PromiseWorker.mjs";
+import {
+  sentenceIterator,
+  extractEntities,
+  cleanText,
+  cleanOutput,
+} from "chrome://global/content/ml/utils.mjs";
 
 import {
   env,
   AutoTokenizer,
+  AutoModelForTokenClassification,
   AutoModelForSequenceClassification,
   T5Tokenizer,
   T5ForConditionalGeneration,
 } from "chrome://global/content/ml/transformers.min.js";
 
 const DEFAULT_SUMMARIZER_MODEL = "tarekziade/text_summarization";
+const DEFAULT_NER_MODEL = "Xenova/bert-base-NER";
 
 const lazy = {};
 
@@ -22,7 +30,6 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
     prefix: "ML",
   });
 });
-
 /**
  * The actual MLEngine lives here in a worker.
  */
@@ -53,6 +60,7 @@ class MLEngineWorker {
     // initializing the inference engine
     this.#task = options.task;
     lazy.console.debug("Initializing ML engine for task:", this.#task);
+    let modelName;
 
     const start = Date.now();
     switch (this.#task) {
@@ -66,14 +74,20 @@ class MLEngineWorker {
         break;
 
       case "summarization":
-        const modelName = options.hasOwnProperty("modelName")
-          ? options.modelName
-          : DEFAULT_SUMMARIZER_MODEL;
+        modelName = options.modelName ?? DEFAULT_SUMMARIZER_MODEL;
 
         this.#model = await T5ForConditionalGeneration.from_pretrained(
           modelName
         );
         this.#tokenizer = await T5Tokenizer.from_pretrained(modelName);
+        break;
+
+      case "token-classification":
+        modelName = options.modelName ?? DEFAULT_NER_MODEL;
+        this.#model = await AutoModelForTokenClassification.from_pretrained(
+          modelName
+        );
+        this.#tokenizer = await AutoTokenizer.from_pretrained(modelName);
         break;
 
       default:
@@ -82,26 +96,6 @@ class MLEngineWorker {
     this.#initTime = Date.now() - start;
 
     lazy.console.log("MLEngineWorker is initialized, took ", this.#initTime);
-  }
-
-  cleanOutput(text, maxLength = 10) {
-    let sentences = text.match(/[^\.!\?]+[\.!\?]+/g);
-    if (sentences == null) {
-      return text.trim();
-    }
-    sentences = sentences.slice(0, maxLength);
-    const capitalizedSentences = sentences.map(sentence => {
-      return sentence.charAt(0).toUpperCase() + sentence.slice(1);
-    });
-    return capitalizedSentences.join(" ");
-  }
-
-  cleanText(text) {
-    text = text.replace(/\xA0/g, " ");
-    text = text.replace(/\r\n|\n|\r/g, " ");
-    text = text.replace(/\s\s+/g, " ");
-    text = text.replace(/[^\w\s.,\/#!\?$%\^&\*;:{}=\-_`~()]/g, "");
-    return text.trim();
   }
 
   /**
@@ -118,8 +112,7 @@ class MLEngineWorker {
 
     const jsonRequest = JSON.parse(request);
 
-    let result = {};
-    let tokenizingTime = 0;
+    let result = { metrics: {} };
     let inferenceTime;
     let start;
 
@@ -128,15 +121,15 @@ class MLEngineWorker {
         start = Date.now();
 
         const features = this.#tokenizer(
-          jsonRequest.queries.map(query => this.cleanText(query)),
+          jsonRequest.queries.map(query => cleanText(query)),
           {
-            text_pair: jsonRequest.text_pair.map(text => this.cleanText(text)),
-            padding: true,
+            text_pair: jsonRequest.text_pair.map(text => cleanText(text)),
             truncation: true,
+            padding: true,
           }
         );
 
-        tokenizingTime = Date.now() - start;
+        result.metrics.tokenizingTime = Date.now() - start;
 
         start = Date.now();
         const res = await this.#model(features);
@@ -144,44 +137,123 @@ class MLEngineWorker {
 
         const scores = Object.values(res.logits.data);
         result.scores = scores;
+        result.metrics.inferenceTime = inferenceTime;
         break;
 
       case "summarization":
-        const text = this.cleanText(jsonRequest.input);
+        result = await this.#infere(
+          cleanText(jsonRequest.input),
+          "summarize: ",
+          {
+            max_length: 512,
+            truncation: true,
+          }
+        );
 
         start = Date.now();
-        let { input_ids } = await this.#tokenizer("summarize: " + text, {
-          max_length: 512,
-          truncation: true,
-        });
-        tokenizingTime = Date.now() - start;
-
-        start = Date.now();
-        let outputs = await this.#model.generate(input_ids, {
-          max_length: 100,
-          truncation: true,
-        });
-        inferenceTime = Date.now() - start;
-
-        start = Date.now();
-        let summary = this.#tokenizer.decode(outputs[0], {
+        let summary = this.#tokenizer.decode(result.outputs[0], {
           skip_special_tokens: true,
         });
-        tokenizingTime += Date.now() - start;
-        result.summary = this.cleanOutput(summary, 2);
+        result.tokenizingTime += Date.now() - start;
+        result.summary = cleanOutput(summary);
+
+        delete result.outputs;
+        delete result.input_ids;
+        break;
+
+      case "token-classification":
+        const text = cleanText(jsonRequest.input);
+
+        result = {
+          names: [],
+          metrics: {
+            inferenceTime: 0,
+            tokenizingTime: 0,
+            initTime: this.#initTime,
+          },
+        };
+
+        let round = 0;
+        const iterator = sentenceIterator(text);
+
+        for (
+          let s_result = iterator.next();
+          !s_result.done;
+          s_result = iterator.next()
+        ) {
+          const sentence = s_result.value;
+
+          // limit how many sentences we infere for now.
+          if (round > 15) {
+            break;
+          }
+          const sentenceResult = await this.#infere(sentence, "", {
+            max_length: 512,
+            truncation: true,
+          });
+
+          result.metrics.inferenceTime += sentenceResult.metrics.inferenceTime;
+          result.metrics.tokenizingTime +=
+            sentenceResult.metrics.tokenizingTime;
+
+          let sentenceEntities = extractEntities(
+            this.#model,
+            this.#tokenizer,
+            sentenceResult.outputs.logits,
+            sentenceResult.input_ids
+          );
+          lazy.console.debug(sentenceEntities);
+
+          result.names = [...new Set(result.names.concat(sentenceEntities))];
+          round++;
+        }
+
+        result.summary = result.names.map(word => `- ${word}`).join("\n");
+        delete result.outputs;
+        delete result.input_ids;
         break;
 
       default:
         throw new Error(`Unknown task: ${this.#task}`);
     }
 
-    result.metrics = {
-      initTime: this.#initTime,
-      tokenizingTime,
-      inferenceTime,
-    };
-
+    result.metrics.initTime = this.#initTime;
     return JSON.stringify(result);
+  }
+
+  async #infere(input, prefix = "", tokenizerOptions = {}) {
+    const text = cleanText(input);
+    let start = Date.now();
+    const tokenized_input = await this.#tokenizer(
+      prefix + text,
+      tokenizerOptions
+    );
+    let tokenizingTime = Date.now() - start;
+
+    start = Date.now();
+    let outputs;
+    switch (this.#task) {
+      case "summarization":
+        outputs = await this.#model.generate(
+          tokenized_input.input_ids,
+
+          { max_length: 100, truncation: true }
+        );
+        break;
+
+      default:
+        outputs = await this.#model(tokenized_input);
+    }
+
+    let inferenceTime = Date.now() - start;
+    return {
+      input_ids: tokenized_input.input_ids,
+      outputs,
+      metrics: {
+        tokenizingTime,
+        inferenceTime,
+      },
+    };
   }
 
   /**

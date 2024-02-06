@@ -1830,6 +1830,8 @@ pref("genai.debug.prompts.2", 'Suggest some web search queries for the selected 
 pref("genai.debug.prompts.3", 'Provide some named entities from this page responding with JSON 2 keys: "queries" array of strings of the named entities, "description" string potential subgroupings of some of these entities (e.g., people, places, topics). { %pageText% }');
 pref("genai.debug.prompts.4", '{ "engine": "summarization", "args": "selection", "label": "Engine: summarize selection" }');
 pref("genai.debug.prompts.5", '{ "engine": "summarization", "args": "pageText", "label": "Engine: summarize page" }');
+pref("genai.debug.prompts.6", '{ "engine": "token-classification", "args": "pageText", "label": "Engine: find named entities in page" }');
+pref("genai.debug.prompts.7", '{ "engine": "token-classification", "args": "selection", "label": "Engine: find named entities in selection" }');
 pref("genai.enabled", true);
 pref("genai.http.bearer", "");
 pref("genai.http.endpoint", "http://localhost:8080/completion");
