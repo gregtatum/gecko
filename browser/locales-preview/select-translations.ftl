@@ -28,3 +28,10 @@ main-context-menu-translate-link-text =
 #   $language (string) - The localized display name of the target language
 main-context-menu-translate-link-text-to-language =
     .label = Translate Link Text to { $language }
+
+select-translations-panel-header = Translation
+select-translations-panel-from-label = From
+select-translations-panel-to-label = To
+select-translations-panel-copy-button = Copy
+select-translations-panel-done-button = Done
+select-translations-panel-translate-full-page-button = Translate full page

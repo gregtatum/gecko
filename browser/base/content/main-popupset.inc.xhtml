@@ -246,6 +246,16 @@
     </stack>
   </html:template>
 
+  <!--
+  For the moment, the Select Translations Panel opens by
+  moving this element to the location of the context menu
+  to act as an anchor from which the panel will open.
+
+  Bug 1878721 is on file to rework this  behavior.
+
+  https://bugzilla.mozilla.org/show_bug.cgi?id=1878721
+  -->
+  <box id="select-translations-panel-open-anchor"></box>
   <menupopup id="sidebarMenu-popup"
              class="toolbar-menupopup"
              hidden="true"
@@ -496,6 +506,7 @@
 #include ../../components/controlcenter/content/permissionPanel.inc.xhtml
 #include ../../components/controlcenter/content/protectionsPanel.inc.xhtml
 #include ../../components/downloads/content/downloadsPanel.inc.xhtml
+#include ../../components/translations/content/selectTranslationsPanel.inc.xhtml
 #include ../../components/translations/content/translationsPanel.inc.xhtml
 #include browser-allTabsMenu.inc.xhtml
 

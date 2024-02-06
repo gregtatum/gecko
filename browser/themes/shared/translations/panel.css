@@ -46,9 +46,18 @@ h1.translations-panel-header-wrapper {
   line-height: 1.6;
 }
 
-#translations-panel-settings > image {
+.settings-gear-icon > image {
   /* Override the panel-info-button with a gear icon. */
   list-style-image: url(chrome://global/skin/icons/settings.svg);
+}
+
+.translations-copy-button::before {
+  content: url(chrome://global/skin/icons/edit-copy.svg);
+  width: 16px;
+  height: 16px;
+  margin-inline-end: 5px;
+  -moz-context-properties: fill;
+  fill: currentColor;
 }
 
 .translations-panel-content {
