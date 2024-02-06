@@ -293,6 +293,12 @@ export default class SidebarLauncher extends MozLitElement {
       : "icon ghost";
   }
 
+  onContextmenu(event) {
+    if (!event.target.tab) {
+      event.preventDefault();
+    }
+  }
+
   onAddShortcutClick(e) {
     if (this.keepTabOnShortcut) {
       // This is not the default case.
@@ -341,6 +347,10 @@ export default class SidebarLauncher extends MozLitElement {
     } else {
       gBrowser.selectedTab = tab;
     }
+  }
+
+  onTabContextmenu(event) {
+    this.tab = event.target.tab;
   }
 
   onAddTabClick(event) {
@@ -410,6 +420,7 @@ export default class SidebarLauncher extends MozLitElement {
               ? this.sideViewIsOpen && t == this.lastSideViewTab
               : t.selected}
             @click=${this.onTabClick}
+            @contextmenu=${this.onTabContextmenu}
             @mouseenter=${this.onTabMouseenter}
             @mouseleave=${this.onTabMouseleave}
             .tab=${t}
@@ -452,6 +463,7 @@ export default class SidebarLauncher extends MozLitElement {
       />
       <div
         class="wrapper"
+        @contextmenu=${this.onContextmenu}
         @mouseenter=${this.onWrapperMouseenter}
         @mouseleave=${this.onWrapperMouseleave}
       >

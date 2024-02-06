@@ -6361,8 +6361,11 @@
         tabContextFTLInserter,
         true
       );
+      let sidebarLauncher = document.querySelector("sidebar-launcher");
       this.tabContainer.addEventListener("mouseover", tabContextFTLInserter);
+      sidebarLauncher.addEventListener("mouseover", tabContextFTLInserter);
       this.tabContainer.addEventListener("focus", tabContextFTLInserter, true);
+      sidebarLauncher.addEventListener("focus", tabContextFTLInserter, true);
 
       // Fired when Gecko has decided a <browser> element will change
       // remoteness. This allows persisting some state on this element across
