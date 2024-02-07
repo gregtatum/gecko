@@ -15,7 +15,7 @@ const CLASSIFIER_REQUEST = JSON.stringify({
 });
 
 const CLASSIFIER_RESULT = JSON.stringify({
-  scores: [7.210887908935547, -11.559350967407227],
+  output: [7.210887908935547, -11.559350967407227],
 });
 
 function removeMetrics(inputJsonString) {
@@ -95,7 +95,7 @@ add_task(async function test_ml_engine_summarizer() {
   const res = await JSON.parse(await summarizePromise);
 
   is(
-    !!res.summary.length,
+    !!res.output.length,
     true,
     "The summarizer engine was called and sent back a summary"
   );

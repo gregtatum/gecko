@@ -8,6 +8,7 @@ import {
   extractEntities,
   cleanText,
   cleanOutput,
+  mergeEntities,
 } from "chrome://global/content/ml/utils.mjs";
 
 import {
@@ -112,7 +113,7 @@ class MLEngineWorker {
 
     const jsonRequest = JSON.parse(request);
 
-    let result = { metrics: {} };
+    let result;
     let inferenceTime;
     let start;
 
@@ -129,14 +130,14 @@ class MLEngineWorker {
           }
         );
 
-        result.metrics.tokenizingTime = Date.now() - start;
+        result = { metrics: { tokenizingTime: Date.now() - start } };
 
         start = Date.now();
         const res = await this.#model(features);
         inferenceTime = Date.now() - start;
 
         const scores = Object.values(res.logits.data);
-        result.scores = scores;
+        result.output = scores;
         result.metrics.inferenceTime = inferenceTime;
         break;
 
@@ -155,7 +156,7 @@ class MLEngineWorker {
           skip_special_tokens: true,
         });
         result.tokenizingTime += Date.now() - start;
-        result.summary = cleanOutput(summary);
+        result.output = cleanOutput(summary);
 
         delete result.outputs;
         delete result.input_ids;
@@ -165,7 +166,13 @@ class MLEngineWorker {
         const text = cleanText(jsonRequest.input);
 
         result = {
-          names: [],
+          entities: {
+            Location: [],
+            Person: [],
+            Miscellaneous: [],
+            Organization: [],
+          },
+
           metrics: {
             inferenceTime: 0,
             tokenizingTime: 0,
@@ -202,13 +209,23 @@ class MLEngineWorker {
             sentenceResult.outputs.logits,
             sentenceResult.input_ids
           );
-          lazy.console.debug(sentenceEntities);
 
-          result.names = [...new Set(result.names.concat(sentenceEntities))];
+          result.entities = mergeEntities(result.entities, sentenceEntities);
           round++;
         }
 
-        result.summary = result.names.map(word => `- ${word}`).join("\n");
+        let entitiesAsSummary = "";
+        Object.keys(result.entities).forEach(key => {
+          if (result.entities[key].length) {
+            entitiesAsSummary += `- ${key}\n`;
+            result.entities[key].forEach(entity => {
+              entitiesAsSummary += `    - ${entity}\n`;
+            });
+            entitiesAsSummary += "\n";
+          }
+        });
+
+        result.output = entitiesAsSummary;
         delete result.outputs;
         delete result.input_ids;
         break;

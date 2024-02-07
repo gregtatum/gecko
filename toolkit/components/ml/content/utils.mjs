@@ -49,6 +49,13 @@ function cleanUpEntity(entity) {
   return entity.replace(/^[\s-]+|[\s-]+$/g, "");
 }
 
+const ENTITY_TYPE = {
+  LOC: "Location",
+  PER: "Person",
+  MISC: "Miscellaneous",
+  ORG: "Organization",
+};
+
 function recreateEntities(entities) {
   let reconstructedEntities = new Map();
   let currentEntity = "";
@@ -57,6 +64,10 @@ function recreateEntities(entities) {
   let wordCount = 0;
 
   entities.forEach(entity => {
+    if (entity.entity.startsWith("B-") && entity.word.startsWith("##")) {
+      entity.entity = "I-" + entity.entity.substring(2);
+    }
+
     const entityType = entity.entity.startsWith("B-")
       ? entity.entity.substring(2)
       : currentType;
@@ -88,14 +99,20 @@ function recreateEntities(entities) {
     }
   }
 
-  const finalEntities = [];
+  const finalEntities = {
+    Location: [],
+    Person: [],
+    Organization: [],
+    Miscellaneous: [],
+  };
+
   reconstructedEntities.forEach((type, ename) => {
     if (
       !Array.from(reconstructedEntities.keys()).some(
         key => key !== ename && key.includes(ename)
       )
     ) {
-      finalEntities.push(`${ename} (${type})`);
+      finalEntities[ENTITY_TYPE[type]].push(ename);
     }
   });
 
@@ -188,4 +205,19 @@ function cleanText(text) {
   return text.trim();
 }
 
-export { sentenceIterator, extractEntities, cleanOutput, cleanText };
+function mergeEntities(originalEntities, newEntities) {
+  Object.keys(originalEntities).forEach(key => {
+    if (newEntities.hasOwnProperty(key)) {
+      originalEntities[key] = originalEntities[key].concat(newEntities[key]);
+    }
+  });
+  return originalEntities;
+}
+
+export {
+  sentenceIterator,
+  extractEntities,
+  cleanOutput,
+  cleanText,
+  mergeEntities,
+};

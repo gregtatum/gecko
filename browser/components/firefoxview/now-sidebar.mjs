@@ -5,6 +5,7 @@
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   GenAI: "resource:///modules/GenAI.sys.mjs",
+  EngineProcess: "chrome://global/content/ml/EngineProcess.sys.mjs",
   XPCOMUtils: "resource://gre/modules/XPCOMUtils.sys.mjs",
 });
 
@@ -13,6 +14,8 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-card.mjs";
+
+const localEngines = {};
 
 class NowSidebar extends MozLitElement {
   static properties = {
@@ -97,24 +100,46 @@ class NowSidebar extends MozLitElement {
         label: "Tabs related to ",
         description: "Analyzing page title and open tabs…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.0"),
+        engine: "service",
       },
       {
         button: "Summarize page",
         label: "Summary of ",
         description: "Analyzing selection and page text…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.1"),
+        engine: "service",
+      },
+      {
+        button: "Summarize page (local)",
+        label: "Summary of ",
+        description:
+          "Analyzing selection and page text… This takes a while on first call as we download models.",
+        prompt: Services.prefs.getStringPref("genai.debug.prompts.5"),
+        engine: "local",
+        task: "summarization",
       },
       {
         button: "Suggest related searches",
         label: "Follow-up searches for ",
         description: "Analyzing selection and page title…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.2"),
+        engine: "service",
       },
       {
         button: "List people, places and topics mentioned",
         label: "Entities on ",
         description: "Analyzing page text…",
         prompt: Services.prefs.getStringPref("genai.debug.prompts.3"),
+        engine: "service",
+      },
+      {
+        button: "List people, places and topics mentioned (local)",
+        label: "Entities on ",
+        description:
+          "Analyzing page text… This takes a while on first call as we download models.",
+        prompt: Services.prefs.getStringPref("genai.debug.prompts.6"),
+        engine: "local",
+        task: "token-classification",
       },
     ];
   }
@@ -162,8 +187,32 @@ class NowSidebar extends MozLitElement {
       };
 
       // Run the prompt and update content
-      text = await lazy.GenAI.completion(config.prompt, context);
-      Object.assign(notif, JSON.parse(text));
+      try {
+        if (config.engine == "local") {
+          let localEngine;
+          if (!(config.task in localEngines)) {
+            const engineParent = await lazy.EngineProcess.getMLEngineParent();
+            localEngines[config.task] = engineParent.getEngine(config.task);
+          }
+          localEngine = localEngines[config.task];
+          text = await localEngine.run(
+            JSON.stringify({ input: context.pageText })
+          );
+
+          text = JSON.parse(text);
+          text.description = text.output;
+        } else {
+          text = await lazy.GenAI.completion(config.prompt, context);
+          text = JSON.parse(text);
+        }
+      } catch (ex) {
+        text = {
+          description: ex,
+          debug: text,
+        };
+      }
+
+      Object.assign(notif, text);
 
       // Convert tab ids to tabs if they exist
       notif.tabs = notif.tabs?.reduce((acc, key) => {

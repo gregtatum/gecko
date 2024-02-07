@@ -109,7 +109,7 @@ async function renderResult({ engine, args, prompt }) {
   result.textContent = "";
 
   if (engine) {
-    parts.description = parts.summary;
+    parts.description = parts.output;
     if (parts.metrics) {
       parts.debug += ` (${(parts.metrics.initTime / 1000).toFixed(
         1
