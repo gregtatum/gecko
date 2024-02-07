@@ -13,15 +13,42 @@ import {
 
 import {
   env,
+  AutoProcessor,
   AutoTokenizer,
   AutoModelForTokenClassification,
   AutoModelForSequenceClassification,
+  AutoModelForVision2Seq,
   T5Tokenizer,
   T5ForConditionalGeneration,
+  RawImage,
 } from "chrome://global/content/ml/transformers.min.js";
 
-const DEFAULT_SUMMARIZER_MODEL = "tarekziade/text_summarization";
-const DEFAULT_NER_MODEL = "Xenova/bert-base-NER";
+const ENGINE_CONFIGURATION = {
+  summarization: {
+    model_id: "tarekziade/text_summarization",
+    model_class: T5ForConditionalGeneration,
+    tokenizer_class: T5Tokenizer,
+    processor_class: null,
+  },
+  text_classification: {
+    model_id: "Xenova/ms-marco-TinyBERT-L-2-v2",
+    model_class: AutoModelForSequenceClassification,
+    tokenizer_class: AutoTokenizer,
+    processor_class: null,
+  },
+  token_classification: {
+    model_id: "Xenova/bert-base-NER",
+    model_class: AutoModelForTokenClassification,
+    tokenizer_class: AutoTokenizer,
+    processor_class: null,
+  },
+  image_to_text: {
+    model_id: "Xenova/vit-gpt2-image-captioning",
+    model_class: AutoModelForVision2Seq,
+    tokenizer_class: AutoTokenizer,
+    processor_class: AutoProcessor,
+  },
+};
 
 const lazy = {};
 
@@ -37,6 +64,7 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
 class MLEngineWorker {
   #model;
   #tokenizer;
+  #processor;
   #task;
   #initTime;
 
@@ -59,43 +87,26 @@ class MLEngineWorker {
     }
 
     // initializing the inference engine
-    this.#task = options.task;
+    this.#task = options.task.replace(/-/g, "_");
     lazy.console.debug("Initializing ML engine for task:", this.#task);
-    let modelName;
 
-    const start = Date.now();
-    switch (this.#task) {
-      case "text-classification":
-        this.#model = await AutoModelForSequenceClassification.from_pretrained(
-          "Xenova/ms-marco-TinyBERT-L-2-v2"
-        );
-        this.#tokenizer = await AutoTokenizer.from_pretrained(
-          "Xenova/ms-marco-TinyBERT-L-2-v2"
-        );
-        break;
-
-      case "summarization":
-        modelName = options.modelName ?? DEFAULT_SUMMARIZER_MODEL;
-
-        this.#model = await T5ForConditionalGeneration.from_pretrained(
-          modelName
-        );
-        this.#tokenizer = await T5Tokenizer.from_pretrained(modelName);
-        break;
-
-      case "token-classification":
-        modelName = options.modelName ?? DEFAULT_NER_MODEL;
-        this.#model = await AutoModelForTokenClassification.from_pretrained(
-          modelName
-        );
-        this.#tokenizer = await AutoTokenizer.from_pretrained(modelName);
-        break;
-
-      default:
-        throw new Error(`Unknown task: ${this.#task}`);
+    if (!ENGINE_CONFIGURATION.hasOwnProperty(this.#task)) {
+      throw new Error(`Unknown task: ${this.#task}`);
     }
-    this.#initTime = Date.now() - start;
 
+    let config = ENGINE_CONFIGURATION[this.#task];
+    let modelId = options.modelName ?? config.model_id;
+
+    let start = Date.now();
+    this.#model = await config.model_class.from_pretrained(modelId);
+    this.#tokenizer = await config.tokenizer_class.from_pretrained(modelId);
+    if (config.processor_class != null) {
+      this.#processor = await config.processor_class.from_pretrained(modelId);
+    } else {
+      this.#processor = null;
+    }
+
+    this.#initTime = Date.now() - start;
     lazy.console.log("MLEngineWorker is initialized, took ", this.#initTime);
   }
 
@@ -118,7 +129,7 @@ class MLEngineWorker {
     let start;
 
     switch (this.#task) {
-      case "text-classification":
+      case "text_classification":
         start = Date.now();
 
         const features = this.#tokenizer(
@@ -162,7 +173,7 @@ class MLEngineWorker {
         delete result.input_ids;
         break;
 
-      case "token-classification":
+      case "token_classification":
         const text = cleanText(jsonRequest.input);
 
         result = {
@@ -228,6 +239,33 @@ class MLEngineWorker {
         result.output = entitiesAsSummary;
         delete result.outputs;
         delete result.input_ids;
+        break;
+
+      case "image_to_text":
+        let rawImage = await RawImage.read(jsonRequest.image);
+        const { pixel_values } = await this.#processor(rawImage);
+
+        const toReturn = [];
+        for (const batch of pixel_values) {
+          batch.dims = [1, ...batch.dims];
+          const output = await this.#model.generate(batch);
+          const decoded = this.#tokenizer
+            .batch_decode(output, {
+              skip_special_tokens: true,
+            })
+            .map(x => ({ generated_text: x.trim() }));
+          toReturn.push(decoded);
+        }
+        result = {
+          metrics: {
+            inferenceTime: 0,
+            tokenizingTime: 0,
+            initTime: this.#initTime,
+          },
+        };
+        console.log(toReturn[0][0]);
+
+        result.output = toReturn[0][0].generated_text;
         break;
 
       default:
