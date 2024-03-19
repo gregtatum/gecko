@@ -153,8 +153,52 @@ h1.translations-panel-header-wrapper {
   gap: 6px;
 }
 
-#select-translations-panel-translation-area {
+.select-translations-panel-text-area {
   height: 8em;
-  margin-inline: 5px;
+  padding: 8px;
+  border: none;
+  outline: solid;
+  outline-width: 2px;
+  outline-color: var(--arrowpanel-dimmed);
+  border-radius: 8px;
+  margin-inline: 4px;
   resize: none;
+  &:focus {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-outline-offset);
+  }
+}
+
+@keyframes translationsRotate {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+
+@media not (prefers-reduced-motion) {
+  #select-translations-panel-circle-arrows {
+    animation: translationsRotate 1.2s linear infinite;
+  }
+}
+
+#select-translations-panel-circle-arrows {
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+  background-image: url("chrome://browser/skin/sync.svg");
+  background-size: cover;
+  -moz-context-properties: fill, fill-opacity;
+  fill: currentColor;
+  fill-opacity: 1;
+  margin-inline-end: 4px;
+}
+
+#select-translations-panel-translating-placeholder-text-text {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+}
+
+#select-translations-panel-active-translation-area {
+  display: flex;
+  align-items: start;
 }

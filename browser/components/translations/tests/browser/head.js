@@ -1405,7 +1405,6 @@ class SelectTranslationsTestUtils {
     multiview: true,
     toLabel: true,
     toMenuList: true,
-    translatedTextArea: true,
   };
 
   /**
@@ -1448,6 +1447,9 @@ class SelectTranslationsTestUtils {
     );
     SelectTranslationsTestUtils.#assertPanelElementVisibility({
       ...SelectTranslationsTestUtils.#alwaysPresentElements,
+      activeTranslationArea: false,
+      circleArrows: false,
+      translatedTextArea: true,
     });
     SelectTranslationsTestUtils.#assertPanelHasTranslatedText();
     SelectTranslationsTestUtils.#assertPanelTextAreaOverflow();
@@ -1471,6 +1473,39 @@ class SelectTranslationsTestUtils {
         "The translated-text area should be scrolled to the top."
       );
     }
+  }
+
+  /**
+   * Asserts that the SelectTranslationsPanel UI matches the expected
+   * state when the panel is actively translating text.
+   */
+  static assertPanelViewActivelyTranslating() {
+    SelectTranslationsTestUtils.#assertPanelMainViewId(
+      "select-translations-panel-view-default"
+    );
+    SelectTranslationsTestUtils.#assertPanelElementVisibility({
+      ...SelectTranslationsTestUtils.#alwaysPresentElements,
+      activeTranslationArea: true,
+      circleArrows: true,
+      translatedTextArea: false,
+    });
+    SelectTranslationsTestUtils.#assertPanelHasTranslatingPlaceholder();
+  }
+
+  /**
+   * Asserts that the SelectTranslationsPanel UI contains the
+   * translating placeholder text.
+   */
+  static async #assertPanelHasTranslatingPlaceholder() {
+    const { activeTranslationArea } = SelectTranslationsPanel.elements;
+    const expected = await document.l10n.formatValue(
+      "select-translations-panel-translating-placeholder-text"
+    );
+    is(
+      activeTranslationArea.textContent.trim(),
+      expected,
+      "Active translation text area should have the translating placeholder."
+    );
   }
 
   /**
@@ -1652,13 +1687,33 @@ class SelectTranslationsTestUtils {
    */
   static async handleDownloads({ downloadHandler, pivotTranslation }) {
     if (downloadHandler) {
-      const { translatedTextArea } = SelectTranslationsPanel.elements;
+      const { activeTranslationArea, translatedTextArea } =
+        SelectTranslationsPanel.elements;
+      if (activeTranslationArea.style.display === "none") {
+        await BrowserTestUtils.waitForMutationCondition(
+          activeTranslationArea,
+          { attributes: true, attributeFilter: ["style"] },
+          () => activeTranslationArea.style.display !== "none"
+        );
+      }
+
+      await SelectTranslationsTestUtils.assertPanelViewActivelyTranslating();
+
+      const activeTranslationAreaHidden =
+        BrowserTestUtils.waitForMutationCondition(
+          activeTranslationArea,
+          { attributes: true, attributeFilter: ["style"] },
+          () => activeTranslationArea.style.display === "none"
+        );
       const overflowEnabled = BrowserTestUtils.waitForMutationCondition(
         translatedTextArea,
         { attributes: true, attributeFilter: ["style"] },
         () => translatedTextArea.style.overflow === "auto"
       );
+
       await downloadHandler(pivotTranslation ? 2 : 1);
+
+      await activeTranslationAreaHidden;
       await overflowEnabled;
     }
   }
