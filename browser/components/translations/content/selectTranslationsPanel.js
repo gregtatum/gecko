@@ -668,6 +668,7 @@ var SelectTranslationsPanel = new (class {
    * Displays the placeholder text for the panel's "idle" state.
    */
   #displayIdlePlaceholder() {
+    this.#enableButtonActions(false);
     this.#showTranslatedTextArea(this.#idlePlaceholderText);
     this.#maybeFocusMenuList();
   }
@@ -676,6 +677,7 @@ var SelectTranslationsPanel = new (class {
    * Displays the placeholder text and spinning circle-arrows for the panel's "translating" state.
    */
   #displayTranslatingPlaceholder() {
+    this.#enableButtonActions(false);
     this.#showActiveTranslationArea();
   }
 
@@ -684,10 +686,22 @@ var SelectTranslationsPanel = new (class {
    */
   #displayTranslatedText() {
     const translatedText = this.getTranslatedText();
+    this.#enableButtonActions(true);
     this.#showTranslatedTextArea(translatedText);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => this.#indicateTranslatedTextArea());
     });
+  }
+
+  /**
+   * Enables or disables button actions for copying text and for full-page translation.
+   *
+   * @param {boolean} shouldEnable - Whether actions should be enabled (true) or disabled (false).
+   */
+  #enableButtonActions(shouldEnable) {
+    const { copyButton, translateFullPageButton } = this.elements;
+    copyButton.disabled = !shouldEnable;
+    translateFullPageButton.disabled = !shouldEnable;
   }
 
   /**
