@@ -4,11 +4,16 @@
 
 /* eslint-env mozilla/browser-window */
 
+/**
+ * @typedef {import("../../../../toolkit/components/translations/translations").SelectTranslationsPanelState} SelectTranslationsPanelState
+ */
+
 ChromeUtils.defineESModuleGetters(this, {
   LanguageDetector:
     "resource://gre/modules/translation/LanguageDetector.sys.mjs",
   TranslationsPanelShared:
     "chrome://browser/content/translations/TranslationsPanelShared.sys.mjs",
+  Translator: "chrome://global/content/translations/Translator.sys.mjs",
 });
 
 /**
@@ -40,11 +45,35 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
+   * The localized placeholder text to display when idle.
+   */
+  #idlePlaceholderText;
+
+  /**
+   * The localized placeholder text to display when translating.
+   */
+  #translatingPlaceholderText;
+
+  /**
    * Where the lazy elements are stored.
    *
    * @type {Record<string, Element>?}
    */
   #lazyElements;
+
+  /**
+   * The internal state of the SelectTranslationsPanel.
+   *
+   * @type {SelectTranslationsPanelState}
+   */
+  #translationState = { state: "closed" };
+
+  /**
+   * The Translator for the current language pair.
+   *
+   * @type {Translator}
+   */
+  #translator;
 
   /**
    * Lazily creates the dom elements, and lazily selects them.
@@ -79,7 +108,7 @@ var SelectTranslationsPanel = new (class {
         fromMenuList: "select-translations-panel-from",
         header: "select-translations-panel-header",
         multiview: "select-translations-panel-multiview",
-        textArea: "select-translations-panel-translation-area",
+        translatedTextArea: "select-translations-panel-translation-area",
         toLabel: "select-translations-panel-to-label",
         toMenuList: "select-translations-panel-to",
         translateFullPageButton:
@@ -181,18 +210,43 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Opens the panel and populates the currently selected fromLang and toLang based
-   * on the result of the langPairPromise.
+   * Opens the panel, ensuring the panel's UI and state are initialized correctly.
    *
    * @param {Event} event - The triggering event for opening the panel.
+   * @param {string} sourceText - The text to translate.
    * @param {Promise} langPairPromise - Promise resolving to language pair data for initializing dropdowns.
+   *
    * @returns {Promise<void>}
    */
-  async open(event, langPairPromise) {
-    this.console?.log("Showing a translation panel.");
+  async open(event, sourceText, langPairPromise) {
+    if (this.#isOpen()) {
+      return;
+    }
 
+    this.#registerSourceText(sourceText);
     await this.#ensureLangListsBuilt();
-    await this.#initializeLanguageMenuLists(langPairPromise);
+
+    await Promise.all([
+      this.#cachePlaceholderText(),
+      this.#initializeLanguageMenuLists(langPairPromise),
+    ]);
+
+    this.#displayIdlePlaceholder();
+    this.#maybeRequestTranslation();
+
+    await this.#openPopup(event);
+  }
+
+  /**
+   * Opens a the panel popup.
+   *
+   * @param {Event} event - The event that triggers the popup opening.
+   *
+   * @returns {Promise<void>}
+   */
+  async #openPopup(event) {
+    this.console?.log("Showing SelectTranslationsPanel");
+    const { panel } = this.elements;
 
     // TODO(Bug 1878721) Rework the logic of where to open the panel.
     //
@@ -200,15 +254,67 @@ var SelectTranslationsPanel = new (class {
     // AppMenu Button, but it will eventually need to open near
     // to the selected content.
     const appMenuButton = document.getElementById("PanelUI-menu-button");
-    const { panel, textArea } = this.elements;
-
-    panel.addEventListener("popupshown", () => textArea.focus(), {
-      once: true,
-    });
     await PanelMultiView.openPopup(panel, appMenuButton, {
       position: "bottomright topright",
       triggerEvent: event,
     }).catch(error => this.console?.error(error));
+  }
+
+  /**
+   * Adds the source text to the translation state.
+   *
+   * @param {string} sourceText - The text to translate.
+   *
+   * @returns {Promise<void>}
+   */
+  #registerSourceText(sourceText) {
+    this.#changeStateTo("idle", /* retainEntries */ false, {
+      sourceText,
+    });
+  }
+
+  /**
+   * Caches the localized text to use as placeholders.
+   */
+  async #cachePlaceholderText() {
+    const [idleText, translatingText] = await document.l10n.formatValues([
+      { id: "select-translations-panel-idle-placeholder-text" },
+      { id: "select-translations-panel-translating-placeholder-text" },
+    ]);
+    this.#idlePlaceholderText = idleText;
+    this.#translatingPlaceholderText = translatingText;
+  }
+
+  /**
+   * Handles events when a popup is shown within the panel, including showing
+   * the panel itself.
+   *
+   * @param {Event} event - The event that triggered the popup to show.
+   */
+  handlePanelPopupShownEvent(event) {
+    const { panel } = this.elements;
+    switch (event.target.id) {
+      case panel.id: {
+        this.#updatePanelUIFromState();
+        break;
+      }
+    }
+  }
+
+  /**
+   * Handles events when a popup is closed within the panel, including closing
+   * the panel itself.
+   *
+   * @param {Event} event - The event that triggered the popup to close.
+   */
+  handlePanelPopupHiddenEvent(event) {
+    const { panel } = this.elements;
+    switch (event.target.id) {
+      case panel.id: {
+        this.#changeStateToClosed();
+        break;
+      }
+    }
   }
 
   /**
@@ -221,5 +327,409 @@ var SelectTranslationsPanel = new (class {
     menuList.value = "";
     document.l10n.setAttributes(menuList, "translations-panel-choose-language");
     await document.l10n.translateElements([menuList]);
+  }
+
+  /**
+   * Focuses the translated-text area and sets its overflow to auto post-animation.
+   */
+  #indicateTranslatedTextArea() {
+    const { translatedTextArea } = this.elements;
+    translatedTextArea.focus({ focusVisible: true });
+    requestAnimationFrame(() => {
+      // We want to set overflow to auto as the final animation, because if it is
+      // set before the translated text is displayed, then the scrollTop will
+      // move to the bottom as the text is populated.
+      //
+      // Setting scrollTop = 0 on its own works, but it sometimes causes an animation
+      // of the text jumping from the bottom to the top. It looks a lot cleaner to
+      // disable overflow before rendering the text, then re-enable it after it renders.
+      requestAnimationFrame(() => {
+        translatedTextArea.style.overflow = "auto";
+        translatedTextArea.scrollTop = 0;
+      });
+    });
+  }
+
+  /**
+   * Checks if the given language pair matches the panel's currently selected language pair.
+   *
+   * @param {string} fromLanguage - The from-language to compare.
+   * @param {string} toLanguage - The to-language to compare.
+   *
+   * @returns {boolean} - True if the given language pair matches the selected pair, otherwise false.
+   */
+  #isSelectedLangPair(fromLanguage, toLanguage) {
+    const { fromLanguage: selectedFromLang, toLanguage: selectedToLang } =
+      this.#getSelectedLanguagePair();
+    return fromLanguage === selectedFromLang && toLanguage === selectedToLang;
+  }
+
+  /**
+   * Checks if the translator's language configuration matches the given language pair.
+   *
+   * @param {string} fromLanguage - The from-language to compare.
+   * @param {string} toLanguage - The to-language to compare.
+   *
+   * @returns {boolean} - True if the translator's languages match the given pair, otherwise false.
+   */
+  #translatorMatchesLangPair(fromLanguage, toLanguage) {
+    return (
+      this.#translator?.fromLanguage === fromLanguage &&
+      this.#translator?.toLanguage === toLanguage
+    );
+  }
+
+  /**
+   * Retrieves the currently selected language pair from the menu lists.
+   *
+   * @returns {{fromLanguage: string, toLanguage: string}} An object containing the selected languages.
+   */
+  #getSelectedLanguagePair() {
+    const { fromMenuList, toMenuList } = this.elements;
+    return {
+      fromLanguage: fromMenuList.value,
+      toLanguage: toMenuList.value,
+    };
+  }
+
+  /**
+   * Retrieves the source text from the translation state.
+   * This value is not available when the panel is closed.
+   *
+   * @returns {string | undefined} The source text.
+   */
+  getSourceText() {
+    return this.#translationState?.sourceText;
+  }
+
+  /**
+   * Retrieves the source text from the translation state.
+   * This value is only available in the translated state.
+   *
+   * @returns {string | undefined} The source text.
+   */
+  getTranslatedText() {
+    return this.#translationState?.translatedText;
+  }
+
+  /**
+   * Retrieves the current translation state.
+   *
+   * @returns {SelectTranslationsPanelState}
+   */
+  #state() {
+    return this.#translationState.state;
+  }
+
+  /**
+   * @returns {boolean} True if the panel is open, otherwise false.
+   */
+  #isOpen() {
+    return this.#state() !== "closed";
+  }
+
+  /**
+   * @returns {boolean} True if the panel is closed, otherwise false.
+   */
+  #isClosed() {
+    return this.#state() === "closed";
+  }
+
+  /**
+   * Changes the state of the translation panel with options to retain or overwrite existing entries.
+   *
+   * @param {SelectTranslationsPanelState} state - The new state to transition to.
+   * @param {boolean} [retainEntries] - Whether to retain existing state entries that are not overwritten.
+   * @param {object | null} [data=null] - Additional data to merge into the state.
+   * @throws {Error} If an invalid state is specified.
+   */
+  #changeStateTo(state, retainEntries, data = null) {
+    switch (state) {
+      case "closed":
+      case "idle":
+      case "translatable":
+      case "translating":
+      case "translated": {
+        break;
+      }
+      default: {
+        throw new Error(`Invalid state change to '${state}'`);
+      }
+    }
+
+    const previousState = this.#state();
+    if (data && retainEntries) {
+      // Change the state and apply new entries from data, but retain non-overwritten entries from previous state.
+      this.#translationState = { ...this.#translationState, state, ...data };
+    } else if (data) {
+      // Change the state and apply new entries from data, but drop any entries that are not overwritten by data.
+      this.#translationState = { state, ...data };
+    } else if (retainEntries) {
+      // Change only the state and retain all entries from previous data.
+      this.#translationState.state = state;
+    } else {
+      // Change the state and delete all entries from previous data.
+      this.#translationState = { state };
+    }
+
+    if (previousState === this.#state()) {
+      // Do not continue on to update the UI because the state didn't change.
+      return;
+    }
+
+    const { fromLanguage, toLanguage } = this.#translationState;
+    this.console?.debug(
+      `SelectTranslationsPanel (${fromLanguage ? fromLanguage : "??"}-${
+        toLanguage ? toLanguage : "??"
+      }) state change (${previousState} => ${state})`
+    );
+
+    this.#updatePanelUIFromState();
+  }
+
+  /**
+   * Changes the internal state to closed, discarding any existing entries.
+   */
+  #changeStateToClosed() {
+    this.#changeStateTo("closed", /* retainEntries */ false);
+  }
+
+  /**
+   * Changes the internal state from "translatable" to "translating".
+   *
+   * @throws {Error} If the current state is not "translatable".
+   */
+  #changeStateToTranslating() {
+    const state = this.#state();
+    if (state !== "translatable") {
+      throw new Error(`Invalid state change (${state} => translating)`);
+    }
+    this.#changeStateTo("translating", /* retainEntries */ true);
+  }
+
+  /**
+   * Changes the internal state from "translating" to "translated".
+   *
+   * @throws {Error} If the current state is not "translating".
+   */
+  #changeStateToTranslated(translatedText) {
+    const state = this.#state();
+    if (state !== "translating") {
+      throw new Error(`Invalid state change (${state} => translated)`);
+    }
+    this.#changeStateTo("translated", /* retainEntries */ true, {
+      translatedText,
+    });
+  }
+
+  /**
+   * Sets the new translation state based on the given language pair.
+   *
+   * @param {string} fromLanguage - The BCP-47 from-language tag.
+   * @param {string} toLanguage - The BCP-47 to-language tag.
+   *
+   * @returns {SelectTranslationsPanelState} The new translation state.
+   */
+  #updateNextStateFromLanguagePair(fromLanguage, toLanguage) {
+    const {
+      state: previousState,
+      fromLanguage: previousFromLanguage,
+      toLanguage: previousToLanguage,
+    } = this.#translationState;
+
+    let nextState = "translatable";
+
+    if (
+      // No from-language is selected, so we cannot translate.
+      !fromLanguage ||
+      // No to-language is selected, so we cannot translate.
+      !toLanguage ||
+      // The same language has been selected, so we cannot translate.
+      fromLanguage === toLanguage
+    ) {
+      nextState = "idle";
+    } else if (
+      // The languages have not changed, so there is nothing to do.
+      previousFromLanguage === fromLanguage &&
+      previousToLanguage === toLanguage
+    ) {
+      nextState = previousState;
+    }
+
+    this.#changeStateTo(nextState, /* retainEntries */ true, {
+      fromLanguage,
+      toLanguage,
+    });
+
+    return nextState;
+  }
+
+  /**
+   * Determines whether translation should continue based on panel state and language pair.
+   *
+   * @param {string} fromLanguage - The from-language to analyze.
+   * @param {string} toLanguage - The to-language to analyze.
+   *
+   * @returns {boolean} True if translation should continue with the given pair, otherwise false.
+   */
+  #shouldContinueTranslation(fromLanguage, toLanguage) {
+    return (
+      // Continue only if the panel is still open.
+      this.#isOpen() &&
+      // Continue only if the given language pair is still the actively selected pair.
+      this.#isSelectedLangPair(fromLanguage, toLanguage) &&
+      // Continue only if the given language pair matches the current translator.
+      this.#translatorMatchesLangPair(fromLanguage, toLanguage)
+    );
+  }
+
+  /**
+   * Displays text in the translated-text area.
+   *
+   * @param {string} textToDisplay - The text to be shown in the translated text area.
+   */
+  #showTranslatedTextArea(textToDisplay) {
+    const { translatedTextArea } = this.elements;
+    translatedTextArea.value = textToDisplay;
+  }
+
+  /**
+   * Displays the placeholder text for the panel's "idle" state.
+   */
+  #displayIdlePlaceholder() {
+    this.#showTranslatedTextArea(this.#idlePlaceholderText);
+  }
+
+  /**
+   * Displays the placeholder text for the panel's "translating" state.
+   */
+  #displayTranslatingPlaceholder() {
+    const { translatedTextArea } = SelectTranslationsPanel.elements;
+    translatedTextArea.style.overflow = "hidden";
+    this.#showTranslatedTextArea(this.#translatingPlaceholderText);
+  }
+
+  /**
+   * Displays the translated text for the panel's "translated" state.
+   */
+  #displayTranslatedText() {
+    const translatedText = this.getTranslatedText();
+    this.#showTranslatedTextArea(translatedText);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this.#indicateTranslatedTextArea());
+    });
+  }
+
+  /**
+   * Updates the panel UI based on the current translation state.
+   */
+  #updatePanelUIFromState() {
+    switch (this.#state()) {
+      case "idle": {
+        this.#displayIdlePlaceholder();
+        break;
+      }
+      case "translating": {
+        this.#displayTranslatingPlaceholder();
+        break;
+      }
+      case "translated": {
+        this.#displayTranslatedText();
+        break;
+      }
+    }
+  }
+
+  /**
+   * Requests a translations port for a given language pair.
+   *
+   * @param {string} fromLanguage - The from-language.
+   * @param {string} toLanguage - The to-language.
+   *
+   * @returns {Promise<MessagePort | undefined>} The message port promise.
+   */
+  async #requestTranslationsPort(fromLanguage, toLanguage) {
+    const innerWindowId =
+      gBrowser.selectedBrowser.browsingContext.top.embedderElement
+        .innerWindowID;
+    if (!innerWindowId) {
+      return undefined;
+    }
+    const port = await TranslationsParent.requestTranslationsPort(
+      innerWindowId,
+      fromLanguage,
+      toLanguage
+    );
+    return port;
+  }
+
+  /**
+   * Retrieves the existing translator for the specified language pair if it matches,
+   * otherwise creates a new translator.
+   *
+   * @param {string} fromLanguage - The source language code.
+   * @param {string} toLanguage - The target language code.
+   *
+   * @returns {Promise<Translator>} A promise that resolves to a `Translator` instance for the given language pair.
+   */
+  async #getOrCreateTranslator(fromLanguage, toLanguage) {
+    if (this.#translatorMatchesLangPair(fromLanguage, toLanguage)) {
+      return Promise.resolve(this.#translator);
+    }
+
+    this.console?.log(
+      `Creating new Translator (${fromLanguage}-${toLanguage})`
+    );
+    if (this.#translator) {
+      this.#translator.destroy();
+      this.#translator = null;
+    }
+
+    const translator = await Translator.create(
+      fromLanguage,
+      toLanguage,
+      this.#requestTranslationsPort
+    );
+    if (translator) {
+      this.#translator = translator;
+    }
+
+    return translator;
+  }
+
+  /**
+   * Initiates the translation process if the panel state and selected languages
+   * meet the conditions for translation.
+   */
+  #maybeRequestTranslation() {
+    if (this.#isClosed()) {
+      return;
+    }
+    const { fromLanguage, toLanguage } = this.#getSelectedLanguagePair();
+    const nextState = this.#updateNextStateFromLanguagePair(
+      fromLanguage,
+      toLanguage
+    );
+    if (nextState !== "translatable") {
+      return;
+    }
+
+    this.#getOrCreateTranslator(fromLanguage, toLanguage)
+      .then(translator => {
+        if (this.#shouldContinueTranslation(fromLanguage, toLanguage)) {
+          this.#changeStateToTranslating();
+          return translator.translate(this.getSourceText());
+        }
+        return null;
+      })
+      .then(translatedText => {
+        if (
+          translatedText &&
+          this.#shouldContinueTranslation(fromLanguage, toLanguage)
+        ) {
+          this.#changeStateToTranslated(translatedText);
+        }
+      })
+      .catch(error => this.console?.error(error));
   }
 })();
