@@ -1800,10 +1800,11 @@ class SelectTranslationsTestUtils {
       ? SelectTranslationsTestUtils.#changeSelectedLanguageViaDropdownMenu
       : SelectTranslationsTestUtils.#changeSelectedLanguageDirectly;
 
-    await switchFn(langTags, {
-      menuList: fromMenuList,
-      menuPopup: fromMenuPopup,
-    });
+    await switchFn(
+      langTags,
+      { menuList: fromMenuList, menuPopup: fromMenuPopup },
+      options
+    );
   }
 
   /**
@@ -1812,6 +1813,8 @@ class SelectTranslationsTestUtils {
    * @param {string[]} langTags - An array of BCP-47 language tags.
    * @param {object} options - Options for selecting paragraphs and opening the context menu.
    * @param {boolean} options.openDropdownMenu - Determines whether the language change should be made via a dropdown menu or directly.
+   * @param {Function} options.downloadHandler - Handler for initiating downloads post language change, if applicable.
+   * @param {Function} options.onChangeLanguage - Callback function to be executed after the language change.
    *
    * @returns {Promise<void>}
    */
@@ -1823,7 +1826,11 @@ class SelectTranslationsTestUtils {
       ? SelectTranslationsTestUtils.#changeSelectedLanguageViaDropdownMenu
       : SelectTranslationsTestUtils.#changeSelectedLanguageDirectly;
 
-    await switchFn(langTags, { menuList: toMenuList, menuPopup: toMenuPopup });
+    await switchFn(
+      langTags,
+      { menuList: toMenuList, menuPopup: toMenuPopup },
+      options
+    );
   }
 
   /**
@@ -1832,11 +1839,15 @@ class SelectTranslationsTestUtils {
    * @param {string[]} langTags - An array of BCP-47 language tags for direct selection.
    * @param {object} elements - Elements required for changing the selected language.
    * @param {Element} elements.menuList - The menu list element where languages are directly changed.
+   * @param {object} options - Configuration options for language change and additional actions.
+   * @param {Function} options.downloadHandler - Handler for initiating downloads post language change, if applicable.
+   * @param {Function} options.onChangeLanguage - Callback function to be executed after the language change.
    *
    * @returns {Promise<void>}
    */
-  static async #changeSelectedLanguageDirectly(langTags, elements) {
+  static async #changeSelectedLanguageDirectly(langTags, elements, options) {
     const { menuList } = elements;
+    const { onChangeLanguage, downloadHandler } = options;
 
     for (const langTag of langTags) {
       const menuListUpdated = BrowserTestUtils.waitForMutationCondition(
@@ -1849,6 +1860,16 @@ class SelectTranslationsTestUtils {
       menuList.dispatchEvent(new Event("command"));
       await menuListUpdated;
     }
+
+    if (downloadHandler) {
+      menuList.focus();
+      EventUtils.synthesizeKey("KEY_Enter");
+      await SelectTranslationsTestUtils.handleDownloads(options);
+    }
+
+    if (onChangeLanguage) {
+      await onChangeLanguage();
+    }
   }
 
   /**
@@ -1858,11 +1879,19 @@ class SelectTranslationsTestUtils {
    * @param {object} elements - Elements involved in the dropdown language selection process.
    * @param {Element} elements.menuList - The element that triggers the dropdown menu.
    * @param {Element} elements.menuPopup - The dropdown menu element containing selectable languages.
+   * @param {object} options - Configuration options for language change and additional actions.
+   * @param {Function} options.downloadHandler - Handler for initiating downloads post language change, if applicable.
+   * @param {Function} options.onChangeLanguage - Callback function to be executed after the language change.
    *
    * @returns {Promise<void>}
    */
-  static async #changeSelectedLanguageViaDropdownMenu(langTags, elements) {
+  static async #changeSelectedLanguageViaDropdownMenu(
+    langTags,
+    elements,
+    options
+  ) {
     const { menuList, menuPopup } = elements;
+    const { onChangeLanguage } = options;
     for (const langTag of langTags) {
       await SelectTranslationsTestUtils.waitForPanelPopupEvent(
         "popupshown",
@@ -1880,6 +1909,11 @@ class SelectTranslationsTestUtils {
           EventUtils.synthesizeKey("KEY_Tab");
         }
       );
+
+      await SelectTranslationsTestUtils.handleDownloads(options);
+      if (onChangeLanguage) {
+        await onChangeLanguage();
+      }
     }
   }
 
