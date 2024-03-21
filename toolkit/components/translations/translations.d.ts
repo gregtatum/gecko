@@ -269,3 +269,10 @@ export interface SupportedLanguages {
 }
 
 export type TranslationErrors = "engine-load-error";
+
+export type SelectTranslationsPanelState =
+  | { state: "closed"; }
+  | { state: "idle"; fromLanguage: string; toLanguage: string, sourceText: string, }
+  | { state: "translatable"; fromLanguage: string; toLanguage: string, sourceText: string, }
+  | { state: "translating"; fromLanguage: string; toLanguage: string, sourceText: string, }
+  | { state: "translated"; fromLanguage: string; toLanguage: string, sourceText: string, translatedText: string, }
