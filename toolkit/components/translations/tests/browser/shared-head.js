@@ -9,6 +9,9 @@
 const { EngineProcess } = ChromeUtils.importESModule(
   "chrome://global/content/ml/EngineProcess.sys.mjs"
 );
+const { TranslationsPanelShared } = ChromeUtils.importESModule(
+  "chrome://browser/content/translations/TranslationsPanelShared.sys.mjs"
+);
 
 // Avoid about:blank's non-standard behavior.
 const BLANK_PAGE =
@@ -473,6 +476,7 @@ async function createAndMockRemoteSettings({
   // The TranslationsParent will pull the language pair values from the JSON dump
   // of Remote Settings. Clear these before mocking the translations engine.
   TranslationsParent.clearCache();
+  TranslationsPanelShared.clearCache();
 
   TranslationsParent.mockTranslationsEngine(
     remoteClients.translationModels.client,
@@ -487,6 +491,7 @@ async function createAndMockRemoteSettings({
 
       TranslationsParent.unmockTranslationsEngine();
       TranslationsParent.clearCache();
+      TranslationsPanelShared.clearCache();
     },
     remoteClients,
   };
