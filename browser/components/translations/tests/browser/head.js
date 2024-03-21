@@ -1466,6 +1466,7 @@ class SelectTranslationsTestUtils {
     });
     SelectTranslationsTestUtils.#assertButtonActionsEnabled(true);
     SelectTranslationsTestUtils.#assertPanelHasTranslatedText();
+    SelectTranslationsTestUtils.#assertPanelTextAreaHeight();
     SelectTranslationsTestUtils.#assertPanelTextAreaOverflow();
   }
 
@@ -1485,6 +1486,31 @@ class SelectTranslationsTestUtils {
         translatedTextArea.scrollTop,
         0,
         "The translated-text area should be scrolled to the top."
+      );
+    }
+  }
+
+  /**
+   * Asserts that the SelectTranslationsPanel translated text area is
+   * the correct height for the length of the translated text.
+   */
+  static #assertPanelTextAreaHeight() {
+    const { translatedTextArea } = SelectTranslationsPanel.elements;
+
+    if (
+      SelectTranslationsPanel.getSourceText().length <
+      SelectTranslationsPanel.textLengthThreshold
+    ) {
+      is(
+        translatedTextArea.style.height,
+        SelectTranslationsPanel.shortTextHeight,
+        "The panel text area should have the short-text height"
+      );
+    } else {
+      is(
+        translatedTextArea.style.height,
+        SelectTranslationsPanel.longTextHeight,
+        "The panel text area should have the long-text height"
       );
     }
   }
