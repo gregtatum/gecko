@@ -74,11 +74,32 @@
           </hbox>
         </vbox>
         <vbox class="select-translations-panel-content">
-          <html:textarea id="select-translations-panel-translation-area"
+          <!--
+            The following <textarea> and <div> are displayed/hidden in a mutually exclusive fashion
+            by the JavaScript implementation in selectTranslationsPanel.js
+
+            The textarea element is properly formatted to display the translated text, with scrolling,
+            highlighting, etc. and should be used instead of a <div> for displaying the translated text.
+
+            The <div> is required to show the spinning circle-arrows animation, because a <textarea>
+            cannot easily display an animated image as its content.
+
+            As such, the <div> is shown only when the active translation is pending,
+            and the <textarea> is shown when the panel is translated or idle.
+          -->
+          <html:textarea id="select-translations-panel-translated-text-area"
+                         class="select-translations-panel-text-area"
                          data-l10n-id="select-translations-panel-idle-placeholder-text"
                          readonly="true"
                          tabindex="0">
           </html:textarea>
+          <html:div id="select-translations-panel-active-translation-area"
+                    class="select-translations-panel-text-area">
+            <html:span id="select-translations-panel-circle-arrows"></html:span>
+            <html:span id="select-translations-panel-translating-placeholder-text-text"
+                       data-l10n-id="select-translations-panel-translating-placeholder-text">
+            </html:span>
+          </html:div>
         </vbox>
 
         <hbox class="select-translations-panel-content">

@@ -1451,3 +1451,10 @@ async function loadBlankPage() {
   BrowserTestUtils.startLoadingURIString(gBrowser.selectedBrowser, BLANK_PAGE);
   await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
 }
+
+/**
+ * Destroys the Translations Engine process.
+ */
+async function destroyTranslationsEngine() {
+  await EngineProcess.destroyTranslationsEngine();
+}

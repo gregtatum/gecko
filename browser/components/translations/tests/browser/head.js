@@ -1405,7 +1405,6 @@ class SelectTranslationsTestUtils {
     multiview: true,
     toLabel: true,
     toMenuList: true,
-    translatedTextArea: true,
   };
 
   /**
@@ -1448,6 +1447,9 @@ class SelectTranslationsTestUtils {
     );
     SelectTranslationsTestUtils.#assertPanelElementVisibility({
       ...SelectTranslationsTestUtils.#alwaysPresentElements,
+      activeTranslationArea: false,
+      circleArrows: false,
+      translatedTextArea: true,
     });
     SelectTranslationsTestUtils.#assertPanelHasTranslatedText();
     SelectTranslationsTestUtils.#assertPanelTextAreaOverflow();
@@ -1471,6 +1473,39 @@ class SelectTranslationsTestUtils {
         "The translated-text area should be scrolled to the top."
       );
     }
+  }
+
+  /**
+   * Asserts that the SelectTranslationsPanel UI matches the expected
+   * state when the panel is actively translating text.
+   */
+  static assertPanelViewActivelyTranslating() {
+    SelectTranslationsTestUtils.#assertPanelMainViewId(
+      "select-translations-panel-view-default"
+    );
+    SelectTranslationsTestUtils.#assertPanelElementVisibility({
+      ...SelectTranslationsTestUtils.#alwaysPresentElements,
+      activeTranslationArea: true,
+      circleArrows: true,
+      translatedTextArea: false,
+    });
+    SelectTranslationsTestUtils.#assertPanelHasTranslatingPlaceholder();
+  }
+
+  /**
+   * Asserts that the SelectTranslationsPanel UI contains the
+   * translating placeholder text.
+   */
+  static async #assertPanelHasTranslatingPlaceholder() {
+    const { activeTranslationArea } = SelectTranslationsPanel.elements;
+    const expected = await document.l10n.formatValue(
+      "select-translations-panel-translating-placeholder-text"
+    );
+    is(
+      activeTranslationArea.textContent.trim(),
+      expected,
+      "Active translation text area should have the translating placeholder."
+    );
   }
 
   /**
@@ -1644,22 +1679,62 @@ class SelectTranslationsTestUtils {
    * Handles language-model downloads for the SelectTranslationsPanel, ensuring that expected
    * UI states match based on the resolved download state.
    *
+   * @param {Function} viewAssertion - A function that asserts the expected view state of the SelectTranslationsPanel.
    * @param {object} options - Configuration options for downloads.
    * @param {function(number): Promise<void>} options.downloadHandler - The function to resolve or reject the downloads.
    * @param {boolean} [options.pivotTranslation] - Whether to expect a pivot translation.
    *
    * @returns {Promise<void>}
    */
-  static async handleDownloads({ downloadHandler, pivotTranslation }) {
+  static async handleDownloads(viewAssertion, options) {
+    const { downloadHandler, pivotTranslation } = options;
+
     if (downloadHandler) {
-      const { translatedTextArea } = SelectTranslationsPanel.elements;
-      const overflowEnabled = BrowserTestUtils.waitForMutationCondition(
-        translatedTextArea,
-        { attributes: true, attributeFilter: ["style"] },
-        () => translatedTextArea.style.overflow === "auto"
-      );
+      // If the active translation area is not visible yet, wait for it.
+      const { activeTranslationArea } = SelectTranslationsPanel.elements;
+      if (activeTranslationArea.style.display === "none") {
+        await BrowserTestUtils.waitForMutationCondition(
+          activeTranslationArea,
+          { attributes: true, attributeFilter: ["style"] },
+          () => activeTranslationArea.style.display !== "none"
+        );
+      }
+    }
+
+    let mutationConditions = [];
+
+    if (
+      viewAssertion === SelectTranslationsTestUtils.assertPanelViewTranslated
+    ) {
+      const { activeTranslationArea, translatedTextArea } =
+        SelectTranslationsPanel.elements;
+      mutationConditions.push(async () => {
+        if (activeTranslationArea.display !== "none") {
+          await BrowserTestUtils.waitForMutationCondition(
+            activeTranslationArea,
+            { attributes: true, attributeFilter: ["style"] },
+            () => activeTranslationArea.style.display === "none"
+          );
+        }
+      });
+      mutationConditions.push(async () => {
+        if (translatedTextArea.style.overflow !== "auto") {
+          await BrowserTestUtils.waitForMutationCondition(
+            translatedTextArea,
+            { attributes: true, attributeFilter: ["style"] },
+            () => translatedTextArea.style.overflow === "auto"
+          );
+        }
+      });
+    }
+
+    if (downloadHandler) {
+      await SelectTranslationsTestUtils.assertPanelViewActivelyTranslating();
       await downloadHandler(pivotTranslation ? 2 : 1);
-      await overflowEnabled;
+    }
+
+    for (const mutationCondition of mutationConditions) {
+      await mutationCondition();
     }
   }
 
@@ -1713,7 +1788,7 @@ class SelectTranslationsTestUtils {
       () => click(menuItem),
       async () => {
         const { onOpenPanel } = options;
-        await SelectTranslationsTestUtils.handleDownloads(options);
+        await SelectTranslationsTestUtils.handleDownloads(onOpenPanel, options);
         if (onOpenPanel) {
           await onOpenPanel();
         }

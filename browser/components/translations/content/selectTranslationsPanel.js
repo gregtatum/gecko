@@ -50,11 +50,6 @@ var SelectTranslationsPanel = new (class {
   #idlePlaceholderText;
 
   /**
-   * The localized placeholder text to display when translating.
-   */
-  #translatingPlaceholderText;
-
-  /**
    * Where the lazy elements are stored.
    *
    * @type {Record<string, Element>?}
@@ -101,14 +96,17 @@ var SelectTranslationsPanel = new (class {
       };
 
       TranslationsPanelShared.defineLazyElements(document, this.#lazyElements, {
+        activeTranslationArea:
+          "select-translations-panel-active-translation-area",
         betaIcon: "select-translations-panel-beta-icon",
+        circleArrows: "select-translations-panel-circle-arrows",
         copyButton: "select-translations-panel-copy-button",
         doneButton: "select-translations-panel-done-button",
         fromLabel: "select-translations-panel-from-label",
         fromMenuList: "select-translations-panel-from",
         header: "select-translations-panel-header",
         multiview: "select-translations-panel-multiview",
-        translatedTextArea: "select-translations-panel-translation-area",
+        translatedTextArea: "select-translations-panel-translated-text-area",
         toLabel: "select-translations-panel-to-label",
         toMenuList: "select-translations-panel-to",
         translateFullPageButton:
@@ -274,15 +272,12 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Caches the localized text to use as placeholders.
+   * Caches the localized text to use as an idle placeholder.
    */
   async #cachePlaceholderText() {
-    const [idleText, translatingText] = await document.l10n.formatValues([
-      { id: "select-translations-panel-idle-placeholder-text" },
-      { id: "select-translations-panel-translating-placeholder-text" },
-    ]);
-    this.#idlePlaceholderText = idleText;
-    this.#translatingPlaceholderText = translatingText;
+    this.#idlePlaceholderText = await document.l10n.formatValue(
+      "select-translations-panel-idle-placeholder-text"
+    );
   }
 
   /**
@@ -584,13 +579,27 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Displays text in the translated-text area.
+   * Displays the translated-text area and hides the active-translation area.
    *
    * @param {string} textToDisplay - The text to be shown in the translated text area.
    */
   #showTranslatedTextArea(textToDisplay) {
-    const { translatedTextArea } = this.elements;
+    const { activeTranslationArea, translatedTextArea } = this.elements;
     translatedTextArea.value = textToDisplay;
+    activeTranslationArea.style.display = "none";
+    translatedTextArea.style.display = "flex";
+  }
+
+  /**
+   * Displays the active-translation area and hides the translated-text area.
+   */
+  #showActiveTranslationArea() {
+    const { activeTranslationArea, translatedTextArea } = this.elements;
+    translatedTextArea.value = "";
+    translatedTextArea.style.overflow = "hidden";
+    translatedTextArea.style.display = "none";
+    activeTranslationArea.style.height = translatedTextArea.style.height;
+    activeTranslationArea.style.display = "flex";
   }
 
   /**
@@ -601,12 +610,10 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Displays the placeholder text for the panel's "translating" state.
+   * Displays the placeholder text and spinning circle-arrows for the panel's "translating" state.
    */
   #displayTranslatingPlaceholder() {
-    const { translatedTextArea } = SelectTranslationsPanel.elements;
-    translatedTextArea.style.overflow = "hidden";
-    this.#showTranslatedTextArea(this.#translatingPlaceholderText);
+    this.#showActiveTranslationArea();
   }
 
   /**
