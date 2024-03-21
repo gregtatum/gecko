@@ -18,7 +18,7 @@ async function addTab(url) {
   const tab = await BrowserTestUtils.openNewForegroundTab(
     gBrowser,
     url,
-    true // Wait for laod
+    true // Wait for load
   );
   return {
     tab,
@@ -65,7 +65,6 @@ function click(element, message) {
  */
 function getAllByL10nId(l10nId, doc = document) {
   const elements = doc.querySelectorAll(`[data-l10n-id="${l10nId}"]`);
-  console.log(doc);
   if (elements.length === 0) {
     throw new Error("Could not find the element by l10n id: " + l10nId);
   }
@@ -409,7 +408,7 @@ class SharedTranslationsTestUtils {
     info("Waiting for the translations panel popup to be shown");
     await promise;
     if (postEventAssertion) {
-      postEventAssertion();
+      await postEventAssertion();
     }
     // Wait a single tick on the event loop.
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -1283,7 +1282,7 @@ class SelectTranslationsTestUtils {
    * @param {boolean} options.selectFirstParagraph - Selects the first paragraph before opening the context menu.
    * @param {boolean} options.selectSpanishParagraph - Selects the Spanish paragraph before opening the context menu.
    *                                                   This is only available in SPANISH_TEST_PAGE.
-   * @param {boolean} options.expectMenuItemIsVisible - Whether the translate-selection item is expected to be visible.
+   * @param {boolean} options.expectMenuItemVisible - Whether the translate-selection item is expected to be visible.
    *                                                  Does not assert visibility if left undefined.
    * @param {string} options.expectedTargetLanguage - The target language for translation.
    * @param {boolean} options.openAtFirstParagraph - Opens the context menu at the first paragraph in the test page.
@@ -1301,7 +1300,7 @@ class SelectTranslationsTestUtils {
     {
       selectFirstParagraph,
       selectSpanishParagraph,
-      expectMenuItemIsVisible,
+      expectMenuItemVisible,
       expectedTargetLanguage,
       openAtFirstParagraph,
       openAtSpanishParagraph,
@@ -1332,12 +1331,12 @@ class SelectTranslationsTestUtils {
       /* ensureIsVisible */ false
     );
 
-    if (expectMenuItemIsVisible !== undefined) {
-      const visibility = expectMenuItemIsVisible ? "visible" : "hidden";
-      assertVisibility({ [visibility]: menuItem });
+    if (expectMenuItemVisible !== undefined) {
+      const visibility = expectMenuItemVisible ? "visible" : "hidden";
+      assertVisibility({ [visibility]: { menuItem } });
     }
 
-    if (expectMenuItemIsVisible === true) {
+    if (expectMenuItemVisible === true) {
       if (expectedTargetLanguage) {
         // Target language expected, check for the data-l10n-id with a `{$language}` argument.
         const expectedL10nId =
