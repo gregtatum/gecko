@@ -669,6 +669,7 @@ var SelectTranslationsPanel = new (class {
    * Displays the placeholder text for the panel's "idle" state.
    */
   #displayIdlePlaceholder() {
+    this.#updateConditionalUIEnabledState();
     this.#showTranslatedTextArea(this.#idlePlaceholderText);
     this.#maybeFocusMenuList();
   }
@@ -677,6 +678,7 @@ var SelectTranslationsPanel = new (class {
    * Displays the placeholder text and spinning circle-arrows for the panel's "translating" state.
    */
   #displayTranslatingPlaceholder() {
+    this.#updateConditionalUIEnabledState();
     this.#showActiveTranslationArea();
   }
 
@@ -685,10 +687,31 @@ var SelectTranslationsPanel = new (class {
    */
   #displayTranslatedText() {
     const translatedText = this.getTranslatedText();
+    this.#updateConditionalUIEnabledState();
     this.#showTranslatedTextArea(translatedText);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => this.#indicateTranslatedTextArea());
     });
+  }
+
+  /**
+   * Enables or disables UI components that are conditional on a valid language pair being selected.
+   */
+  #updateConditionalUIEnabledState() {
+    const { fromLanguage, toLanguage } = this.#getSelectedLanguagePair();
+    const { copyButton, translateFullPageButton, translatedTextArea } =
+      this.elements;
+
+    const shouldEnable =
+      // A valid language pair must be selected.
+      fromLanguage &&
+      toLanguage &&
+      // We must not be actively translating.
+      this.#state() !== "translating";
+
+    copyButton.disabled = !shouldEnable;
+    translatedTextArea.disabled = !shouldEnable;
+    translateFullPageButton.disabled = !shouldEnable;
   }
 
   /**

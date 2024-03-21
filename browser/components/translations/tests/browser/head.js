@@ -1464,6 +1464,7 @@ class SelectTranslationsTestUtils {
       circleArrows: false,
       translatedTextArea: true,
     });
+    SelectTranslationsTestUtils.#assertButtonActionsEnabled(true);
     SelectTranslationsTestUtils.#assertPanelHasTranslatedText();
     SelectTranslationsTestUtils.#assertPanelTextAreaOverflow();
   }
@@ -1520,6 +1521,7 @@ class SelectTranslationsTestUtils {
       translatedTextArea: true,
     });
     await SelectTranslationsTestUtils.#assertPanelHasIdlePlaceholder();
+    SelectTranslationsTestUtils.#assertButtonActionsEnabled(false);
     SelectTranslationsTestUtils.assertSelectedFromLanguage(null);
   }
 
@@ -1538,6 +1540,7 @@ class SelectTranslationsTestUtils {
       translatedTextArea: true,
     });
     SelectTranslationsTestUtils.assertSelectedToLanguage(null);
+    SelectTranslationsTestUtils.#assertButtonActionsEnabled(false);
     await SelectTranslationsTestUtils.#assertPanelHasIdlePlaceholder();
   }
 
@@ -1571,6 +1574,7 @@ class SelectTranslationsTestUtils {
       expected,
       "Active translation text area should have the translating placeholder."
     );
+    SelectTranslationsTestUtils.#assertButtonActionsEnabled(false);
   }
 
   /**
@@ -1592,6 +1596,28 @@ class SelectTranslationsTestUtils {
       SelectTranslationsPanel.getTranslatedText().length -
         translatedSuffix.length,
       "Expected translated text length to correspond to the source text length."
+    );
+  }
+
+  /**
+   * Asserts the enabled state of action buttons in the SelectTranslationsPanel.
+   *
+   * @param {boolean} expectEnabled - Whether the buttons should be enabled (true) or not (false).
+   */
+  static #assertButtonActionsEnabled(expectEnabled) {
+    const { copyButton, translateFullPageButton } =
+      SelectTranslationsPanel.elements;
+    is(
+      copyButton.disabled,
+      !expectEnabled,
+      `The copy button should be ${expectEnabled ? "enabled" : "disabled"}.`
+    );
+    is(
+      translateFullPageButton.disabled,
+      !expectEnabled,
+      `The translate-full-page button should be ${
+        expectEnabled ? "enabled" : "disabled"
+      }.`
     );
   }
 
