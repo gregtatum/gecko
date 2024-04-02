@@ -3,45 +3,51 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { PromiseWorker } from "resource://gre/modules/workers/PromiseWorker.mjs";
-
-// Respect the preference "browser.ml.logLevel".
-let _loggingLevel = "Error";
-function log(...args) {
-  if (_loggingLevel !== "Error" && _loggingLevel !== "Warn") {
-    console.log("ML:", ...args);
-  }
-}
-function trace(...args) {
-  if (_loggingLevel === "Trace" || _loggingLevel === "All") {
-    console.log("ML:", ...args);
-  }
-}
+import { Pipeline } from "chrome://global/content/ml/ONNXPipeline.mjs";
 
 /**
  * The actual MLEngine lives here in a worker.
  */
 class MLEngineWorker {
-  /** @type {ArrayBuffer} */
-  #wasm;
-  /** @type {ArrayBuffer} */
-  #model;
+  #pipeline;
 
   constructor() {
     // Connect the provider to the worker.
     this.#connectToPromiseWorker();
   }
 
+  async match(key) {
+    let res = await this.getModelFile(key);
+    let headers = res.ok[1];
+    let modelFile = res.ok[2];
+
+    // Transformers.js expects a response object, so we wrap the array buffer
+    const response = new Response(modelFile, {
+      status: 200,
+      headers,
+    });
+
+    return response;
+  }
+
+  put() {
+    throw new Error("Expected the model to be fetched via RemoteSettings.");
+  }
+
+  async getModelFile(...args) {
+    let result = await self.callMainThread("getModelFile", args);
+    return result;
+  }
+
   /**
    * @param {ArrayBuffer} wasm
    * @param {ArrayBuffer} model
-   * @param {string} loggingLevel
+   * @param {string} _loggingLevel
    */
-  initializeEngine(wasm, model, loggingLevel) {
-    this.#wasm = wasm;
-    this.#model = model;
-    _loggingLevel = loggingLevel;
-    // TODO - Initialize the engine for real here.
-    log("MLEngineWorker is initalized");
+  async initializeEngine(wasm, model, _loggingLevel) {
+    let options = JSON.parse(new TextDecoder().decode(model));
+    options.runtime = wasm;
+    this.#pipeline = await Pipeline.initialize(this, options);
   }
 
   /**
@@ -49,20 +55,14 @@ class MLEngineWorker {
    *
    * @param {string} request
    */
-  run(request) {
-    if (!this.#wasm) {
-      throw new Error("Expected the wasm to exist.");
-    }
-    if (!this.#model) {
-      throw new Error("Expected the model to exist");
-    }
+  async run(request) {
     if (request === "throw") {
       throw new Error(
         'Received the message "throw", so intentionally throwing an error.'
       );
     }
-    trace("inference run requested with:", request);
-    return request.slice(0, Math.floor(request.length / 2));
+    let result = await this.#pipeline.run(request);
+    return JSON.stringify(result);
   }
 
   /**
@@ -81,6 +81,7 @@ class MLEngineWorker {
       self.postMessage(message, ...transfers);
     };
 
+    self.callMainThread = worker.callMainThread.bind(worker);
     self.addEventListener("message", msg => worker.handleMessage(msg));
     self.addEventListener("unhandledrejection", function (error) {
       throw error.reason;

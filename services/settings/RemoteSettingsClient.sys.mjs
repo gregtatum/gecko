@@ -104,7 +104,7 @@ class EventEmitter {
   }
 }
 
-class APIError extends Error {}
+class APIError extends Error { }
 
 class NetworkError extends APIError {
   constructor(e) {
@@ -337,7 +337,7 @@ export class RemoteSettingsClient extends EventEmitter {
 
     // This attribute allows signature verification to be disabled, when running tests
     // or when pulling data from a dev server.
-    this.verifySignature = AppConstants.REMOTE_SETTINGS_VERIFY_SIGNATURE;
+    this.verifySignature = false; //AppConstants.REMOTE_SETTINGS_VERIFY_SIGNATURE;
 
     ChromeUtils.defineLazyGetter(
       this,

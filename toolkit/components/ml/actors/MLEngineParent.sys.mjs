@@ -30,7 +30,73 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * @typedef {import("../../translations/translations").WasmRecord} WasmRecord
  */
 
-const DEFAULT_CACHE_TIMEOUT_MS = 15_000;
+const DEFAULT_CACHE_TIMEOUT_MS = 15_000_000;
+
+// taken from https://github.com/microsoft/onnxruntime/blob/262b6bd3b7531503f40f2cb6059d22d7d9d84f27/js/web/lib/wasm/wasm-factory.ts#L31
+function detectMultiThreadSupport() {
+  if (typeof SharedArrayBuffer === "undefined") {
+    return false;
+  }
+  try {
+    // Test for transferability of SABs (for browsers. needed for Firefox)
+    // https://groups.google.com/forum/#!msg/mozilla.dev.platform/IHkBZlHETpA/dwsMNchWEQAJ
+    if (typeof MessageChannel !== "undefined") {
+      new MessageChannel().port1.postMessage(new SharedArrayBuffer(1));
+    }
+
+    // Test for WebAssembly threads capability (for both browsers and Node.js)
+    // This typed array is a WebAssembly program containing threaded instructions.
+    return WebAssembly.validate(
+      new Uint8Array([
+        0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, 5, 4, 1, 3,
+        1, 1, 10, 11, 1, 9, 0, 65, 0, 254, 16, 2, 0, 26, 11,
+      ])
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Validate some simple Wasm that uses a SIMD operation.
+ */
+function detectSimdSupport() {
+  return WebAssembly.validate(
+    new Uint8Array(
+      // ```
+      // ;; Detect SIMD support.
+      // ;; Compile by running: wat2wasm --enable-all simd-detect.wat
+      //
+      // (module
+      //   (func (result v128)
+      //     i32.const 0
+      //     i8x16.splat
+      //     i8x16.popcnt
+      //   )
+      // )
+      // ```
+
+      // prettier-ignore
+      [
+        0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x01, 0x60, 0x00,
+        0x01, 0x7b, 0x03, 0x02, 0x01, 0x00, 0x0a, 0x0a, 0x01, 0x08, 0x00, 0x41, 0x00,
+        0xfd, 0x0f, 0xfd, 0x62, 0x0b
+      ]
+    )
+  );
+}
+
+function getRuntimeWasmFilename() {
+  if (detectSimdSupport()) {
+    return detectMultiThreadSupport()
+      ? "ort-wasm-simd-threaded.wasm"
+      : "ort-wasm-simd.wasm";
+  }
+
+  return detectMultiThreadSupport()
+    ? "ort-wasm-threaded.wasm"
+    : "ort-wasm.wasm";
+}
 
 /**
  * The ML engine is in its own content process. This actor handles the
@@ -87,11 +153,15 @@ export class MLEngineParent extends JSWindowActorParent {
    * @returns {MLEngine}
    */
   getEngine(engineName, getModel, cacheTimeoutMS = DEFAULT_CACHE_TIMEOUT_MS) {
+    lazy.console.log("getEngine", engineName);
+
     return new MLEngine(this, engineName, getModel, cacheTimeoutMS);
   }
 
   // eslint-disable-next-line consistent-return
   async receiveMessage({ name }) {
+    lazy.console.log(name);
+
     switch (name) {
       case "MLEngine:Ready":
         if (lazy.EngineProcess.resolveMLEngineParent) {
@@ -111,20 +181,18 @@ export class MLEngineParent extends JSWindowActorParent {
         break;
     }
   }
-
   /**
    * @param {RemoteSettingsClient} client
    */
   static async #getWasmArrayRecord(client) {
-    // Load the wasm binary from remote settings, if it hasn't been already.
-    lazy.console.log(`Getting remote wasm records.`);
+    const wasmFilename = getRuntimeWasmFilename();
 
     /** @type {WasmRecord[]} */
     const wasmRecords = await lazy.TranslationsParent.getMaxVersionRecords(
       client,
       {
         // TODO - This record needs to be created with the engine wasm payload.
-        filters: { name: "inference-engine" },
+        filters: { name: wasmFilename },
         majorVersion: MLEngineParent.WASM_MAJOR_VERSION,
       }
     );
@@ -142,10 +210,7 @@ export class MLEngineParent extends JSWindowActorParent {
       );
     }
     const [record] = wasmRecords;
-    lazy.console.log(
-      `Using ${record.name}@${record.release} release version ${record.version} first released on Fx${record.fx_release}`,
-      record
-    );
+    lazy.console.log(`Using runtime ${record.name}@${record.version}`, record);
     return record;
   }
 
@@ -192,7 +257,9 @@ export class MLEngineParent extends JSWindowActorParent {
     }
 
     /** @type {RemoteSettingsClient} */
-    const client = lazy.RemoteSettings("ml-wasm");
+    const client = lazy.RemoteSettings("machine-learning", {
+      bucketName: "main",
+    });
 
     MLEngineParent.#remoteClient = client;
 
@@ -277,6 +344,8 @@ class MLEngine {
    * @param {number} timeoutMS
    */
   constructor(mlEngineParent, engineName, getModel, timeoutMS) {
+    lazy.console.log("MLEngine:constructor", engineName);
+
     /** @type {MLEngineParent} */
     this.mlEngineParent = mlEngineParent;
     /** @type {string} */
@@ -310,6 +379,8 @@ class MLEngine {
   }
 
   handlePortMessage = ({ data }) => {
+    lazy.console.log("handlePortMessage", data);
+
     switch (data.type) {
       case "EnginePort:ModelRequest": {
         if (this.#port) {
@@ -393,11 +464,15 @@ class MLEngine {
     const resolvers = Promise.withResolvers();
     const requestId = this.#nextRequestId++;
     this.#requests.set(requestId, resolvers);
-    this.#port.postMessage({
-      type: "EnginePort:Run",
-      requestId,
-      request,
-    });
+    let transferables = [request.data];
+    this.#port.postMessage(
+      {
+        type: "EnginePort:Run",
+        requestId,
+        request,
+      },
+      transferables
+    );
     return resolvers.promise;
   }
 }

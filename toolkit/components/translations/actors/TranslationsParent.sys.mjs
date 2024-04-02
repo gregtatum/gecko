@@ -1076,7 +1076,8 @@ export class TranslationsParent extends JSWindowActorParent {
     }
     const retrievedRecords = await remoteSettingsClient.get({
       // Pull the records from the network if empty.
-      syncIfEmpty: true,
+      //syncIfEmpty: true,
+      forceSync: true,
       // Do not load the JSON dump if it is newer.
       //
       // The JSON dump comes from the Prod RemoteSettings channel
@@ -1087,7 +1088,8 @@ export class TranslationsParent extends JSWindowActorParent {
       // testing RemoteSettings on the Dev and Stage
       // environments if they happen to be older than the
       // most recent JSON dump from Prod.
-      loadDumpIfNewer: false,
+      //loadDumpIfNewer: false,
+
       // Don't verify the signature if the client is mocked.
       verifySignature: VERIFY_SIGNATURES_FROM_FS,
       // Apply any filters for retrieving the records.

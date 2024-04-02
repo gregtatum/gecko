@@ -261,6 +261,9 @@ testing/web-platform/
 
 # toolkit/ exclusions
 
+# vendored lib
+toolkit/components/ml/vendor/
+
 # Intentionally invalid files
 toolkit/components/workerloader/tests/moduleF-syntax-error.js
 toolkit/components/enterprisepolicies/tests/browser/config_broken_json.json

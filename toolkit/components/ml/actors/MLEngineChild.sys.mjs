@@ -21,6 +21,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BasePromiseWorker: "resource://gre/modules/PromiseWorker.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
+  ModelHub: "chrome://global/content/ml/ModelHub.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () => {
@@ -275,6 +276,36 @@ class EngineDispatcher {
   }
 }
 
+async function getModelFile(url) {
+  const normalizedUrl = url.replace(
+    /^(\/models\/|https:\/\/model-hub.mozilla.org\/)/,
+    ""
+  );
+  const parts = normalizedUrl.split("/");
+  const organization = parts[0];
+  const modelName = parts[1];
+  const file = parts.slice(2).join("/");
+
+  lazy.console.debug(`MLEngineChild.getModelFile(${url})`);
+  let modelHub = new lazy.ModelHub({
+    rootUrl: "https://model-hub.mozilla.org/",
+    urlTemplate: "${organization}/${modelName}/${file}",
+  });
+
+  let [data, headers] = await modelHub.getModelFileAsArrayBuffer({
+    organization,
+    modelName,
+    modelVersion: "main",
+    file,
+  });
+
+  lazy.console.debug("Got file, transferring...");
+
+  return new lazy.BasePromiseWorker.Meta([url, headers, data], {
+    transfers: [data],
+  });
+}
+
 /**
  * Fake the engine by slicing the text in half.
  */
@@ -293,7 +324,8 @@ class FakeEngine {
     /** @type {BasePromiseWorker} */
     const worker = new lazy.BasePromiseWorker(
       "chrome://global/content/ml/MLEngine.worker.mjs",
-      { type: "module" }
+      { type: "module" },
+      { getModelFile }
     );
 
     const args = [wasm, model, lazy.loggingLevel];
