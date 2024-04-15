@@ -1076,7 +1076,9 @@ var FullPageTranslationsPanel = new (class {
    *   True to report to telemetry that the panel was opened automatically, otherwise false.
    */
   async open(event, reportAsAutoShow = false) {
+    console.log(`!!! FullPageTranslationsPanel open`);
     if (this.#openPromise) {
+      console.log(`!!! FullPageTranslationsPanel open - already a promise`);
       // There is already an open event happening, do not open.
       return;
     }
@@ -1093,6 +1095,7 @@ var FullPageTranslationsPanel = new (class {
    * @param {Event} event
    */
   async #openImpl(event, reportAsAutoShow) {
+    console.log(`!!! FullPageTranslationsPanel openImpl`);
     event.stopPropagation();
     if (
       (event.type == "click" && event.button != 0) ||
@@ -1140,7 +1143,12 @@ var FullPageTranslationsPanel = new (class {
         ? button
         : this.elements.appMenuButton;
 
-    if (!TranslationsParent.isActiveLocation(locationChangeId)) {
+    if (
+      !TranslationsParent.isActiveLocation(
+        event.view.browsingContext.currentWindowGlobal.innerWindowId,
+        locationChangeId
+      )
+    ) {
       this.console?.log(`A translation panel open request was stale.`, {
         locationChangeId,
         newlocationChangeId: TranslationsParent.getTranslationsActor(

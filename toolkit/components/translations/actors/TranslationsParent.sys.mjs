@@ -176,7 +176,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * event is sent so that UI can react to it. The actor is inside of /toolkit and
    * needs a way of notifying /browser code (or other users) of when the state changes.
    *
-   * @type {TranslationsLanguageState}
+   * @type {Map<InnerWindowID, TranslationsLanguageState>}
    */
   languageState;
 
@@ -2039,6 +2039,8 @@ export class TranslationsParent extends JSWindowActorParent {
 
   /**
    * Keep track of when the location changes.
+   *
+   * @type {Map<InnerWindowID, number>}
    */
   static #locationChangeId = 0;
 
@@ -2064,11 +2066,15 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Is this actor active for the current location change?
    *
+   * @param {number} innerWindowID - The gBrowser.selectedBrowser.innerWindowID
    * @param {number} locationChangeId - The id sent by the "TranslationsParent:LanguageState" event.
    * @returns {boolean}
    */
-  static isActiveLocation(locationChangeId) {
-    return locationChangeId === TranslationsParent.#locationChangeId;
+  static isActiveLocation(innerWindowID, locationChangeId) {
+    return (
+      locationChangeId ===
+      TranslationsParent.#locationChangeId.get(innerWindowID)
+    );
   }
 
   async queryIdentifyLanguage() {
@@ -2674,8 +2680,12 @@ class TranslationsLanguageState {
   /** @type {LangTags | null} */
   #detectedLanguages = null;
 
-  /** @type {number} */
-  #locationChangeId = -1;
+  /**
+   * A map of an InnerWindowID of the top window to a unique change ID.
+   *
+   * @type {Map<number, number>}
+   */
+  #locationChangeIds = new Map();
 
   /** @type {null | TranslationErrors} */
   #error = null;
@@ -2686,12 +2696,19 @@ class TranslationsLanguageState {
    * Dispatch anytime the language details change, so that any UI can react to it.
    */
   dispatch() {
-    if (!TranslationsParent.isActiveLocation(this.#locationChangeId)) {
+    const browser = this.#actor.browsingContext.top.embedderElement;
+    console.log(`!!! browser`, browser);
+    if (
+      !TranslationsParent.isActiveLocation(
+        browser.innerWindowID,
+        this.#locationChangeIds
+      )
+    ) {
       // Do not dispatch as this location is not active.
       return;
     }
 
-    const browser = this.#actor.browsingContext.top.embedderElement;
+    console.log(`!!! browser`, browser);
     if (!browser) {
       return;
     }
@@ -2754,11 +2771,11 @@ class TranslationsLanguageState {
    *
    * @returns {number}
    */
-  get locationChangeId() {
-    return this.#locationChangeId;
+  getLocationChangeId(innerWindowID) {
+    return this.#locationChangeIds.get(innerWindowID) ?? -1;
   }
 
-  set locationChangeId(locationChangeId) {
+  setLocationChangeId(innerWindowID, locationChangeId) {
     if (this.#locationChangeId === locationChangeId) {
       return;
     }
