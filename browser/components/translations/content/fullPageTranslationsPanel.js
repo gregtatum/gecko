@@ -1143,12 +1143,11 @@ var FullPageTranslationsPanel = new (class {
         ? button
         : this.elements.appMenuButton;
 
-    if (
-      !TranslationsParent.isActiveLocation(
-        event.view.browsingContext.currentWindowGlobal.innerWindowId,
-        locationChangeId
-      )
-    ) {
+    console.log(
+      `!!! panel openImpl event.view.browsingContext.id`,
+      event.view.browsingContext.id
+    );
+    if (!TranslationsParent.isActiveLocation(locationChangeId)) {
       this.console?.log(`A translation panel open request was stale.`, {
         locationChangeId,
         newlocationChangeId: TranslationsParent.getTranslationsActor(
