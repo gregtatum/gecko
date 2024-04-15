@@ -176,9 +176,9 @@ export class TranslationsParent extends JSWindowActorParent {
    * event is sent so that UI can react to it. The actor is inside of /toolkit and
    * needs a way of notifying /browser code (or other users) of when the state changes.
    *
-   * @type {WeakMap<ChromeWindow, TranslationsLanguageState>}
+   * @type {TranslationsLanguageState}
    */
-  languageState = new WeakMap();
+  languageState;
 
   /**
    * Allows the TranslationsEngineParent to resolve an engine once it is ready.
@@ -213,12 +213,7 @@ export class TranslationsParent extends JSWindowActorParent {
   static #previousDetectedLanguages = null;
 
   actorCreated() {
-    const { embedderElement } = this.browsingContext.top;
-    this.innerWindowId = embedderElement.innerWindowID;
-    const chromeWindow = embedderElement.ownerGlobal;
-    if (!chromeWindow.foobar) {
-      chromeWindow.foobar = Math.floor(Math.random() * 10000);
-    }
+    this.innerWindowId = this.browsingContext.top.embedderElement.innerWindowID;
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -2652,7 +2647,6 @@ class TranslationsLanguageState {
   constructor(actor, previousDetectedLanguages = null) {
     this.#actor = actor;
     this.#detectedLanguages = previousDetectedLanguages;
-    this.dispatch();
   }
 
   /**

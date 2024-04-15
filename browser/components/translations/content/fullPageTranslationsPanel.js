@@ -230,9 +230,9 @@ var FullPageTranslationsPanel = new (class {
   /**
    * Tracks if the popup is open, or scheduled to be open.
    *
-   * @type {new WeakMap<ChromeWindow, boolean>}
+   * @type {boolean}
    */
-  #isPopupOpen = new WeakMap();
+  #isPopupOpen = false;
 
   /**
    * Where the lazy elements are stored.
@@ -983,7 +983,7 @@ var FullPageTranslationsPanel = new (class {
     switch (event.target.id) {
       case panel.id: {
         TranslationsParent.telemetry().panel().onClose();
-        this.#isPopupOpen.delete(event.target.ownerGlobal);
+        this.#isPopupOpen = false;
         this.elements.error.hidden = true;
         break;
       }
@@ -1053,7 +1053,7 @@ var FullPageTranslationsPanel = new (class {
       isFirstUserInteraction,
     });
 
-    this.#isPopupOpen.set(event.target.ownerGlobal, true);
+    this.#isPopupOpen = true;
 
     PanelMultiView.openPopup(panel, target, {
       position: "bottomright topright",
@@ -1064,9 +1064,9 @@ var FullPageTranslationsPanel = new (class {
   /**
    * Keeps track of open requests to guard against race conditions.
    *
-   * @type {WeakMap<ChromeWindow, Promise<void>>}
+   * @type {Promise<void> | null}
    */
-  #openPromise = new WeakMap();
+  #openPromise = null;
 
   /**
    * Opens the FullPageTranslationsPanel.
@@ -1076,16 +1076,14 @@ var FullPageTranslationsPanel = new (class {
    *   True to report to telemetry that the panel was opened automatically, otherwise false.
    */
   async open(event, reportAsAutoShow = false) {
-    const chromeWindow = event.target.ownerGlobal;
-    if (this.#openPromise.get(chromeWindow)) {
+    if (this.#openPromise) {
       // There is already an open event happening, do not open.
       return;
     }
 
-    const openPromise = this.#openImpl(event, reportAsAutoShow);
-    this.#openPromise.set(chromeWindow, openPromise);
-    openPromise.finally(() => {
-      this.#openPromise.delete(chromeWindow);
+    this.#openPromise = this.#openImpl(event, reportAsAutoShow);
+    this.#openPromise.finally(() => {
+      this.#openPromise = null;
     });
   }
 
@@ -1112,7 +1110,7 @@ var FullPageTranslationsPanel = new (class {
 
     const { button } = this.buttonElements;
 
-    const { requestedTranslationPair, locationChangeId } =
+    const { requestedTranslationPair } =
       TranslationsParent.getTranslationsActor(
         gBrowser.selectedBrowser
       ).languageState;
@@ -1141,10 +1139,6 @@ var FullPageTranslationsPanel = new (class {
       event.type === "TranslationsParent:OfferTranslation"
         ? button
         : this.elements.appMenuButton;
-
-    if (!window.foobar) {
-      window.foobar = Math.floor(Math.random() * 10000);
-    }
 
     this.console?.log(`Showing a translation panel`, gBrowser.currentURI.spec);
 
@@ -1429,7 +1423,7 @@ var FullPageTranslationsPanel = new (class {
           FullPageTranslationsPanel.detectedLanguages = detectedLanguages;
         }
 
-        if (this.#isPopupOpen.get(event.target.ownerGlobal)) {
+        if (this.#isPopupOpen) {
           // Make sure to use the language state that is passed by the event.detail, and
           // don't read it from the actor here, as it's possible the actor isn't available
           // via the gBrowser.selectedBrowser.
@@ -1520,11 +1514,16 @@ var FullPageTranslationsPanel = new (class {
 
         switch (error) {
           case null:
+          case undefined:
             break;
           case "engine-load-failure":
-            this.#showEngineError(actor).catch(viewError =>
-              this.console.error(viewError)
-            );
+            this.#showEngineError(actor).catch(viewError => {
+              if (this.console) {
+                this.console?.error(viewError);
+              } else {
+                dump(`Engine error: ${viewError}\n`);
+              }
+            });
             break;
           default:
             console.error("Unknown translation error", error);
