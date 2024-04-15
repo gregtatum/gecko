@@ -230,9 +230,9 @@ var FullPageTranslationsPanel = new (class {
   /**
    * Tracks if the popup is open, or scheduled to be open.
    *
-   * @type {boolean}
+   * @type {new WeakMap<ChromeWindow, boolean>}
    */
-  #isPopupOpen = false;
+  #isPopupOpen = new WeakMap();
 
   /**
    * Where the lazy elements are stored.
@@ -983,7 +983,7 @@ var FullPageTranslationsPanel = new (class {
     switch (event.target.id) {
       case panel.id: {
         TranslationsParent.telemetry().panel().onClose();
-        this.#isPopupOpen = false;
+        this.#isPopupOpen.delete(event.target.ownerGlobal);
         this.elements.error.hidden = true;
         break;
       }
@@ -1053,7 +1053,7 @@ var FullPageTranslationsPanel = new (class {
       isFirstUserInteraction,
     });
 
-    this.#isPopupOpen = true;
+    this.#isPopupOpen.set(event.target.ownerGlobal, true);
 
     PanelMultiView.openPopup(panel, target, {
       position: "bottomright topright",
@@ -1064,9 +1064,9 @@ var FullPageTranslationsPanel = new (class {
   /**
    * Keeps track of open requests to guard against race conditions.
    *
-   * @type {Promise<void> | null}
+   * @type {WeakMap<ChromeWindow, Promise<void>>}
    */
-  #openPromise = null;
+  #openPromise = new WeakMap();
 
   /**
    * Opens the FullPageTranslationsPanel.
@@ -1076,16 +1076,16 @@ var FullPageTranslationsPanel = new (class {
    *   True to report to telemetry that the panel was opened automatically, otherwise false.
    */
   async open(event, reportAsAutoShow = false) {
-    console.log(`!!! FullPageTranslationsPanel open`);
-    if (this.#openPromise) {
-      console.log(`!!! FullPageTranslationsPanel open - already a promise`);
+    const chromeWindow = event.target.ownerGlobal;
+    if (this.#openPromise.get(chromeWindow)) {
       // There is already an open event happening, do not open.
       return;
     }
 
-    this.#openPromise = this.#openImpl(event, reportAsAutoShow);
-    this.#openPromise.finally(() => {
-      this.#openPromise = null;
+    const openPromise = this.#openImpl(event, reportAsAutoShow);
+    this.#openPromise.set(chromeWindow, openPromise);
+    openPromise.finally(() => {
+      this.#openPromise.delete(chromeWindow);
     });
   }
 
@@ -1143,19 +1143,8 @@ var FullPageTranslationsPanel = new (class {
         ? button
         : this.elements.appMenuButton;
 
-    console.log(
-      `!!! panel openImpl event.view.browsingContext.id`,
-      event.view.browsingContext.id
-    );
-    if (!TranslationsParent.isActiveLocation(locationChangeId)) {
-      this.console?.log(`A translation panel open request was stale.`, {
-        locationChangeId,
-        newlocationChangeId: TranslationsParent.getTranslationsActor(
-          gBrowser.selectedBrowser
-        ).languageState.locationChangeId,
-        currentURISpec: gBrowser.currentURI.spec,
-      });
-      return;
+    if (!window.foobar) {
+      window.foobar = Math.floor(Math.random() * 10000);
     }
 
     this.console?.log(`Showing a translation panel`, gBrowser.currentURI.spec);
@@ -1410,12 +1399,19 @@ var FullPageTranslationsPanel = new (class {
   handleEvent = event => {
     switch (event.type) {
       case "TranslationsParent:OfferTranslation": {
-        if (Services.wm.getMostRecentBrowserWindow()?.gBrowser === gBrowser) {
+        if (Services.wm.getMostRecentBrowserWindow() === window) {
+          // Only show the translation if the current browser window is the open one.
+          // For instance, if restarting a session two windows could be created
+          // simultaneously, and it would be annoying to offer twice in a row.
           this.open(event, /* reportAsAutoShow */ true);
         }
         break;
       }
       case "TranslationsParent:LanguageState": {
+        console.log(
+          `!!! TranslationsParent:LanguageState`,
+          event.target.ownerGlobal === window
+        );
         const { actor } = event.detail;
         const {
           detectedLanguages,
@@ -1438,7 +1434,7 @@ var FullPageTranslationsPanel = new (class {
           FullPageTranslationsPanel.detectedLanguages = detectedLanguages;
         }
 
-        if (this.#isPopupOpen) {
+        if (this.#isPopupOpen.get(event.target.ownerGlobal)) {
           // Make sure to use the language state that is passed by the event.detail, and
           // don't read it from the actor here, as it's possible the actor isn't available
           // via the gBrowser.selectedBrowser.

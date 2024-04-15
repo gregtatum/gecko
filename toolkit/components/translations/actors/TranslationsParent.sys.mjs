@@ -176,9 +176,9 @@ export class TranslationsParent extends JSWindowActorParent {
    * event is sent so that UI can react to it. The actor is inside of /toolkit and
    * needs a way of notifying /browser code (or other users) of when the state changes.
    *
-   * @type {Map<BrowsingContext, TranslationsLanguageState>}
+   * @type {WeakMap<ChromeWindow, TranslationsLanguageState>}
    */
-  languageState;
+  languageState = new WeakMap();
 
   /**
    * Allows the TranslationsEngineParent to resolve an engine once it is ready.
@@ -213,7 +213,13 @@ export class TranslationsParent extends JSWindowActorParent {
   static #previousDetectedLanguages = null;
 
   actorCreated() {
-    this.innerWindowId = this.browsingContext.top.embedderElement.innerWindowID;
+    const { embedderElement } = this.browsingContext.top;
+    this.innerWindowId = embedderElement.innerWindowID;
+    const chromeWindow = embedderElement.ownerGlobal;
+    if (!chromeWindow.foobar) {
+      chromeWindow.foobar = Math.floor(Math.random() * 10000);
+    }
+    console.log(`!!! chromeWindow.foobar`, chromeWindow.foobar);
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -461,6 +467,11 @@ export class TranslationsParent extends JSWindowActorParent {
         detectedLanguages
       );
 
+      const { embedderElement } = this.browsingContext.top;
+      console.log(
+        `!!! dispatch embedderElement.ownerGlobal.foobar`,
+        embedderElement.ownerGlobal.foobar
+      );
       browser.dispatchEvent(
         new CustomEvent("TranslationsParent:OfferTranslation", {
           bubbles: true,
@@ -2061,16 +2072,6 @@ export class TranslationsParent extends JSWindowActorParent {
     }
   }
 
-  /**
-   * Is this actor active for the current location change?
-   *
-   * @param {number} locationChangeId - The id sent by the "TranslationsParent:LanguageState" event.
-   * @returns {boolean}
-   */
-  static isActiveLocation(locationChangeId) {
-    return locationChangeId === TranslationsParent.#locationChangeId;
-  }
-
   async queryIdentifyLanguage() {
     if (
       TranslationsParent.isInAutomation() &&
@@ -2686,16 +2687,6 @@ class TranslationsLanguageState {
    * Dispatch anytime the language details change, so that any UI can react to it.
    */
   dispatch() {
-    console.log(
-      `!!! dispatch browser.browsingContext.id`,
-      browser.browsingContext.id
-    );
-
-    if (!TranslationsParent.isActiveLocation(this.#locationChangeId)) {
-      // Do not dispatch as this location is not active.
-      return;
-    }
-
     const browser = this.#actor.browsingContext.top.embedderElement;
     if (!browser) {
       return;
