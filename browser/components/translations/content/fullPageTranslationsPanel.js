@@ -1095,7 +1095,6 @@ var FullPageTranslationsPanel = new (class {
    * @param {Event} event
    */
   async #openImpl(event, reportAsAutoShow) {
-    console.log(`!!! FullPageTranslationsPanel openImpl`);
     event.stopPropagation();
     if (
       (event.type == "click" && event.button != 0) ||
@@ -1408,10 +1407,6 @@ var FullPageTranslationsPanel = new (class {
         break;
       }
       case "TranslationsParent:LanguageState": {
-        console.log(
-          `!!! TranslationsParent:LanguageState`,
-          event.target.ownerGlobal === window
-        );
         const { actor } = event.detail;
         const {
           detectedLanguages,

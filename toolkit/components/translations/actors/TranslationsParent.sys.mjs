@@ -219,7 +219,6 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!chromeWindow.foobar) {
       chromeWindow.foobar = Math.floor(Math.random() * 10000);
     }
-    console.log(`!!! chromeWindow.foobar`, chromeWindow.foobar);
     this.languageState = new TranslationsLanguageState(
       this,
       TranslationsParent.#previousDetectedLanguages
@@ -467,11 +466,6 @@ export class TranslationsParent extends JSWindowActorParent {
         detectedLanguages
       );
 
-      const { embedderElement } = this.browsingContext.top;
-      console.log(
-        `!!! dispatch embedderElement.ownerGlobal.foobar`,
-        embedderElement.ownerGlobal.foobar
-      );
       browser.dispatchEvent(
         new CustomEvent("TranslationsParent:OfferTranslation", {
           bubbles: true,
