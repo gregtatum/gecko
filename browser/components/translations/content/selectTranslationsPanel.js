@@ -82,6 +82,15 @@ var SelectTranslationsPanel = new (class {
   #longTextHeight = "16em";
 
   /**
+   * This value should be set to true if the panel popup was positioned
+   * using the vertical flip mode when it opened. If this is true we should
+   * disable resizing the text area within the panel.
+   *
+   * @see #determineIfPanelWasPositionedWithVerticalFlipMode
+   */
+  #panelWasOpenedWithVerticalFlipMode = false;
+
+  /**
    * Retrieves the read-only textarea height for longer text.
    *
    * @see #longTextHeight
@@ -478,7 +487,32 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Opens a the panel popup at a location on the screen.
+   * Determines if the panel was opened with the vertical flip mode based on the popuppositioned event.
+   *
+   * This situation occurs when the XUL popup manager determines that the original target location at which the panel
+   * was to be opened would render part of the panel off the bottom edge of the screen, in which case it vertically flips
+   * the location of the panel about the horizontal axis of the target before opening, ensuring that the whole of the panel
+   * will be visible.
+   *
+   * As an example, if the top-left corner of the panel were to be the anchor point at the target location, but opening the
+   * panel here would cause part of the panel UI to be rendered below the screen boundary, the new panel location will be
+   * vertically flipped about the horizontal axis such that the bottom-left corner of the panel is the anchor point at the
+   * target location instead.
+   *
+   * When this happens, it causes the text-area resizer extend the panel upward from the top instead of downward from
+   * the bottom, even though the user is dragging the resizer downward. For now, we should disable the resizer in this
+   * situation, as it only occurs when the panel was opened near to the bottom edge of the screen, and there is not much
+   * room to resize the panel in this scenario.
+   *
+   * @param {event} popupPositionedEvent - The popuppositioned event that fired when the panel opened.
+   */
+  #determineIfPanelWasPositionedWithVerticalFlipMode(popupPositionedEvent) {
+    const { vFlip } = popupPositionedEvent;
+    this.#panelWasOpenedWithVerticalFlipMode = vFlip;
+  }
+
+  /**
+   * Opens the panel popup at a location on the screen.
    *
    * @param {Event} event - The event that triggers the popup opening.
    * @param {number} screenX - The x-axis location of the screen at which to open the popup.
@@ -487,6 +521,14 @@ var SelectTranslationsPanel = new (class {
   #openPopup(event, screenX, screenY) {
     this.console?.log("Showing SelectTranslationsPanel");
     const { panel } = this.elements;
+    panel.addEventListener(
+      "popuppositioned",
+      popupPositionedEvent =>
+        this.#determineIfPanelWasPositionedWithVerticalFlipMode(
+          popupPositionedEvent
+        ),
+      { once: true }
+    );
     panel.openPopupAtScreen(screenX, screenY, /* isContextMenu */ false, event);
   }
 
@@ -520,6 +562,7 @@ var SelectTranslationsPanel = new (class {
       });
     }
 
+    textArea.style.resize = "none";
     if (sourceText.length < SelectTranslationsPanel.textLengthThreshold) {
       textArea.style.height = SelectTranslationsPanel.shortTextHeight;
     } else {
@@ -643,6 +686,19 @@ var SelectTranslationsPanel = new (class {
         break;
       }
     }
+  }
+
+  /**
+   * Conditionally enables the resizer component at the bottom corner of the text area.
+   */
+  #maybeEnableTextAreaResize() {
+    if (this.#panelWasOpenedWithVerticalFlipMode) {
+      // We never want to enable textarea resize if the panel was opened with vertical flip mode.
+      // See the documentation on this data member for more details.
+      return;
+    }
+
+    textArea.style.resize = "vertical";
   }
 
   /**
@@ -1298,6 +1354,7 @@ var SelectTranslationsPanel = new (class {
     this.#updateTextDirection(toLanguage);
     this.#updateConditionalUIEnabledState();
     this.#indicateTranslatedTextArea({ overflow: "auto" });
+    this.#maybeEnableTextAreaResize();
   }
 
   /**
