@@ -403,6 +403,12 @@ class nsMenuPopupFrame final : public nsBlockFrame {
   // Return the offset applied to the alignment of the popup
   nscoord GetAlignmentOffset() const { return mAlignmentOffset; }
 
+  // Return whether the horizontal flip mode was used during positioning.
+  bool GetHFlip() const;
+
+  // Return whether the vertical flip mode was used during positioning.
+  bool GetVFlip() const;
+
   // Clear the mPopupShownDispatcher, remove the listener and return true if
   // mPopupShownDispatcher was non-null.
   bool ClearPopupShownDispatcher() {

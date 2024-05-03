@@ -33,8 +33,8 @@
 </panel>
 
 <panel id="animatepanel" type="arrow"
-       onpopupshown="animatedPopupShown = true;"
-       onpopuphidden="animatedPopupHidden = true; runNextTest.next();">
+       onpopupshown="gAnimatedPopupShown = true;"
+       onpopuphidden="gAnimatedPopupHidden = true; runNextTest.next();">
   <label value="Animate Closed" style="height: 40px"/>
 </panel>
 
@@ -58,11 +58,13 @@
 
 SimpleTest.waitForExplicitFinish();
 
-var expectedAnchor = null;
-var expectedSide = "", expectedAnchorEdge = "";
-var zoomFactor = 1;
-var animatedPopupShown = false;
-var animatedPopupHidden = false;
+var gExpectedAnchor = null;
+var gExpectedSide = "", expectedAnchorEdge = "";
+var gZoomFactor = 1;
+var gAnimatedPopupShown = false;
+var gAnimatedPopupHidden = false;
+var gExpectedHFlip = false;
+var gExpectedVFlip = false;
 var runNextTest;
 
 function startTest()
@@ -75,87 +77,93 @@ function* nextTest()
 {
   var panel = $("panel");
 
-  function openPopup(position, anchor, expected, anchorEdge)
+  function openPopup(position, anchor, { expectSide, expectAnchorEdge, expectHFlip = false, expectVFlip = false })
   {
-    expectedAnchor = Node.isInstance(anchor) ? anchor : $(anchor);
-    expectedSide = expected;
-    expectedAnchorEdge = anchorEdge;
+    gExpectedAnchor = Node.isInstance(anchor) ? anchor : $(anchor);
+    gExpectedSide = expectSide;
+    expectedAnchorEdge = expectAnchorEdge;
+    gExpectedHFlip = expectHFlip;
+    gExpectedVFlip = expectVFlip;
 
     panel.removeAttribute("side");
-    panel.openPopup(expectedAnchor, position, 0, 0, false, false, null);
+    panel.addEventListener("popuppositioned", (event) => checkPanelFlipModes(event));
+    panel.openPopup(gExpectedAnchor, position, 0, 0, false, false, null);
   }
 
+  const expectVFlip = true;
+  const expectHFlip = true;
+
   for (var iter = 0; iter < 2; iter++) {
-    openPopup("after_start", "topleft", "top", "left");
+    openPopup("after_start", "topleft", { expectSide: "top", expectAnchorEdge: "left" });
     yield;
-    openPopup("after_start", "bottomleft", "bottom", "left");
+    openPopup("after_start", "bottomleft", { expectSide: "bottom", expectAnchorEdge: "left", expectVFlip });
     yield;
-    openPopup("before_start", "topleft", "top", "left");
+    openPopup("before_start", "topleft", { expectSide: "top", expectAnchorEdge: "left", expectVFlip });
     yield;
-    openPopup("before_start", "bottomleft", "bottom", "left");
+    openPopup("before_start", "bottomleft", { expectSide: "bottom", expectAnchorEdge: "left" });
     yield;
-    openPopup("after_start", "middle", "top", "left");
+    openPopup("after_start", "middle", { expectSide: "top", expectAnchorEdge: "left" });
     yield;
-    openPopup("before_start", "middle", "bottom", "left");
-    yield;
-
-    openPopup("after_start", "topright", "top", "right");
-    yield;
-    openPopup("after_start", "bottomright", "bottom", "right");
-    yield;
-    openPopup("before_start", "topright", "top", "right");
-    yield;
-    openPopup("before_start", "bottomright", "bottom", "right");
+    openPopup("before_start", "middle", { expectSide: "bottom", expectAnchorEdge: "left" });
     yield;
 
-    openPopup("after_end", "middle", "top", "right");
+    openPopup("after_start", "topright", { expectSide: "top", expectAnchorEdge: "right", expectHFlip });
     yield;
-    openPopup("before_end", "middle", "bottom", "right");
+    openPopup("after_start", "bottomright", { expectSide: "bottom", expectAnchorEdge: "right", expectHFlip, expectVFlip });
     yield;
-
-    openPopup("start_before", "topleft", "left", "top");
+    openPopup("before_start", "topright", { expectSide: "top", expectAnchorEdge: "right", expectHFlip, expectVFlip });
     yield;
-    openPopup("start_before", "topright", "right", "top");
-    yield;
-    openPopup("end_before", "topleft", "left", "top");
-    yield;
-    openPopup("end_before", "topright", "right", "top");
-    yield;
-    openPopup("start_before", "middle", "right", "top");
-    yield;
-    openPopup("end_before", "middle", "left", "top");
+    openPopup("before_start", "bottomright", { expectSide: "bottom", expectAnchorEdge: "right", expectHFlip });
     yield;
 
-    openPopup("start_before", "bottomleft", "left", "bottom");
+    openPopup("after_end", "middle", { expectSide: "top", expectAnchorEdge: "right" });
     yield;
-    openPopup("start_before", "bottomright", "right", "bottom");
-    yield;
-    openPopup("end_before", "bottomleft", "left", "bottom");
-    yield;
-    openPopup("end_before", "bottomright", "right", "bottom");
+    openPopup("before_end", "middle", { expectSide: "bottom", expectAnchorEdge: "right" });
     yield;
 
-    openPopup("start_after", "middle", "right", "bottom");
+    openPopup("start_before", "topleft", { expectSide: "left", expectAnchorEdge: "top", expectHFlip });
     yield;
-    openPopup("end_after", "middle", "left", "bottom");
+    openPopup("start_before", "topright", { expectSide: "right", expectAnchorEdge: "top" });
     yield;
-
-    openPopup("topcenter bottomleft", "bottomleft", "bottom", "center left");
+    openPopup("end_before", "topleft", { expectSide: "left", expectAnchorEdge: "top" });
     yield;
-    openPopup("bottomcenter topleft", "topleft", "top", "center left");
+    openPopup("end_before", "topright", { expectSide: "right", expectAnchorEdge: "top", expectHFlip });
     yield;
-    openPopup("topcenter bottomright", "bottomright", "bottom", "center right");
+    openPopup("start_before", "middle", { expectSide: "right", expectAnchorEdge: "top" });
     yield;
-    openPopup("bottomcenter topright", "topright", "top", "center right");
-    yield;
-    openPopup("topcenter bottomleft", "middle", "bottom", "center left");
-    yield;
-    openPopup("bottomcenter topleft", "middle", "top", "center left");
+    openPopup("end_before", "middle", { expectSide: "left", expectAnchorEdge: "top" });
     yield;
 
-    openPopup("leftcenter topright", "middle", "right", "center top");
+    openPopup("start_before", "bottomleft", { expectSide: "left", expectAnchorEdge: "bottom", expectHFlip, expectVFlip });
     yield;
-    openPopup("rightcenter bottomleft", "middle", "left", "center bottom");
+    openPopup("start_before", "bottomright", { expectSide: "right", expectAnchorEdge: "bottom", expectVFlip });
+    yield;
+    openPopup("end_before", "bottomleft", { expectSide: "left", expectAnchorEdge: "bottom", expectVFlip });
+    yield;
+    openPopup("end_before", "bottomright", { expectSide: "right", expectAnchorEdge: "bottom", expectHFlip, expectVFlip });
+    yield;
+
+    openPopup("start_after", "middle", { expectSide: "right", expectAnchorEdge: "bottom" });
+    yield;
+    openPopup("end_after", "middle", { expectSide: "left", expectAnchorEdge: "bottom" });
+    yield;
+
+    openPopup("topcenter bottomleft", "bottomleft", { expectSide: "bottom", expectAnchorEdge: "center left" });
+    yield;
+    openPopup("bottomcenter topleft", "topleft", { expectSide: "top", expectAnchorEdge: "center left" });
+    yield;
+    openPopup("topcenter bottomright", "bottomright", { expectSide: "bottom", expectAnchorEdge: "center right" });
+    yield;
+    openPopup("bottomcenter topright", "topright", { expectSide: "top", expectAnchorEdge: "center right" });
+    yield;
+    openPopup("topcenter bottomleft", "middle", { expectSide: "bottom", expectAnchorEdge: "center left" });
+    yield;
+    openPopup("bottomcenter topleft", "middle", { expectSide: "top", expectAnchorEdge: "center left" });
+    yield;
+
+    openPopup("leftcenter topright", "middle", { expectSide: "right", expectAnchorEdge: "center top" });
+    yield;
+    openPopup("rightcenter bottomleft", "middle", { expectSide: "left", expectAnchorEdge: "center bottom" });
     yield;
 
 /*
@@ -204,10 +212,10 @@ function* nextTest()
     function transitionEnded() {
       if ($("animatepanel").state != "open") {
         is($("animatepanel").state, "showing", "state is showing during transitionend");
-        ok(!animatedPopupShown, "popupshown not fired yet")
+        ok(!gAnimatedPopupShown, "popupshown not fired yet")
       } else {
         is($("animatepanel").state, "open", "state is open after transitionend");
-        ok(animatedPopupShown, "popupshown now fired")
+        ok(gAnimatedPopupShown, "popupshown now fired")
         SimpleTest.executeSoon(() => runNextTest.next());
       }
     }
@@ -220,7 +228,7 @@ function* nextTest()
     $("animatepanel").removeEventListener("transitionend", transitionEnded);
 
     synthesizeKey("KEY_Escape");
-    ok(!animatedPopupHidden, "animated popup not hidden yet");
+    ok(!gAnimatedPopupHidden, "animated popup not hidden yet");
     yield;
   }
 
@@ -230,7 +238,12 @@ function* nextTest()
 function setScale(win, scale)
 {
   SpecialPowers.setFullZoom(win, scale);
-  zoomFactor = scale;
+  gZoomFactor = scale;
+}
+
+function checkPanelFlipModes(event) {
+  is(event.hFlip, gExpectedHFlip, "popuppositioned: event.hFlip should match the expected value");
+  is(event.vFlip, gExpectedVFlip, "popuppositioned: event.vFlip should match the expected value");
 }
 
 function checkPanelPosition(panel)
@@ -249,24 +262,24 @@ function checkPanelPosition(panel)
   if (isRTL) {
     var flipLeftRight = val => val == "left" ? "right" : "left";
     expectedAnchorEdge = expectedAnchorEdge.replace(/(left|right)/, flipLeftRight);
-    expectedSide = expectedSide.replace(/(left|right)/, flipLeftRight);
+    gExpectedSide = gExpectedSide.replace(/(left|right)/, flipLeftRight);
   }
 
   var panelRect = panel.getBoundingClientRect();
   var anchorRect = anchor.getBoundingClientRect();
   var contentRect = panel.firstChild.getBoundingClientRect();
-  switch (expectedSide) {
+  switch (gExpectedSide) {
     case "top":
-      ok(contentRect.top > vwinpos + anchorRect.bottom * zoomFactor + 5, "panel content is below");
+      ok(contentRect.top > vwinpos + anchorRect.bottom * gZoomFactor + 5, "panel content is below");
       break;
     case "bottom":
-      ok(contentRect.bottom < vwinpos + anchorRect.top * zoomFactor - 5, "panel content is above");
+      ok(contentRect.bottom < vwinpos + anchorRect.top * gZoomFactor - 5, "panel content is above");
       break;
     case "left":
-      ok(contentRect.left > hwinpos + anchorRect.right * zoomFactor + 5, "panel content is right");
+      ok(contentRect.left > hwinpos + anchorRect.right * gZoomFactor + 5, "panel content is right");
       break;
     case "right":
-      ok(contentRect.right < hwinpos + anchorRect.left * zoomFactor - 5, "panel content is left");
+      ok(contentRect.right < hwinpos + anchorRect.left * gZoomFactor - 5, "panel content is left");
       break;
   }
 
@@ -282,31 +295,31 @@ function checkPanelPosition(panel)
       adj = vwinpos + parseInt(getComputedStyle(panel).marginTop);
       if (iscentered)
         adj += anchorRect.height / 2;
-      isWithinHalfPixel(panelRect.top, anchorRect.top * zoomFactor + adj, desc);
+      isWithinHalfPixel(panelRect.top, anchorRect.top * gZoomFactor + adj, desc);
       break;
     case "bottom":
       adj = vwinpos + parseInt(getComputedStyle(panel).marginBottom);
       if (iscentered)
         adj += anchorRect.height / 2;
-      isWithinHalfPixel(panelRect.bottom, anchorRect.bottom * zoomFactor - adj, desc);
+      isWithinHalfPixel(panelRect.bottom, anchorRect.bottom * gZoomFactor - adj, desc);
       break;
     case "left":
       adj = hwinpos + parseInt(getComputedStyle(panel).marginLeft);
       if (iscentered)
         adj += anchorRect.width / 2;
-      isWithinHalfPixel(panelRect.left, anchorRect.left * zoomFactor + adj, desc);
+      isWithinHalfPixel(panelRect.left, anchorRect.left * gZoomFactor + adj, desc);
       break;
     case "right":
       adj = hwinpos + parseInt(getComputedStyle(panel).marginRight);
       if (iscentered)
         adj += anchorRect.width / 2;
-      isWithinHalfPixel(panelRect.right, anchorRect.right * zoomFactor - adj, desc);
+      isWithinHalfPixel(panelRect.right, anchorRect.right * gZoomFactor - adj, desc);
       break;
   }
 
-  is(anchor, expectedAnchor, "anchor");
+  is(anchor, gExpectedAnchor, "anchor");
 
-  is(panel.getAttribute("side"), expectedSide, "panel arrow side");
+  is(panel.getAttribute("side"), gExpectedSide, "panel arrow side");
 
   panel.hidePopup();
 }

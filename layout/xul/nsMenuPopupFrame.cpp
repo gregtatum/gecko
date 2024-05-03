@@ -2258,6 +2258,10 @@ void nsMenuPopupFrame::MoveToAnchor(nsIContent* aAnchorContent,
   SetPopupPosition(false);
 }
 
+bool nsMenuPopupFrame::GetHFlip() const { return mHFlip; }
+
+bool nsMenuPopupFrame::GetVFlip() const { return mVFlip; }
+
 int8_t nsMenuPopupFrame::GetAlignmentPosition() const {
   // The code below handles most cases of alignment, anchor and position values.
   // Those that are not handled just return POPUPPOSITION_UNKNOWN.

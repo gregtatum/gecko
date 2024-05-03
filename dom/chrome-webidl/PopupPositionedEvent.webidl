@@ -17,6 +17,14 @@ dictionary PopupPositionedEventInit : EventInit {
    */
   DOMString popupAlignment = "";
   long alignmentOffset = 0;
+  /**
+   * Whether the horizontal flip mode was used when the popup was positioned.
+   */
+  boolean hFlip = false;
+  /**
+   * Whether the vertical flip mode was used when the popup was positioned.
+   */
+  boolean vFlip = false;
 };
 
 [ChromeOnly, Exposed=Window]
@@ -27,4 +35,6 @@ interface PopupPositionedEvent : Event {
   readonly attribute DOMString alignmentPosition;
   readonly attribute DOMString popupAlignment;
   readonly attribute long alignmentOffset;
+  readonly attribute boolean hFlip;
+  readonly attribute boolean vFlip;
 };
