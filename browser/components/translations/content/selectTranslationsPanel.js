@@ -563,6 +563,7 @@ var SelectTranslationsPanel = new (class {
     }
 
     textArea.style.resize = "none";
+    textArea.style.maxHeight = null;
     if (sourceText.length < SelectTranslationsPanel.textLengthThreshold) {
       textArea.style.height = SelectTranslationsPanel.shortTextHeight;
     } else {
@@ -689,7 +690,9 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Conditionally enables the resizer component at the bottom corner of the text area.
+   * Conditionally enables the resizer component at the bottom corner of the text area,
+   * and limits the maximum height that the textarea can be resized, above all ensuring
+   * that the panel will not be able to be resized off the bottom edge of the screen.
    */
   #maybeEnableTextAreaResize() {
     if (this.#panelWasOpenedWithVerticalFlipMode) {
@@ -698,7 +701,84 @@ var SelectTranslationsPanel = new (class {
       return;
     }
 
+    const { panel, textArea } = this.elements;
+
+    // The visible height of the text area on the screen.
+    const textAreaClientHeight = textArea.clientHeight;
+
+    // The height of the text in the text area, including text that has overflowed beyond the client height.
+    const textAreaScrollHeight = textArea.scrollHeight;
+
+    if (textAreaScrollHeight <= textAreaClientHeight) {
+      // The entirety of the text fits within the visible text area, so there is no need to resize the text area.
+      return;
+    }
+
+    if (textArea.style.maxHeight) {
+      // We have already done the work below and set the maximum height of the text area for the currently open panel.
+      return;
+    }
+
+    // TODO(Bug 1894952) Investigate issues with getOuterScreenRect returning the wrong information.
+    //
+    // Calling getBoundingClientRect() here without storing the value is intentional.
+    // I do not yet understand why, but for some reason, on Linux, calling only getOuterScreenRect()
+    // occasionally returns the size and location where the panel was previously opened rather than
+    // its current size and location.
+    //
+    // Calling getBoundingClientRect() appears to trigger whatever is necessary for getOuterScreenRect()
+    // to retrieve the most up-to-date location information.
+    panel.getBoundingClientRect();
+    const { bottom: panelBottom } = panel.getOuterScreenRect();
+
+    if (!panelBottom) {
+      // The location of the panel was unable to be retrieved by getOuterScreenRect() so we should not enable
+      // resizing the text area because we cannot accurately guard against the user resizing the panel off of
+      // the bottom edge of the screen. The worst case for the user here is that they have to utilize the scroll
+      // bar instead of resizing. This happens intermittently, but infrequently.
+      return;
+    }
+
+    // The total height that we have available to utilize on the screen.
+    // This value is less than or equal to the screen's actual resolution.
+    const availableScreenHeight = screen.availHeight;
+
+    // The distance between the bottom edge of the panel to the bottom of the available screen area.
+    const panelBottomToScreenBottom = availableScreenHeight - panelBottom;
+
+    // This is an arbitrary pixel number, but we want to set some limit for how close the bottom
+    // of the panel can get to the bottom of the screen during resize, because if they touch then
+    // visual glitching may occur, and the panel may continue expanding from the top even though
+    // the user is dragging the text-area resizer downward.
+    const SCREEN_BOTTOM_PIXEL_BUFFER = 20;
+
+    if (panelBottomToScreenBottom < SCREEN_BOTTOM_PIXEL_BUFFER) {
+      // If the panel was opened such that the location of the panel's bottom edge is already within
+      // the boundary of the buffer that prevents it from being resized fully to the bottom edge of
+      // the screen, then do not allow it to be resized at all.
+      return;
+    }
+
+    // The height that the textarea could grow to before hitting the threshold of the buffer that we
+    // intend to keep between the bottom edge of the panel and the bottom edge of available screen space.
+    const textAreaHeightLimitForScreen =
+      textAreaClientHeight +
+      panelBottomToScreenBottom -
+      SCREEN_BOTTOM_PIXEL_BUFFER;
+
+    // This is an arbitrary ratio, but allowing the panel's text area to span 1/2 of the available
+    // vertical screen real estate, even if it could expand farther, seems like a reasonable constraint.
+    const textAreaHeightLimitUpperBound = Math.trunc(availableScreenHeight / 2);
+
+    // The final maximum height that the text area will be allowed to resize to at its current location.
+    const textAreaMaxHeight = Math.min(
+      textAreaScrollHeight,
+      textAreaHeightLimitForScreen,
+      textAreaHeightLimitUpperBound
+    );
+
     textArea.style.resize = "vertical";
+    textArea.style.maxHeight = `${textAreaMaxHeight}px`;
   }
 
   /**
