@@ -82,6 +82,18 @@ var SelectTranslationsPanel = new (class {
   #longTextHeight = "16em";
 
   /**
+   * The alignment position value of the panel when it opened.
+   *
+   * We want to cache this value because some alignments, such as "before_start"
+   * and "before_end" will cause the panel to expand upward from the top edge
+   * when the user is trying to resize the text-area by dragging the resizer downward.
+   *
+   * Knowing this value helps us determine if we should disable the textarea resizer
+   * based on how and where the panel was opened.
+   */
+  #alignmentPosition = "";
+
+  /**
    * Retrieves the read-only textarea height for longer text.
    *
    * @see #longTextHeight
@@ -479,7 +491,7 @@ var SelectTranslationsPanel = new (class {
   }
 
   /**
-   * Opens a the panel popup at a location on the screen.
+   * Opens the panel popup at a location on the screen.
    *
    * @param {Event} event - The event that triggers the popup opening.
    * @param {number} screenX - The x-axis location of the screen at which to open the popup.
@@ -488,7 +500,37 @@ var SelectTranslationsPanel = new (class {
   #openPopup(event, screenX, screenY) {
     this.console?.log("Showing SelectTranslationsPanel");
     const { panel } = this.elements;
-    panel.openPopupAtScreen(screenX, screenY, /* isContextMenu */ false, event);
+    this.#cacheAlignmentPositionOnOpen();
+    panel.openPopupAtScreenRect(
+      "after_start",
+      screenX,
+      screenY,
+      /* width */ 0,
+      /* height */ 0,
+      /* isContextMenu */ false,
+      /* attributesOverride */ false,
+      event
+    );
+  }
+
+  /**
+   * Resets the cached alignment-position value and adds an event listener
+   * to set the value again when the panel is positioned before opening.
+   * See the comment on the data member for more details.
+   *
+   * @see #alignmentPosition
+   */
+  #cacheAlignmentPositionOnOpen() {
+    const { panel } = this.elements;
+    this.#alignmentPosition = "";
+    panel.addEventListener(
+      "popuppositioned",
+      popupPositionedEvent => {
+        // Cache the alignment position when the popup is opened.
+        this.#alignmentPosition = popupPositionedEvent.alignmentPosition;
+      },
+      { once: true }
+    );
   }
 
   /**
@@ -521,6 +563,7 @@ var SelectTranslationsPanel = new (class {
       });
     }
 
+    textArea.style.resize = "none";
     if (sourceText.length < SelectTranslationsPanel.textLengthThreshold) {
       textArea.style.height = SelectTranslationsPanel.shortTextHeight;
     } else {
@@ -646,6 +689,41 @@ var SelectTranslationsPanel = new (class {
         break;
       }
     }
+  }
+
+  /**
+   * Conditionally enables the resizer component at the bottom corner of the text area.
+   */
+  #maybeEnableTextAreaResizer() {
+    switch (this.#alignmentPosition) {
+      case "after_start":
+      case "after_end": {
+        // The text-area resizer will act normally.
+        break;
+      }
+      case "before_start":
+      case "before_end": {
+        // The text-area resizer increase the size of the panel from the top edge even
+        // though the user is dragging the resizer downward with the mouse.
+        this.console?.debug(
+          `Disabling text-area resizer due to panel alignment position: "${
+            this.#alignmentPosition
+          }"`
+        );
+        return;
+      }
+      default: {
+        this.console?.debug(
+          `Disabling text-area resizer due to unexpected panel alignment position: "${
+            this.#alignmentPosition
+          }"`
+        );
+        return;
+      }
+    }
+
+    const { textArea } = this.elements;
+    textArea.style.resize = "vertical";
   }
 
   /**
@@ -1301,6 +1379,7 @@ var SelectTranslationsPanel = new (class {
     this.#updateTextDirection(toLanguage);
     this.#updateConditionalUIEnabledState();
     this.#indicateTranslatedTextArea({ overflow: "auto" });
+    this.#maybeEnableTextAreaResizer();
   }
 
   /**
