@@ -187,6 +187,7 @@ add_task(
     );
 
     await FullPageTranslationsTestUtils.openPanel({
+      expectedToLanguage: "en",
       onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewRevisit,
     });
     await TestTranslationsTelemetry.assertEvent(Glean.translationsPanel.open, {

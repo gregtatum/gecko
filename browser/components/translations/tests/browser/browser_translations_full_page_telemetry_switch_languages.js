@@ -20,10 +20,11 @@ add_task(async function test_translations_telemetry_switch_from_language() {
   await FullPageTranslationsTestUtils.assertPageIsUntranslated(runInPage);
 
   await FullPageTranslationsTestUtils.openPanel({
+    expectedFromLanguage: "es",
+    expectedToLanguage: "en",
     onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewDefault,
   });
 
-  FullPageTranslationsTestUtils.assertSelectedFromLanguage({ langTag: "es" });
   FullPageTranslationsTestUtils.changeSelectedFromLanguage({ langTag: "en" });
 
   await TestTranslationsTelemetry.assertEvent(Glean.translationsPanel.open, {
@@ -102,10 +103,11 @@ add_task(async function test_translations_telemetry_switch_to_language() {
   await FullPageTranslationsTestUtils.assertPageIsUntranslated(runInPage);
 
   await FullPageTranslationsTestUtils.openPanel({
+    expectedFromLanguage: "es",
+    expectedToLanguage: "en",
     onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewDefault,
   });
 
-  FullPageTranslationsTestUtils.assertSelectedToLanguage({ langTag: "en" });
   FullPageTranslationsTestUtils.changeSelectedToLanguage({ langTag: "fr" });
 
   await TestTranslationsTelemetry.assertEvent(Glean.translationsPanel.open, {

@@ -42,6 +42,8 @@ add_task(async function test_button_does_not_update_when_button_is_not_shown() {
   );
 
   await FullPageTranslationsTestUtils.openPanel({
+    expectedFromLanguage: "es",
+    expectedToLanguage: "en",
     onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewDefault,
   });
 
@@ -128,6 +130,8 @@ add_task(
     );
 
     await FullPageTranslationsTestUtils.openPanel({
+      expectedFromLanguage: "es",
+      expectedToLanguage: "en",
       onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewDefault,
     });
 
@@ -196,6 +200,8 @@ add_task(
     );
 
     await FullPageTranslationsTestUtils.openPanel({
+      expectedFromLanguage: "es",
+      expectedToLanguage: "en",
       onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewDefault,
     });
 
@@ -230,6 +236,8 @@ add_task(
     );
 
     await FullPageTranslationsTestUtils.openPanel({
+      expectedFromLanguage: "es",
+      expectedToLanguage: "en",
       onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewDefault,
     });
 

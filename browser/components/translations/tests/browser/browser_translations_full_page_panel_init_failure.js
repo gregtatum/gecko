@@ -16,6 +16,8 @@ add_task(async function test_full_page_translations_panel_init_failure() {
 
   TranslationsPanelShared.simulateLangListError();
   await FullPageTranslationsTestUtils.openPanel({
+    expectedFromLanguage: "es",
+    expectedToLanguage: "en",
     onOpenPanel: FullPageTranslationsTestUtils.assertPanelViewInitFailure,
   });
 
