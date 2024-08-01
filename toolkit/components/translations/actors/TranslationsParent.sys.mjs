@@ -3007,7 +3007,7 @@ class TranslationsLanguageState {
   /**
    * Dispatch anytime the language details change, so that any UI can react to it.
    */
-  dispatch() {
+  dispatch({ reason } = {}) {
     const browser = this.#actor.browsingContext.top.embedderElement;
     if (!browser) {
       return;
@@ -3018,6 +3018,7 @@ class TranslationsLanguageState {
         bubbles: true,
         detail: {
           actor: this.#actor,
+          reason,
         },
       })
     );
@@ -3042,7 +3043,7 @@ class TranslationsLanguageState {
     this.#error = null;
     this.#isEngineReady = false;
     this.#requestedTranslationPair = requestedTranslationPair;
-    this.dispatch();
+    this.dispatch({ reason: "requestedTranslationPair" });
   }
 
   /**
@@ -3060,7 +3061,7 @@ class TranslationsLanguageState {
     }
 
     this.#detectedLanguages = detectedLanguages;
-    this.dispatch();
+    this.dispatch({ reason: "detectedLanguages" });
   }
 
   /**
@@ -3078,7 +3079,7 @@ class TranslationsLanguageState {
     }
 
     this.#hasVisibleChange = hasVisibleChange;
-    this.dispatch();
+    this.dispatch({ reason: "hasVisibleChange" });
   }
 
   /**
@@ -3087,7 +3088,7 @@ class TranslationsLanguageState {
    */
   locationChanged() {
     this.#error = null;
-    this.dispatch();
+    this.dispatch({ reason: "locationChanged" });
   }
 
   /**
@@ -3105,7 +3106,7 @@ class TranslationsLanguageState {
     // Setting an error invalidates the requested translation pair.
     this.#requestedTranslationPair = null;
     this.#isEngineReady = false;
-    this.dispatch();
+    this.dispatch({ reason: "error" });
   }
 
   /**
@@ -3121,7 +3122,7 @@ class TranslationsLanguageState {
       return;
     }
     this.#isEngineReady = isEngineReady;
-    this.dispatch();
+    this.dispatch({ reason: "isEngineReady" });
   }
 }
 
