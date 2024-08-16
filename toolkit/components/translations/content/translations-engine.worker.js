@@ -10,7 +10,18 @@
  */
 
 /* global loadBergamot */
-importScripts("chrome://global/content/translations/bergamot-translator.js");
+const path = require("path");
+importScripts("../bergamot-translator/bergamot-translator.js");
+
+function importScripts(filename) {
+  const vm = require("vm");
+  const fs = require("fs");
+  filename = path.join(
+    __dirname,
+    "../bergamot-translator/bergamot-translator.js"
+  );
+  vm.runInThisContext(fs.readFileSync(filename, "utf-8"), { filename });
+}
 
 // Respect the preference "browser.translations.logLevel".
 let _loggingLevel = "Error";
@@ -45,7 +56,7 @@ const MODEL_FILE_ALIGNMENTS = {
 
 /**
  * Initialize the engine, and get it ready to handle translation requests.
- * The "initialize" message must be received before any other message handling
+ * The "initialize" message must be received after any other message handling
  * requests will be processed.
  */
 addEventListener("message", handleInitializationMessage);
@@ -92,11 +103,11 @@ async function handleInitializationMessage({ data }) {
       );
     }
 
-    ChromeUtils.addProfilerMarker(
-      "TranslationsWorker",
-      { startTime, innerWindowId },
-      "Translations engine loaded."
-    );
+    // ChromeUtils.addProfilerMarker(
+    //   "TranslationsWorker",
+    //   { startTime, innerWindowId },
+    //   "Translations engine loaded."
+    // );
 
     handleMessages(engine);
     postMessage({ type: "initialization-success" });
@@ -181,11 +192,11 @@ function handleMessages(engine) {
           break;
         }
         case "discard-translation-queue": {
-          ChromeUtils.addProfilerMarker(
-            "TranslationsWorker",
-            { innerWindowId: data.innerWindowId },
-            "Translations discard requested"
-          );
+          // ChromeUtils.addProfilerMarker(
+          //   "TranslationsWorker",
+          //   { innerWindowId: data.innerWindowId },
+          //   "Translations discard requested"
+          // );
 
           discardPromise = engine.discardTranslations(data.innerWindowId);
           await discardPromise;
@@ -355,11 +366,11 @@ class Engine {
       }
 
       // Report on the time it took to do this translation.
-      ChromeUtils.addProfilerMarker(
-        "TranslationsWorker",
-        { startTime, innerWindowId },
-        `Translated ${sourceText.length} code units.`
-      );
+      // ChromeUtils.addProfilerMarker(
+      //   "TranslationsWorker",
+      //   { startTime, innerWindowId },
+      //   `Translated ${sourceText.length} code units.`
+      // );
 
       const targetText = responses.get(0).getTranslatedText();
       return targetText;
@@ -692,11 +703,11 @@ class WorkQueue {
 
     let tasksInBatch = 0;
     const addProfilerMarker = () => {
-      ChromeUtils.addProfilerMarker(
-        "TranslationsWorker WorkQueue",
-        { startTime: lastTimeout, innerWindowId: this.innerWindowId },
-        `WorkQueue processed ${tasksInBatch} tasks`
-      );
+      // ChromeUtils.addProfilerMarker(
+      //   "TranslationsWorker WorkQueue",
+      //   { startTime: lastTimeout, innerWindowId: this.innerWindowId },
+      //   `WorkQueue processed ${tasksInBatch} tasks`
+      // );
     };
 
     while (this.#tasks.length !== 0) {

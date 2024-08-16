@@ -1,0 +1,26 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "lib": ["es2023"],
+    "module": "node16",
+    "target": "es2022",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node16"
+  },
+  // Add a @ts-check comment to a JS file to start type checking it.
+  "include": [
+    "./**/*.mjs",
+    "./**/*.js"
+  ],
+  "types": ["node"],
+  "files": [
+    "./@types/globals.d.ts",
+    "../../translations.d.ts"
+  ],
+  "exclude": []
+}
