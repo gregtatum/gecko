@@ -101,8 +101,12 @@ function verifyModelFiles(modelFilesUnchecked) {
 /**
  * @param {string} fromLang
  * @param {string} toLang
+ * @returns {boolean}
  */
-function doesModelExist(fromLang, toLang) {
+function isModelCached(fromLang, toLang) {
+  if (fromLang !== "en" && toLang !== "en") {
+    return isModelCached(fromLang, "en") && isModelCached("en", toLang);
+  }
   const { recordsPath } = getModelPaths(fromLang, toLang);
   return fs.existsSync(recordsPath);
 }
@@ -142,7 +146,7 @@ async function getModelFiles(fromLang, toLang) {
         buffer: fs.readFileSync(path.join(modelFolder, filename)).buffer,
       };
     }
-    verifyModelFiles(modelFiles);
+    return verifyModelFiles(modelFiles);
   }
 
   // Look up the models and download the attachments.
@@ -289,7 +293,9 @@ function getTranslationsWorker(fromLanguage, toLanguage, enginePayload) {
     "../../content/translations-engine.worker.js",
     /** @type {any} */ (import.meta).url
   );
-  const worker = new Worker(url);
+
+  /** @type {Worker} */
+  const worker = new /** @type {any} */ (Worker)(url);
 
   /** @type {Promise<void>} */
   let isReady = new Promise((resolve, reject) => {
@@ -300,7 +306,6 @@ function getTranslationsWorker(fromLanguage, toLanguage, enginePayload) {
      * @param {string} [message.data.error]
      */
     function onMessage({ data }) {
-      console.log("Received initialization message", data);
       if (data.type === "initialization-success") {
         resolve();
       } else if (data.type === "initialization-error") {
@@ -319,7 +324,7 @@ function getTranslationsWorker(fromLanguage, toLanguage, enginePayload) {
     toLanguage,
     enginePayload,
     messageId: messageId++,
-    logLevel: "debug",
+    logLevel: "Error",
   });
 
   const innerWindowId = 0;
@@ -410,7 +415,7 @@ async function promptLanguages() {
   });
 
   for (const record of records) {
-    if (record.fromLang === fromLang) {
+    if (record.fromLang === fromLang || record.fromLang === "en") {
       toLangs.add(record.toLang);
     }
   }
@@ -545,7 +550,7 @@ async function main() {
 
   let fromLang = args.from;
   let toLang = args.to;
-  if (!doesModelExist(fromLang, toLang)) {
+  if (!fromLang || !toLang) {
     const langs = await promptLanguages();
     fromLang = langs.fromLang;
     toLang = langs.toLang;
@@ -553,7 +558,15 @@ async function main() {
 
   const enginePayload = {
     bergamotWasmArrayBuffer: await getEngineWasm(),
-    languageModelFiles: [await getModelFiles(fromLang, toLang)],
+    languageModelFiles:
+      fromLang !== "en" && toLang !== "en"
+        ? // Pivot language:
+          [
+            await getModelFiles(fromLang, "en"),
+            await getModelFiles("en", toLang),
+          ]
+        : // Direct translation
+          [await getModelFiles(fromLang, toLang)],
     isMocked: false,
   };
   const translate = await getTranslationsWorker(
@@ -564,7 +577,7 @@ async function main() {
 
   // eslint-disable-next-line no-constant-condition
   let sourceText;
-  while ((sourceText = await input({ message: "Enter text to translate" }))) {
+  while ((sourceText = await input({ message: `[${fromLang}-${toLang}]` }))) {
     console.log(await translate(sourceText));
   }
 }

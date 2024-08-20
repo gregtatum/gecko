@@ -398,8 +398,6 @@ class BergamotUtils {
     bergamot,
     languageTranslationModelFiles
   ) {
-    log(`Constructing translation model.`);
-
     const { model, lex, vocab, qualityModel, srcvocab, trgvocab } =
       BergamotUtils.allocateModelMemory(
         bergamot,
@@ -451,9 +449,6 @@ class BergamotUtils {
           : "int8shiftAlphaAll",
       alignment: "soft",
     });
-
-    log(`Bergamot translation model config: ${config}`);
-    log(memoryLog);
 
     return new bergamot.TranslationModel(
       config,
