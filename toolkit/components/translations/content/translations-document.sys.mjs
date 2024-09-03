@@ -364,9 +364,12 @@ export class TranslationsDocument {
 
   /**
    * The list of nodes that need updating with the translated HTML. These are batched
-   * into an update.
+   * into an update. The id is a monotonically increasing number that represents
+   * a unique id for a translation. It guards against races where a node is mutated
+   * before the translation is returned. The translation is asynchronously canceled
+   * during a mutation, but it can still return a translation before it is canceled.
    *
-   * @type {Set<{ node: Node, translatedHTML: string }>}
+   * @type {Set<{ node: Node, translatedHTML: string, id: number }>}
    */
   #nodesWithTranslatedHTML = new Set();
 
@@ -508,6 +511,14 @@ export class TranslationsDocument {
 
     this.observer = new document.ownerGlobal.MutationObserver(mutationsList => {
       for (const mutation of mutationsList) {
+        const pendingNode = this.getPendingNodeFromTarget(mutation.target);
+        if (pendingNode) {
+          // The node was still pending to be translated, cancel it and re-submit.
+          this.cancelTranslation(pendingNode);
+          this.subdivideNodeForTranslations(pendingNode);
+          continue;
+        }
+
         switch (mutation.type) {
           case "childList":
             for (const node of mutation.addedNodes) {
@@ -576,6 +587,30 @@ export class TranslationsDocument {
       // The defaultView may not be there on tests.
       document.defaultView?.location.href
     );
+  }
+
+  /**
+   * If a pending node contains or is the target node, return that pending node.
+   *
+   * @param {Node} target
+   * @returns {Node | null}
+   */
+  getPendingNodeFromTarget(target) {
+    for (const pendingNode of this.#pendingTranslations.keys()) {
+      if (pendingNode.contains(target)) {
+        return pendingNode;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {Node} node
+   */
+  cancelTranslation(node) {
+    this.translator.cancelTranslation(this.#pendingTranslations.get(node));
+    this.#pendingTranslations.delete(node);
+    this.#processedNodes.delete(node);
   }
 
   /**
@@ -1250,6 +1285,14 @@ export class TranslationsDocument {
   }
 
   /**
+   * A unique ID that guards against races between translations and mutations.
+   *
+   * @type {Map<Node, number>}
+   */
+  #pendingTranslations = new Map();
+  #lastTranslationId = 0;
+
+  /**
    * Submit a node for translation to the translations engine.
    *
    * @param {Node} node
@@ -1281,13 +1324,24 @@ export class TranslationsDocument {
       return;
     }
 
+    const id = this.#lastTranslationId++;
+    this.#pendingTranslations.set(node, id);
+
     // Mark this node as not to be translated again unless the contents are changed
     // (which the observer will pick up on)
     this.#processedNodes.add(node);
     const translatedHTML = await this.maybeTranslate(node, text, isHTML);
-    if (translatedHTML != null) {
-      this.scheduleNodeUpdateWithTranslation(node, translatedHTML);
+
+    if (this.#pendingTranslations.get(node) !== id) {
+      // This translation lost a race, and was re-submitted under a different ID.
+      return;
     }
+    if (translatedHTML == null) {
+      this.#pendingTranslations.delete(node);
+      return;
+    }
+
+    this.scheduleNodeUpdateWithTranslation(node, translatedHTML, id);
   }
 
   /**
@@ -1296,7 +1350,7 @@ export class TranslationsDocument {
    *
    * @param {Node} node
    * @param {string} text
-   * @property {boolean} isHTML
+   * @param {boolean} isHTML
    * @returns {Promise<string | null>}
    */
   async maybeTranslate(node, text, isHTML) {
@@ -1355,7 +1409,8 @@ export class TranslationsDocument {
   updateNodesWithTranslations() {
     // Stop the mutations so that the updates won't trigger observations.
     this.pauseMutationObserverAndRun(() => {
-      for (const { node, translatedHTML } of this.#nodesWithTranslatedHTML) {
+      for (const { node, translatedHTML, id } of this
+        .#nodesWithTranslatedHTML) {
         if (Cu.isDeadWrapper(node)) {
           // The node is no longer alive.
           ChromeUtils.addProfilerMarker(
@@ -1363,6 +1418,11 @@ export class TranslationsDocument {
             { innerWindowId: this.innerWindowId },
             "Node is no long alive."
           );
+          continue;
+        }
+        if (this.#pendingTranslations.get(node) !== id) {
+          // A mutation has submitted another translation for this node. Use the newer
+          // one.
           continue;
         }
         switch (node.nodeType) {
@@ -1385,6 +1445,7 @@ export class TranslationsDocument {
             break;
           }
         }
+        this.#pendingTranslations.delete(node);
       }
 
       this.#nodesWithTranslatedHTML.clear();
@@ -1409,10 +1470,11 @@ export class TranslationsDocument {
    *
    * @param {Node} node
    * @param {string} translatedHTML
+   * @param {number} id - A unique id that guards against races
    */
-  scheduleNodeUpdateWithTranslation(node, translatedHTML) {
+  scheduleNodeUpdateWithTranslation(node, translatedHTML, id) {
     // Add the nodes to be populated with the next translation update.
-    this.#nodesWithTranslatedHTML.add({ node, translatedHTML });
+    this.#nodesWithTranslatedHTML.add({ node, translatedHTML, id });
 
     if (this.#pendingTranslationsCount === 0) {
       // No translations are pending, update the node.
