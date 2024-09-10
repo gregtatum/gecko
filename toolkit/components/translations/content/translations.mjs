@@ -168,7 +168,12 @@ class TranslationsState {
       ) {
         return;
       }
-
+      // Arbitrary text length limit to prevent url from becoming too long
+      let urlTextParam = this.messageToTranslate;
+      if (urlTextParam.length > 1000) {
+        urlTextParam = urlTextParam.substring(0, 999);
+      }
+      window.location.hash = `?src=${this.fromLanguage}&trg=${this.toLanguage}&text=${urlTextParam}`;
       const start = performance.now();
       this.translationRequest = this.translator.translate(
         messageToTranslate,
