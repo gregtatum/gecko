@@ -26,14 +26,6 @@ ChromeUtils.defineLazyGetter(lazy, "console", () => {
   });
 });
 
-ChromeUtils.defineESModuleGetters(
-  lazy,
-  {
-    arrayBufferToBlobURL: "chrome://global/content/ml/Utils.sys.mjs",
-  },
-  { global: "current" }
-);
-
 /**
  * Conditional import for Transformer.js
  *
@@ -128,7 +120,7 @@ async function imageToText(request, model, tokenizer, processor, _config) {
   for (const batch of pixel_values) {
     batch.dims = [1, ...batch.dims];
     start = Date.now();
-    const output = await model.generate(batch);
+    const output = await model.generate({ inputs: batch });
     result.metrics.inferenceTime += Date.now() - start;
     start = Date.now();
     const decoded = tokenizer
@@ -224,14 +216,17 @@ export class Pipeline {
     transformers.env.backends.onnx.wasm.numThreads = config.numThreads || 1;
 
     // ONNX runtime - we set up the wasm runtime we got from RS for the ONNX backend to pick
-    lazy.console.debug(
-      "Setting up ONNX backend for runtime",
-      config.runtimeFilename
-    );
     transformers.env.backends.onnx.wasm.wasmPaths = {};
-    transformers.env.backends.onnx.wasm.wasmPaths[config.runtimeFilename] =
-      lazy.arrayBufferToBlobURL(config.runtime);
+    transformers.env.backends.onnx.wasm.wasmBinary = config.runtime;
+
     lazy.console.debug("Transformers.js env", transformers.env);
+
+    const device = config.device || "wasm";
+    const dtype = config.dtype || "fp32";
+
+    lazy.console.debug(
+      `Setting up pipeline for ${device} using ${dtype} quantization.`
+    );
 
     if (config.pipelineFunction && config.taskName != "test-echo") {
       lazy.console.debug("Using internal inference function");
@@ -254,6 +249,8 @@ export class Pipeline {
           config.modelId,
           {
             revision: config.modelRevision,
+            device,
+            dtype,
           }
         );
       }
@@ -263,7 +260,7 @@ export class Pipeline {
         );
         this.#tokenizer = transformers[config.tokenizerClass].from_pretrained(
           config.tokenizerId,
-          { revision: config.tokenizerRevision }
+          { revision: config.tokenizerRevision, device, dtype }
         );
       }
       if (config.processorClass && config.processorId) {
@@ -272,7 +269,7 @@ export class Pipeline {
         );
         this.#processor = transformers[config.processorClass].from_pretrained(
           config.processorId,
-          { revision: config.processorRevision }
+          { revision: config.processorRevision, device, dtype }
         );
       }
     } else {
@@ -280,7 +277,7 @@ export class Pipeline {
       this.#genericPipelineFunction = transformers.pipeline(
         config.taskName,
         config.modelId,
-        { revision: config.modelRevision }
+        { revision: config.modelRevision, device, dtype }
       );
     }
     this.#initTime = Date.now() - start;
@@ -314,6 +311,8 @@ export class Pipeline {
         taskName,
         modelId: options.modelId,
         modelRevision: options.modelRevision || "default",
+        dtype: options.dtype || "fp16",
+        device: options.device || "wasm",
       };
     } else {
       // Loading the config defaults for the task
@@ -334,6 +333,10 @@ export class Pipeline {
       transformers = await transformersPromise;
     }
 
+    // reapply logLevel if it has changed.
+    if (lazy.console.logLevel != config.logLevel) {
+      lazy.console.logLevel = config.logLevel;
+    }
     const pipeline = new Pipeline(modelCache, config);
     await pipeline.ensurePipelineIsReady();
     return pipeline;
@@ -404,14 +407,17 @@ export class Pipeline {
           multiThreadSupported: typeof SharedArrayBuffer !== "undefined",
         };
       } else {
+        let start = Date.now();
         result = await this.#genericPipelineFunction(
           ...request.args,
           request.options || {}
         );
-
         // When the pipeline returns Tensors they are Proxy objects that cannot be cloned.
         // Workaround: convert to JSON and back to JS objects.
         result = JSON.parse(JSON.stringify(result));
+        result.metrics = {
+          inferenceTime: Date.now() - start,
+        };
       }
     } else {
       result = await this.#pipelineFunction(
@@ -421,8 +427,9 @@ export class Pipeline {
         this.#processor,
         this.#config
       );
-      result.metrics.initTime = this.#initTime;
     }
+
+    result.metrics.initTime = this.#initTime;
     return result;
   }
 }
