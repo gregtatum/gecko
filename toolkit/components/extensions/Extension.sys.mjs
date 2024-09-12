@@ -222,6 +222,7 @@ const PRIVILEGED_PERMS = new Set([
   "networkStatus",
   "normandyAddonStudy",
   "telemetry",
+  "experimentalML",
 ]);
 
 const PRIVILEGED_PERMS_ANDROID_ONLY = new Set([

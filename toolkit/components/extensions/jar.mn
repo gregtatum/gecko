@@ -23,6 +23,7 @@ toolkit.jar:
     content/extensions/parent/ext-dns.js (parent/ext-dns.js)
     content/extensions/parent/ext-downloads.js (parent/ext-downloads.js)
     content/extensions/parent/ext-extension.js (parent/ext-extension.js)
+    content/extensions/parent/ext-experimental-ml.js (parent/ext-experimental-ml.js)
 #ifndef ANDROID
     content/extensions/parent/ext-geckoProfiler.js (parent/ext-geckoProfiler.js)
 #endif

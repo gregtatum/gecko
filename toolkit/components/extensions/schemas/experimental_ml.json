@@ -1,0 +1,87 @@
+[
+  {
+    "namespace": "manifest",
+    "types": [
+      {
+        "$extend": "OptionalPermission",
+        "choices": [
+          {
+            "type": "string",
+            "enum": ["experimentalML"]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "namespace": "experimental",
+    "allowedContexts": ["content"]
+  },
+  {
+    "namespace": "experimental.ml",
+    "description": "Use the experimental ML API to run Machine Learning models requests from extensions pages or content scripts.",
+    "allowedContexts": ["content"],
+    "permissions": ["experimentalML"],
+    "types": [
+      {
+        "id": "CreatePipelineRequest",
+        "type": "object",
+        "additionalProperties": true
+      },
+      {
+        "id": "RunPipelineRequest",
+        "type": "object",
+        "additionalProperties": true
+      }
+    ],
+    "functions": [
+      {
+        "name": "createPipeline",
+        "type": "function",
+        "allowedContexts": ["content"],
+        "description": "Prepare the inference pipeline",
+        "async": "callback",
+        "parameters": [
+          {
+            "name": "CreatePipelineRequest",
+            "$ref": "CreatePipelineRequest"
+          },
+          {
+            "name": "callback",
+            "type": "function",
+            "parameters": [
+              {
+                "name": "result",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "runPipeline",
+        "type": "function",
+        "allowedContexts": ["content"],
+        "description": "Call the inference pipeline",
+        "async": "callback",
+        "parameters": [
+          {
+            "name": "RunPipelineRequest",
+            "$ref": "RunPipelineRequest"
+          },
+          {
+            "name": "callback",
+            "type": "function",
+            "parameters": [
+              {
+                "name": "result",
+                "type": "object"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "events": []
+  }
+]

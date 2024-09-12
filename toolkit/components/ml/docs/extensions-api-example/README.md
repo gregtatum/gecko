@@ -1,0 +1,11 @@
+- install remotesetting-devtools addon from https://github.com/mozilla-extensions/remote-settings-devtools/releases
+- click on the extension toolbar button
+- switch to dev remote settings preview
+- force sync the following collections:
+  - main-preview/ml-inference-options
+  - main-preview/ml-onnx-runtime
+- in about:config set:
+  - browser.ml.enable: true
+  - extensions.experiments.enabled:	true
+- from about:debugging load this extension
+- in a web page with images right click and from the context menu click on "Generate ML description":

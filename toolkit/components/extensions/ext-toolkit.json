@@ -79,6 +79,12 @@
     "scopes": ["addon_parent"],
     "paths": [["activityLog"]]
   },
+  "experimental_ml": {
+    "url": "chrome://extensions/content/parent/ext-experimental-ml.js",
+    "schema": "chrome://extensions/content/schemas/experimental_ml.json",
+    "scopes": ["addon_parent", "content_parent"],
+    "paths": [["experimental", "ml"]]
+  },
   "i18n": {
     "url": "chrome://extensions/content/parent/ext-i18n.js",
     "schema": "chrome://extensions/content/schemas/i18n.json",

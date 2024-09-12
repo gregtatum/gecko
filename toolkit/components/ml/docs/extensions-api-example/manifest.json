@@ -1,0 +1,19 @@
+{
+  "manifest_version": 2,
+  "name": "test-experimental-ml",
+  "version": "0.1",
+  "description": "test-experimental-ml description",
+  "permissions": ["menus", "experimentalML", "<all_urls>"],
+  "icons": {
+    "64": "icon.png"
+  },
+  "browser_action": {
+    "default_title": "test-experimental-ml (browserAction)",
+    "default_icon": {
+      "64": "icon.png"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
