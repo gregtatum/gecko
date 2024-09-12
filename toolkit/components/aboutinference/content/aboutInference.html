@@ -101,6 +101,17 @@
               <input type="text" id="modelRevision" value="main" />
             </div>
             <div>
+              <label for="numThreads">Number of threads:</label>
+              <span class="tooltip"
+                >ℹ️
+                <span class="tooltiptext"
+                  >0 means ONNX will infere the value with your hardware
+                  ability. 1 means no multi-threading
+                </span>
+              </span>
+              <input type="number" id="numThreads" value="1" min="0" />
+            </div>
+            <div>
               <label for="inferencePad">Input data:</label>
               <span class="tooltip"
                 >ℹ️

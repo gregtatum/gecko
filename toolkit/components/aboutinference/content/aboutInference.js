@@ -309,6 +309,7 @@ async function runInference() {
   const modelId = document.getElementById("modelId").value;
   const modelRevision = document.getElementById("modelRevision").value;
   const taskName = document.getElementById("taskName").value;
+  const numThreads = parseInt(document.getElementById("numThreads").value);
 
   let inputData;
   try {
@@ -332,6 +333,7 @@ async function runInference() {
     engineId: "about:inference",
     modelHubRootUrl,
     modelHubUrlTemplate,
+    numThreads,
   };
 
   const { createEngine } = ChromeUtils.importESModule(

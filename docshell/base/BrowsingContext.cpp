@@ -1440,7 +1440,10 @@ RefPtr<SessionStorageManager> BrowsingContext::GetSessionStorageManager() {
 
 bool BrowsingContext::CrossOriginIsolated() {
   MOZ_ASSERT(NS_IsMainThread());
-
+  if (XRE_IsContentProcess() &&
+      ContentChild::GetSingleton()->GetRemoteType() == INFERENCE_REMOTE_TYPE) {
+    return true;
+  }
   return StaticPrefs::
              dom_postMessage_sharedArrayBuffer_withCOOP_COEP_AtStartup() &&
          Top()->GetOpenerPolicy() ==

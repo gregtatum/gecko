@@ -31,6 +31,7 @@
 #include "mozilla/dom/CallbackDebuggerNotification.h"
 #include "mozilla/dom/ClientManager.h"
 #include "mozilla/dom/ClientState.h"
+#include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/Console.h"
 #include "mozilla/dom/DocGroup.h"
 #include "mozilla/dom/Document.h"
@@ -6215,7 +6216,11 @@ bool WorkerPrivate::IsSharedMemoryAllowed() const {
           dom_postMessage_sharedArrayBuffer_bypassCOOP_COEP_insecure_enabled()) {
     return true;
   }
-
+  if (mozilla::dom::ContentChild::GetSingleton() &&
+      mozilla::dom::ContentChild::GetSingleton()->GetRemoteType() ==
+          INFERENCE_REMOTE_TYPE) {
+    return true;
+  }
   if (mIsPrivilegedAddonGlobal) {
     return true;
   }

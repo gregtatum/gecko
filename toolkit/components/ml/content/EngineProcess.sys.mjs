@@ -117,6 +117,13 @@ export class PipelineOptions {
   runtimeFilename = null;
 
   /**
+   * Number of threads to use in the pipeline
+   *
+   * @type {?number}
+   */
+  numThreads = null;
+
+  /**
    * Create a PipelineOptions instance.
    *
    * @param {object} options - The options for the pipeline. Must include mandatory fields.
@@ -146,6 +153,7 @@ export class PipelineOptions {
       "processorRevision",
       "logLevel",
       "runtimeFilename",
+      "numThreads",
     ];
 
     if (options instanceof PipelineOptions) {
@@ -184,6 +192,7 @@ export class PipelineOptions {
       processorRevision: this.processorRevision,
       logLevel: this.logLevel,
       runtimeFilename: this.runtimeFilename,
+      numThreads: this.numThreads,
     };
   }
 

@@ -221,6 +221,7 @@ export class Pipeline {
     transformers.env.customCache = this.#modelCache;
     // using `NO_LOCAL` so when the custom cache is used, we don't try to fetch it (see MLEngineWorker.match)
     transformers.env.localModelPath = "NO_LOCAL";
+    transformers.env.backends.onnx.wasm.numThreads = config.numThreads || 1;
 
     // ONNX runtime - we set up the wasm runtime we got from RS for the ONNX backend to pick
     lazy.console.debug(
@@ -397,7 +398,11 @@ export class Pipeline {
 
     if (this.#genericPipelineFunction) {
       if (this.#config.modelId === "test-echo") {
-        result = { output: request.args, config: this.#config };
+        result = {
+          output: request.args,
+          config: this.#config,
+          multiThreadSupported: typeof SharedArrayBuffer !== "undefined",
+        };
       } else {
         result = await this.#genericPipelineFunction(
           ...request.args,
