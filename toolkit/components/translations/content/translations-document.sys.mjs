@@ -323,6 +323,29 @@ const MUTATION_OBSERVER_OPTIONS = {
  *
  * This class also handles mutations of the DOM and will translate nodes as they are added
  * to the page, or the when the node's text is changed by content scripts.
+ *
+ * Flow for discarding translations due to mutations:
+ * ==================================================
+ *
+ * This diagram shows the flow of translations and how to discard translations when there
+ * are mutations, which can happen at any point after a translation is requested, up to
+ * the point a node is updated.
+ *                                                         [cancel]         [cancel]
+ *                                                            ^                ^
+ *                                                            │ mutated?       │ mutated?
+ *  Document: ┌─────────────┐                             ┌────────┐       ┌────────┐
+ *            │   request   │      wait for response      │ queue  │       │ update │
+ *            │ translation │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ > │ update │ ────> │  node  │
+ *            └─────────────┘                             └────────┘       └────────┘
+ *                 │                                          ^
+ *                 v                                          │
+ *   Worker:  ┌─────────────┐                            ┌──────────┐
+ *            │    queue    │       ┌───────────┐        │   post   │
+ *            │ translation │ ────> │ translate │  ────> │ response │
+ *            └─────────────┘       └───────────┘        └──────────┘
+ *            ^                     ^
+ *            └─────────────────────┘
+ *            Handle discard requests
  */
 export class TranslationsDocument {
   /**
