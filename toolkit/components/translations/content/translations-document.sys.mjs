@@ -647,38 +647,53 @@ export class TranslationsDocument {
       (this.#mutatedNodes.size || this.#queuedAttributeNodes)
     ) {
       this.#isMutatedNodesRAFScheduled = true;
+      // Perform a double requestAnimationFrame to:
+      //   1. Reduce the number of invalidation cycles of canceling intermediate translations.
+      //   2. Do less work on the main thread when there are many mutations.
       this.document.ownerGlobal.requestAnimationFrame(() => {
-        {
-          // Ensure the nodes are still alive and only the outer most nodes are sent for
-          // translation.
-          const nodes = [...this.#mutatedNodes];
-          for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
+        this.document.ownerGlobal.requestAnimationFrame(() => {
+          this.#isMutatedNodesRAFScheduled = false;
 
+          // Ensure the nodes are still alive.
+          const liveNodes = [];
+          for (const node of this.#mutatedNodes) {
             if (isNodeDetached(node)) {
-              // This node is no longer part of the DOM.
               this.#mutatedNodes.delete(node);
+            } else {
+              liveNodes.push(node);
+            }
+          }
+
+          // Remove any nodes that are contained in another node.
+          for (let i = 0; i < liveNodes.length; i++) {
+            const node = liveNodes[i];
+            if (!this.#mutatedNodes.has(node)) {
               continue;
             }
+            for (let j = i + 1; j < liveNodes.length; j++) {
+              const otherNode = liveNodes[j];
 
-            if (this.#mutatedNodes.has(node)) {
-              for (let j = i + 1; j < nodes.length; j++) {
-                const otherNode = nodes[j];
-                if (node.contains(otherNode)) {
-                  this.#mutatedNodes.delete(otherNode);
-                }
+              if (!this.#mutatedNodes.has(otherNode)) {
+                continue;
+              }
+
+              if (node.contains(otherNode)) {
+                this.#mutatedNodes.delete(otherNode);
+              } else if (otherNode.contains(node)) {
+                this.#mutatedNodes.delete(node);
+                break;
               }
             }
           }
-        }
 
-        this.#isMutatedNodesRAFScheduled = false;
-        for (const node of this.#mutatedNodes) {
-          this.subdivideNodeForTranslations(node);
-        }
-        this.#mutatedNodes.clear();
-        // If any attributes were queued in the mutation observer, dispatch them now.
-        this.dispatchQueuedAttributeTranslations();
+          for (const node of this.#mutatedNodes) {
+            this.subdivideNodeForTranslations(node);
+          }
+          this.#mutatedNodes.clear();
+
+          // If any attributes were queued in the mutation observer, dispatch them now.
+          this.dispatchQueuedAttributeTranslations();
+        });
       });
     }
   }
@@ -690,12 +705,7 @@ export class TranslationsDocument {
    * @returns {Node | null}
    */
   getPendingNodeFromTarget(target) {
-    for (const pendingNode of this.#pendingTranslations.keys()) {
-      if (pendingNode.contains(target)) {
-        return pendingNode;
-      }
-    }
-    return null;
+    return this.#nodeToPendingParent.get(target);
   }
 
   /**
@@ -1424,6 +1434,15 @@ export class TranslationsDocument {
   #pendingTranslations = new Map();
 
   /**
+   * Cache a map of all child nodes to their pending parents. This lookup was slow
+   * from profiling sites like YouTube with lots of mutations. Caching the relationship
+   * speeds it up.
+   *
+   * @type {WeakMap<Node, Node>}
+   */
+  #nodeToPendingParent = new WeakMap();
+
+  /**
    * A unique ID that guards against races between translations and mutations. The
    * Map<string, number> is a mapping of the node's attribute to the translation id.
    *
@@ -1467,6 +1486,7 @@ export class TranslationsDocument {
 
     const translationId = this.#lastTranslationId++;
     this.#pendingTranslations.set(node, translationId);
+    this.walkNodeToPendingParent(node);
 
     // Mark this node as not to be translated again unless the contents are changed
     // (which the observer will pick up on)
@@ -1485,6 +1505,30 @@ export class TranslationsDocument {
         translatedHTML,
         translationId
       );
+    }
+  }
+
+  /**
+   * Walks the nodes to set the relationship between the node to the pending parent node.
+   * This solves a performance problem with pages with large subtrees and lots of mutation.
+   * For instance on YouTube it took 838ms to `getPendingNodeFromTarget` by going through
+   * all pending translations. Caching this relationship reduced it to 26ms to walk it
+   * while adding the pending translation.
+   *
+   * On a page like the Wikipedia "Cat" entry, there are not many mutations, and this
+   * adds 8ms of additional wasted work.
+   *
+   * @param {Node} pendingParent
+   * @param {Node} node
+   */
+  walkNodeToPendingParent(pendingParent) {
+    const nodes = [pendingParent];
+    while (nodes.length > 0) {
+      const node = nodes.pop();
+      this.#nodeToPendingParent.set(node, pendingParent);
+      for (const childNode of node.childNodes) {
+        nodes.push(childNode);
+      }
     }
   }
 
