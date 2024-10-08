@@ -296,7 +296,7 @@ function createMockedTranslatorPort(transformNode = upperCaseNode) {
           });
           break;
         case "TranslationsPort:TranslationRequest": {
-          const { messageId, sourceText } = message;
+          const { translationId, sourceText } = message;
 
           const translatedDoc = parser.parseFromString(sourceText, "text/html");
           transformNode(translatedDoc.body);
@@ -304,7 +304,7 @@ function createMockedTranslatorPort(transformNode = upperCaseNode) {
             data: {
               type: "TranslationsPort:TranslationResponse",
               targetText: translatedDoc.body.innerHTML,
-              messageId,
+              translationId,
             },
           });
         }
