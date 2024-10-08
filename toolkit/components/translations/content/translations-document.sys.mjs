@@ -688,6 +688,7 @@ export class TranslationsDocument {
 
           for (const node of this.#mutatedNodes) {
             this.subdivideNodeForTranslations(node);
+            this.translateAttributes(node);
           }
           this.#mutatedNodes.clear();
 
@@ -1012,6 +1013,10 @@ export class TranslationsDocument {
    * @returns {Array<Promise<void>> | null}
    */
   translateAttributes(node) {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      // Only element nodes may have attributes.
+      return;
+    }
     this.maybeQueueNodeForAttributeTranslation(node);
 
     const childNodesWithTranslatableAttributes = node.querySelectorAll(
@@ -1296,7 +1301,7 @@ export class TranslationsDocument {
           pendingAttributes = new Map();
           this.#pendingAttributes.set(node, pendingAttributes);
         }
-        this.#pendingAttributes.set(attribute, translationId);
+        pendingAttributes.set(attribute, translationId);
 
         const translation = await this.maybeTranslate(
           node,
