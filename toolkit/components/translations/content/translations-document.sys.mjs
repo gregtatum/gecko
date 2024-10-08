@@ -557,10 +557,6 @@ export class TranslationsDocument {
       for (const mutation of mutationsList) {
         const pendingNode = this.getPendingNodeFromTarget(mutation.target);
         if (pendingNode) {
-          console.log(`!!! mutation - pendingNode`, {
-            target: mutation.target,
-            pendingNode,
-          });
           // The node was still pending to be translated, cancel it and re-submit.
           this.cancelTranslation(pendingNode);
           this.markNodeMutated(pendingNode);
@@ -568,16 +564,11 @@ export class TranslationsDocument {
         }
         switch (mutation.type) {
           case "childList":
-            console.log(`!!! mutation - childList`, {
-              node: mutation.target,
-              addedNodes: mutation.addedNodes,
-            });
             for (const node of mutation.addedNodes) {
               this.markNodeMutated(node);
             }
             break;
           case "characterData":
-            console.log(`!!! mutation - characterData`, mutation.target);
             this.#processedNodes.delete(mutation.target);
             this.markNodeMutated(mutation.target);
             break;
@@ -585,10 +576,6 @@ export class TranslationsDocument {
             if (
               isAttributeTranslatable(mutation.target, mutation.attributeName)
             ) {
-              console.log(`!!! mutation - attribute`, {
-                node: mutation.target,
-                attribute: mutation.attributeName,
-              });
               this.#queueNodeForAttributeTranslation(mutation.target, [
                 mutation.attributeName,
               ]);
@@ -659,30 +646,37 @@ export class TranslationsDocument {
       !this.#isMutatedNodesRAFScheduled &&
       (this.#mutatedNodes.size || this.#queuedAttributeNodes)
     ) {
-      console.log(`!!! queuing mutated nodes update`);
       this.#isMutatedNodesRAFScheduled = true;
       this.document.ownerGlobal.requestAnimationFrame(() => {
-        console.log(`!!! subdividing nodes after mutation`, {
-          mutatedNodes: this.#mutatedNodes,
-        });
+        {
+          // Ensure the nodes are still alive and only the outer most nodes are sent for
+          // translation.
+          const nodes = [...this.#mutatedNodes];
+          for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
 
-        const deduplicated = new Set(this.#mutatedNodes);
-        for (const a of this.#mutatedNodes) {
-          for (const b of this.#mutatedNodes) {
-            if (a === b) {
+            if (isNodeDetached(node)) {
+              // This node is no longer part of the DOM.
+              this.#mutatedNodes.delete(node);
               continue;
             }
-            if (a.contains(b)) {
-              console.log(`!!! deduplicating a contains b`, deduplicated);
-              deduplicated.delete(b);
+
+            if (this.#mutatedNodes.has(node)) {
+              for (let j = i + 1; j < nodes.length; j++) {
+                const otherNode = nodes[j];
+                if (node.contains(otherNode)) {
+                  this.#mutatedNodes.delete(otherNode);
+                }
+              }
             }
           }
         }
 
         this.#isMutatedNodesRAFScheduled = false;
-        for (const node of deduplicated) {
+        for (const node of this.#mutatedNodes) {
           this.subdivideNodeForTranslations(node);
         }
+        this.#mutatedNodes.clear();
         // If any attributes were queued in the mutation observer, dispatch them now.
         this.dispatchQueuedAttributeTranslations();
       });
@@ -708,7 +702,6 @@ export class TranslationsDocument {
    * @param {Node} node
    */
   cancelTranslation(node) {
-    console.log(`!!! cancelTranslation`, node);
     const translationId = this.#pendingTranslations.get(node);
     if (translationId) {
       this.translator.cancelSingleTranslation(translationId);
@@ -1378,8 +1371,7 @@ export class TranslationsDocument {
             translationId,
             translation,
             true /* removeAttribute */
-          ) &&
-          !Cu.isDeadWrapper(node)
+          )
         ) {
           // Update the attribute of the node with translated attribute
           node.setAttribute(attribute, translation);
@@ -1448,17 +1440,9 @@ export class TranslationsDocument {
    * @returns {Promise<void>}
    */
   async submitTranslation(node) {
-    console.log(`!!! submitting for translation`, node);
     // Give each element an id that gets passed through the translation so it can be
     // reunited later on.
     if (node.nodeType === Node.ELEMENT_NODE) {
-      if (node.dataset.mozTranslationsId) {
-        console.log(`!!! node has pre-existing mozTranslationId`, node);
-      }
-      const nodes = [...node.querySelectorAll("[data-moz-translations-id]")];
-      if (nodes.length) {
-        console.log(`!!! node contained mozTranslationId`, nodes);
-      }
       node.querySelectorAll("*").forEach((el, i) => {
         el.dataset.mozTranslationsId = i;
       });
@@ -1514,27 +1498,21 @@ export class TranslationsDocument {
    * @returns {boolean}
    */
   validateTranslationResponse(node, translationId, translation) {
+    if (isNodeDetached(node)) {
+      return false;
+    }
     if (this.#pendingTranslations.get(node) !== translationId) {
-      console.log(
-        `!!! validateTranslationResponse - translation lost race`,
-        snippetText(translation)
-      );
       // This translation lost a race, and was re-submitted under a
       // different translationId.
       return false;
     }
 
     if (translation == null) {
-      console.log(`!!! validateTranslationResponse - translation null`);
       // The translation had an error, remove it from the pending translations.
       this.#pendingTranslations.delete(node);
       return false;
     }
 
-    console.log(
-      `!!! validateTranslationResponse - translation is valid:`,
-      snippetText(translation)
-    );
     return true;
   }
 
@@ -1556,6 +1534,9 @@ export class TranslationsDocument {
     translation,
     removeAttribute
   ) {
+    if (isNodeDetached(node)) {
+      return false;
+    }
     const pendingAttributes = this.#pendingAttributes.get(node);
     if (!pendingAttributes) {
       // The pending attribute was deleted.
@@ -2045,7 +2026,6 @@ function updateElement(translationsDocument, element) {
       ([, liveElement]) => !liveElement.parentNode
     );
 
-    console.log(`!!! Clean-up the live element ids`, node);
     for (node of liveTree.querySelectorAll("*")) {
       // Clean-up the live element ids.
       delete node.dataset.mozTranslationsId;
@@ -2668,7 +2648,7 @@ class QueuedTranslator {
   #repostTranslations(mappedRequests) {
     for (const value of mappedRequests.values()) {
       const { node, sourceText, isHTML, resolve, reject } = value;
-      if (Cu.isDeadWrapper(node)) {
+      if (isNodeDetached(node)) {
         // If the node is dead, resolve without any text. Do not reject as that
         // will be treated as an error.
         resolve(null);
@@ -2747,4 +2727,15 @@ function snippetText(text) {
     return text;
   }
   return text.slice(0, 50) + "...";
+}
+
+/**
+ * @param {Node} node
+ */
+function isNodeDetached(node) {
+  return (
+    Cu.isDeadWrapper(node) ||
+    !node.parentElement ||
+    !node.flattenedTreeParentNode
+  );
 }

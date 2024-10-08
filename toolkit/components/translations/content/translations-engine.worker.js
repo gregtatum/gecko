@@ -337,7 +337,7 @@ class Engine {
   discardSingleTranslation(innerWindowId, translationsId) {
     const workQueue = this.#workQueues.get(innerWindowId);
     if (workQueue) {
-      trace("Discarding translation with id", id);
+      trace("Discarding translation with translationsId", translationsId);
       workQueue.cancelTask(translationsId);
     }
   }
@@ -659,6 +659,7 @@ class WorkQueue {
   /**
    * This is the list of work to be done. While it is a Map, it is treated as a FIFO
    * queue, but with work that can be canceled via the translationId.
+   *
    * @type {Map<number, {task: Function, resolve: Function}>}
    */
   #tasksByTranslationId = new Map();
