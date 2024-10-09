@@ -12,6 +12,7 @@
 #include "mozilla/IntegerPrintfMacros.h"
 
 #include <gemmology_fwd.h>
+#include <kernels/GemmologyParallelEngine.h>
 
 #include "js/ErrorReport.h"
 #include "js/HeapAPI.h"
@@ -58,9 +59,10 @@
 // architectures.
 //
 // FIXME: Ideally we would not run the dispatch code at each function call.
-#define GEMMOLOGY_DISPATCH(FUNC)                                 \
-  xsimd::dispatch<SUPPORTED_ARCHS>([](auto arch, auto... args) { \
-    return gemmology::Engine<decltype(arch)>::FUNC(args...);     \
+#define GEMMOLOGY_DISPATCH(FUNC)                                   \
+  xsimd::dispatch<SUPPORTED_ARCHS>([](auto arch, auto&&... args) { \
+    return gemmology::Engine<decltype(arch)>::FUNC(                \
+        std::forward<decltype(args)>(args)...);                    \
   })
 
 struct JSContext;
@@ -390,11 +392,17 @@ int32_t js::intgemm::IntrI8MultiplyAndAddBias(
   uint8_t* outputPtr = &memBase[output];
   float unquantFactor = unquantMultiplier / (scaleA * scaleB);
 
+  // FIXME: this provides a speedup while only requiring a single extra thread.
+  // We could be smarter but we currently don't amortize the overhead of thread
+  // creation.
+  static gemmology::JSThreadStaticExecutionEngine<2> engine;
+
   GEMMOLOGY_DISPATCH(Shift::Multiply)
   (inputMatrixAPreparedPtr, (const int8_t*)inputMatrixBPreparedPtr, rowsA,
    width, colsB,
    gemmology::callbacks::UnquantizeAndAddBiasAndWrite(
-       unquantFactor, (const float*)inputBiasPreparedPtr, (float*)outputPtr));
+       unquantFactor, (const float*)inputBiasPreparedPtr, (float*)outputPtr),
+   engine);
   return 0;
 }
 
