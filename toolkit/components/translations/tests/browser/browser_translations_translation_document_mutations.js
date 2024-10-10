@@ -339,3 +339,542 @@ add_task(async function test_block_elements() {
 
   cleanup();
 });
+
+add_task(async function test_removing_elements() {
+  const { translate, htmlMatches, cleanup, document, resolveRequests } =
+    await setupMutationsTest(/* html */ `
+      <section>
+        <div>block one</div>
+        <div title="Title attribute">block two</div>
+        <div>block three</div>
+      </section>
+    `);
+
+  translate();
+
+  info("Removing two divs");
+  const elements = document.querySelectorAll("div");
+  elements[0].remove();
+  elements[1].remove();
+
+  await doubleRaf(document);
+  let translationsCount = await resolveRequests();
+  is(translationsCount, 1, "Only one block should have been translated.");
+
+  await htmlMatches(
+    "Only one element is translated",
+    /* html */ `
+      <section>
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+        </div>
+      </section>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_mixed_block_inline() {
+  const { translate, htmlMatches, cleanup, document, resolveRequests } =
+    await setupMutationsTest(/* html */ `
+      <section>
+        first text node
+        <div>block one</div>
+        second text node <span>with inline element</span>
+        <div>block two</div>
+        third text node
+        <div>block three</div>
+      </section>
+    `);
+
+  translate();
+  await resolveRequests();
+
+  await htmlMatches(
+    "The algorithm to chop of the nodes runs.",
+    /* html */ `
+      <section>
+        f̅i̅r̅s̅t̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:1)
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:2)
+        </div>
+        s̅e̅c̅o̅n̅d̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:3)
+        <span>
+          w̅i̅t̅h̅ i̅n̅l̅i̅n̅e̅ e̅l̅e̅m̅e̅n̅t̅ (id:4)
+        </span>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:5)
+        </div>
+        t̅h̅i̅r̅d̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:6)
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:7)
+        </div>
+      </section>
+    `
+  );
+
+  info("Mutating the <section>'s text nodes");
+  const section = document.querySelector("section");
+  for (let i = 0; i < section.childNodes.length; i++) {
+    const node = section.childNodes[i];
+    if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim()) {
+      node.nodeValue = `Mutating ${i} text node`;
+    }
+  }
+
+  await doubleRaf(document);
+  let translationsCount = await resolveRequests();
+  is(translationsCount, 3, "There were 3 text nodes");
+
+  await htmlMatches(
+    "",
+    /* html */ `
+      <section>
+        M̅u̅t̅a̅t̅i̅n̅g̅ 0 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:8)
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:2)
+        </div>
+        M̅u̅t̅a̅t̅i̅n̅g̅ 2 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:9)
+        <span>
+          w̅i̅t̅h̅ i̅n̅l̅i̅n̅e̅ e̅l̅e̅m̅e̅n̅t̅ (id:4)
+        </span>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:5)
+        </div>
+        M̅u̅t̅a̅t̅i̅n̅g̅ 6 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:10)
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:7)
+        </div>
+      </section>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_appending_element() {
+  const { translate, htmlMatches, cleanup, document, resolveRequests } =
+    await setupMutationsTest(/* html */ `
+      <section>
+        <div>block one</div>
+        <div>block two</div>
+        <div>block three</div>
+      </section>
+    `);
+
+  translate();
+  await resolveRequests();
+
+  await htmlMatches(
+    "The blocks are translated",
+    /* html */ `
+      <section>
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+        </div>
+      </section>
+    `
+  );
+
+  const fragment = document.createDocumentFragment();
+  const subDiv1 = document.createElement("div");
+  const subDiv2 = document.createElement("div");
+  subDiv1.innerHTML = "Adding multiple elements at once";
+  subDiv2.innerHTML = "<div>It even has <span>nested</span> elements</div>";
+  fragment.append(subDiv1);
+  fragment.append(subDiv2);
+
+  const section = document.querySelector("section");
+  const secondDiv = document.querySelectorAll("div")[1];
+  section.insertBefore(fragment, secondDiv);
+
+  await htmlMatches(
+    "Multiple elements are inserted at once",
+    /* html */ `
+      <section>
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+        <div>
+          Adding multiple elements at once
+        </div>
+        <div>
+          <div>
+            It even has
+            <span data-moz-translations-id="0">
+              nested
+            </span>
+            elements
+          </div>
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+        </div>
+      </section>
+    `
+  );
+
+  await doubleRaf(document);
+  let translationsCount = await resolveRequests();
+  is(translationsCount, 2, "The two block elements were translated");
+
+  await htmlMatches(
+    "Multiple elements are inserted at once",
+    /* html */ `
+      <section>
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+        <div>
+          A̅d̅d̅i̅n̅g̅ m̅u̅l̅t̅i̅p̅l̅e̅ e̅l̅e̅m̅e̅n̅t̅s̅ a̅t̅ o̅n̅c̅e̅ (id:4)
+        </div>
+        <div>
+          <div>
+            I̅t̅ e̅v̅e̅n̅ h̅a̅s̅
+            <span>
+              n̅e̅s̅t̅e̅d̅
+            </span>
+            e̅l̅e̅m̅e̅n̅t̅s̅ (id:5)
+          </div>
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+        </div>
+      </section>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_mutating_comments() {
+  const { translate, htmlMatches, cleanup, document, resolveRequests } =
+    await setupMutationsTest(/* html */ `
+      <section>
+        <!-- this is a comment -->
+        <div>block one</div>
+      </section>
+    `);
+
+  translate();
+  await resolveRequests();
+
+  await htmlMatches(
+    "The blocks are translated",
+    /* html */ `
+      <section>
+        <!-- this is a comment -->
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+      </section>
+    `
+  );
+
+  // Mutate the comment's contents.
+  const section = document.querySelector("section");
+  const commentNode = [...section.childNodes].find(
+    node => node.nodeType === Node.COMMENT_NODE
+  );
+  commentNode.nodeValue = "Change the comment";
+
+  await doubleRaf(document);
+  let translationsCount = await resolveRequests();
+  is(translationsCount, 0, "Nothing was translated.");
+
+  await htmlMatches(
+    "The comment is untranslated in a mutation",
+    /* html */ `
+      <section>
+        <!--Change the comment-->
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+      </section>
+    `
+  );
+  cleanup();
+});
+
+add_task(async function test_appending_element() {
+  const { translate, htmlMatches, cleanup, document, resolveRequests } =
+    await setupMutationsTest(/* html */ `
+      <section>
+        <div>block one</div>
+        <div>block two</div>
+        <div>block three</div>
+      </section>
+    `);
+
+  translate();
+  await resolveRequests();
+
+  document.ownerGlobal.customElements.define(
+    "app-login-widget",
+    AppLoginWidget
+  );
+
+  console.log(`!!! AppLoginWidget`);
+  /** @type {AppLoginWidget} */
+  const loginWidget = new AppLoginWidget();
+  console.log(`!!! loginWidget`, loginWidget.shadowRoot);
+
+  const section = document.querySelector("section");
+  const secondDiv = document.querySelectorAll("div")[1];
+  section.insertBefore(loginWidget, secondDiv);
+
+  await htmlMatches(
+    "Multiple elements are inserted at once",
+    /* html */ `
+      <section>
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+        <app-login-widget>
+        </app-login-widget>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+        </div>
+      </section>
+    `
+  );
+
+  console.log(
+    `!!! loginWidget.shadowRoot`,
+    loginWidget,
+    loginWidget.shadowRoot.children
+  );
+
+  await htmlMatches(
+    "The shadowroot also matches",
+    /* html */ `asdf`,
+    loginWidget.shadowRoot
+  );
+
+  await doubleRaf(document);
+  let translationsCount = await resolveRequests();
+  is(translationsCount, 2, "The two block elements were translated");
+
+  await htmlMatches(
+    "Multiple elements are inserted at once",
+    /* html */ `
+
+    `
+  );
+
+  cleanup();
+});
+
+class AppLoginWidget extends HTMLElement {
+  constructor() {
+    super();
+    console.log(`!!! AppLoginWidget constructor`);
+
+    // Create a shadow root
+    const shadow = this.attachShadow({ mode: "open" });
+
+    // Create form elements
+    const form = document.createElement("form");
+    form.setAttribute("novalidate", "");
+
+    const usernameInput = document.createElement("input");
+    usernameInput.setAttribute("type", "text");
+    usernameInput.setAttribute("name", "username");
+    usernameInput.setAttribute("placeholder", "Spielername");
+    usernameInput.setAttribute("aria-label", "Spielername");
+    usernameInput.setAttribute("autocomplete", "username");
+    usernameInput.setAttribute("required", "");
+    usernameInput.classList.add("uk-input", "uk-form-small");
+
+    const passwordInput = document.createElement("input");
+    passwordInput.setAttribute("type", "password");
+    passwordInput.setAttribute("name", "password");
+    passwordInput.setAttribute("placeholder", "Passwort");
+    passwordInput.setAttribute("aria-label", "Passwort");
+    passwordInput.setAttribute("autocomplete", "current-password");
+    passwordInput.setAttribute("required", "");
+    passwordInput.classList.add("uk-input", "uk-form-small");
+
+    const submitButton = document.createElement("button");
+    submitButton.setAttribute("type", "submit");
+    submitButton.textContent = "Einloggen";
+    submitButton.classList.add(
+      "uk-button",
+      "uk-button-small",
+      "uk-button-default"
+    );
+
+    // Append inputs to the form
+    form.appendChild(usernameInput);
+    form.appendChild(passwordInput);
+    form.appendChild(submitButton);
+
+    // Apply styles
+    const style = document.createElement("style");
+    style.textContent = `
+      .uk-input {
+        margin-bottom: 8px;
+        width: 100%;
+      }
+      .uk-button {
+        width: 100%;
+      }
+    `;
+
+    // Attach the created elements to the shadow DOM
+    shadow.appendChild(style);
+    shadow.appendChild(form);
+    console.log(`!!! shadow created`, shadow);
+  }
+}
+
+add_task(async function test_appending_element() {
+  const { translate, htmlMatches, cleanup, document, resolveRequests } =
+    await setupMutationsTest(/* html */ `
+      <section>
+        <div>block one</div>
+        <div>block two</div>
+        <div>block three</div>
+      </section>
+    `);
+
+  translate();
+  await resolveRequests();
+
+  document.ownerGlobal.customElements.define(
+    "app-login-widget",
+    AppLoginWidget
+  );
+
+  console.log(`!!! AppLoginWidget`);
+  /** @type {AppLoginWidget} */
+  const loginWidget = new AppLoginWidget();
+  console.log(`!!! loginWidget`, loginWidget.shadowRoot);
+
+  const section = document.querySelector("section");
+  const secondDiv = document.querySelectorAll("div")[1];
+  section.insertBefore(loginWidget, secondDiv);
+
+  await htmlMatches(
+    "Multiple elements are inserted at once",
+    /* html */ `
+      <section>
+        <div>
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+        </div>
+        <app-login-widget>
+        </app-login-widget>
+        <div>
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+        </div>
+        <div>
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+        </div>
+      </section>
+    `
+  );
+
+  console.log(
+    `!!! loginWidget.shadowRoot`,
+    loginWidget,
+    loginWidget.shadowRoot.children
+  );
+
+  await htmlMatches(
+    "The shadowroot also matches",
+    /* html */ `asdf`,
+    loginWidget.shadowRoot
+  );
+
+  await doubleRaf(document);
+  let translationsCount = await resolveRequests();
+  is(translationsCount, 2, "The two block elements were translated");
+
+  await htmlMatches(
+    "Multiple elements are inserted at once",
+    /* html */ `
+
+    `
+  );
+
+  cleanup();
+});
+
+class AppLoginWidget extends HTMLElement {
+  constructor() {
+    super();
+    console.log(`!!! AppLoginWidget constructor`);
+
+    // Create a shadow root
+    const shadow = this.attachShadow({ mode: "open" });
+
+    // Create form elements
+    const form = document.createElement("form");
+    form.setAttribute("novalidate", "");
+
+    const usernameInput = document.createElement("input");
+    usernameInput.setAttribute("type", "text");
+    usernameInput.setAttribute("name", "username");
+    usernameInput.setAttribute("placeholder", "Spielername");
+    usernameInput.setAttribute("aria-label", "Spielername");
+    usernameInput.setAttribute("autocomplete", "username");
+    usernameInput.setAttribute("required", "");
+    usernameInput.classList.add("uk-input", "uk-form-small");
+
+    const passwordInput = document.createElement("input");
+    passwordInput.setAttribute("type", "password");
+    passwordInput.setAttribute("name", "password");
+    passwordInput.setAttribute("placeholder", "Passwort");
+    passwordInput.setAttribute("aria-label", "Passwort");
+    passwordInput.setAttribute("autocomplete", "current-password");
+    passwordInput.setAttribute("required", "");
+    passwordInput.classList.add("uk-input", "uk-form-small");
+
+    const submitButton = document.createElement("button");
+    submitButton.setAttribute("type", "submit");
+    submitButton.textContent = "Einloggen";
+    submitButton.classList.add(
+      "uk-button",
+      "uk-button-small",
+      "uk-button-default"
+    );
+
+    // Append inputs to the form
+    form.appendChild(usernameInput);
+    form.appendChild(passwordInput);
+    form.appendChild(submitButton);
+
+    // Apply styles
+    const style = document.createElement("style");
+    style.textContent = `
+      .uk-input {
+        margin-bottom: 8px;
+        width: 100%;
+      }
+      .uk-button {
+        width: 100%;
+      }
+    `;
+
+    // Attach the created elements to the shadow DOM
+    shadow.appendChild(style);
+    shadow.appendChild(form);
+    console.log(`!!! shadow created`, shadow);
+  }
+}
