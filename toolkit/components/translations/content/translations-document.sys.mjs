@@ -430,6 +430,11 @@ export class TranslationsDocument {
   #mutatedNodes = new Set();
 
   /**
+   * @type {Map<Node, Set<string>>}
+   */
+  #mutatedAttributes = new Map();
+
+  /**
    * Mark when a requestAnimationFrame has been scheduled for updating the mutated nodes.
    */
   #isMutatedNodesRAFScheduled = false;
@@ -557,30 +562,41 @@ export class TranslationsDocument {
       for (const mutation of mutationsList) {
         const pendingNode = this.getPendingNodeFromTarget(mutation.target);
         if (pendingNode) {
-          // The node was still pending to be translated, cancel it and re-submit.
-          this.cancelTranslation(pendingNode);
-          this.markNodeMutated(pendingNode);
-          continue;
+          const translationId = this.#pendingTranslations.get(pendingNode);
+          if (translationId) {
+            // The node was still pending to be translated, cancel it and re-submit.
+            this.cancelTranslation(pendingNode, translationId);
+            this.markNodeMutated(pendingNode);
+            continue;
+          }
         }
         switch (mutation.type) {
           case "childList":
             for (const node of mutation.addedNodes) {
+              // This node
+              let identifier;
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                identifier = /** @type {Element} */ (node).tagName;
+              } else {
+                identifier = "#text";
+              }
               this.markNodeMutated(node);
             }
+            // TODO - Validate this change.
+            // for (const removedNode of mutation.removedNodes) {
+            //   const translationId = this.#pendingTranslations.get(removedNode);
+            //   if (translationId) {
+            //     this.cancelTranslation(removedNode);
+            //   }
+            // }
             break;
           case "characterData":
+            // A Text node `nodeValue` was changed.
             this.#processedNodes.delete(mutation.target);
             this.markNodeMutated(mutation.target);
             break;
           case "attributes":
-            if (
-              isAttributeTranslatable(mutation.target, mutation.attributeName)
-            ) {
-              this.#queueNodeForAttributeTranslation(mutation.target, [
-                mutation.attributeName,
-              ]);
-              this.ensureMutatedNodesUpdateIsScheduled();
-            }
+            this.markAttributeMutated(mutation.target, mutation.attributeName);
             break;
           default:
             break;
@@ -632,8 +648,25 @@ export class TranslationsDocument {
    * @param {Node} node
    */
   markNodeMutated(node) {
+    this.#processedNodes.delete(node);
     this.#mutatedNodes.add(node);
     this.ensureMutatedNodesUpdateIsScheduled();
+  }
+
+  /**
+   * @param {Node} node
+   * @param {string} attributeName
+   */
+  markAttributeMutated(node, attributeName) {
+    if (isAttributeTranslatable(node, attributeName)) {
+      let attributes = this.#mutatedAttributes.get(node);
+      if (!attributes) {
+        attributes = new Set();
+        this.#mutatedAttributes.set(node, attributes);
+      }
+      attributes.add(attributeName);
+      this.ensureMutatedNodesUpdateIsScheduled();
+    }
   }
 
   /**
@@ -692,7 +725,9 @@ export class TranslationsDocument {
           }
           this.#mutatedNodes.clear();
 
-          // If any attributes were queued in the mutation observer, dispatch them now.
+          for (const [node, attributes] of this.#mutatedAttributes.entries()) {
+            this.#queueNodeForAttributeTranslation(node, attributes);
+          }
           this.dispatchQueuedAttributeTranslations();
         });
       });
@@ -711,12 +746,10 @@ export class TranslationsDocument {
 
   /**
    * @param {Node} node
+   * @param {number} translationId
    */
-  cancelTranslation(node) {
-    const translationId = this.#pendingTranslations.get(node);
-    if (translationId) {
-      this.translator.cancelSingleTranslation(translationId);
-    }
+  cancelTranslation(node, translationId) {
+    this.translator.cancelSingleTranslation(translationId);
     delete node.dataset.mozTranslationsId;
     for (const childNode of node.querySelectorAll(
       "[data-moz-translations-id]"
@@ -724,6 +757,7 @@ export class TranslationsDocument {
       delete childNode.dataset.mozTranslationsId;
     }
     this.#pendingTranslations.delete(node);
+    // TODO - This is wrong.
     this.#pendingAttributes.delete(node);
     this.#processedNodes.delete(node);
   }
@@ -1455,7 +1489,10 @@ export class TranslationsDocument {
    */
   #pendingAttributes = new Map();
 
-  #lastTranslationId = 0;
+  /**
+   * Start with 1 so that it will never be falsey.
+   */
+  #lastTranslationId = 1;
 
   /**
    * Submit a node for translation to the translations engine.
