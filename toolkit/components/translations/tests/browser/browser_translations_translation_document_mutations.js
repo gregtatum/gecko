@@ -18,7 +18,7 @@ async function setupMutationsTest(html) {
 /**
  * Test basic mutations discarding behavior, where a page is trans
  */
-add_task(async function test_mutation_discarding() {
+add_task(async function test_discarding() {
   const { translate, htmlMatches, cleanup, document, resolveRequests } =
     await setupMutationsTest(/* html */ `
       <div>
@@ -68,7 +68,7 @@ add_task(async function test_mutation_discarding() {
 /**
  * Test the case where mutations happens before the initial translation.
  */
-add_task(async function test_mutations_before_initial_translation() {
+add_task(async function test_before_initial_translation() {
   const { translate, htmlMatches, cleanup, document, resolveRequests } =
     await setupMutationsTest(/* html */ `
       <div>
@@ -77,7 +77,7 @@ add_task(async function test_mutations_before_initial_translation() {
     `);
 
   translate();
-  // Unlike `test_mutation_discarding`, do NOT resolve translations here.
+  // Unlike `test_discarding`, do NOT resolve translations here.
 
   info("Mutating the DOM node 5 times");
   const textNode = document.querySelector("div").firstChild;
@@ -108,7 +108,7 @@ add_task(async function test_mutations_before_initial_translation() {
 /**
  * Test what happens when an inline element is mutated inside of a block element.
  */
-add_task(async function test_mutations_inline_elements() {
+add_task(async function test_inline_elements() {
   const { translate, htmlMatches, cleanup, document, resolveRequests } =
     await setupMutationsTest(/* html */ `
       <div>
@@ -227,10 +227,10 @@ add_task(async function test_mutations_inline_elements() {
 });
 
 /**
- * Test the same behavior as `test_mutations_inline_elements` but with individual block
+ * Test the same behavior as `test_inline_elements` but with individual block
  * elements.
  */
-add_task(async function test_mutations_on_block() {
+add_task(async function test_block_elements() {
   const { translate, htmlMatches, cleanup, document, resolveRequests } =
     await setupMutationsTest(/* html */ `
       <section>
