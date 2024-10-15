@@ -563,39 +563,79 @@ export class TranslationsDocument {
         const pendingNode = this.getPendingNodeFromTarget(mutation.target);
         if (pendingNode) {
           const translationId = this.#pendingTranslations.get(pendingNode);
+          console.log(`!!! mutation - pendingNode`, {
+            pendingNode,
+            translationId,
+          });
           if (translationId) {
+            console.log(`!!! pending node canceled`, { translationId });
             // The node was still pending to be translated, cancel it and re-submit.
             this.cancelTranslation(pendingNode, translationId);
             this.markNodeMutated(pendingNode);
+            if (mutation.type === "childList") {
+              // New nodes could have been added, make sure we can follow their shadow roots.
+              this.document.ownerGlobal.requestAnimationFrame(() => {
+                this.addShadowRootsToObserver(pendingNode);
+              });
+            }
             continue;
           }
         }
         switch (mutation.type) {
           case "childList":
-            for (const node of mutation.addedNodes) {
+            for (const addedNode of mutation.addedNodes) {
               // This node
               let identifier;
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                identifier = /** @type {Element} */ (node).tagName;
+              if (addedNode.nodeType === Node.ELEMENT_NODE) {
+                identifier = /** @type {Element} */ (addedNode).tagName;
               } else {
                 identifier = "#text";
               }
-              this.markNodeMutated(node);
+              console.log(
+                `!!! mutation - childList addedNode ${identifier}`,
+                addedNode
+              );
+              if (addedNode.tagName === "NAV") {
+                console.log(`!!! addedNode`, addedNode.outerHTML);
+              }
+              this.addShadowRootsToObserver(addedNode);
+              this.markNodeMutated(addedNode);
             }
             // TODO - Validate this change.
-            // for (const removedNode of mutation.removedNodes) {
-            //   const translationId = this.#pendingTranslations.get(removedNode);
-            //   if (translationId) {
-            //     this.cancelTranslation(removedNode);
-            //   }
-            // }
+            for (const removedNode of mutation.removedNodes) {
+              let identifier;
+              if (removedNode.nodeType === Node.ELEMENT_NODE) {
+                identifier = /** @type {Element} */ (removedNode).tagName;
+              } else {
+                identifier = "#text";
+              }
+              const translationId = this.#pendingTranslations.get(removedNode);
+              console.log(
+                `!!! mutation - childList removedNode ${identifier} (id:${translationId})`,
+                removedNode
+              );
+              if (translationId) {
+                this.cancelTranslation(removedNode, translationId);
+              }
+              this.cancelPendingAttributes(removedNode);
+            }
             break;
           case "characterData":
-            // A Text node `nodeValue` was changed.
-            this.#processedNodes.delete(mutation.target);
-            this.markNodeMutated(mutation.target);
+            console.log(`!!! mutation - characterData`, mutation.target);
+            // The mutated node will implement the CharacterData interface. The only
+            // node of this type that contains user-visible text is the `Text` node.
+            // Ignore others such as the comment node.
+            // https://developer.mozilla.org/en-US/docs/Web/API/CharacterData
+            if (mutation.target.nodeType === Node.TEXT_NODE) {
+              this.#processedNodes.delete(mutation.target);
+              this.markNodeMutated(mutation.target);
+            }
             break;
           case "attributes":
+            console.log(`!!! mutation - attributes`, {
+              target: mutation.target,
+              attributes: mutation.attributeName,
+            });
             this.markAttributeMutated(mutation.target, mutation.attributeName);
             break;
           default:
@@ -621,6 +661,31 @@ export class TranslationsDocument {
       // it to be loaded.
       document.addEventListener("DOMContentLoaded", addRootElements);
     }
+
+    // Shadow root attachment is not normally dispatched. Flipping this on for the
+    // document will allow the TranslationsDocument to subscribe to these events.
+    document.shadowRootAttachedEventEnabled = true;
+    document.ownerGlobal.addEventListener(
+      "shadowrootattached",
+      /**
+       * @param {Event}
+       */
+      event => {
+        console.log(`!!! window shadowrootattached`, event.target);
+        this.addShadowRootsToObserver(event.target);
+      }
+    );
+
+    document.addEventListener(
+      "shadowrootattached",
+      /**
+       * @param {Event}
+       */
+      event => {
+        console.log(`!!! shadowrootattached`, event.target);
+        this.addShadowRootsToObserver(event.target);
+      }
+    );
 
     this.viewportTranslated?.then(() => {
       ChromeUtils.addProfilerMarker(
@@ -720,6 +785,7 @@ export class TranslationsDocument {
           }
 
           for (const node of this.#mutatedNodes) {
+            this.addShadowRootsToObserver(node);
             this.subdivideNodeForTranslations(node);
             this.translateAttributes(node);
           }
@@ -749,6 +815,7 @@ export class TranslationsDocument {
    * @param {number} translationId
    */
   cancelTranslation(node, translationId) {
+    console.log(`!!! TranslationDocument.cancelTranslation`);
     this.translator.cancelSingleTranslation(translationId);
     delete node.dataset.mozTranslationsId;
     for (const childNode of node.querySelectorAll(
@@ -757,9 +824,17 @@ export class TranslationsDocument {
       delete childNode.dataset.mozTranslationsId;
     }
     this.#pendingTranslations.delete(node);
-    // TODO - This is wrong.
-    this.#pendingAttributes.delete(node);
     this.#processedNodes.delete(node);
+  }
+
+  cancelPendingAttributes(node) {
+    const attributes = this.#pendingAttributes.get(node);
+    if (attributes) {
+      for (const translationId of attributes.values()) {
+        this.translator.cancelSingleTranslation(translationId);
+      }
+      this.#pendingAttributes.delete(node);
+    }
   }
 
   /**
@@ -882,24 +957,29 @@ export class TranslationsDocument {
   }
 
   /**
-   * This function finds all sub shadow trees of node and
-   * add the ShadowRoot of those subtrees to the mutation
-   * observer.
+   * Shadow roots are used in custom elements, and are a method for encapsulating
+   * @param {Node} node
    */
   addShadowRootsToObserver(node) {
+    if (node.nodeType !== node.ELEMENT_NODE) {
+      return;
+    }
+    console.log(`!!! calling addShadowRootsToObserver`, node);
     const nodeIterator = node.ownerDocument.createTreeWalker(
       node,
       NodeFilter.SHOW_ELEMENT,
-      function (currentNode) {
-        return currentNode.openOrClosedShadowRoot
+      currentNode =>
+        currentNode.openOrClosedShadowRoot
           ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_SKIP;
-      }
+          : NodeFilter.FILTER_SKIP
     );
+
+    /** @type {Node | null} */
     let currentNode;
     while ((currentNode = nodeIterator.nextNode())) {
       // Only shadow hosts are accepted nodes
       const shadowRoot = currentNode.openOrClosedShadowRoot;
+      console.log(`!!! shadowroot found`, currentNode, shadowRoot);
       this.observeNewRoot(shadowRoot);
       this.addShadowRootsToObserver(shadowRoot);
     }
@@ -962,6 +1042,7 @@ export class TranslationsDocument {
     while ((currentNode = nodeIterator.nextNode())) {
       const shadowRoot = currentNode.openOrClosedShadowRoot;
       if (shadowRoot) {
+        console.log(`!!! processSubdivide shadowRoot`, shadowRoot);
         this.processSubdivide(shadowRoot);
       } else {
         this.queueNodeForTranslation(currentNode);
@@ -2597,6 +2678,7 @@ class QueuedTranslator {
    * @param {number} translationId
    */
   async cancelSingleTranslation(translationId) {
+    console.log(`!!! QueuedTranslator - cancelSingleTranslation`);
     this.#port.postMessage({
       type: "TranslationsPort:CancelSingleTranslation",
       translationId,
