@@ -485,7 +485,7 @@ async function createTranslationsDoc(html, options) {
    * @param {string} message
    * @param {string} html
    */
-  async function htmlMatches(message, html) {
+  async function htmlMatches(message, html, element = document.body) {
     const expected = naivelyPrettify(html);
     try {
       // TODO - !!! remove me before review.
@@ -500,7 +500,7 @@ async function createTranslationsDoc(html, options) {
       console.error(error);
 
       // Provide a nice error message.
-      const actual = naivelyPrettify(document.body.innerHTML);
+      const actual = naivelyPrettify(element.innerHTML);
       ok(
         false,
         `${message}\n\nExpected HTML:\n\n${expected}\n\nActual HTML:\n\n${actual}\n\n`

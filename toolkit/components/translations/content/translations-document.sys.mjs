@@ -567,33 +567,38 @@ export class TranslationsDocument {
             // The node was still pending to be translated, cancel it and re-submit.
             this.cancelTranslation(pendingNode, translationId);
             this.markNodeMutated(pendingNode);
+            if (mutation.type === "childList") {
+              // New nodes could have been added, make sure we can follow their shadow roots.
+              this.document.ownerGlobal.requestAnimationFrame(() => {
+                this.addShadowRootsToObserver(pendingNode);
+              });
+            }
             continue;
           }
         }
         switch (mutation.type) {
           case "childList":
-            for (const node of mutation.addedNodes) {
-              // This node
-              let identifier;
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                identifier = /** @type {Element} */ (node).tagName;
-              } else {
-                identifier = "#text";
-              }
-              this.markNodeMutated(node);
+            for (const addedNode of mutation.addedNodes) {
+              this.addShadowRootsToObserver(addedNode);
+              this.markNodeMutated(addedNode);
             }
-            // TODO - Validate this change.
-            // for (const removedNode of mutation.removedNodes) {
-            //   const translationId = this.#pendingTranslations.get(removedNode);
-            //   if (translationId) {
-            //     this.cancelTranslation(removedNode);
-            //   }
-            // }
+            for (const removedNode of mutation.removedNodes) {
+              const translationId = this.#pendingTranslations.get(removedNode);
+              if (translationId) {
+                this.cancelTranslation(removedNode, translationId);
+              }
+              this.cancelPendingAttributes(removedNode);
+            }
             break;
           case "characterData":
-            // A Text node `nodeValue` was changed.
-            this.#processedNodes.delete(mutation.target);
-            this.markNodeMutated(mutation.target);
+            // The mutated node will implement the CharacterData interface. The only
+            // node of this type that contains user-visible text is the `Text` node.
+            // Ignore others such as the comment node.
+            // https://developer.mozilla.org/en-US/docs/Web/API/CharacterData
+            if (mutation.target.nodeType === Node.TEXT_NODE) {
+              this.#processedNodes.delete(mutation.target);
+              this.markNodeMutated(mutation.target);
+            }
             break;
           case "attributes":
             this.markAttributeMutated(mutation.target, mutation.attributeName);
@@ -720,6 +725,7 @@ export class TranslationsDocument {
           }
 
           for (const node of this.#mutatedNodes) {
+            this.addShadowRootsToObserver(node);
             this.subdivideNodeForTranslations(node);
             this.translateAttributes(node);
           }
@@ -757,9 +763,17 @@ export class TranslationsDocument {
       delete childNode.dataset.mozTranslationsId;
     }
     this.#pendingTranslations.delete(node);
-    // TODO - This is wrong.
-    this.#pendingAttributes.delete(node);
     this.#processedNodes.delete(node);
+  }
+
+  cancelPendingAttributes(node) {
+    const attributes = this.#pendingAttributes.get(node);
+    if (attributes) {
+      for (const translationId of attributes.values()) {
+        this.translator.cancelSingleTranslation(translationId);
+      }
+      this.#pendingAttributes.delete(node);
+    }
   }
 
   /**
@@ -882,25 +896,34 @@ export class TranslationsDocument {
   }
 
   /**
-   * This function finds all sub shadow trees of node and
-   * add the ShadowRoot of those subtrees to the mutation
-   * observer.
+   * Shadow roots are used in custom elements, and are a method for encapsulating
+   * markup. Normally only "open" shadow roots can be accessed, but in privileged
+   * contexts, they can be traversed using the ChromeOnly property openOrClosedShadowRoot.
+   *
+   * @param {Node} node
    */
   addShadowRootsToObserver(node) {
+    if (node.nodeType !== node.ELEMENT_NODE) {
+      return;
+    }
     const nodeIterator = node.ownerDocument.createTreeWalker(
       node,
       NodeFilter.SHOW_ELEMENT,
-      function (currentNode) {
-        return currentNode.openOrClosedShadowRoot
+      currentNode =>
+        currentNode.openOrClosedShadowRoot
           ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_SKIP;
-      }
+          : NodeFilter.FILTER_SKIP
     );
+
+    /** @type {Node | null} */
     let currentNode;
     while ((currentNode = nodeIterator.nextNode())) {
       // Only shadow hosts are accepted nodes
       const shadowRoot = currentNode.openOrClosedShadowRoot;
-      this.observeNewRoot(shadowRoot);
+      if (!this.#rootNodes.has(shadowRoot)) {
+        this.observeNewRoot(shadowRoot);
+      }
+      // A shadow root may contain other shadow roots, recurse into them.
       this.addShadowRootsToObserver(shadowRoot);
     }
   }
