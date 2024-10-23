@@ -627,9 +627,9 @@ add_task(async function test_presumed_inlines3() {
       <div>
         Text node
         <span>Inline</span>
-        <div>Block Element</div>
-        <div>Block Element</div>
-        <div>Block Element</div>
+        <div>Block Element 1</div>
+        <div>Block Element 2</div>
+        <div>Block Element 3</div>
       </span>
     `,
     { mockedTranslatorPort: createBatchedMockedTranslatorPort() }
@@ -646,15 +646,95 @@ add_task(async function test_presumed_inlines3() {
         bbbbbb
       </span>
       <div>
-        ccccc ccccccc
+        ccccc ccccccc c
       </div>
       <div>
-        ddddd ddddddd
+        ddddd ddddddd d
       </div>
       <div>
-        eeeee eeeeeee
+        eeeee eeeeeee e
       </div>
     </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_cached_pending_translations_text() {
+  const { translate, htmlMatches, cleanup } = await createTranslationsDoc(
+    /* html */ `
+      <div>
+        <div>Repeated text in a block element</div>
+        <div>Repeated text in a block element</div>
+        <div>Repeated text in a block element</div>
+      </span>
+    `,
+    { mockedTranslatorPort: createBatchedMockedTranslatorPort() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Repeated text translations are only sent to the inference engine once.",
+    /* html */ `
+      <div>
+        <div>
+          aaaaaaaa aaaa aa a aaaaa aaaaaaa
+        </div>
+        <div>
+          aaaaaaaa aaaa aa a aaaaa aaaaaaa
+        </div>
+        <div>
+          aaaaaaaa aaaa aa a aaaaa aaaaaaa
+        </div>
+      </div>
+    `
+  );
+
+  cleanup();
+});
+
+add_task(async function test_cached_pending_translations_html() {
+  const { translate, htmlMatches, cleanup } = await createTranslationsDoc(
+    /* html */ `
+      <div>
+        <div>Repeated <b>text</b> in a block element</div>
+        <div>Repeated <b>text</b> in a block element</div>
+        <div>Repeated <b>text</b> in a block element</div>
+      </span>
+    `,
+    { mockedTranslatorPort: createBatchedMockedTranslatorPort() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Repeated html translations are only sent to the inference engine once.",
+    /* html */ `
+      <div>
+      <div>
+          aaaaaaaa
+          <b>
+            aaaa
+          </b>
+          aa a aaaaa aaaaaaa
+        </div>
+        <div>
+          aaaaaaaa
+          <b>
+            aaaa
+          </b>
+          aa a aaaaa aaaaaaa
+        </div>
+        <div>
+          aaaaaaaa
+          <b>
+            aaaa
+          </b>
+          aa a aaaaa aaaaaaa
+        </div>
+      </div>
     `
   );
 

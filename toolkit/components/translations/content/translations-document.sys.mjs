@@ -47,9 +47,9 @@ const NodeStatus = {
  * re-used on page reloads if the origin of the site does not change.
  */
 export class LRUCache {
-  /** @type {Map<string, string>} */
+  /** @type {Map<string, Promise<string>>} */
   #htmlCache = new Map();
-  /** @type {Map<string, string>} */
+  /** @type {Map<string, Promise<string>>} */
   #textCache = new Map();
   /** @type {string} */
   #fromLanguage;
@@ -77,7 +77,7 @@ export class LRUCache {
 
   /**
    * @param {boolean} isHTML
-   * @returns {boolean}
+   * @returns {Map<string, Promise<string>>}
    */
   #getCache(isHTML) {
     return isHTML ? this.#htmlCache : this.#textCache;
@@ -89,7 +89,7 @@ export class LRUCache {
    *
    * @param {string} sourceString
    * @param {boolean} isHTML
-   * @returns {string}
+   * @returns {Promise<string>}
    */
   get(sourceString, isHTML) {
     const cache = this.#getCache(isHTML);
@@ -111,7 +111,7 @@ export class LRUCache {
 
   /**
    * @param {string} sourceString
-   * @param {string} targetString
+   * @param {Promise<string>} targetString
    * @param {boolean} isHTML
    */
   set(sourceString, targetString, isHTML) {
@@ -1360,7 +1360,7 @@ export class TranslationsDocument {
         const translation = await this.maybeTranslate(
           node,
           text,
-          false /*isHTML*/,
+          null,
           translationId
         );
 
@@ -1529,17 +1529,12 @@ export class TranslationsDocument {
       });
     }
 
-    /** @type {string} */
-    let text;
-    /** @type {boolean} */
-    let isHTML;
+    const text = node.textContent;
 
+    /** @type {string | null} */
+    let html = null;
     if (node.nodeType === Node.ELEMENT_NODE) {
-      text = node.innerHTML;
-      isHTML = true;
-    } else {
-      text = node.textContent;
-      isHTML = false;
+      html = node.innerHTML;
     }
 
     if (text.trim().length === 0) {
@@ -1557,7 +1552,7 @@ export class TranslationsDocument {
     const translatedHTML = await this.maybeTranslate(
       node,
       text,
-      isHTML,
+      html,
       translationId
     );
 
@@ -1677,38 +1672,52 @@ export class TranslationsDocument {
   }
 
   /**
-   * A single function to update pendingTranslationsCount while
-   * calling the translate function
+   * A node is ready to be translated. Check if the text is translatable, and if
+   * the translation was cached return that instead of performing a new request.
    *
    * @param {Node} node
-   * @param {string} text
-   * @param {boolean} isHTML
+   * @param {string} text - Either the original text, or the `textContent` of the HTML.
+   * @param {string | null} html
    * @param {number} translationId
    * @returns {Promise<string | null>}
    */
-  async maybeTranslate(node, text, isHTML, translationId) {
+  async maybeTranslate(node, text, html, translationId) {
+    if (isTextNotTranslatable(text)) {
+      return null;
+    }
+
+    const isHTML = html != null;
+    const stringToTranslate = html ?? text;
     this.#pendingTranslationsCount++;
-    try {
-      let translation = this.translationsCache.get(text, isHTML);
-      if (translation === undefined) {
-        translation = await this.translator.translate(
-          node,
-          text,
-          isHTML,
-          translationId
-        );
-        this.translationsCache.set(text, translation, isHTML);
-      } else if (!this.hasFirstVisibleChange) {
+    const cachedTranslation = this.translationsCache.get(
+      stringToTranslate,
+      isHTML
+    );
+    if (cachedTranslation) {
+      if (!this.hasFirstVisibleChange) {
+        // When reloading the page, if we pull from the LRUCache, it counts as the
+        // first visible change for the page.
         this.hasFirstVisibleChange = true;
         this.actorReportFirstVisibleChange();
       }
+      return cachedTranslation;
+    }
+
+    try {
+      const translation = this.translator.translate(
+        node,
+        stringToTranslate,
+        isHTML,
+        translationId
+      );
+      this.translationsCache.set(stringToTranslate, translation, isHTML);
       return translation;
     } catch (error) {
       lazy.console.log("Translation failed", error);
+      return null;
     } finally {
       this.#pendingTranslationsCount--;
     }
-    return null;
   }
 
   /**
@@ -2851,4 +2860,44 @@ function isNodeDetached(node) {
     // Shadow DOM elements, which have a null parentElement.
     !node.flattenedTreeParentNode
   );
+}
+
+/**
+ * This isn't a super strict set of characters, and was built from observing
+ * some of the most common websites.
+ */
+const NON_TRANSLATABLE_CHARS = new Set(
+  [
+    // Numbers
+    "0123456789",
+    // Top row symbols on an American keyboard.
+    "`~!@#$%^&*()_+-=",
+    // Other common English. punctuation
+    ",./;'[]\\<>?:\"{}|",
+    // Currencies
+    "¥€£",
+    // This is frequently used presentationally, like "2x"
+    "xX",
+    // Other punctuation
+    "«»‹›★•",
+    // Whitespace
+    " \t\n",
+  ]
+    .join("")
+    .split("")
+);
+
+/**
+ * If a string consists of only non-translatable chars, skip it.
+ *
+ * @param {string} text
+ */
+function isTextNotTranslatable(text) {
+  text = text.trim();
+  for (let i = 0; i < text.length; i++) {
+    if (!NON_TRANSLATABLE_CHARS.has(text[i])) {
+      return false;
+    }
+  }
+  return true;
 }
