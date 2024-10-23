@@ -2887,17 +2887,75 @@ const NON_TRANSLATABLE_CHARS = new Set(
     .split("")
 );
 
+/** @type {Optional<RegExp>} */
+let NOT_TRANSLATABLE;
+
+/**
+ * Use a unicode regex to test for presentational characters, such as dash.
+ *
+ * Useful links:
+ *    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Unicode_character_class_escape
+ *    https://tc39.es/ecma262/multipage/text-processing.html#table-binary-unicode-properties
+ *    https://unicode.org/reports/tr44/
+ *    https://www.compart.com/en/unicode/category
+ *    https://www.compart.com/en/unicode/bidiclass
+ *
+ * @returns {RegExp}
+ */
+function getNotTranslatableRegex() {
+  if (!NOT_TRANSLATABLE) {
+    const properties = [
+      // https://unicode.org/reports/tr44/#Emoji
+      "Emoji",
+      // https://www.compart.com/en/unicode/category/Ps
+      // https://www.compart.com/en/unicode/category/Po
+      // https://www.compart.com/en/unicode/category/Pi
+      // https://www.compart.com/en/unicode/category/Pf
+      // https://www.compart.com/en/unicode/category/Pe
+      // https://www.compart.com/en/unicode/category/Pd
+      // https://www.compart.com/en/unicode/category/Pc
+      "Punctuation",
+      // https://www.compart.com/en/unicode/category/Sm
+      // https://unicode.org/reports/tr44/#Other_Math
+      "Math",
+      // https://www.compart.com/en/unicode/bidiclass/WS
+      "White_Space",
+      //  https://www.compart.com/en/unicode/category/Sc
+      "Currency_Symbol",
+      // https://www.compart.com/en/unicode/category/Sk
+      "Modifier_Symbol",
+      // There are certain numbers covered here that may be translatable, but it's probably
+      // better to find cases of this in the wild, and change this rule as needed.
+      // https://www.compart.com/en/unicode/category/Nd
+      // https://www.compart.com/en/unicode/category/Nl
+      // https://www.compart.com/en/unicode/category/No
+      "Number",
+    ];
+
+    let unicodeProperties = "";
+    for (const property of properties) {
+      unicodeProperties += "\\p{" + property + "}";
+    }
+
+    NOT_TRANSLATABLE = new RegExp(
+      // Include x and X here as well, as they are frequently used as presentational symbols
+      // in the absence of other letters.
+      `^[xX${unicodeProperties}]*$`,
+      // v: Unicode mode
+      // m: Multiline
+      "gv"
+    );
+  }
+  return NOT_TRANSLATABLE;
+}
+
 /**
  * If a string consists of only non-translatable chars, skip it.
  *
  * @param {string} text
+ * @returns {boolean}
  */
 function isTextNotTranslatable(text) {
   text = text.trim();
-  for (let i = 0; i < text.length; i++) {
-    if (!NON_TRANSLATABLE_CHARS.has(text[i])) {
-      return false;
-    }
-  }
-  return true;
+  return Boolean(text.match(getNotTranslatableRegex()));
 }

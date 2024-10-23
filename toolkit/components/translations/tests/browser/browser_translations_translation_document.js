@@ -741,6 +741,77 @@ add_task(async function test_cached_pending_translations_html() {
   cleanup();
 });
 
+add_task(async function test_untranslatable_blocks() {
+  const { translate, htmlMatches, cleanup } = await createTranslationsDoc(
+    /* html */ `
+      <div>
+        <!-- presentational -->
+        <div>🧙👍😀😬</div>
+        <div>1, 2, 3, 4</div>
+        <div>𝛽₂ + 𝛾ₓ = ½</div>
+        <div>5x</div>
+        <div>$100.00</div>
+        <div>€100,00</div>
+        <div>&nbsp; &mdash; &nbsp;</div>
+        <div>© 1983</div>
+        <div>"«»‹›★•”^</div>
+
+        <!-- translated -->
+        <div>Emoji: 🧙👍😀😬</div>
+        <div>DX</div>
+      </span>
+    `,
+    { mockedTranslatorPort: createBatchedMockedTranslatorPort() }
+  );
+
+  translate();
+
+  await htmlMatches(
+    "Expected ",
+    /* html */ `
+    <div>
+    <!-- presentational -->
+      <div>
+        🧙👍😀😬
+      </div>
+      <div>
+        1, 2, 3, 4
+      </div>
+      <div>
+        𝛽₂ + 𝛾ₓ = ½
+      </div>
+      <div>
+        5x
+      </div>
+      <div>
+        $100.00
+      </div>
+      <div>
+        €100,00
+      </div>
+      <div>
+        &nbsp; — &nbsp;
+      </div>
+      <div>
+        © 1983
+      </div>
+      <div>
+        "«»‹›★•”^
+      </div>
+      <!-- translated -->
+      <div>
+        bbbbb: 🧙👍😀😬
+      </div>
+      <div>
+        cc
+      </div>
+    </div>
+    `
+  );
+
+  cleanup();
+});
+
 /**
  * Test the display "none" properties properly subdivide in block elements.
  */
