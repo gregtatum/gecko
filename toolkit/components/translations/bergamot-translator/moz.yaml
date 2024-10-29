@@ -16,7 +16,7 @@ origin:
 
   # Full URL for the package's homepage/etc
   # Usually different from repository url
-  url: https://github.com/browsermt/bergamot-translator.git
+  url: https://github.com/mozilla/firefox-translations-training.git
 
   # Human-readable identifier for this version/release
   # Generally "version NNN", "tag SSS", "bookmark SSS"
@@ -24,7 +24,7 @@ origin:
 
   # Revision to pull in
   # Must be a long or short commit SHA (long preferred)
-  revision: 05a87784973b6e1cc591f1f1a9a05c5873d9971e
+  revision: 2ec548102a0c07a3c54aee28f0e991c40c7c111c
 
   # The package's license, where possible using the mnemonic from
   # https://spdx.org/licenses/
