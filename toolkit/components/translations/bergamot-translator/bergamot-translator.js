@@ -3455,10 +3455,92 @@ function loadBergamot(Module) {
 
   run();
 
+  const crcTable = (function makeCRCTable(){
+    var c;
+    var crcTable = [];
+    for(var n =0; n < 256; n++){
+        c = n;
+        for(var k =0; k < 8; k++){
+            c = ((c&1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+          }
+          crcTable[n] = c;
+      }
+      return crcTable;
+  })();
+
+  const crc32 = function(p, len) {
+      var crc = 0 ^ (-1);
+      const buf = new Uint8Array(wasmMemory.buffer, p, len);
+      for (var i = 0; i < len; i++ ) {
+          crc = (crc >>> 8) ^ crcTable[(crc ^ buf[i]) & 0xFF];
+      }
+
+      return (crc ^ (-1)) >>> 0;
+  };
+
+  function createWasmGemm() {
+    const r = createWasmGemm0();
+    return {
+      int8_prepare_a(...args) {
+        const [ inputMatrixA,  scale, zeroPoint,  rowsA, colsA,  outputMatrixA ] =args;
+        const res = r.int8_prepare_a(...args);
+        err(`!!! int8PrepareAFallback: ${rowsA}x${colsA} in=${crc32(inputMatrixA, 4 * rowsA * colsA)} out=${crc32(outputMatrixA, rowsA * colsA)}`);
+        return res;
+      },
+      int8_prepare_b(...args) {
+        err("int8PrepareBFallback");
+        const [inputMatrixB,  scale,  zeroPoint,  rowsB,  colsB,  outputMatrixB] = args;
+        const res = r.int8_prepare_b(...args);
+        return res;
+      },
+      int8_prepare_b_from_transposed(...args) {
+        err("int8PrepareBFromTransposedFallback");
+        const [ inputMatrixBQuantizedTransposed, rowsB,  colsB,  outputMatrixB] = args;
+        const res = r.int8_prepare_b_from_transposed(...args);
+        return res;
+      },
+      int8_prepare_b_from_quantized_transposed(...args) {
+        const [ inputMatrixBQuantizedTransposed, rowsB, colsB, outputMatrixB,] = args;
+        const res = r.int8_prepare_b_from_quantized_transposed(...args);
+        err(`!!! int8PrepareBFromQuantizedTransposedFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBQuantizedTransposed, rowsB * colsB)} out=${crc32(outputMatrixB, rowsB * colsB)}`);
+        return res;
+      },
+      int8_prepare_bias(...args) {
+        const [ inputMatrixBPrepared,  scaleA, zeroPointA,  scaleB,  zeroPointB,  rowsB,colsB,  inputBias,  output, ] = args;
+        const res = r.int8_prepare_bias(...args);
+        if (crc32(inputMatrixBPrepared, rowsB * colsB) == 23861312) {
+          err('-- B: ' + JSON.stringify(Array.from(new Uint8Array(wasmMemory.buffer, inputMatrixBPrepared, rowsB * colsB))));
+          err('-- bias: ' + JSON.stringify(Array.from(new Float32Array(wasmMemory.buffer, inputBias, colsB))));
+          err('-- out: ' + JSON.stringify(Array.from(new Float32Array(wasmMemory.buffer, output, colsB))));
+          const a = new Float32Array(wasmMemory.buffer, inputBias, colsB)
+          for (let i = 0; i < a.length; i++) {
+            console.log(`!!! value 0x${a[i].toString(16)}` );
+          }
+        }
+        err(`!!! int8PrepareBiasFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBPrepared, rowsB * colsB)} bias=${crc32(inputBias, 4 * colsB)} out=${crc32(output, 4 * colsB)}`);
+        return res;
+      },
+      int8_multiply_and_add_bias(...args) {
+        const [  inputMatrixAPrepared,  scaleA, zeroPointA,  inputMatrixBPrepared,  scaleB,
+           zeroPointB,  inputBiasPrepared,  unquantMultiplier, rowsA,  width,  colsB,  output] = args;
+        const res = r.int8_multiply_and_add_bias(...args);
+        err(`!!! int8MultiplyAndAddBiasFallback: ${rowsA}x${colsB} a=${crc32(inputMatrixAPrepared, rowsA * width)} b=${crc32(inputMatrixBPrepared, width * colsB)} bias=${crc32(inputBiasPrepared, 4 * colsB)} out=${crc32(output, 4 * rowsA * colsB)}`);
+        return res;
+      },
+      int8_select_columns_of_b(...args) {
+        const [  inputMatrixBPrepared, rowsB,  colsB,
+           colIndexList, sizeColIndexList, output,] = args;
+        const res = r.int8_select_columns_of_b(...args);
+        err(`!!! int8SelectColumnsOfBFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBPrepared, rowsB * colsB)} list=${crc32(colIndexList, 4 * sizeColIndexList)} out=${crc32(output, 4 * rowsB * sizeColIndexList)}`);
+        return res;
+      },
+    };
+  }
+
   /* Use an optimized gemm implementation if available, otherwise use the fallback
    * implementation.
    */
-  function createWasmGemm() {
+  function createWasmGemm0() {
     // A map of expected gemm function to the corresponding fallback gemm function names.
     const GEMM_TO_FALLBACK_FUNCTIONS_MAP = {
       int8_prepare_a: "int8PrepareAFallback",
