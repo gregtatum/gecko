@@ -152,6 +152,7 @@ def create_command(allow_run_on_host: bool, task_args: list[str]):
 
     # Append task arguments if they exist
     if task_args:
+        command.append("--")
         command.extend(task_args)
 
     return command
@@ -215,9 +216,12 @@ def main():
     if not os.path.exists(THIRD_PARTY_PATH):
         os.mkdir(THIRD_PARTY_PATH)
 
-    fetch_bergamot_source()
+    # fetch_bergamot_source()
     build_bergamot(args)
-    write_final_bergamot_js_file()
+    # write_final_bergamot_js_file()
+
+    print("\nTo test the locally built wasm file, uncomment the line in:")
+    print("toolkit/components/translations/jar.mn")
 
 
 if __name__ == "__main__":

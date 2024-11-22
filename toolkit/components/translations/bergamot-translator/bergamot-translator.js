@@ -3484,7 +3484,7 @@ function loadBergamot(Module) {
       int8_prepare_a(...args) {
         const [ inputMatrixA,  scale, zeroPoint,  rowsA, colsA,  outputMatrixA ] =args;
         const res = r.int8_prepare_a(...args);
-        err(`!!! int8PrepareAFallback: ${rowsA}x${colsA} in=${crc32(inputMatrixA, 4 * rowsA * colsA)} out=${crc32(outputMatrixA, rowsA * colsA)}`);
+        err(`@@@ int8PrepareAFallback: ${rowsA}x${colsA} in=${crc32(inputMatrixA, 4 * rowsA * colsA)} out=${crc32(outputMatrixA, rowsA * colsA)}`);
         return res;
       },
       int8_prepare_b(...args) {
@@ -3502,36 +3502,64 @@ function loadBergamot(Module) {
       int8_prepare_b_from_quantized_transposed(...args) {
         const [ inputMatrixBQuantizedTransposed, rowsB, colsB, outputMatrixB,] = args;
         const res = r.int8_prepare_b_from_quantized_transposed(...args);
-        err(`!!! int8PrepareBFromQuantizedTransposedFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBQuantizedTransposed, rowsB * colsB)} out=${crc32(outputMatrixB, rowsB * colsB)}`);
+        err(`@@@ int8PrepareBFromQuantizedTransposedFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBQuantizedTransposed, rowsB * colsB)} out=${crc32(outputMatrixB, rowsB * colsB)}`);
         return res;
       },
       int8_prepare_bias(...args) {
-        const [ inputMatrixBPrepared,  scaleA, zeroPointA,  scaleB,  zeroPointB,  rowsB,colsB,  inputBias,  output, ] = args;
+        const [ input_B_prepared,  scaleA, zeroPointA,  scaleB,  zeroPointB,  width, cols_b,  input_bias,  output, ] = args;
         const res = r.int8_prepare_bias(...args);
-        if (crc32(inputMatrixBPrepared, rowsB * colsB) == 23861312) {
-          err('-- B: ' + JSON.stringify(Array.from(new Uint8Array(wasmMemory.buffer, inputMatrixBPrepared, rowsB * colsB))));
-          err('-- bias: ' + JSON.stringify(Array.from(new Float32Array(wasmMemory.buffer, inputBias, colsB))));
-          err('-- out: ' + JSON.stringify(Array.from(new Float32Array(wasmMemory.buffer, output, colsB))));
-          const a = new Float32Array(wasmMemory.buffer, inputBias, colsB)
-          for (let i = 0; i < a.length; i++) {
-            console.log(`!!! value 0x${a[i].toString(16)}` );
+        if (crc32(input_B_prepared, width * cols_b) == 23861312) {
+          const unquant_factor = (-1) * ((127.0 / scaleA) * (127.0 / scaleB)) / (127.0)
+          const input_bias_arr = Array.from(new Float32Array(wasmMemory.buffer, input_bias, cols_b));
+          const output_bias_arr = Array.from(new Float32Array(wasmMemory.buffer, output, cols_b));
+          console.log(`!!! args`, {scaleA, zeroPointA,  scaleB,  zeroPointB, width, cols_b, input_bias});
+          console.log(`!!! res`, res);
+          console.log(`!!! unquant_factor`, unquant_factor);
+          console.log('!!! input matrix prepared: ' + JSON.stringify(Array.from(new Uint8Array(wasmMemory.buffer, input_B_prepared, width * cols_b))));
+          console.log('!!! input bias: ' + JSON.stringify(input_bias_arr));
+          console.log('!!! output: ' + JSON.stringify(output_bias_arr));
+
+          for (let i = 0; i < cols_b; i++) {
+            if (Number.isNaN(input_bias_arr[i])) {
+              let input = '0x'
+              let output = '0x'
+              const uint_input = new Uint8Array(wasmMemory.buffer, input_bias + i * 4, 4)
+              const uint_output = new Uint8Array(wasmMemory.buffer, output + i * 4, 4)
+              for (const value of uint_input) {
+                input += value.toString(16)
+              }
+              for (const value of uint_output) {
+                output += value.toString(16)
+              }
+              console.log(`!!! output NaN`, i, input, output);
+            }
           }
+          const a = new Float32Array(wasmMemory.buffer, input_bias, cols_b)
+          for (let i = 0; i < a.length; i++) {
+            console.log(`@@@ value 0x${a[i].toString(16)}` );
+          }
+          // console.log(`!!! intgemm::Int8Shift::PrepareBias(input_B_prepared ${width}, ${cols_B}, intgemm::callbacks::UnquantizeAndAddBiasAndWrite(unquant_factor,))`)
+          // intgemm::Int8Shift::PrepareBias(
+          //   input_B_prepared,
+          //   width,
+          //   cols_B,
+          //   intgemm::callbacks::UnquantizeAndAddBiasAndWrite(unquant_factor, input_bias, output));
         }
-        err(`!!! int8PrepareBiasFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBPrepared, rowsB * colsB)} bias=${crc32(inputBias, 4 * colsB)} out=${crc32(output, 4 * colsB)}`);
+        err(`@@@ int8PrepareBiasFallback: ${width}x${cols_b} in=${crc32(input_B_prepared, width * cols_b)} bias=${crc32(input_bias, 4 * cols_b)} out=${crc32(output, 4 * cols_b)}`);
         return res;
       },
       int8_multiply_and_add_bias(...args) {
         const [  inputMatrixAPrepared,  scaleA, zeroPointA,  inputMatrixBPrepared,  scaleB,
            zeroPointB,  inputBiasPrepared,  unquantMultiplier, rowsA,  width,  colsB,  output] = args;
         const res = r.int8_multiply_and_add_bias(...args);
-        err(`!!! int8MultiplyAndAddBiasFallback: ${rowsA}x${colsB} a=${crc32(inputMatrixAPrepared, rowsA * width)} b=${crc32(inputMatrixBPrepared, width * colsB)} bias=${crc32(inputBiasPrepared, 4 * colsB)} out=${crc32(output, 4 * rowsA * colsB)}`);
+        err(`@@@ int8MultiplyAndAddBiasFallback: ${rowsA}x${colsB} a=${crc32(inputMatrixAPrepared, rowsA * width)} b=${crc32(inputMatrixBPrepared, width * colsB)} bias=${crc32(inputBiasPrepared, 4 * colsB)} out=${crc32(output, 4 * rowsA * colsB)}`);
         return res;
       },
       int8_select_columns_of_b(...args) {
         const [  inputMatrixBPrepared, rowsB,  colsB,
            colIndexList, sizeColIndexList, output,] = args;
         const res = r.int8_select_columns_of_b(...args);
-        err(`!!! int8SelectColumnsOfBFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBPrepared, rowsB * colsB)} list=${crc32(colIndexList, 4 * sizeColIndexList)} out=${crc32(output, 4 * rowsB * sizeColIndexList)}`);
+        err(`@@@ int8SelectColumnsOfBFallback: ${rowsB}x${colsB} in=${crc32(inputMatrixBPrepared, rowsB * colsB)} list=${crc32(colIndexList, 4 * sizeColIndexList)} out=${crc32(output, 4 * rowsB * sizeColIndexList)}`);
         return res;
       },
     };
