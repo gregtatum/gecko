@@ -34,7 +34,7 @@ add_task(async function test_discarding() {
     "It translates.",
     /* html */ `
       <div>
-        T̅h̅i̅s̅ i̅s̅ a̅ s̅i̅m̅p̅l̅e̅ t̅r̅a̅n̅s̅l̅a̅t̅i̅o̅n̅. (id:1)
+        T̅h̅i̅s̅ i̅s̅ a̅ s̅i̅m̅p̅l̅e̅ t̅r̅a̅n̅s̅l̅a̅t̅i̅o̅n̅. (id:0-1)
       </div>
     `
   );
@@ -57,7 +57,7 @@ add_task(async function test_discarding() {
     "The changed node gets translated",
     /* html */ `
       <div>
-        M̅u̅t̅a̅t̅i̅o̅n̅ 5 o̅n̅ e̅l̅e̅m̅e̅n̅t̅ (id:2)
+        M̅u̅t̅a̅t̅i̅o̅n̅ 5 o̅n̅ e̅l̅e̅m̅e̅n̅t̅ (id:0-2)
       </div>
     `
   );
@@ -96,7 +96,7 @@ add_task(async function test_before_initial_translation() {
     "The changed node gets translated",
     /* html */ `
       <div>
-        M̅u̅t̅a̅t̅i̅o̅n̅ 5 o̅n̅ e̅l̅e̅m̅e̅n̅t̅ (id:2)
+        M̅u̅t̅a̅t̅i̅o̅n̅ 5 o̅n̅ e̅l̅e̅m̅e̅n̅t̅ (id:0-2)
       </div>
     `
   );
@@ -133,13 +133,13 @@ add_task(async function test_inline_elements() {
     <span>
       i̅n̅l̅i̅n̅e̅ o̅n̅e̅
     </span>
-    <span title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:2)">
+    <span title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-2)">
       i̅n̅l̅i̅n̅e̅ t̅w̅o̅
     </span>
     <span>
       i̅n̅l̅i̅n̅e̅ t̅h̅r̅e̅e̅
     </span>
-    (id:1)
+    (id:0-1)
   </div>
     `
   );
@@ -161,13 +161,13 @@ add_task(async function test_inline_elements() {
         <span>
           i̅n̅l̅i̅n̅e̅ o̅n̅e̅
         </span>
-        <span title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:2)">
-          s̅e̅t̅t̅i̅n̅g̅ t̅h̅e̅ i̅n̅n̅e̅r̅T̅e̅x̅t̅ h̅i̅t̅s̅ t̅h̅e̅ c̅h̅i̅l̅d̅L̅i̅s̅t̅ m̅u̅t̅a̅t̅i̅o̅n̅ t̅y̅p̅e̅ (id:3)
+        <span title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-2)">
+          s̅e̅t̅t̅i̅n̅g̅ t̅h̅e̅ i̅n̅n̅e̅r̅T̅e̅x̅t̅ h̅i̅t̅s̅ t̅h̅e̅ c̅h̅i̅l̅d̅L̅i̅s̅t̅ m̅u̅t̅a̅t̅i̅o̅n̅ t̅y̅p̅e̅ (id:0-3)
         </span>
         <span>
           i̅n̅l̅i̅n̅e̅ t̅h̅r̅e̅e̅
         </span>
-        (id:1)
+        (id:0-1)
       </div>
     `
   );
@@ -186,13 +186,13 @@ add_task(async function test_inline_elements() {
         <span>
           i̅n̅l̅i̅n̅e̅ o̅n̅e̅
         </span>
-        <span title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:2)">
-          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:4)
+        <span title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-2)">
+          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:0-4)
         </span>
         <span>
           i̅n̅l̅i̅n̅e̅ t̅h̅r̅e̅e̅
         </span>
-        (id:1)
+        (id:0-1)
       </div>
     `
   );
@@ -210,13 +210,13 @@ add_task(async function test_inline_elements() {
         <span>
           i̅n̅l̅i̅n̅e̅ o̅n̅e̅
         </span>
-        <span title="M̅u̅t̅a̅t̅e̅ t̅h̅e̅ t̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:5)">
-          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:4)
+        <span title="M̅u̅t̅a̅t̅e̅ t̅h̅e̅ t̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-5)">
+          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:0-4)
         </span>
         <span>
           i̅n̅l̅i̅n̅e̅ t̅h̅r̅e̅e̅
         </span>
-        (id:1)
+        (id:0-1)
       </div>
     `
   );
@@ -249,13 +249,13 @@ add_task(async function test_block_elements() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
-        <div title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:4)">
-          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+        <div title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-4)">
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:0-2)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -276,13 +276,13 @@ add_task(async function test_block_elements() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
-        <div title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:4)">
-          s̅e̅t̅t̅i̅n̅g̅ t̅h̅e̅ i̅n̅n̅e̅r̅T̅e̅x̅t̅ h̅i̅t̅s̅ t̅h̅e̅ c̅h̅i̅l̅d̅L̅i̅s̅t̅ m̅u̅t̅a̅t̅i̅o̅n̅ t̅y̅p̅e̅ (id:5)
+        <div title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-4)">
+          s̅e̅t̅t̅i̅n̅g̅ t̅h̅e̅ i̅n̅n̅e̅r̅T̅e̅x̅t̅ h̅i̅t̅s̅ t̅h̅e̅ c̅h̅i̅l̅d̅L̅i̅s̅t̅ m̅u̅t̅a̅t̅i̅o̅n̅ t̅y̅p̅e̅ (id:0-5)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -300,13 +300,13 @@ add_task(async function test_block_elements() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
-        <div title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:4)">
-          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:6)
+        <div title="T̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-4)">
+          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:0-6)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -323,13 +323,13 @@ add_task(async function test_block_elements() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
-        <div title="M̅u̅t̅a̅t̅e̅ t̅h̅e̅ t̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:7)">
-          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:6)
+        <div title="M̅u̅t̅a̅t̅e̅ t̅h̅e̅ t̅i̅t̅l̅e̅ a̅t̅t̅r̅i̅b̅u̅t̅e̅ (id:0-7)">
+          C̅h̅a̅n̅g̅e̅ t̅h̅e̅ c̅h̅a̅r̅a̅c̅t̅e̅r̅ d̅a̅t̅a̅ f̅o̅r̅ a̅ s̅p̅e̅c̅i̅f̅i̅c̅ n̅o̅d̅e̅ (id:0-6)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -364,7 +364,7 @@ add_task(async function test_removing_elements() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -393,20 +393,20 @@ add_task(async function test_mixed_block_inline() {
     "The algorithm to chop of the nodes runs.",
     /* html */ `
       <section>
-        f̅i̅r̅s̅t̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:1)
+        f̅i̅r̅s̅t̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:0-1)
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:2)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-2)
         </div>
-        s̅e̅c̅o̅n̅d̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:3)
+        s̅e̅c̅o̅n̅d̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:0-3)
         <span>
-          w̅i̅t̅h̅ i̅n̅l̅i̅n̅e̅ e̅l̅e̅m̅e̅n̅t̅ (id:4)
+          w̅i̅t̅h̅ i̅n̅l̅i̅n̅e̅ e̅l̅e̅m̅e̅n̅t̅ (id:0-4)
         </span>
         <div>
-          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:5)
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:0-5)
         </div>
-        t̅h̅i̅r̅d̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:6)
+        t̅h̅i̅r̅d̅ t̅e̅x̅t̅ n̅o̅d̅e̅ (id:0-6)
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:7)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-7)
         </div>
       </section>
     `
@@ -429,20 +429,20 @@ add_task(async function test_mixed_block_inline() {
     "",
     /* html */ `
       <section>
-        M̅u̅t̅a̅t̅i̅n̅g̅ 0 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:8)
+        M̅u̅t̅a̅t̅i̅n̅g̅ 0 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:0-8)
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:2)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-2)
         </div>
-        M̅u̅t̅a̅t̅i̅n̅g̅ 2 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:9)
+        M̅u̅t̅a̅t̅i̅n̅g̅ 2 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:0-9)
         <span>
-          w̅i̅t̅h̅ i̅n̅l̅i̅n̅e̅ e̅l̅e̅m̅e̅n̅t̅ (id:4)
+          w̅i̅t̅h̅ i̅n̅l̅i̅n̅e̅ e̅l̅e̅m̅e̅n̅t̅ (id:0-4)
         </span>
         <div>
-          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:5)
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:0-5)
         </div>
-        M̅u̅t̅a̅t̅i̅n̅g̅ 6 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:10)
+        M̅u̅t̅a̅t̅i̅n̅g̅ 6 t̅e̅x̅t̅ n̅o̅d̅e̅ (id:0-10)
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:7)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-7)
         </div>
       </section>
     `
@@ -469,13 +469,13 @@ add_task(async function test_appending_element() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:0-2)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -498,7 +498,7 @@ add_task(async function test_appending_element() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
         <div>
           Adding multiple elements at once
@@ -513,10 +513,10 @@ add_task(async function test_appending_element() {
           </div>
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:0-2)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -531,10 +531,10 @@ add_task(async function test_appending_element() {
     /* html */ `
       <section>
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
         <div>
-          A̅d̅d̅i̅n̅g̅ m̅u̅l̅t̅i̅p̅l̅e̅ e̅l̅e̅m̅e̅n̅t̅s̅ a̅t̅ o̅n̅c̅e̅ (id:4)
+          A̅d̅d̅i̅n̅g̅ m̅u̅l̅t̅i̅p̅l̅e̅ e̅l̅e̅m̅e̅n̅t̅s̅ a̅t̅ o̅n̅c̅e̅ (id:0-4)
         </div>
         <div>
           <div>
@@ -542,14 +542,14 @@ add_task(async function test_appending_element() {
             <span>
               n̅e̅s̅t̅e̅d̅
             </span>
-            e̅l̅e̅m̅e̅n̅t̅s̅ (id:5)
+            e̅l̅e̅m̅e̅n̅t̅s̅ (id:0-5)
           </div>
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:2)
+          b̅l̅o̅c̅k̅ t̅w̅o̅ (id:0-2)
         </div>
         <div>
-          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:3)
+          b̅l̅o̅c̅k̅ t̅h̅r̅e̅e̅ (id:0-3)
         </div>
       </section>
     `
@@ -576,7 +576,7 @@ add_task(async function test_mutating_comments() {
       <section>
         <!-- this is a comment -->
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
       </section>
     `
@@ -599,7 +599,7 @@ add_task(async function test_mutating_comments() {
       <section>
         <!--Change the comment-->
         <div>
-          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:1)
+          b̅l̅o̅c̅k̅ o̅n̅e̅ (id:0-1)
         </div>
       </section>
     `

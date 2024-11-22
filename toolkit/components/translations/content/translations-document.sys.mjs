@@ -387,13 +387,12 @@ export class TranslationsDocument {
 
   /**
    * The list of nodes that need updating with the translated HTML. These are batched
-   * into an update. The translationId is a monotonically increasing number that
-   * represents a unique id for a translation. It guards against races where a node is
-   * mutated before the translation is returned. The translation is asynchronously
-   * canceled during a mutation, but it can still return a translation before it is
-   * canceled.
+   * into an update. The translationId is a unique id for a given translation. It guards
+   * against races where a node is mutated before the translation is returned. The
+   * translation is asynchronously canceled during a mutation, but it can still return
+   * a translation before it is canceled.
    *
-   * @type {Set<{ node: Node, translatedHTML: string, translationId: number }>}
+   * @type {Set<{ node: Node, translatedHTML: string, translationId: string }>}
    */
   #nodesWithTranslatedHTML = new Set();
 
@@ -401,7 +400,7 @@ export class TranslationsDocument {
    * The list of nodes that need updating with the translated Attribute HTML. These are batched
    * into an update.
    *
-   * @type {Set<{ node: Node, translation: string, attribute: string, translationId: number }>}
+   * @type {Set<{ node: Node, translation: string, attribute: string, translationId: string }>}
    */
   #nodesWithTranslatedAttributes = new Set();
 
@@ -460,7 +459,7 @@ export class TranslationsDocument {
   /**
    * A unique ID that guards against races between translations and mutations.
    *
-   * @type {Map<Node, number>}
+   * @type {Map<Node, string>}
    */
   #pendingTranslations = new Map();
 
@@ -484,7 +483,7 @@ export class TranslationsDocument {
   /**
    * Start with 1 so that it will never be falsey.
    */
-  #lastTranslationId = 1;
+  #lastTranslationGeneration = 1;
 
   /**
    * Construct a new TranslationsDocument. It is tied to a specific Document and cannot
@@ -781,7 +780,7 @@ export class TranslationsDocument {
 
   /**
    * @param {Node} node
-   * @param {number} translationId
+   * @param {string} translationId
    */
   cancelTranslation(node, translationId) {
     this.translator.cancelSingleTranslation(translationId);
@@ -1379,7 +1378,8 @@ export class TranslationsDocument {
         if (text.trim().length === 0) {
           continue;
         }
-        const translationId = this.#lastTranslationId++;
+        const translationId = `${this.innerWindowId}-${this
+          .#lastTranslationGeneration++}`;
 
         let pendingAttributes = this.#pendingAttributes.get(node);
         if (!pendingAttributes) {
@@ -1420,7 +1420,7 @@ export class TranslationsDocument {
    * @param {Node} node
    * @param {string} translation
    * @param {string} attribute
-   * @param {number} translationId
+   * @param {string} translationId
    */
   scheduleNodeUpdateWithTranslationAttribute(
     node,
@@ -1548,7 +1548,8 @@ export class TranslationsDocument {
       return;
     }
 
-    const translationId = this.#lastTranslationId++;
+    const translationId = `${this.innerWindowId}-${this
+      .#lastTranslationGeneration++}`;
     this.#pendingTranslations.set(node, translationId);
     this.walkNodeToPendingParent(node);
 
@@ -1603,7 +1604,7 @@ export class TranslationsDocument {
    * can be applied. This method has a side effect of cleaning up pending translations.
    *
    * @param {Node} node
-   * @param {number} translationId
+   * @param {string} translationId
    * @param {string | null} translation
    * @returns {boolean}
    */
@@ -1632,7 +1633,7 @@ export class TranslationsDocument {
    *
    * @param {Node} node
    * @param {string} attribute
-   * @param {number} translationId
+   * @param {string} translationId
    * @param {string | null} translation
    * @param {boolean} removeAttribute
    * @returns {boolean}
@@ -1685,7 +1686,7 @@ export class TranslationsDocument {
    * @param {Node} node
    * @param {string} text
    * @param {boolean} isHTML
-   * @param {number} translationId
+   * @param {string} translationId
    * @returns {Promise<string | null>}
    */
   async maybeTranslate(node, text, isHTML, translationId) {
@@ -1812,7 +1813,7 @@ export class TranslationsDocument {
    *
    * @param {Node} node
    * @param {string} translatedHTML
-   * @param {number} translationId - A unique id to identify this translation request.
+   * @param {string} translationId - A unique id to identify this translation request.
    */
   scheduleNodeUpdateWithTranslation(node, translatedHTML, translationId) {
     // Add the nodes to be populated with the next translation update.
@@ -2451,9 +2452,9 @@ class QueuedTranslator {
   #actorReportFirstVisibleChange;
 
   /**
-   * Tie together a message id to a resolved response.
+   * Tie together a translationId to a resolved response.
    *
-   * @type {Map<number, TranslationRequest>}
+   * @type {Map<string, TranslationRequest>}
    */
   #requests = new Map();
 
@@ -2618,7 +2619,7 @@ class QueuedTranslator {
    * @param {Node} node
    * @param {string} sourceText
    * @param {boolean} isHTML
-   * @param {number} translationId
+   * @param {string} translationId
    * @returns {{ messageId: number, translation: Promise<string>}}
    */
   async translate(node, sourceText, isHTML, translationId) {
@@ -2665,7 +2666,7 @@ class QueuedTranslator {
   }
 
   /**
-   * @param {number} translationId
+   * @param {string} translationId
    */
   async cancelSingleTranslation(translationId) {
     this.#port.postMessage({
@@ -2680,7 +2681,7 @@ class QueuedTranslator {
    * @param {Node} node
    * @param {string} sourceText
    * @param {boolean} isHTML
-   * @param {number} translationId
+   * @param {string} translationId
    * @returns {{ translateText: TranslationFunction, translateHTML: TranslationFunction}}
    */
   #postTranslationRequest(node, sourceText, isHTML, translationId) {

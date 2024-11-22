@@ -281,7 +281,7 @@ class Engine {
    * @param {string} sourceText
    * @param {boolean} isHTML
    * @param {number} innerWindowId - This is required
-   * @param {number} translationId
+   * @param {string} translationId
    *
    * @returns {Promise<string>}sourceText
    */
@@ -660,7 +660,7 @@ class WorkQueue {
    * This is the list of work to be done. While it is a Map, it is treated as a FIFO
    * queue, but with work that can be canceled via the translationId.
    *
-   * @type {Map<number, {task: Function, resolve: Function}>}
+   * @type {Map<string, {task: Function, resolve: Function}>}
    */
   #tasksByTranslationId = new Map();
   #isRunning = false;
@@ -678,7 +678,7 @@ class WorkQueue {
    * Run the task and return the result.
    *
    * @template {any} T
-   * @param {number} translationId
+   * @param {string} translationId
    * @param {() => T} task
    * @returns {Promise<T>}
    */
@@ -697,7 +697,7 @@ class WorkQueue {
   }
 
   /**
-   * @param {number} translationId
+   * @param {string} translationId
    */
   cancelTask(translationId) {
     this.#tasksByTranslationId.delete(translationId);

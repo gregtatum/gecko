@@ -316,7 +316,7 @@ export class TranslationsEngine {
    * @param {string} sourceText
    * @param {boolean} isHTML
    * @param {number} innerWindowId
-   * @param {number} translationId
+   * @param {string} translationId
    * @returns {Promise<string[]>}
    */
   translate(sourceText, isHTML, innerWindowId, translationId) {
@@ -399,7 +399,7 @@ export class TranslationsEngine {
    * Cancel a single translation.
    *
    * @param {number} innerWindowId
-   * @param {id} translationId
+   * @param {string} translationId
    */
   cancelSingleTranslation(innerWindowId, translationId) {
     this.#worker.postMessage({

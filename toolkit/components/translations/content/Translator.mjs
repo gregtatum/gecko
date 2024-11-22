@@ -51,6 +51,11 @@ export class Translator {
   #requestTranslationsPort;
 
   /**
+   * Generate a random id for this translator to use as a key.
+   */
+  #translatorId = Math.floor(Math.random() * 1e16);
+
+  /**
    * An id for each message sent. This is used to match up the request and response.
    *
    * @type {number}
@@ -223,7 +228,7 @@ export class Translator {
     await this.#ready;
 
     const { promise, resolve, reject } = Promise.withResolvers();
-    const translationId = this.#nextTranslationId++;
+    const translationId = `${this.#translatorId}-${this.#nextTranslationId++}`;
 
     // Store the "resolve" for the promise. It will be matched back up with the
     // `translationId` in #handlePortMessage.
