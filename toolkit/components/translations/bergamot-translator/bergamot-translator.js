@@ -700,9 +700,15 @@ function loadBergamot(Module) {
           return function (lang) {
             let segmenter = segmenters.get(lang);
             if (!segmenter) {
-              segmenter = new Intl.Segmenter(lang, {
-                granularity: "sentence",
-              });
+              try {
+                segmenter = new Intl.Segmenter(lang, {
+                  granularity: "sentence",
+                });
+              } catch {
+                segmenter = new Intl.Segmenter(undefined, {
+                  granularity: "sentence",
+                });
+              }
               segmenters.set(lang, segmenter);
             }
             return segmenter;

@@ -523,18 +523,18 @@ export class TranslationsDocument {
      * @type {string}
      */
     this.documentLanguage = documentLanguage;
-    if (documentLanguage.length !== 2) {
-      throw new Error(
-        "Expected the document language to be a valid 2 letter BCP 47 language tag: " +
-          documentLanguage
-      );
-    }
-    if (toLanguage.length !== 2) {
-      throw new Error(
-        "Expected the destination language to be a valid 2 letter BCP 47 language tag: " +
-          toLanguage
-      );
-    }
+    // if (documentLanguage.length !== 2) {
+    //   throw new Error(
+    //     "Expected the document language to be a valid 2 letter BCP 47 language tag: " +
+    //       documentLanguage
+    //   );
+    // }
+    // if (toLanguage.length !== 2) {
+    //   throw new Error(
+    //     "Expected the destination language to be a valid 2 letter BCP 47 language tag: " +
+    //       toLanguage
+    //   );
+    // }
 
     /** @type {QueuedTranslator} */
     this.translator = new QueuedTranslator(
@@ -1889,9 +1889,9 @@ function langTagsMatch(knownLanguage, otherLanguage) {
     // A simple direct match.
     return true;
   }
-  if (knownLanguage.length !== 2) {
-    throw new Error("Expected the knownLanguage to be of length 2.");
-  }
+  // if (knownLanguage.length !== 2) {
+  //   throw new Error("Expected the knownLanguage to be of length 2.");
+  // }
   // Check if the language tags part match, e.g. "en" and "en-US".
   return (
     knownLanguage[0] === otherLanguage[0] &&

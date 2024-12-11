@@ -54,6 +54,7 @@ export class TranslationsChild extends JSWindowActorChild {
           this.#translatedDoc.destroy();
           this.#translatedDoc = null;
         }
+        console.log(`!!! TranslatePage`, this.#translatedDoc);
 
         if (this.#translatedDoc) {
           console.error("This page was already translated.");

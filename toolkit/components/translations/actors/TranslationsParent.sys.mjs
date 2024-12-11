@@ -1262,7 +1262,11 @@ export class TranslationsParent extends JSWindowActorParent {
           if (displayNames.has(langTag)) {
             continue;
           }
-          displayNames.set(langTag, dn.of(langTag));
+          try {
+            displayNames.set(langTag, dn.of(langTag));
+          } catch (error) {
+            displayNames.set(langTag, langTag);
+          }
         }
       }
     }
@@ -2567,6 +2571,7 @@ export class TranslationsParent extends JSWindowActorParent {
    *   an auto-translate.
    */
   async translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
+    console.log(`!!! fromLanguage, toLanguage`);
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
@@ -2596,6 +2601,10 @@ export class TranslationsParent extends JSWindowActorParent {
         );
       }
 
+      console.log(
+        `!!! TranslationsParent.requestTranslationsPort`,
+        TranslationsParent.requestTranslationsPort
+      );
       // The MessageChannel will be used for communicating directly between the content
       // process and the engine's process.
       const port = await TranslationsParent.requestTranslationsPort(
@@ -2633,6 +2642,11 @@ export class TranslationsParent extends JSWindowActorParent {
 
       TranslationsParent.storeMostRecentTargetLanguage(toLanguage);
 
+      console.log(`!!! sendAsyncMessage`, {
+        fromLanguage,
+        toLanguage,
+        port,
+      });
       this.sendAsyncMessage(
         "Translations:TranslatePage",
         {
