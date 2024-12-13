@@ -24,7 +24,7 @@ origin:
 
   # Revision to pull in
   # Must be a long or short commit SHA (long preferred)
-  revision: f9010478a45cd40bf7ad3d0aecdd62dd281ec5d6
+  revision: b2c788cf911d740a7e6134bd55361dff0046078a
 
   # The package's license, where possible using the mnemonic from
   # https://spdx.org/licenses/

@@ -7,9 +7,9 @@ translations.inference:
     fetch:
         artifact-name: bergamot-translator
         type: static-url
-        url: https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/translations-wasm/95f4c7df-7cd2-4851-be11-6414679c1089.wasm
-        sha256: 5430dd7f41709620b403e4628f357304c26120c9be634c732827c2ba9164d16c
-        size: 4956240
+        url: https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/translations-wasm/d9fe875b-7a67-4919-9330-f368d6b24c7f.wasm
+        sha256: f1a72992161c93a223e2a8968b666ccf631be5d2b98a33d3751b0246fb24c58e
+        size: 4956222
 
 translations.esen.lex:
     description: The Spanish to English translation lex artifact (version 1.0)
