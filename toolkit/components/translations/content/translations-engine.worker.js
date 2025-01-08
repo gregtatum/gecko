@@ -534,7 +534,7 @@ class BergamotUtils {
       "word-penalty": "0",
       "max-length-break": "128",
       "mini-batch-words": "1024",
-      workspace: "128",
+      workspace: "8",
       "max-length-factor": "2.0",
       "skip-cost": (!qualityModel).toString(),
       "cpu-threads": "0",
@@ -610,7 +610,7 @@ class BergamotUtils {
       /** @type {Bergamot} */
       const bergamot = loadBergamot({
         // This is the amount of memory that a simple run of Bergamot uses, in bytes.
-        INITIAL_MEMORY: 234_291_200,
+        INITIAL_MEMORY: 16_777_216,
         print: log,
         onAbort() {
           reject(new Error("Error loading Bergamot wasm module."));
