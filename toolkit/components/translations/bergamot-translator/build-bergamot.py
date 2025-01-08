@@ -44,6 +44,11 @@ parser.add_argument(
     action="store_true",
     help="Build with debug symbols, useful for profiling",
 )
+parser.add_argument(
+    "--force-rebuild",
+    action="store_true",
+    help="Force rebuilding the artifacts"
+)
 
 ArgNamespace = namedtuple("ArgNamespace", ["clobber", "debug"])
 
@@ -140,7 +145,7 @@ def create_command(allow_run_on_host: bool, task_args: list[str]):
             "docker-run",
             "--",
             "task",
-            "inference-build-wasm",
+            "inference:build-wasm",
             "--volume",
             f"{BUILD_PATH}:/inference/build_wasm",
         ]
@@ -152,6 +157,7 @@ def create_command(allow_run_on_host: bool, task_args: list[str]):
 
     # Append task arguments if they exist
     if task_args:
+        command.append("--")
         command.extend(task_args)
 
     return command
@@ -174,6 +180,8 @@ def build_bergamot(args: ArgNamespace):
         task_args.append("--clobber")
     if args.debug:
         task_args.append("--debug")
+    if args.force_rebuild:
+        task_args.append("--force-rebuild")
 
     command = create_command(
         allow_run_on_host,
@@ -215,8 +223,8 @@ def main():
     if not os.path.exists(THIRD_PARTY_PATH):
         os.mkdir(THIRD_PARTY_PATH)
 
-    fetch_bergamot_source()
-    build_bergamot(args)
+    # fetch_bergamot_source()
+    # build_bergamot(args)
     write_final_bergamot_js_file()
 
 
