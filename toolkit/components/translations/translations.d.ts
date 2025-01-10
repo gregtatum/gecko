@@ -36,6 +36,9 @@ export interface TranslationModelRecord {
   fromLang: string;
   // The BCP 47 language tag, e.g. "en"
   toLang: string;
+  // A model variant. This is a developer-only property that can be used in Nightly or
+  // local builds to test different types of models.
+  variant?: string;
   // The semver number, used for handling future format changes. e.g. 1.0
   version: string;
   // e.g. "lex"
@@ -264,7 +267,7 @@ export interface LangTags {
   userLangTag: string | null,
 }
 
-export interface LanguagePair { fromLang: string, toLang: string };
+export interface LanguagePair { fromLang: string, toLang: string, variant };
 
 /**
  * A structure that contains all of the information needed to render dropdowns

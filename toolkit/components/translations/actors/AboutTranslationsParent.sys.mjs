@@ -25,11 +25,12 @@ export class AboutTranslationsParent extends JSWindowActorParent {
           return undefined;
         }
 
-        const { fromLanguage, toLanguage } = data;
+        const { fromLanguage, toLanguage, variant } = data;
         try {
           const port = await lazy.TranslationsParent.requestTranslationsPort(
             fromLanguage,
-            toLanguage
+            toLanguage,
+            variant
           );
 
           // At the time of writing, you can't return a port via the `sendQuery` API,

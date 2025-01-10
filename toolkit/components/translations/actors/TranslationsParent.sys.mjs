@@ -188,6 +188,7 @@ const VERIFY_SIGNATURES_FROM_FS = false;
  * @typedef {object} TranslationPair
  * @property {string} fromLanguage
  * @property {string} toLanguage
+ * @property {string} [variant]
  * @property {string} [fromDisplayLanguage]
  * @property {string} [toDisplayLanguage]
  */
@@ -452,7 +453,8 @@ export class TranslationsParent extends JSWindowActorParent {
 
     if (windowState.translateOnPageReload) {
       // The actor was recreated after a page reload, start the translation.
-      const { fromLanguage, toLanguage } = windowState.translateOnPageReload;
+      const { fromLanguage, toLanguage, variant } =
+        windowState.translateOnPageReload;
       windowState.translateOnPageReload = null;
 
       lazy.console.log(
@@ -462,6 +464,7 @@ export class TranslationsParent extends JSWindowActorParent {
       this.translate(
         fromLanguage,
         toLanguage,
+        variant,
         false // reportAsAutoTranslate
       );
     }
@@ -1046,6 +1049,7 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @param {string} fromLanguage - The BCP-47 from-language tag.
    * @param {string} toLanguage - The BCP-47 to-language tag.
+   * @param {string} [variant]
    * @param {TranslationsParent} [translationsParent] - A TranslationsParent actor instance.
    *   NOTE: This value should be provided only if your port is associated with Full Page Translations.
    *   This will associate this translations port with the TranslationsParent actor instance, which will mean that changes
@@ -1056,6 +1060,7 @@ export class TranslationsParent extends JSWindowActorParent {
   static async requestTranslationsPort(
     fromLanguage,
     toLanguage,
+    variant,
     translationsParent
   ) {
     let translationsEngineParent;
@@ -1073,6 +1078,7 @@ export class TranslationsParent extends JSWindowActorParent {
     translationsEngineParent.startTranslation(
       fromLanguage,
       toLanguage,
+      variant,
       port1,
       translationsParent
     );
@@ -1107,6 +1113,7 @@ export class TranslationsParent extends JSWindowActorParent {
           this.translate(
             detectedLanguages.docLangTag,
             detectedLanguages.userLangTag,
+            undefined /* variant */,
             true // reportAsAutoTranslate
           );
         } else {
@@ -1134,10 +1141,11 @@ export class TranslationsParent extends JSWindowActorParent {
           );
         }
 
-        const { fromLanguage, toLanguage } = requestedTranslationPair;
+        const { fromLanguage, toLanguage, variant } = requestedTranslationPair;
         const port = await TranslationsParent.requestTranslationsPort(
           fromLanguage,
           toLanguage,
+          variant,
           this
         );
 
@@ -1254,10 +1262,13 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @returns {string}
    */
-  static languagePairKey(fromLanguage, toLanguage) {
-    return `${fromLanguage},${toLanguage}`;
+  static languagePairKey(fromLanguage, toLanguage, variant) {
+    return variant
+      ? `${fromLanguage},${toLanguage},${variant}`
+      : `${fromLanguage},${toLanguage}`;
   }
 
   /**
@@ -1285,12 +1296,17 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!TranslationsParent.#languagePairs) {
       TranslationsParent.#languagePairs =
         TranslationsParent.#getTranslationModelRecords().then(records => {
+          console.log(`!!! records`, records);
           const languagePairMap = new Map();
 
-          for (const { fromLang, toLang } of records.values()) {
-            const key = TranslationsParent.languagePairKey(fromLang, toLang);
+          for (const { fromLang, toLang, variant } of records.values()) {
+            const key = TranslationsParent.languagePairKey(
+              fromLang,
+              toLang,
+              variant
+            );
             if (!languagePairMap.has(key)) {
-              languagePairMap.set(key, { fromLang, toLang });
+              languagePairMap.set(key, { fromLang, toLang, variant });
             }
           }
           return Array.from(languagePairMap.values());
@@ -1317,13 +1333,13 @@ export class TranslationsParent extends JSWindowActorParent {
     const languagePairs = await TranslationsParent.getLanguagePairs();
 
     /** @type {Set<string>} */
-    const fromLanguages = new Set();
+    const fromLanguageKeys = new Set();
     /** @type {Set<string>} */
-    const toLanguages = new Set();
+    const toLanguageKeys = new Set();
 
-    for (const { fromLang, toLang } of languagePairs) {
-      fromLanguages.add(fromLang);
-      toLanguages.add(toLang);
+    for (const { fromLang, toLang, variant } of languagePairs) {
+      fromLanguageKeys.add(variant ? `${fromLang},${variant}` : fromLang);
+      toLanguageKeys.add(variant ? `${toLang},${variant}` : toLang);
     }
 
     // Build a map of the langTag to the display name.
@@ -1333,8 +1349,9 @@ export class TranslationsParent extends JSWindowActorParent {
       const languageDisplayNames =
         TranslationsParent.createLanguageDisplayNames();
 
-      for (const langTagSet of [fromLanguages, toLanguages]) {
-        for (const langTag of langTagSet.keys()) {
+      for (const langTagSet of [fromLanguageKeys, toLanguageKeys]) {
+        for (const langTagKey of langTagSet) {
+          const [langTag] = langTagKey.split(",");
           if (displayNames.has(langTag)) {
             continue;
           }
@@ -1343,19 +1360,31 @@ export class TranslationsParent extends JSWindowActorParent {
       }
     }
 
-    const addDisplayName = langTag => ({
-      langTag,
-      displayName: displayNames.get(langTag),
-    });
+    const addDisplayName = langTagKey => {
+      const [langTag, variant] = langTagKey.split(",");
+      let displayName = displayNames.get(langTag);
+      if (variant) {
+        // Right now if there is a variant always append the variant name, but in the
+        // future it might be a good idea to not show the variant name if there is only
+        // 1 variant for a language. For now this is only developer facing. This is also
+        // why Fluent isn't used here, as it's not exposed to end users.
+        //
+        // The display needs to work with languages that use script tags,
+        // e.g. "Chinese (Traditional) - base".
+        //      "Spanish - decoder-bigger-embeddings".
+        displayName = `${displayName} - ${variant}`;
+      }
+      return { langTag, displayName };
+    };
 
     const sort = (a, b) => a.displayName.localeCompare(b.displayName);
 
     return {
       languagePairs,
-      fromLanguages: Array.from(fromLanguages.keys())
+      fromLanguages: Array.from(fromLanguageKeys.keys())
         .map(addDisplayName)
         .sort(sort),
-      toLanguages: Array.from(toLanguages.keys())
+      toLanguages: Array.from(toLanguageKeys.keys())
         .map(addDisplayName)
         .sort(sort),
     };
@@ -1805,7 +1834,8 @@ export class TranslationsParent extends JSWindowActorParent {
             lookupKey: record =>
               `${record.name}${TranslationsParent.languagePairKey(
                 record.fromLang,
-                record.toLang
+                record.toLang,
+                record.variant
               )}`,
           });
 
@@ -2249,11 +2279,19 @@ export class TranslationsParent extends JSWindowActorParent {
 
       if (isDownloaded) {
         downloadedPairs.add(
-          TranslationsParent.languagePairKey(record.fromLang, record.toLang)
+          TranslationsParent.languagePairKey(
+            record.fromLang,
+            record.toLang,
+            record.variant
+          )
         );
       } else {
         nonDownloadedPairs.add(
-          TranslationsParent.languagePairKey(record.fromLang, record.toLang)
+          TranslationsParent.languagePairKey(
+            record.fromLang,
+            record.toLang,
+            record.variant
+          )
         );
       }
     }
@@ -2692,10 +2730,11 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @param {boolean} reportAsAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  async translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
+  async translate(fromLanguage, toLanguage, variant, reportAsAutoTranslate) {
     if (fromLanguage === toLanguage) {
       lazy.console.error(
         "A translation was requested where the from and to language match.",
@@ -2730,6 +2769,7 @@ export class TranslationsParent extends JSWindowActorParent {
       const port = await TranslationsParent.requestTranslationsPort(
         fromLanguage,
         toLanguage,
+        variant,
         this
       );
 
@@ -2743,6 +2783,7 @@ export class TranslationsParent extends JSWindowActorParent {
       this.languageState.requestedTranslationPair = {
         fromLanguage,
         toLanguage,
+        variant,
       };
 
       const preferredLanguages = TranslationsParent.getPreferredLanguages();

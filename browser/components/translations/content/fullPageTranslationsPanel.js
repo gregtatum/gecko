@@ -444,15 +444,19 @@ var FullPageTranslationsPanel = new (class {
       this.elements;
     const { requestedTranslationPair, isEngineReady } = languageState;
 
+    // Remove the model variant. e.g. "ru,base" -> "ru"
+    const selectedFrom = fromMenuList.value.split(",")[0];
+    const selectedTo = toMenuList.value.split(",")[0];
+
     if (
       requestedTranslationPair &&
       !isEngineReady &&
       TranslationsUtils.langTagsMatch(
-        fromMenuList.value,
+        selectedFrom,
         requestedTranslationPair.fromLanguage
       ) &&
       TranslationsUtils.langTagsMatch(
-        toMenuList.value,
+        selectedTo,
         requestedTranslationPair.toLanguage
       )
     ) {
@@ -475,16 +479,16 @@ var FullPageTranslationsPanel = new (class {
         // No "from" language was provided.
         !fromMenuList.value ||
         // The translation languages are the same, don't allow this translation.
-        TranslationsUtils.langTagsMatch(toMenuList.value, fromMenuList.value) ||
+        TranslationsUtils.langTagsMatch(selectedFrom, selectedTo) ||
         // This is the requested translation pair.
         (requestedTranslationPair &&
           TranslationsUtils.langTagsMatch(
             requestedTranslationPair.fromLanguage,
-            fromMenuList.value
+            selectedFrom
           ) &&
           TranslationsUtils.langTagsMatch(
             requestedTranslationPair.toLanguage,
-            toMenuList.value
+            selectedTo
           ));
     }
 
@@ -588,6 +592,9 @@ var FullPageTranslationsPanel = new (class {
     fromMenuList.value = "";
     error.hidden = true;
     langSelection.hidden = false;
+    // Remove the model variant. e.g. "ru,base" -> "ru"
+    const selectedFrom = fromMenuList.value.split(",")[0];
+    const selectedTo = toMenuList.value.split(",")[0];
 
     const { userLangTag, docLangTag, isDocLangTagSupported } =
       await this.#fetchDetectedLanguages().then(langTags => langTags ?? {});
@@ -620,14 +627,12 @@ var FullPageTranslationsPanel = new (class {
               // Avoid offering to translate into the original source language.
               docLangTag,
               // Avoid same-language to same-language translations if possible.
-              fromMenuList.value,
+              selectedFrom,
             ],
           });
       }
 
-      if (
-        TranslationsUtils.langTagsMatch(fromMenuList.value, toMenuList.value)
-      ) {
+      if (TranslationsUtils.langTagsMatch(selectedFrom, selectedTo)) {
         // The best possible user-preferred language tag that we were able to find for the
         // toMenuList is the same as the fromMenuList, but same-language to same-language
         // translations are not allowed in Full Page Translations, so we will just show the
@@ -844,7 +849,7 @@ var FullPageTranslationsPanel = new (class {
    *
    * @param {TranslationPair} translationPair
    */
-  async #showRevisitView({ fromLanguage, toLanguage }) {
+  async #showRevisitView({ fromLanguage, toLanguage, variant }) {
     const { fromMenuList, toMenuList, intro } = this.elements;
     if (!this.#isShowingDefaultView()) {
       await this.#showDefaultView(
@@ -852,7 +857,11 @@ var FullPageTranslationsPanel = new (class {
       );
     }
     intro.hidden = true;
-    fromMenuList.value = fromLanguage;
+    if (variant) {
+      fromMenuList.value = `${fromLanguage},${variant}`;
+    } else {
+      fromMenuList.value = fromLanguage;
+    }
     toMenuList.value = await TranslationsParent.getTopPreferredSupportedToLang({
       excludeLangTags: [
         // Avoid offering to translate into the original source language.
@@ -1237,9 +1246,12 @@ var FullPageTranslationsPanel = new (class {
     const actor = TranslationsParent.getTranslationsActor(
       gBrowser.selectedBrowser
     );
+    const [fromLang, fromVariant] = this.elements.fromMenuList.value.split(",");
+    const [toLang, toVariant] = this.elements.toMenuList.value.split(",");
     actor.translate(
-      this.elements.fromMenuList.value,
-      this.elements.toMenuList.value,
+      fromLang,
+      toLang,
+      fromVariant ?? toVariant,
       false // reportAsAutoTranslate
     );
   }

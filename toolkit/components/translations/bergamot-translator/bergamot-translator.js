@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 function loadBergamot(Module) {
-  var BERGAMOT_VERSION_FULL = "v0.5.0+b475d25";
+  var BERGAMOT_VERSION_FULL = "v0.5.0+b4ce8ef4";
   null;
 
   var Module = typeof Module != "undefined" ? Module : {};
@@ -693,7 +693,7 @@ function loadBergamot(Module) {
   var tempI64;
 
   var ASM_CONSTS = {
-    1429732($0, $1, $2, $3, $4) {
+    1430452($0, $1, $2, $3, $4) {
       if (!Module.getOrCreateSentenceSegmenter) {
         Module.getOrCreateSentenceSegmenter = (function () {
           let segmenters = new Map();
@@ -730,6 +730,17 @@ function loadBergamot(Module) {
       setValue($2, sentenceCount, "i32");
       setValue($3, startsPtr, "i32");
       setValue($4, endsPtr, "i32");
+    },
+    1431684($0, $1, $2) {
+      const name = UTF8ToString($0);
+      const size = $1;
+      const pointer = $2;
+      ChromeUtils.addProfilerMarker(
+        `Item() "${name}" ${size} 0x${pointer.toString(16)}`,
+        {
+          captureStack: true,
+        }
+      );
     },
   };
 

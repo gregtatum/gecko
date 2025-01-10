@@ -55,6 +55,13 @@ class TranslationsState {
   toLanguage = "";
 
   /**
+   * The model variant.
+   *
+   * @type {string | undefined}
+   */
+  variant;
+
+  /**
    * The message to translate, cached so that it can be determined if the text
    * needs to be re-translated.
    *
@@ -140,7 +147,13 @@ class TranslationsState {
     onDebounce: async () => {
       // The contents of "this" can change between async steps, store a local variable
       // binding of these values.
-      const { fromLanguage, toLanguage, messageToTranslate, translator } = this;
+      const {
+        fromLanguage,
+        toLanguage,
+        variant,
+        messageToTranslate,
+        translator,
+      } = this;
 
       if (!this.isTranslationEngineSupported) {
         // Never translate when the engine isn't supported.
@@ -164,6 +177,7 @@ class TranslationsState {
         this.translator !== translator ||
         this.fromLanguage !== fromLanguage ||
         this.toLanguage !== toLanguage ||
+        this.variant !== variant ||
         this.messageToTranslate !== messageToTranslate
       ) {
         return;
@@ -179,8 +193,9 @@ class TranslationsState {
       this.ui.setResultPlaceholderTextContent(l10nIds.resultsPlaceholder);
 
       // The measure events will show up in the Firefox Profiler.
+      const variantMessage = variant ? ` (${variant})` : "";
       performance.measure(
-        `Translations: Translate "${this.fromLanguage}" to "${this.toLanguage}" with ${messageToTranslate.length} characters.`,
+        `Translations: Translate "${this.fromLanguage}" to "${this.toLanguage}"${variantMessage} with ${messageToTranslate.length} characters.`,
         {
           start,
           end: performance.now(),
@@ -233,14 +248,15 @@ class TranslationsState {
       `Creating a new translator for "${this.fromLanguage}" to "${this.toLanguage}"`
     );
 
-    const translationPortPromise = (fromLanguage, toLanguage) => {
+    const translationPortPromise = (fromLanguage, toLanguage, variant) => {
       const { promise, resolve } = Promise.withResolvers();
 
       const getResponse = ({ data }) => {
         if (
           data.type == "GetTranslationsPort" &&
           data.fromLanguage === fromLanguage &&
-          data.toLanguage === toLanguage
+          data.toLanguage === toLanguage &&
+          data.variant == variant
         ) {
           window.removeEventListener("message", getResponse);
           resolve(data.port);
@@ -248,7 +264,7 @@ class TranslationsState {
       };
 
       window.addEventListener("message", getResponse);
-      AT_createTranslationsPort(fromLanguage, toLanguage);
+      AT_createTranslationsPort(fromLanguage, toLanguage, variant);
 
       return promise;
     };
@@ -257,6 +273,7 @@ class TranslationsState {
       const translatorPromise = Translator.create(
         this.fromLanguage,
         this.toLanguage,
+        this.variant,
         {
           allowSameLanguage: false,
           requestTranslationsPort: translationPortPromise,
