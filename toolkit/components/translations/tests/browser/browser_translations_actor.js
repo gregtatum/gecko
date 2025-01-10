@@ -44,8 +44,12 @@ add_task(async function test_pivot_language_behavior() {
 
   // The pairs aren't guaranteed to be sorted.
   languagePairs.sort((a, b) =>
-    TranslationsParent.languagePairKey(a.fromLang, a.toLang).localeCompare(
-      TranslationsParent.languagePairKey(b.fromLang, b.toLang)
+    TranslationsParent.languagePairKey(
+      a.fromLang,
+      a.toLang,
+      a.variant
+    ).localeCompare(
+      TranslationsParent.languagePairKey(b.fromLang, b.toLang, b.variant)
     )
   );
 
@@ -208,8 +212,10 @@ add_task(async function test_translating_to_and_from_app_language() {
    */
   function getUniqueLanguagePairs(records) {
     const langPairs = new Set();
-    for (const { fromLang, toLang } of records) {
-      langPairs.add(TranslationsParent.languagePairKey(fromLang, toLang));
+    for (const { fromLang, toLang, variant } of records) {
+      langPairs.add(
+        TranslationsParent.languagePairKey(fromLang, toLang, variant)
+      );
     }
     return Array.from(langPairs)
       .sort()

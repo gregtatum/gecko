@@ -117,8 +117,12 @@ export class TranslationsEngine {
    * @param {number} innerWindowId
    * @returns {Promise<TranslationsEngine>}
    */
-  static getOrCreate(fromLanguage, toLanguage, innerWindowId) {
-    const languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
+  static getOrCreate(fromLanguage, toLanguage, variant, innerWindowId) {
+    const languagePairKey = getLanguagePairKey(
+      fromLanguage,
+      toLanguage,
+      variant
+    );
     let enginePromise = TranslationsEngine.#cachedEngines.get(languagePairKey);
 
     if (enginePromise) {
@@ -131,6 +135,7 @@ export class TranslationsEngine {
     enginePromise = TranslationsEngine.create(
       fromLanguage,
       toLanguage,
+      variant,
       innerWindowId
     );
 
@@ -168,15 +173,17 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} variant
    * @param {number} innerWindowId
    * @returns {Promise<TranslationsEngine>}
    */
-  static async create(fromLanguage, toLanguage, innerWindowId) {
+  static async create(fromLanguage, toLanguage, variant, innerWindowId) {
     const startTime = performance.now();
 
     const engine = new TranslationsEngine(
       fromLanguage,
       toLanguage,
+      variant,
       await TE_requestEnginePayload(fromLanguage, toLanguage)
     );
 
@@ -254,15 +261,20 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} variant
    * @param {TranslationsEnginePayload} enginePayload - If there is no engine payload
    *   then the engine will be mocked. This allows this class to be used in tests.
    */
-  constructor(fromLanguage, toLanguage, enginePayload) {
+  constructor(fromLanguage, toLanguage, variant, enginePayload) {
     /** @type {string} */
     this.fromLanguage = fromLanguage;
     /** @type {string} */
     this.toLanguage = toLanguage;
-    this.languagePairKey = getLanguagePairKey(fromLanguage, toLanguage);
+    this.languagePairKey = getLanguagePairKey(
+      fromLanguage,
+      toLanguage,
+      variant
+    );
     this.#worker = new Worker(
       "chrome://global/content/translations/translations-engine.worker.js"
     );
@@ -372,11 +384,12 @@ export class TranslationsEngine {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} variant
    * @param {(engine: TranslationsEngine) => void} fn
    */
-  static withCachedEngine(fromLanguage, toLanguage, fn) {
+  static withCachedEngine(fromLanguage, toLanguage, variant, fn) {
     const engine = TranslationsEngine.#cachedEngines.get(
-      getLanguagePairKey(fromLanguage, toLanguage)
+      getLanguagePairKey(fromLanguage, toLanguage, variant)
     );
 
     if (engine) {
@@ -409,20 +422,6 @@ export class TranslationsEngine {
       translationId,
     });
   }
-
-  /**
-   * Pause or resume the translations from a cached engine.
-   *
-   * @param {boolean} pause
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
-   * @param {number} innerWindowId
-   */
-  static pause(pause, fromLanguage, toLanguage, innerWindowId) {
-    TranslationsEngine.withCachedEngine(fromLanguage, toLanguage, engine => {
-      engine.pause(pause, innerWindowId);
-    });
-  }
 }
 
 /**
@@ -430,16 +429,24 @@ export class TranslationsEngine {
  *
  * @param {string} fromLanguage
  * @param {string} toLanguage
+ * @param {string} [variant]
  * @returns {string}
  */
-function getLanguagePairKey(fromLanguage, toLanguage) {
-  return `${fromLanguage},${toLanguage}`;
+function getLanguagePairKey(fromLanguage, toLanguage, variant) {
+  return variant
+    ? `${fromLanguage},${toLanguage},${variant}`
+    : `${fromLanguage},${toLanguage}`;
 }
 
 /**
  * Maps the innerWindowId to the port.
  *
- * @type {Map<number, { fromLanguage: string, toLanguage: string, port: MessagePort }>}
+ * @type {Map<number, {
+ *  fromLanguage: string,
+ *  toLanguage: string,
+ *  variant: string | undefined,
+ *  port: MessagePort
+ * }>}
  */
 const ports = new Map();
 
@@ -450,10 +457,17 @@ const ports = new Map();
  *
  * @param {string} fromLanguage
  * @param {string} toLanguage
+ * @param {string} [variant]
  * @param {number} innerWindowId
  * @param {MessagePort} port
  */
-function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
+function listenForPortMessages(
+  fromLanguage,
+  toLanguage,
+  variant,
+  innerWindowId,
+  port
+) {
   async function handleMessage({ data }) {
     switch (data.type) {
       case "TranslationsPort:GetEngineStatusRequest": {
@@ -463,6 +477,7 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
         TranslationsEngine.getOrCreate(
           fromLanguage,
           toLanguage,
+          variant,
           innerWindowId
         ).then(
           () => {
@@ -494,6 +509,7 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
         const engine = await TranslationsEngine.getOrCreate(
           fromLanguage,
           toLanguage,
+          variant,
           innerWindowId
         );
         const targetText = await engine.translate(
@@ -514,6 +530,7 @@ function listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port) {
         TranslationsEngine.withCachedEngine(
           fromLanguage,
           toLanguage,
+          variant,
           engine => {
             engine.cancelSingleTranslation(innerWindowId, translationId);
           }
@@ -551,13 +568,18 @@ function discardTranslations(innerWindowId) {
 
   const portData = ports.get(innerWindowId);
   if (portData) {
-    const { port, fromLanguage, toLanguage } = portData;
+    const { port, fromLanguage, toLanguage, variant } = portData;
     port.close();
     ports.delete(innerWindowId);
 
-    TranslationsEngine.withCachedEngine(fromLanguage, toLanguage, engine => {
-      engine.discardTranslationQueue(innerWindowId);
-    });
+    TranslationsEngine.withCachedEngine(
+      fromLanguage,
+      toLanguage,
+      variant,
+      engine => {
+        engine.discardTranslationQueue(innerWindowId);
+      }
+    );
   }
 }
 
@@ -567,10 +589,16 @@ function discardTranslations(innerWindowId) {
 window.addEventListener("message", ({ data }) => {
   switch (data.type) {
     case "StartTranslation": {
-      const { fromLanguage, toLanguage, innerWindowId, port } = data;
+      const { fromLanguage, toLanguage, variant, innerWindowId, port } = data;
       TE_log("Starting translation", innerWindowId);
-      listenForPortMessages(fromLanguage, toLanguage, innerWindowId, port);
-      ports.set(innerWindowId, { port, fromLanguage, toLanguage });
+      listenForPortMessages(
+        fromLanguage,
+        toLanguage,
+        variant,
+        innerWindowId,
+        port
+      );
+      ports.set(innerWindowId, { port, fromLanguage, toLanguage, variant });
       break;
     }
     case "DiscardTranslations": {

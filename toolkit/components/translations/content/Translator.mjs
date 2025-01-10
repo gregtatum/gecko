@@ -43,6 +43,13 @@ export class Translator {
   #toLanguage;
 
   /**
+   * A model variant identifier
+   *
+   * @type {string | undefined}
+   */
+  #variant;
+
+  /**
    * The callback function to request a new port, provided at construction time
    * by the caller.
    *
@@ -73,11 +80,13 @@ export class Translator {
    *
    * @param {string} fromLanguage - The BCP-47 from-language tag.
    * @param {string} toLanguage - The BCP-47 to-language tag.
+   * @param {string} [variant] - A model variant.
    * @param {Function} requestTranslationsPort - A callback function to request a new MessagePort.
    */
-  constructor(fromLanguage, toLanguage, requestTranslationsPort) {
+  constructor(fromLanguage, toLanguage, variant, requestTranslationsPort) {
     this.#fromLanguage = fromLanguage;
     this.#toLanguage = toLanguage;
+    this.#variant = variant;
     this.#requestTranslationsPort = requestTranslationsPort;
   }
 
@@ -114,6 +123,7 @@ export class Translator {
    *
    * @param {string} fromLanguage - The BCP-47 language tag of the from-language.
    * @param {string} toLanguage - The BCP-47 language tag of the to-language.
+   * @param {string} [variant] - Optional model variant.
    * @param {object} data - Data for creating a translator.
    * @param {Function} [data.requestTranslationsPort]
    *  - A function to request a translations port for communication with the Translations engine.
@@ -128,6 +138,7 @@ export class Translator {
   static async create(
     fromLanguage,
     toLanguage,
+    variant,
     { requestTranslationsPort, allowSameLanguage }
   ) {
     if (!fromLanguage || !toLanguage) {
@@ -152,6 +163,7 @@ export class Translator {
     const translator = new Translator(
       fromLanguage,
       toLanguage,
+      variant,
       requestTranslationsPort
     );
     await translator.#createNewPortIfClosed();
@@ -171,7 +183,8 @@ export class Translator {
 
     this.#port = await this.#requestTranslationsPort(
       this.#fromLanguage,
-      this.#toLanguage
+      this.#toLanguage,
+      this.#variant
     );
     this.#portClosed = false;
 

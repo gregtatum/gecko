@@ -75,10 +75,17 @@ export class TranslationsEngineParent extends JSWindowActorParent {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @param {MessagePort} port
    * @param {TranslationsParent} [translationsParent]
    */
-  startTranslation(fromLanguage, toLanguage, port, translationsParent) {
+  startTranslation(
+    fromLanguage,
+    toLanguage,
+    variant,
+    port,
+    translationsParent
+  ) {
     const innerWindowId = translationsParent?.innerWindowId;
     if (translationsParent) {
       this.#translationsParents.set(innerWindowId, translationsParent);
@@ -92,6 +99,7 @@ export class TranslationsEngineParent extends JSWindowActorParent {
       {
         fromLanguage,
         toLanguage,
+        variant,
         innerWindowId,
         port,
       },

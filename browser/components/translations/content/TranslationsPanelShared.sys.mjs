@@ -176,6 +176,12 @@ export class TranslationsPanelShared {
     const { languagePairs, fromLanguages, toLanguages } =
       await lazy.TranslationsParent.getSupportedLanguages();
 
+    console.log(`!!! ensureLangListBuilt`, {
+      languagePairs,
+      fromLanguages,
+      toLanguages,
+    });
+
     // Verify that we are in a proper state.
     if (languagePairs.length === 0 || this.#simulateLangListError) {
       this.#simulateLangListError = false;
