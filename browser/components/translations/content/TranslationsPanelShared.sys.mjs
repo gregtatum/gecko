@@ -205,9 +205,9 @@ export class TranslationsPanelShared {
       while (popup.lastChild?.value) {
         popup.lastChild.remove();
       }
-      for (const { langTag, displayName } of fromLanguages) {
+      for (const { langTagKey, displayName } of fromLanguages) {
         const fromMenuItem = document.createXULElement("menuitem");
-        fromMenuItem.setAttribute("value", langTag);
+        fromMenuItem.setAttribute("value", langTagKey);
         fromMenuItem.setAttribute("label", displayName);
         popup.appendChild(fromMenuItem);
       }
@@ -217,9 +217,9 @@ export class TranslationsPanelShared {
       while (popup.lastChild?.value) {
         popup.lastChild.remove();
       }
-      for (const { langTag, displayName } of toLanguages) {
+      for (const { langTagKey, displayName } of toLanguages) {
         const toMenuItem = document.createXULElement("menuitem");
-        toMenuItem.setAttribute("value", langTag);
+        toMenuItem.setAttribute("value", langTagKey);
         toMenuItem.setAttribute("label", displayName);
         popup.appendChild(toMenuItem);
       }

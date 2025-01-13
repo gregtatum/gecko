@@ -40,12 +40,14 @@ export class TranslationsEngineChild extends JSWindowActorChild {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "TranslationsEngine:StartTranslation": {
-        const { fromLanguage, toLanguage, innerWindowId, port } = data;
+        const { fromLanguage, toLanguage, variant, innerWindowId, port } = data;
         const transferables = [port];
+        console.log(`!!! TranslationsEngineChild.receiveMessage`, { variant });
         const message = {
           type: "StartTranslation",
           fromLanguage,
           toLanguage,
+          variant,
           innerWindowId,
           port,
         };
@@ -179,12 +181,14 @@ export class TranslationsEngineChild extends JSWindowActorChild {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    */
-  TE_requestEnginePayload(fromLanguage, toLanguage) {
+  TE_requestEnginePayload(fromLanguage, toLanguage, variant) {
     return this.#convertToContentPromise(
       this.sendQuery("TranslationsEngine:RequestEnginePayload", {
         fromLanguage,
         toLanguage,
+        variant,
       })
     );
   }

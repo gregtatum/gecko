@@ -2182,13 +2182,15 @@ var SelectTranslationsPanel = new (class {
    *
    * @param {string} fromLanguage - The from-language.
    * @param {string} toLanguage - The to-language.
+   * @param {string} [variant]
    *
    * @returns {Promise<MessagePort | undefined>} The message port promise.
    */
-  async #requestTranslationsPort(fromLanguage, toLanguage) {
+  async #requestTranslationsPort(fromLanguage, toLanguage, variant) {
     const port = await TranslationsParent.requestTranslationsPort(
       fromLanguage,
-      toLanguage
+      toLanguage,
+      variant
     );
     return port;
   }
@@ -2199,18 +2201,24 @@ var SelectTranslationsPanel = new (class {
    *
    * @param {string} fromLanguage - The source language code.
    * @param {string} toLanguage - The target language code.
+   * @param {string} variant - The model variant.
    *
    * @returns {Promise<Translator>} A promise that resolves to a `Translator` instance for the given language pair.
    */
-  async #createTranslator(fromLanguage, toLanguage) {
+  async #createTranslator(fromLanguage, toLanguage, variant) {
     this.console?.log(
       `Creating new Translator (${fromLanguage}-${toLanguage})`
     );
 
-    const translator = await Translator.create(fromLanguage, toLanguage, {
-      allowSameLanguage: true,
-      requestTranslationsPort: this.#requestTranslationsPort,
-    });
+    const translator = await Translator.create(
+      fromLanguage,
+      toLanguage,
+      variant,
+      {
+        allowSameLanguage: true,
+        requestTranslationsPort: this.#requestTranslationsPort,
+      }
+    );
     return translator;
   }
 
@@ -2223,7 +2231,8 @@ var SelectTranslationsPanel = new (class {
       return;
     }
 
-    const { fromLanguage, toLanguage } = this.#getSelectedLanguagePair();
+    const { fromLanguage, toLanguage, variant } =
+      this.#getSelectedLanguagePair();
     this.#maybeChangeStateToTranslatable(fromLanguage, toLanguage);
 
     if (this.phase() !== "translatable") {
@@ -2236,7 +2245,7 @@ var SelectTranslationsPanel = new (class {
 
     TranslationsParent.storeMostRecentTargetLanguage(toLanguage);
 
-    this.#createTranslator(fromLanguage, toLanguage)
+    this.#createTranslator(fromLanguage, toLanguage, variant)
       .then(translator => {
         if (
           this.#shouldContinueTranslation(

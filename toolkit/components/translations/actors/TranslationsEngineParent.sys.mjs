@@ -31,11 +31,13 @@ export class TranslationsEngineParent extends JSWindowActorParent {
         lazy.EngineProcess.resolveTranslationsEngineParent(this);
         return undefined;
       case "TranslationsEngine:RequestEnginePayload": {
-        const { fromLanguage, toLanguage } = data;
+        const { fromLanguage, toLanguage, variant } = data;
+        console.log(`!!! TranslationsEngine:RequestEnginePayload`, data);
         const payloadPromise =
           lazy.TranslationsParent.getTranslationsEnginePayload(
             fromLanguage,
-            toLanguage
+            toLanguage,
+            variant
           );
         payloadPromise.catch(error => {
           lazy.TranslationsParent.telemetry().onError(String(error));
@@ -94,6 +96,7 @@ export class TranslationsEngineParent extends JSWindowActorParent {
       throw new Error("The translation engine process was already destroyed.");
     }
     const transferables = [port];
+    console.log(`!!! TranslationsEngineParent.startTranslation`, { variant });
     this.sendAsyncMessage(
       "TranslationsEngine:StartTranslation",
       {
