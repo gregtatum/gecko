@@ -179,12 +179,13 @@ export class TranslationsEngine {
    */
   static async create(fromLanguage, toLanguage, variant, innerWindowId) {
     const startTime = performance.now();
+    console.trace(`!!! TranslationsEngine.create`, variant);
 
     const engine = new TranslationsEngine(
       fromLanguage,
       toLanguage,
       variant,
-      await TE_requestEnginePayload(fromLanguage, toLanguage)
+      await TE_requestEnginePayload(fromLanguage, toLanguage, variant)
     );
 
     await engine.isReady;
@@ -490,7 +491,8 @@ function listenForPortMessages(
               status: "ready",
             });
           },
-          () => {
+          error => {
+            console.error(error);
             TE_reportEngineStatus(innerWindowId, "error");
             port.postMessage({
               type: "TranslationsPort:GetEngineStatusResponse",

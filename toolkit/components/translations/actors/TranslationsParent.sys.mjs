@@ -1072,6 +1072,8 @@ export class TranslationsParent extends JSWindowActorParent {
       return undefined;
     }
 
+    console.trace(`!!! requestTranslationsPort`, { variant });
+
     // The MessageChannel will be used for communicating directly between the content
     // process and the engine's process.
     const { port1, port2 } = new MessageChannel();
@@ -1174,8 +1176,9 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    */
-  static async getTranslationsEnginePayload(fromLanguage, toLanguage) {
+  static async getTranslationsEnginePayload(fromLanguage, toLanguage, variant) {
     const wasmStartTime = Cu.now();
     const bergamotWasmArrayBufferPromise =
       TranslationsParent.#getBergamotWasmArrayBuffer();
@@ -1196,7 +1199,8 @@ export class TranslationsParent extends JSWindowActorParent {
     let translationModelPayloads;
     const nonPivotPayload = await TranslationsParent.getTranslationModelPayload(
       fromLanguage,
-      toLanguage
+      toLanguage,
+      variant
     );
 
     if (nonPivotPayload) {
@@ -1207,16 +1211,18 @@ export class TranslationsParent extends JSWindowActorParent {
       const [payload1, payload2] = await Promise.all([
         TranslationsParent.getTranslationModelPayload(
           fromLanguage,
-          PIVOT_LANGUAGE
+          PIVOT_LANGUAGE,
+          variant
         ),
         TranslationsParent.getTranslationModelPayload(
           PIVOT_LANGUAGE,
-          toLanguage
+          toLanguage,
+          variant
         ),
       ]);
       if (!payload1 || !payload2) {
         throw new Error(
-          `No language models were found for ${fromLanguage} to ${toLanguage}`
+          `No language models were found for ${fromLanguage} to ${toLanguage} - ${variant}`
         );
       }
       translationModelPayloads = [payload1, payload2];
@@ -1374,7 +1380,7 @@ export class TranslationsParent extends JSWindowActorParent {
         //      "Spanish - decoder-bigger-embeddings".
         displayName = `${displayName} - ${variant}`;
       }
-      return { langTag, displayName };
+      return { langTag, variant, langTagKey, displayName };
     };
 
     const sort = (a, b) => a.displayName.localeCompare(b.displayName);
@@ -2429,12 +2435,14 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @param {boolean} withQualityEstimation
    * @returns {null | TranslationModelPayload}
    */
   static async getTranslationModelPayload(
     fromLanguage,
     toLanguage,
+    variant,
     withQualityEstimation = false
   ) {
     const client = TranslationsParent.#getTranslationModelsRemoteClient();
@@ -2458,7 +2466,11 @@ export class TranslationsParent extends JSWindowActorParent {
           return;
         }
 
-        if (record.fromLang !== fromLanguage || record.toLang !== toLanguage) {
+        if (
+          record.fromLang !== fromLanguage ||
+          record.toLang !== toLanguage ||
+          record.variant !== variant
+        ) {
           // Only use models that match.
           return;
         }
@@ -2486,6 +2498,7 @@ export class TranslationsParent extends JSWindowActorParent {
           `Translation model fetched in ${duration / 1000} seconds:`,
           record.fromLang,
           record.toLang,
+          record.variant,
           record.fileType,
           record.version
         );
@@ -3632,6 +3645,8 @@ class TranslationsLanguageState {
     if (this.#requestedTranslationPair === requestedTranslationPair) {
       return;
     }
+
+    console.trace("!!! set requestedTranslationPair", requestedTranslationPair);
 
     this.#error = null;
     this.#isEngineReady = false;

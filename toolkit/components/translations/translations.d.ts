@@ -269,14 +269,21 @@ export interface LangTags {
 
 export interface LanguagePair { fromLang: string, toLang: string, variant };
 
+interface SupportedLanguage {
+  langTag: string,
+  langTagKey: string,
+  variant: string
+  displayName: string,
+}
+
 /**
  * A structure that contains all of the information needed to render dropdowns
  * for translation language selection.
  */
 export interface SupportedLanguages {
   languagePairs: LanguagePair[],
-  fromLanguages: Array<{ langTag: string, displayName: string, }>,
-  toLanguages: Array<{ langTag: string, displayName: string }>,
+  fromLanguages: Array<SupportedLanguage>,
+  toLanguages: Array<SupportedLanguage>,
 }
 
 export type TranslationErrors = "engine-load-error";

@@ -212,12 +212,14 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @returns {void}
    */
-  AT_createTranslationsPort(fromLanguage, toLanguage) {
+  AT_createTranslationsPort(fromLanguage, toLanguage, variant) {
     this.sendAsyncMessage("AboutTranslations:GetTranslationsPort", {
       fromLanguage,
       toLanguage,
+      variant,
     });
   }
 
