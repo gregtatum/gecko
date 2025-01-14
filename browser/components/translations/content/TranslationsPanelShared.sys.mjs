@@ -2,6 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/**
+ * @typedef {typeof import("../../../../toolkit/components/translations/actors/TranslationsParent.sys.mjs").TranslationsParent} TranslationsParent
+ */
+
+/** @type {{ TranslationsParent: TranslationsParent }} */
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -175,12 +180,6 @@ export class TranslationsPanelShared {
     /** @type {SupportedLanguages} */
     const { languagePairs, fromLanguages, toLanguages } =
       await lazy.TranslationsParent.getSupportedLanguages();
-
-    console.log(`!!! ensureLangListBuilt`, {
-      languagePairs,
-      fromLanguages,
-      toLanguages,
-    });
 
     // Verify that we are in a proper state.
     if (languagePairs.length === 0 || this.#simulateLangListError) {

@@ -206,7 +206,7 @@ export class Translator {
             resolve();
           } else {
             this.#portClosed = true;
-            reject();
+            reject(new Error(data.error));
           }
           break;
         }

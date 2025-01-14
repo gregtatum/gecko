@@ -2187,6 +2187,11 @@ var SelectTranslationsPanel = new (class {
    * @returns {Promise<MessagePort | undefined>} The message port promise.
    */
   async #requestTranslationsPort(fromLanguage, toLanguage, variant) {
+    console.log(`!!! requestTranslationsPort`, {
+      fromLanguage,
+      toLanguage,
+      variant,
+    });
     const port = await TranslationsParent.requestTranslationsPort(
       fromLanguage,
       toLanguage,

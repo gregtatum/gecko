@@ -42,7 +42,6 @@ export class TranslationsEngineChild extends JSWindowActorChild {
       case "TranslationsEngine:StartTranslation": {
         const { fromLanguage, toLanguage, variant, innerWindowId, port } = data;
         const transferables = [port];
-        console.log(`!!! TranslationsEngineChild.receiveMessage`, { variant });
         const message = {
           type: "StartTranslation",
           fromLanguage,

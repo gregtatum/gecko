@@ -32,7 +32,6 @@ export class TranslationsEngineParent extends JSWindowActorParent {
         return undefined;
       case "TranslationsEngine:RequestEnginePayload": {
         const { fromLanguage, toLanguage, variant } = data;
-        console.log(`!!! TranslationsEngine:RequestEnginePayload`, data);
         const payloadPromise =
           lazy.TranslationsParent.getTranslationsEnginePayload(
             fromLanguage,
@@ -96,7 +95,6 @@ export class TranslationsEngineParent extends JSWindowActorParent {
       throw new Error("The translation engine process was already destroyed.");
     }
     const transferables = [port];
-    console.log(`!!! TranslationsEngineParent.startTranslation`, { variant });
     this.sendAsyncMessage(
       "TranslationsEngine:StartTranslation",
       {

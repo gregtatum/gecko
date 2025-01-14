@@ -179,7 +179,6 @@ export class TranslationsEngine {
    */
   static async create(fromLanguage, toLanguage, variant, innerWindowId) {
     const startTime = performance.now();
-    console.trace(`!!! TranslationsEngine.create`, variant);
 
     const engine = new TranslationsEngine(
       fromLanguage,
@@ -497,6 +496,7 @@ function listenForPortMessages(
             port.postMessage({
               type: "TranslationsPort:GetEngineStatusResponse",
               status: "error",
+              error: String(error),
             });
             // After an error no more translation requests will be sent. Go ahead
             // and close the port.
@@ -592,6 +592,11 @@ window.addEventListener("message", ({ data }) => {
   switch (data.type) {
     case "StartTranslation": {
       const { fromLanguage, toLanguage, variant, innerWindowId, port } = data;
+      console.log(`!!! StartTranslation`, {
+        fromLanguage,
+        toLanguage,
+        variant,
+      });
       TE_log("Starting translation", innerWindowId);
       listenForPortMessages(
         fromLanguage,
