@@ -145,6 +145,7 @@ class TranslationsState {
      * in a new translation request.
      */
     onDebounce: async () => {
+      console.log(`!!! maybeRequestTranslation 2`);
       // The contents of "this" can change between async steps, store a local variable
       // binding of these values.
       const {
@@ -157,15 +158,23 @@ class TranslationsState {
 
       if (!this.isTranslationEngineSupported) {
         // Never translate when the engine isn't supported.
+        console.log(`!!! Never translate when the engine isn't supported.`);
         return;
       }
 
       if (!fromLanguage || !toLanguage || !messageToTranslate || !translator) {
+        console.log(`!!! Not everything is set for translation.`, {
+          fromLanguage,
+          toLanguage,
+          messageToTranslate,
+          translator,
+        });
         // Not everything is set for translation.
         this.ui.updateTranslation("");
         return;
       }
 
+      console.log(`!!! awaiting previous request`);
       // Ensure the previous translation has finished so that only the latest
       // translation goes through.
       await this.translationRequest;
@@ -180,16 +189,19 @@ class TranslationsState {
         this.variant !== variant ||
         this.messageToTranslate !== messageToTranslate
       ) {
+        console.log(`!!! no translation`);
         return;
       }
 
       const start = performance.now();
+      console.log(`!!! requestion translation`, messageToTranslate);
       this.translationRequest = this.translator.translate(
         messageToTranslate,
         AT_isHtmlTranslation()
       );
       this.ui.setResultPlaceholderTextContent(l10nIds.translatingMessage);
       const translation = await this.translationRequest;
+      console.log(`!!! Received translation`, translation);
       this.ui.setResultPlaceholderTextContent(l10nIds.resultsPlaceholder);
 
       // The measure events will show up in the Firefox Profiler.
@@ -283,9 +295,11 @@ class TranslationsState {
 
       // Signal to tests that the translator was created so they can exit.
       window.postMessage("translator-ready");
+
+      console.log(`!!! maybeCreateNewTranslator`, { translatorPromise });
+      this.translator = await translatorPromise;
       AT_log(`Created a new Translator in ${duration / 1000} seconds`);
 
-      this.translator = await translatorPromise;
       this.maybeRequestTranslation();
     } catch (error) {
       this.ui.showInfo("about-translations-engine-error");
@@ -329,21 +343,37 @@ class TranslationsState {
   }
 
   /**
-   * @param {string} lang
+   * @param {string} langTagKey
    */
-  async setFromLanguage(lang) {
-    if (lang !== this.fromLanguage) {
-      this.fromLanguage = lang;
+  async setFromLanguage(langTagKey) {
+    const [langTag, variant] = langTagKey.split(",");
+    console.log(`!!! setFromLanguage`, { langTagKey, langTag, variant });
+    if (
+      langTag !== this.fromLanguage ||
+      // Ignore variants for translating from the pivot language.
+      (variant !== this.variant && langTag !== "en")
+    ) {
+      console.log(`!!! setting from language`);
+      this.fromLanguage = langTag;
+      if (langTag !== "en") {
+        console.log(`!!! setting variant`, { langTagKey, langTag, variant });
+        this.variant = variant;
+      }
+
       await this.maybeCreateNewTranslator();
     }
   }
 
   /**
-   * @param {string} lang
+   * @param {string} langTagKey
    */
-  setToLanguage(lang) {
-    if (lang !== this.toLanguage) {
-      this.toLanguage = lang;
+  setToLanguage(langTagKey) {
+    const [langTag, variant] = langTagKey.split(",");
+    console.log(`!!! setToLanguage`, { langTagKey, langTag, variant });
+    if (langTag !== this.toLanguage || this.variant !== variant) {
+      console.log(`!!! setting to language`);
+      this.toLanguage = langTag;
+      this.variant = variant;
       this.maybeCreateNewTranslator();
     }
   }
@@ -436,16 +466,19 @@ class TranslationsUI {
     const supportedLanguages = await this.state.supportedLanguages;
 
     // Update the DOM elements with the display names.
-    for (const { langTag, displayName } of supportedLanguages.toLanguages) {
+    for (const { langTagKey, displayName } of supportedLanguages.toLanguages) {
       const option = document.createElement("option");
-      option.value = langTag;
+      option.value = langTagKey;
       option.text = displayName;
       this.languageTo.add(option);
     }
 
-    for (const { langTag, displayName } of supportedLanguages.fromLanguages) {
+    for (const {
+      langTagKey,
+      displayName,
+    } of supportedLanguages.fromLanguages) {
       const option = document.createElement("option");
-      option.value = langTag;
+      option.value = langTagKey;
       option.text = displayName;
       this.languageFrom.add(option);
     }

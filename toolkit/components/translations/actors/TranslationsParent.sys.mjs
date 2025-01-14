@@ -1072,8 +1072,6 @@ export class TranslationsParent extends JSWindowActorParent {
       return undefined;
     }
 
-    console.trace(`!!! requestTranslationsPort`, { variant });
-
     // The MessageChannel will be used for communicating directly between the content
     // process and the engine's process.
     const { port1, port2 } = new MessageChannel();
@@ -1302,7 +1300,6 @@ export class TranslationsParent extends JSWindowActorParent {
     if (!TranslationsParent.#languagePairs) {
       TranslationsParent.#languagePairs =
         TranslationsParent.#getTranslationModelRecords().then(records => {
-          console.log(`!!! records`, records);
           const languagePairMap = new Map();
 
           for (const { fromLang, toLang, variant } of records.values()) {
@@ -1344,7 +1341,12 @@ export class TranslationsParent extends JSWindowActorParent {
     const toLanguageKeys = new Set();
 
     for (const { fromLang, toLang, variant } of languagePairs) {
-      fromLanguageKeys.add(variant ? `${fromLang},${variant}` : fromLang);
+      if (fromLang === PIVOT_LANGUAGE) {
+        // Ignore variants for the pivot language, as every variant targets English.
+        fromLanguageKeys.add(PIVOT_LANGUAGE);
+      } else {
+        fromLanguageKeys.add(variant ? `${fromLang},${variant}` : fromLang);
+      }
       toLanguageKeys.add(variant ? `${toLang},${variant}` : toLang);
     }
 
@@ -3645,8 +3647,6 @@ class TranslationsLanguageState {
     if (this.#requestedTranslationPair === requestedTranslationPair) {
       return;
     }
-
-    console.trace("!!! set requestedTranslationPair", requestedTranslationPair);
 
     this.#error = null;
     this.#isEngineReady = false;

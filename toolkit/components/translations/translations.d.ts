@@ -267,7 +267,7 @@ export interface LangTags {
   userLangTag: string | null,
 }
 
-export interface LanguagePair { fromLang: string, toLang: string, variant };
+export interface LanguagePair { fromLang: string, toLang: string, variant: string };
 
 interface SupportedLanguage {
   langTag: string,
