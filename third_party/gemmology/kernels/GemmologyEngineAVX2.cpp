@@ -4,6 +4,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include <gemmology.h>
+#include "GemmologyParallelEngine.h"
 
 namespace gemmology {
 template struct Engine<xsimd::avx2>;
@@ -12,7 +13,7 @@ template void Engine<xsimd::avx2>::SelectColumnsB(int8_t const*, int8_t*,
                                                   uint32_t const*);
 template void Engine<xsimd::avx2>::Shift::Multiply(
     uint8_t const*, int8_t const*, size_t, size_t, size_t,
-    gemmology::callbacks::UnquantizeAndAddBiasAndWrite);
+    gemmology::callbacks::UnquantizeAndAddBiasAndWrite, gemmology::JSThreadStaticExecutionEngine<>&);
 template void Engine<xsimd::avx2>::Shift::PrepareBias(
     int8_t const*, size_t, size_t,
     gemmology::callbacks::UnquantizeAndAddBiasAndWrite);
