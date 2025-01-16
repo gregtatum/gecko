@@ -19,6 +19,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 /**
  * @typedef {import("./TranslationsChild.sys.mjs").TranslationsEngine} TranslationsEngine
  * @typedef {import("./TranslationsChild.sys.mjs").SupportedLanguages} SupportedLanguages
+ * @typedef {import("../translations").LanguagePair} LanguagePair
  */
 
 /**
@@ -210,16 +211,12 @@ export class AboutTranslationsChild extends JSWindowActorChild {
    * created for that pair. The lifecycle of the engine is managed by the
    * TranslationsEngine.
    *
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
-   * @param {string} [variant]
+   * @param {LanguagePair} languagePair
    * @returns {void}
    */
-  AT_createTranslationsPort(fromLanguage, toLanguage, variant) {
+  AT_createTranslationsPort(languagePair) {
     this.sendAsyncMessage("AboutTranslations:GetTranslationsPort", {
-      fromLanguage,
-      toLanguage,
-      variant,
+      languagePair,
     });
   }
 

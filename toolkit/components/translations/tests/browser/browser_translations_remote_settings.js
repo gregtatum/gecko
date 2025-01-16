@@ -143,7 +143,7 @@ add_task(async function test_get_records_with_multiple_versions() {
   );
 
   const lookupKey = record =>
-    `${record.name}${TranslationsParent.languagePairKey(
+    `${record.name}${TranslationsParent.nonPivotKey(
       record.fromLang,
       record.toLang,
       record.variant

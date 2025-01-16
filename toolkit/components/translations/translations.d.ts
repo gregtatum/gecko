@@ -212,6 +212,7 @@ interface LanguageTranslationModelFile {
 interface TranslationModelPayload {
   sourceLanguage: string,
   targetLanguage: string,
+  variant?: string,
   languageModelFiles: LanguageTranslationModelFiles,
 };
 
@@ -267,9 +268,29 @@ export interface LangTags {
   userLangTag: string | null,
 }
 
-export interface LanguagePair { fromLang: string, toLang: string, variant: string };
+/**
+ * All of the necessary information to pick models for doing a translation. This pair
+ * should be solvable by picking model variants, and pivoting through English.
+ */
+export interface LanguagePair {
+  fromLanguage: string,
+  toLanguage: string,
+  fromVariant?: string,
+  toVariant?: string
+};
 
-interface SupportedLanguage {
+/**
+ * In the case of a single model, there will only be a single potential model variant.
+ * A LanguagePair can resolve into 1 or 2 NonPivotLanguagePair depending on the pivoting
+ * needs and how they are resolved.
+ */
+export interface NonPivotLanguagePair {
+  fromLanguage: string,
+  toLanguage: string,
+  variant?: string,
+}
+
+export interface SupportedLanguage {
   langTag: string,
   langTagKey: string,
   variant: string
@@ -281,7 +302,7 @@ interface SupportedLanguage {
  * for translation language selection.
  */
 export interface SupportedLanguages {
-  languagePairs: LanguagePair[],
+  languagePairs: NonPivotLanguagePair[],
   fromLanguages: Array<SupportedLanguage>,
   toLanguages: Array<SupportedLanguage>,
 }

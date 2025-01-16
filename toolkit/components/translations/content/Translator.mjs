@@ -29,25 +29,11 @@ export class Translator {
   #ready = Promise.reject;
 
   /**
-   * The BCP-47 language tag for the from-language.
+   * The current language pair to use for translation.
    *
-   * @type {string}
+   * @type {LanguagePair}
    */
-  #fromLanguage;
-
-  /**
-   * The BCP-47 language tag for the to-language.
-   *
-   * @type {string}
-   */
-  #toLanguage;
-
-  /**
-   * A model variant identifier
-   *
-   * @type {string | undefined}
-   */
-  #variant;
+  #languagePair;
 
   /**
    * The callback function to request a new port, provided at construction time
@@ -78,15 +64,11 @@ export class Translator {
    *
    * @see Translator.create
    *
-   * @param {string} fromLanguage - The BCP-47 from-language tag.
-   * @param {string} toLanguage - The BCP-47 to-language tag.
-   * @param {string} [variant] - A model variant.
+   * @param {LanguagePair} languagePair
    * @param {Function} requestTranslationsPort - A callback function to request a new MessagePort.
    */
-  constructor(fromLanguage, toLanguage, variant, requestTranslationsPort) {
-    this.#fromLanguage = fromLanguage;
-    this.#toLanguage = toLanguage;
-    this.#variant = variant;
+  constructor(languagePair, requestTranslationsPort) {
+    this.#languagePair = languagePair;
     this.#requestTranslationsPort = requestTranslationsPort;
   }
 

@@ -6,6 +6,7 @@
 
 /**
  * @typedef {import("../../../../toolkit/components/translations/translations").SelectTranslationsPanelState} SelectTranslationsPanelState
+ * @typedef {import("../../../../toolkit/components/translations/translations").LanguagePair} LanguagePair
  */
 
 ChromeUtils.defineESModuleGetters(this, {
@@ -13,6 +14,8 @@ ChromeUtils.defineESModuleGetters(this, {
     "resource://gre/modules/translation/LanguageDetector.sys.mjs",
   TranslationsPanelShared:
     "chrome://browser/content/translations/TranslationsPanelShared.sys.mjs",
+  TranslationsUtils:
+    "chrome://global/content/translations/TranslationsUtils.sys.mjs",
   Translator: "chrome://global/content/translations/Translator.mjs",
 });
 
@@ -311,7 +314,7 @@ var SelectTranslationsPanel = new (class {
     // First see if any of the detected languages are supported and return it if so.
     const { language, languages } =
       await LanguageDetector.detectLanguage(textToTranslate);
-    const languagePairs = await TranslationsParent.getLanguagePairs();
+    const languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
     for (const { languageCode } of languages) {
       const compatibleLangTag =
         TranslationsParent.findCompatibleSourceLangTagSync(
@@ -622,11 +625,10 @@ var SelectTranslationsPanel = new (class {
    */
   #maybeGetActiveFullPageTranslationsTargetLanguage() {
     try {
-      const { requestedTranslationPair } =
-        TranslationsParent.getTranslationsActor(
-          gBrowser.selectedBrowser
-        ).languageState;
-      return requestedTranslationPair?.toLanguage;
+      const { requestedLanguagePair } = TranslationsParent.getTranslationsActor(
+        gBrowser.selectedBrowser
+      ).languageState;
+      return requestedLanguagePair?.toLanguage;
     } catch {
       this.console.warn("Failed to retrieve the TranslationsParent actor.");
     }
@@ -1916,7 +1918,8 @@ var SelectTranslationsPanel = new (class {
    * Enables or disables UI components that are conditional on a valid language pair being selected.
    */
   #updateConditionalUIEnabledState() {
-    const { fromLanguage, toLanguage } = this.#getSelectedLanguagePair();
+    const { fromLanguage, toLanguage, fromVariant, toVariant } =
+      this.#getSelectedLanguagePair();
     const {
       copyButton,
       textArea,
@@ -2180,23 +2183,12 @@ var SelectTranslationsPanel = new (class {
   /**
    * Requests a translations port for a given language pair.
    *
-   * @param {string} fromLanguage - The from-language.
-   * @param {string} toLanguage - The to-language.
-   * @param {string} [variant]
-   *
+   * @param {LanguagePair} languagePair
    * @returns {Promise<MessagePort | undefined>} The message port promise.
    */
-  async #requestTranslationsPort(fromLanguage, toLanguage, variant) {
-    console.log(`!!! requestTranslationsPort`, {
-      fromLanguage,
-      toLanguage,
-      variant,
-    });
-    const port = await TranslationsParent.requestTranslationsPort(
-      fromLanguage,
-      toLanguage,
-      variant
-    );
+  async #requestTranslationsPort(languagePair) {
+    console.log(`!!! requestTranslationsPort`, languagePair);
+    const port = await TranslationsParent.requestTranslationsPort(languagePair);
     return port;
   }
 
@@ -2204,26 +2196,19 @@ var SelectTranslationsPanel = new (class {
    * Retrieves the existing translator for the specified language pair if it matches,
    * otherwise creates a new translator.
    *
-   * @param {string} fromLanguage - The source language code.
-   * @param {string} toLanguage - The target language code.
-   * @param {string} variant - The model variant.
+   * @param {LanguagePair} languagePair
    *
    * @returns {Promise<Translator>} A promise that resolves to a `Translator` instance for the given language pair.
    */
-  async #createTranslator(fromLanguage, toLanguage, variant) {
+  async #createTranslator(languagePair) {
     this.console?.log(
-      `Creating new Translator (${fromLanguage}-${toLanguage})`
+      `Creating new Translator (${TranslationsUtils.serializeLanguagePair(languagePair)})`
     );
 
-    const translator = await Translator.create(
-      fromLanguage,
-      toLanguage,
-      variant,
-      {
-        allowSameLanguage: true,
-        requestTranslationsPort: this.#requestTranslationsPort,
-      }
-    );
+    const translator = await Translator.create(languagePair, {
+      allowSameLanguage: true,
+      requestTranslationsPort: this.#requestTranslationsPort,
+    });
     return translator;
   }
 
@@ -2236,8 +2221,8 @@ var SelectTranslationsPanel = new (class {
       return;
     }
 
-    const { fromLanguage, toLanguage, variant } =
-      this.#getSelectedLanguagePair();
+    const languagePair = this.#getSelectedLanguagePair();
+    const { fromLanguage, toLanguage } = languagePair;
     this.#maybeChangeStateToTranslatable(fromLanguage, toLanguage);
 
     if (this.phase() !== "translatable") {
@@ -2250,7 +2235,7 @@ var SelectTranslationsPanel = new (class {
 
     TranslationsParent.storeMostRecentTargetLanguage(toLanguage);
 
-    this.#createTranslator(fromLanguage, toLanguage, variant)
+    this.#createTranslator(languagePair)
       .then(translator => {
         if (
           this.#shouldContinueTranslation(

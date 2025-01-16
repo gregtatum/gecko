@@ -25,13 +25,10 @@ export class AboutTranslationsParent extends JSWindowActorParent {
           return undefined;
         }
 
-        const { fromLanguage, toLanguage, variant } = data;
+        const { languagePair } = data;
         try {
-          const port = await lazy.TranslationsParent.requestTranslationsPort(
-            fromLanguage,
-            toLanguage,
-            variant
-          );
+          const port =
+            await lazy.TranslationsParent.requestTranslationsPort(languagePair);
 
           // At the time of writing, you can't return a port via the `sendQuery` API,
           // so results can't just be returned. The `sendAsyncMessage` method must be
@@ -40,8 +37,7 @@ export class AboutTranslationsParent extends JSWindowActorParent {
           this.sendAsyncMessage(
             "AboutTranslations:SendTranslationsPort",
             {
-              fromLanguage,
-              toLanguage,
+              languagePair,
               port,
             },
             [port] // Mark the port as transferable.

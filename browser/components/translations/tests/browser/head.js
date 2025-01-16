@@ -248,11 +248,10 @@ function logAction(...params) {
  */
 function isFullPageTranslationsActive() {
   try {
-    const { requestedTranslationPair } =
-      TranslationsParent.getTranslationsActor(
-        gBrowser.selectedBrowser
-      ).languageState;
-    return !!requestedTranslationPair;
+    const { requestedLanguagePair } = TranslationsParent.getTranslationsActor(
+      gBrowser.selectedBrowser
+    ).languageState;
+    return !!requestedLanguagePair;
   } catch {
     // Translations actor unavailable, continue on.
   }
