@@ -36,6 +36,9 @@ export interface TranslationModelRecord {
   fromLang: string;
   // The BCP 47 language tag, e.g. "en"
   toLang: string;
+  // A model variant. This is a developer-only property that can be used in Nightly or
+  // local builds to test different types of models.
+  variant?: string;
   // The semver number, used for handling future format changes. e.g. 1.0
   version: string;
   // e.g. "lex"
@@ -209,6 +212,7 @@ interface LanguageTranslationModelFile {
 interface TranslationModelPayload {
   sourceLanguage: string,
   targetLanguage: string,
+  variant?: string,
   languageModelFiles: LanguageTranslationModelFiles,
 };
 
@@ -264,16 +268,43 @@ export interface LangTags {
   userLangTag: string | null,
 }
 
-export interface LanguagePair { fromLang: string, toLang: string };
+/**
+ * All of the necessary information to pick models for doing a translation. This pair
+ * should be solvable by picking model variants, and pivoting through English.
+ */
+export interface LanguagePair {
+  fromLanguage: string,
+  toLanguage: string,
+  fromVariant?: string,
+  toVariant?: string
+};
+
+/**
+ * In the case of a single model, there will only be a single potential model variant.
+ * A LanguagePair can resolve into 1 or 2 NonPivotLanguagePair depending on the pivoting
+ * needs and how they are resolved.
+ */
+export interface NonPivotLanguagePair {
+  fromLanguage: string,
+  toLanguage: string,
+  variant?: string,
+}
+
+export interface SupportedLanguage {
+  langTag: string,
+  langTagKey: string,
+  variant: string
+  displayName: string,
+}
 
 /**
  * A structure that contains all of the information needed to render dropdowns
  * for translation language selection.
  */
 export interface SupportedLanguages {
-  languagePairs: LanguagePair[],
-  fromLanguages: Array<{ langTag: string, displayName: string, }>,
-  toLanguages: Array<{ langTag: string, displayName: string }>,
+  languagePairs: NonPivotLanguagePair[],
+  fromLanguages: Array<SupportedLanguage>,
+  toLanguages: Array<SupportedLanguage>,
 }
 
 export type TranslationErrors = "engine-load-error";
@@ -303,3 +334,5 @@ export type SelectTranslationsPanelState =
 
   // The source language is not currently supported by Translations in Firefox.
   | { phase: "unsupported"; detectedLanguage: string; toLanguage: string, sourceText: string }
+
+export type RequestTranslationsPort = (languagePair: LanguagePair) => Promise<MessagePort>

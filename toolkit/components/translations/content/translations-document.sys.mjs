@@ -53,10 +53,8 @@ export class LRUCache {
   #htmlCache = new Map();
   /** @type {Map<string, string>} */
   #textCache = new Map();
-  /** @type {string} */
-  #fromLanguage;
-  /** @type {string} */
-  #toLanguage;
+  /** @type {LanguagePair} */
+  #languagePair;
 
   /**
    * This limit is used twice, once for Text translations, and once for HTML translations.
@@ -69,12 +67,10 @@ export class LRUCache {
   #cacheExpirationMS = 10 * 60_000;
 
   /**
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
+   * @param {LanguagePair} languagePair
    */
-  constructor(fromLanguage, toLanguage) {
-    this.#fromLanguage = fromLanguage;
-    this.#toLanguage = toLanguage;
+  constructor(languagePair) {
+    this.#languagePair = languagePair;
   }
 
   /**
@@ -129,12 +125,12 @@ export class LRUCache {
   }
 
   /**
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
+   * @param {LanguagePair} languagePair
    */
-  matches(fromLanguage, toLanguage) {
+  matches(languagePair) {
     return (
-      this.#fromLanguage === fromLanguage && this.#toLanguage === toLanguage
+      lazy.TranslationsUtils.serializeLanguagePair(this.#languagePair) ===
+      lazy.TranslationsUtils.serializeLanguagePair(languagePair)
     );
   }
 

@@ -2,6 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/**
+ * @typedef {typeof import("../../../../toolkit/components/translations/actors/TranslationsParent.sys.mjs").TranslationsParent} TranslationsParent
+ */
+
+/** @type {{ TranslationsParent: TranslationsParent }} */
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -199,9 +204,9 @@ export class TranslationsPanelShared {
       while (popup.lastChild?.value) {
         popup.lastChild.remove();
       }
-      for (const { langTag, displayName } of fromLanguages) {
+      for (const { langTagKey, displayName } of fromLanguages) {
         const fromMenuItem = document.createXULElement("menuitem");
-        fromMenuItem.setAttribute("value", langTag);
+        fromMenuItem.setAttribute("value", langTagKey);
         fromMenuItem.setAttribute("label", displayName);
         popup.appendChild(fromMenuItem);
       }
@@ -211,9 +216,9 @@ export class TranslationsPanelShared {
       while (popup.lastChild?.value) {
         popup.lastChild.remove();
       }
-      for (const { langTag, displayName } of toLanguages) {
+      for (const { langTagKey, displayName } of toLanguages) {
         const toMenuItem = document.createXULElement("menuitem");
-        toMenuItem.setAttribute("value", langTag);
+        toMenuItem.setAttribute("value", langTagKey);
         toMenuItem.setAttribute("label", displayName);
         popup.appendChild(toMenuItem);
       }

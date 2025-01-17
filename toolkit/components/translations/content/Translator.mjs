@@ -3,6 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * @typedef {typeof import("../translations")} Translations
+ */
+
+/**
+ * @typedef {import("../translations").LanguagePair} LanguagePair
+ * @typedef {import("../translations").RequestTranslationsPort} RequestTranslationsPort
+ */
+
+/**
  * This class manages the communications to the translations engine via MessagePort.
  */
 export class Translator {
@@ -29,24 +38,17 @@ export class Translator {
   #ready = Promise.reject;
 
   /**
-   * The BCP-47 language tag for the from-language.
+   * The current language pair to use for translation.
    *
-   * @type {string}
+   * @type {LanguagePair}
    */
-  #fromLanguage;
-
-  /**
-   * The BCP-47 language tag for the to-language.
-   *
-   * @type {string}
-   */
-  #toLanguage;
+  #languagePair;
 
   /**
    * The callback function to request a new port, provided at construction time
    * by the caller.
    *
-   * @type {Function}
+   * @type {RequestTranslationsPort}
    */
   #requestTranslationsPort;
 
@@ -71,13 +73,11 @@ export class Translator {
    *
    * @see Translator.create
    *
-   * @param {string} fromLanguage - The BCP-47 from-language tag.
-   * @param {string} toLanguage - The BCP-47 to-language tag.
-   * @param {Function} requestTranslationsPort - A callback function to request a new MessagePort.
+   * @param {LanguagePair} languagePair
+   * @param {RequestTranslationsPort} requestTranslationsPort - A callback function to request a new MessagePort.
    */
-  constructor(fromLanguage, toLanguage, requestTranslationsPort) {
-    this.#fromLanguage = fromLanguage;
-    this.#toLanguage = toLanguage;
+  constructor(languagePair, requestTranslationsPort) {
+    this.#languagePair = languagePair;
     this.#requestTranslationsPort = requestTranslationsPort;
   }
 
@@ -96,26 +96,11 @@ export class Translator {
   }
 
   /**
-   * @returns {string} The BCP-47 language tag of the from-language.
-   */
-  get fromLanguage() {
-    return this.#fromLanguage;
-  }
-
-  /**
-   * @returns {string} The BCP-47 language tag of the to-language.
-   */
-  get toLanguage() {
-    return this.#toLanguage;
-  }
-
-  /**
    * Opens up a port and creates a new translator.
    *
-   * @param {string} fromLanguage - The BCP-47 language tag of the from-language.
-   * @param {string} toLanguage - The BCP-47 language tag of the to-language.
+   * @param {LanguagePair} languagePair
    * @param {object} data - Data for creating a translator.
-   * @param {Function} [data.requestTranslationsPort]
+   * @param {RequestTranslationsPort} [data.requestTranslationsPort]
    *  - A function to request a translations port for communication with the Translations engine.
    *    This is required in all cases except if allowSameLanguage is true and the fromLanguage
    *    is the same as the toLanguage.
@@ -126,21 +111,15 @@ export class Translator {
    * @returns {Promise<Translator | PassthroughTranslator>}
    */
   static async create(
-    fromLanguage,
-    toLanguage,
-    { requestTranslationsPort, allowSameLanguage }
+    languagePair,
+    requestTranslationsPort,
+    allowSameLanguage
   ) {
-    if (!fromLanguage || !toLanguage) {
-      throw new Error(
-        "Attempt to create Translator with missing language tags."
-      );
-    }
-
-    if (fromLanguage === toLanguage) {
+    if (languagePair.fromLanguage === languagePair.toLanguage) {
       if (!allowSameLanguage) {
         throw new Error("Attempt to create disallowed PassthroughTranslator");
       }
-      return new PassthroughTranslator(fromLanguage, toLanguage);
+      return new PassthroughTranslator(languagePair);
     }
 
     if (!requestTranslationsPort) {
@@ -149,11 +128,7 @@ export class Translator {
       );
     }
 
-    const translator = new Translator(
-      fromLanguage,
-      toLanguage,
-      requestTranslationsPort
-    );
+    const translator = new Translator(languagePair, requestTranslationsPort);
     await translator.#createNewPortIfClosed();
 
     return translator;
@@ -169,10 +144,7 @@ export class Translator {
       return;
     }
 
-    this.#port = await this.#requestTranslationsPort(
-      this.#fromLanguage,
-      this.#toLanguage
-    );
+    this.#port = await this.#requestTranslationsPort(this.#languagePair);
     this.#portClosed = false;
 
     // Create a promise that will be resolved when the engine is ready.
@@ -193,7 +165,7 @@ export class Translator {
             resolve();
           } else {
             this.#portClosed = true;
-            reject();
+            reject(new Error(data.error));
           }
           break;
         }
@@ -311,13 +283,13 @@ class PassthroughTranslator {
    * @param {string} fromLanguage - The BCP-47 from-language tag.
    * @param {string} toLanguage - The BCP-47 to-language tag.
    */
-  constructor(fromLanguage, toLanguage) {
-    if (fromLanguage !== toLanguage) {
+  constructor(languagePair) {
+    if (languagePair.fromLanguage !== languagePair.toLanguage) {
       throw new Error(
         "Attempt to create PassthroughTranslator with different fromLanguage and toLanguage."
       );
     }
-    this.#language = fromLanguage;
+    this.#language = languagePair.fromLanguage;
   }
 
   /**

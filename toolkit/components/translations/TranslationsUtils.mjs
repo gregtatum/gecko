@@ -3,6 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * @typedef {import("./translations").LanguagePair} LanguagePair
+ */
+
+/**
  * A set of global static utility functions that are useful throughout the
  * Translations ecosystem within the Firefox code base.
  */
@@ -92,5 +96,33 @@ export class TranslationsUtils {
     }
 
     return false;
+  }
+
+  /**
+   * Serializes a language pair into a unique key that is human readable. This is useful
+   * for caching, deduplicating, and logging.
+   *
+   * e.g.
+   *   "en -> fr"
+   *   "en -> fr,base"
+   *   "zh-Hans,tiny -> fr,base"
+   *
+   * @param {LanguagePair} languagePair
+   */
+  static serializeLanguagePair({
+    fromLanguage,
+    toLanguage,
+    fromVariant,
+    toVariant,
+  }) {
+    let key = fromLanguage;
+    if (fromVariant) {
+      key += `,${fromVariant}`;
+    }
+    key += ` -> ${toLanguage}`;
+    if (toVariant) {
+      key += `,${toVariant}`;
+    }
+    return key;
   }
 }

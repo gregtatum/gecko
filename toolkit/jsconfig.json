@@ -1,4 +1,4 @@
 {
   "extends": "../tools/@types/tsconfig.json",
-  "include": ["**/*.sys.mjs"]
+  "include": ["**/*.sys.mjs", "components/translations/TranslationsUtils.mjs"]
 }

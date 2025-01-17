@@ -180,16 +180,9 @@ const VERIFY_SIGNATURES_FROM_FS = false;
  * @typedef {import("../translations").WasmRecord} WasmRecord
  * @typedef {import("../translations").LangTags} LangTags
  * @typedef {import("../translations").LanguagePair} LanguagePair
+ * @typedef {import("../translations").ModelLanguages} ModelLanguages
  * @typedef {import("../translations").SupportedLanguages} SupportedLanguages
  * @typedef {import("../translations").TranslationErrors} TranslationErrors
- */
-
-/**
- * @typedef {object} TranslationPair
- * @property {string} fromLanguage
- * @property {string} toLanguage
- * @property {string} [fromDisplayLanguage]
- * @property {string} [toDisplayLanguage]
  */
 
 /**
@@ -212,7 +205,7 @@ class StatePerTopChromeWindow {
   /**
    * When reloading the page, store the translation pair that needs translating.
    *
-   * @type {null | TranslationPair}
+   * @type {null | LanguagePair}
    */
   translateOnPageReload = null;
 
@@ -452,16 +445,15 @@ export class TranslationsParent extends JSWindowActorParent {
 
     if (windowState.translateOnPageReload) {
       // The actor was recreated after a page reload, start the translation.
-      const { fromLanguage, toLanguage } = windowState.translateOnPageReload;
+      const languagePair = windowState.translateOnPageReload;
       windowState.translateOnPageReload = null;
 
       lazy.console.log(
-        `Translating on a page reload from "${fromLanguage}" to "${toLanguage}".`
+        `Translating on a page reload from "${lazy.TranslationsUtils.serializeLanguagePair(languagePair)}".`
       );
 
       this.translate(
-        fromLanguage,
-        toLanguage,
+        languagePair,
         false // reportAsAutoTranslate
       );
     }
@@ -1044,8 +1036,7 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Requests a new translations port.
    *
-   * @param {string} fromLanguage - The BCP-47 from-language tag.
-   * @param {string} toLanguage - The BCP-47 to-language tag.
+   * @param {LanguagePair} languagePair
    * @param {TranslationsParent} [translationsParent] - A TranslationsParent actor instance.
    *   NOTE: This value should be provided only if your port is associated with Full Page Translations.
    *   This will associate this translations port with the TranslationsParent actor instance, which will mean that changes
@@ -1053,11 +1044,7 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @returns {Promise<MessagePort | undefined>} The port for communication with the translation engine, or undefined on failure.
    */
-  static async requestTranslationsPort(
-    fromLanguage,
-    toLanguage,
-    translationsParent
-  ) {
+  static async requestTranslationsPort(languagePair, translationsParent) {
     let translationsEngineParent;
     try {
       translationsEngineParent =
@@ -1071,8 +1058,7 @@ export class TranslationsParent extends JSWindowActorParent {
     // process and the engine's process.
     const { port1, port2 } = new MessageChannel();
     translationsEngineParent.startTranslation(
-      fromLanguage,
-      toLanguage,
+      languagePair,
       port1,
       translationsParent
     );
@@ -1105,8 +1091,10 @@ export class TranslationsParent extends JSWindowActorParent {
 
         if (this.shouldAutoTranslate(detectedLanguages)) {
           this.translate(
-            detectedLanguages.docLangTag,
-            detectedLanguages.userLangTag,
+            {
+              fromLanguage: detectedLanguages.docLangTag,
+              toLanguage: detectedLanguages.userLangTag,
+            },
             true // reportAsAutoTranslate
           );
         } else {
@@ -1115,8 +1103,8 @@ export class TranslationsParent extends JSWindowActorParent {
         return undefined;
       }
       case "Translations:RequestPort": {
-        const { requestedTranslationPair } = this.languageState;
-        if (!requestedTranslationPair) {
+        const { requestedLanguagePair } = this.languageState;
+        if (!requestedLanguagePair) {
           lazy.console.error(
             "A port was requested but no translation pair was previously requested"
           );
@@ -1134,16 +1122,14 @@ export class TranslationsParent extends JSWindowActorParent {
           );
         }
 
-        const { fromLanguage, toLanguage } = requestedTranslationPair;
         const port = await TranslationsParent.requestTranslationsPort(
-          fromLanguage,
-          toLanguage,
+          requestedLanguagePair,
           this
         );
 
         if (!port) {
           lazy.console.error(
-            `Failed to create a translations port for language pair: (${fromLanguage} -> ${toLanguage})`
+            `Failed to create a translations port for language pair: ${lazy.TranslationsUtils.serializeLanguagePair(requestedLanguagePair)}`
           );
           return undefined;
         }
@@ -1164,10 +1150,9 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
+   * @param {LanguagePair} languagePair
    */
-  static async getTranslationsEnginePayload(fromLanguage, toLanguage) {
+  static async getTranslationsEnginePayload(languagePair) {
     const wasmStartTime = Cu.now();
     const bergamotWasmArrayBufferPromise =
       TranslationsParent.#getBergamotWasmArrayBuffer();
@@ -1185,33 +1170,41 @@ export class TranslationsParent extends JSWindowActorParent {
 
     const modelStartTime = Cu.now();
 
-    let translationModelPayloads;
-    const nonPivotPayload = await TranslationsParent.getTranslationModelPayload(
-      fromLanguage,
-      toLanguage
-    );
-
-    if (nonPivotPayload) {
-      // A direct translation model was found for the language pair.
-      translationModelPayloads = [nonPivotPayload];
+    /** @type {TranslationModelPayload[]} */
+    const translationModelPayloads = [];
+    const { fromLanguage, toLanguage, fromVariant, toVariant } = languagePair;
+    if (fromLanguage === PIVOT_LANGUAGE) {
+      translationModelPayloads.push(
+        await TranslationsParent.getTranslationModelPayload(
+          fromLanguage,
+          toLanguage,
+          toVariant
+        )
+      );
+    } else if (toLanguage === PIVOT_LANGUAGE) {
+      translationModelPayloads.push(
+        await TranslationsParent.getTranslationModelPayload(
+          fromLanguage,
+          toLanguage,
+          fromVariant
+        )
+      );
     } else {
       // No matching model was found, try to pivot between English.
-      const [payload1, payload2] = await Promise.all([
-        TranslationsParent.getTranslationModelPayload(
-          fromLanguage,
-          PIVOT_LANGUAGE
-        ),
-        TranslationsParent.getTranslationModelPayload(
-          PIVOT_LANGUAGE,
-          toLanguage
-        ),
-      ]);
-      if (!payload1 || !payload2) {
-        throw new Error(
-          `No language models were found for ${fromLanguage} to ${toLanguage}`
-        );
-      }
-      translationModelPayloads = [payload1, payload2];
+      translationModelPayloads.push(
+        ...(await Promise.all([
+          TranslationsParent.getTranslationModelPayload(
+            fromLanguage,
+            PIVOT_LANGUAGE,
+            fromVariant
+          ),
+          TranslationsParent.getTranslationModelPayload(
+            PIVOT_LANGUAGE,
+            toLanguage,
+            toVariant
+          ),
+        ]))
+      );
     }
 
     ChromeUtils.addProfilerMarker(
@@ -1254,10 +1247,13 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @returns {string}
    */
-  static languagePairKey(fromLanguage, toLanguage) {
-    return `${fromLanguage},${toLanguage}`;
+  static nonPivotKey(fromLanguage, toLanguage, variant) {
+    return variant
+      ? `${fromLanguage},${toLanguage},${variant}`
+      : `${fromLanguage},${toLanguage}`;
   }
 
   /**
@@ -1279,18 +1275,22 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * Get the list of translation pairs supported by the translations engine.
    *
-   * @returns {Promise<Array<LanguagePair>>}
+   * @returns {Promise<Array<NonPivotLanguagePair>>}
    */
-  static getLanguagePairs() {
+  static getNonPivotLanguagePairs() {
     if (!TranslationsParent.#languagePairs) {
       TranslationsParent.#languagePairs =
         TranslationsParent.#getTranslationModelRecords().then(records => {
           const languagePairMap = new Map();
 
-          for (const { fromLang, toLang } of records.values()) {
-            const key = TranslationsParent.languagePairKey(fromLang, toLang);
+          for (const { fromLang, toLang, variant } of records.values()) {
+            const key = TranslationsParent.nonPivotKey(
+              fromLang,
+              toLang,
+              variant
+            );
             if (!languagePairMap.has(key)) {
-              languagePairMap.set(key, { fromLang, toLang });
+              languagePairMap.set(key, { fromLang, toLang, variant });
             }
           }
           return Array.from(languagePairMap.values());
@@ -1304,8 +1304,8 @@ export class TranslationsParent extends JSWindowActorParent {
 
   /**
    * Get the list of languages and their display names, sorted by their display names.
-   * This is more expensive of a call than getLanguagePairs since the display names
-   * are looked up.
+   * This is more expensive of a call than getNonPivotLanguagePairs since the display
+   * names are looked up.
    *
    * This is all of the information needed to render dropdowns for translation
    * language selection.
@@ -1314,16 +1314,21 @@ export class TranslationsParent extends JSWindowActorParent {
    */
   static async getSupportedLanguages() {
     await chaosMode(1 / 4);
-    const languagePairs = await TranslationsParent.getLanguagePairs();
+    const languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
 
     /** @type {Set<string>} */
-    const fromLanguages = new Set();
+    const fromLanguageKeys = new Set();
     /** @type {Set<string>} */
-    const toLanguages = new Set();
+    const toLanguageKeys = new Set();
 
-    for (const { fromLang, toLang } of languagePairs) {
-      fromLanguages.add(fromLang);
-      toLanguages.add(toLang);
+    for (const { fromLang, toLang, variant } of languagePairs) {
+      if (fromLang === PIVOT_LANGUAGE) {
+        // Ignore variants for the pivot language, as every variant targets English.
+        fromLanguageKeys.add(PIVOT_LANGUAGE);
+      } else {
+        fromLanguageKeys.add(variant ? `${fromLang},${variant}` : fromLang);
+      }
+      toLanguageKeys.add(variant ? `${toLang},${variant}` : toLang);
     }
 
     // Build a map of the langTag to the display name.
@@ -1333,8 +1338,9 @@ export class TranslationsParent extends JSWindowActorParent {
       const languageDisplayNames =
         TranslationsParent.createLanguageDisplayNames();
 
-      for (const langTagSet of [fromLanguages, toLanguages]) {
-        for (const langTag of langTagSet.keys()) {
+      for (const langTagSet of [fromLanguageKeys, toLanguageKeys]) {
+        for (const langTagKey of langTagSet) {
+          const [langTag] = langTagKey.split(",");
           if (displayNames.has(langTag)) {
             continue;
           }
@@ -1343,19 +1349,31 @@ export class TranslationsParent extends JSWindowActorParent {
       }
     }
 
-    const addDisplayName = langTag => ({
-      langTag,
-      displayName: displayNames.get(langTag),
-    });
+    const addDisplayName = langTagKey => {
+      const [langTag, variant] = langTagKey.split(",");
+      let displayName = displayNames.get(langTag);
+      if (variant) {
+        // Right now if there is a variant always append the variant name, but in the
+        // future it might be a good idea to not show the variant name if there is only
+        // 1 variant for a language. For now this is only developer facing. This is also
+        // why Fluent isn't used here, as it's not exposed to end users.
+        //
+        // The display needs to work with languages that use script tags,
+        // e.g. "Chinese (Traditional) - base".
+        //      "Spanish - decoder-bigger-embeddings".
+        displayName = `${displayName} - ${variant}`;
+      }
+      return { langTag, variant, langTagKey, displayName };
+    };
 
     const sort = (a, b) => a.displayName.localeCompare(b.displayName);
 
     return {
       languagePairs,
-      fromLanguages: Array.from(fromLanguages.keys())
+      fromLanguages: Array.from(fromLanguageKeys.keys())
         .map(addDisplayName)
         .sort(sort),
-      toLanguages: Array.from(toLanguages.keys())
+      toLanguages: Array.from(toLanguageKeys.keys())
         .map(addDisplayName)
         .sort(sort),
     };
@@ -1803,9 +1821,10 @@ export class TranslationsParent extends JSWindowActorParent {
             // Names in this collection are not unique, so we are appending the languagePairKey
             // to guarantee uniqueness.
             lookupKey: record =>
-              `${record.name}${TranslationsParent.languagePairKey(
+              `${record.name}${TranslationsParent.nonPivotKey(
                 record.fromLang,
-                record.toLang
+                record.toLang,
+                record.variant
               )}`,
           });
 
@@ -2185,7 +2204,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @returns {Set<string>}  Directional language pairs in the form of "fromLang,toLang" that indicates translation pairs that were deleted.
    */
   static async deleteCachedLanguageFiles() {
-    const languagePairs = await TranslationsParent.getLanguagePairs();
+    const languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
 
     const deletionRequest = [];
     let deletedPairs = new Set();
@@ -2249,11 +2268,19 @@ export class TranslationsParent extends JSWindowActorParent {
 
       if (isDownloaded) {
         downloadedPairs.add(
-          TranslationsParent.languagePairKey(record.fromLang, record.toLang)
+          TranslationsParent.nonPivotKey(
+            record.fromLang,
+            record.toLang,
+            record.variant
+          )
         );
       } else {
         nonDownloadedPairs.add(
-          TranslationsParent.languagePairKey(record.fromLang, record.toLang)
+          TranslationsParent.nonPivotKey(
+            record.fromLang,
+            record.toLang,
+            record.variant
+          )
         );
       }
     }
@@ -2391,12 +2418,14 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @param {string} fromLanguage
    * @param {string} toLanguage
+   * @param {string} [variant]
    * @param {boolean} withQualityEstimation
-   * @returns {null | TranslationModelPayload}
+   * @returns {TranslationModelPayload}
    */
   static async getTranslationModelPayload(
     fromLanguage,
     toLanguage,
+    variant,
     withQualityEstimation = false
   ) {
     const client = TranslationsParent.#getTranslationModelsRemoteClient();
@@ -2410,7 +2439,7 @@ export class TranslationsParent extends JSWindowActorParent {
     ];
 
     /** @type {LanguageTranslationModelFiles} */
-    let results;
+    const results = {};
 
     // Use Promise.all to download (or retrieve from cache) the model files in parallel.
     await Promise.all(
@@ -2420,13 +2449,13 @@ export class TranslationsParent extends JSWindowActorParent {
           return;
         }
 
-        if (record.fromLang !== fromLanguage || record.toLang !== toLanguage) {
+        if (
+          record.fromLang !== fromLanguage ||
+          record.toLang !== toLanguage ||
+          record.variant !== variant
+        ) {
           // Only use models that match.
           return;
-        }
-
-        if (!results) {
-          results = {};
         }
 
         const start = Date.now();
@@ -2448,16 +2477,12 @@ export class TranslationsParent extends JSWindowActorParent {
           `Translation model fetched in ${duration / 1000} seconds:`,
           record.fromLang,
           record.toLang,
+          record.variant,
           record.fileType,
           record.version
         );
       })
     );
-
-    if (!results) {
-      // No model files were found, pivoting will be required.
-      return null;
-    }
 
     // Validate that all of the files we expected were actually available and
     // downloaded.
@@ -2501,6 +2526,7 @@ export class TranslationsParent extends JSWindowActorParent {
     return {
       sourceLanguage: fromLanguage,
       targetLanguage: toLanguage,
+      variant,
       languageModelFiles: results,
     };
   }
@@ -2690,31 +2716,35 @@ export class TranslationsParent extends JSWindowActorParent {
   }
 
   /**
-   * @param {string} fromLanguage
-   * @param {string} toLanguage
+   * @param {LanguagePair} languagePair
    * @param {boolean} reportAsAutoTranslate - In telemetry, report this as
    *   an auto-translate.
    */
-  async translate(fromLanguage, toLanguage, reportAsAutoTranslate) {
-    if (fromLanguage === toLanguage) {
-      lazy.console.error(
-        "A translation was requested where the from and to language match.",
-        { fromLanguage, toLanguage, reportAsAutoTranslate }
-      );
-      return;
-    }
+  async translate(languagePair, reportAsAutoTranslate) {
+    const { fromLanguage, toLanguage } = languagePair;
     if (!fromLanguage || !toLanguage) {
       lazy.console.error(
-        "A translation was requested but the fromLanguage or toLanguage was not set.",
+        new Error(
+          "A translation was requested but the fromLanguage or toLanguage was not set."
+        ),
         { fromLanguage, toLanguage, reportAsAutoTranslate }
       );
       return;
     }
-    if (this.languageState.requestedTranslationPair) {
+    if (fromLanguage === toLanguage) {
+      lazy.console.error(
+        new Error(
+          "A translation was requested where the from and to language match."
+        ),
+        { fromLanguage, toLanguage, reportAsAutoTranslate }
+      );
+      return;
+    }
+    if (this.languageState.requestedLanguagePair) {
       // This page has already been translated, restore it and translate it
       // again once the actor has been recreated.
       const windowState = this.getWindowState();
-      windowState.translateOnPageReload = { fromLanguage, toLanguage };
+      windowState.translateOnPageReload = languagePair;
       this.restorePage(fromLanguage);
     } else {
       const { docLangTag } = this.languageState.detectedLanguages;
@@ -2728,22 +2758,18 @@ export class TranslationsParent extends JSWindowActorParent {
       // The MessageChannel will be used for communicating directly between the content
       // process and the engine's process.
       const port = await TranslationsParent.requestTranslationsPort(
-        fromLanguage,
-        toLanguage,
+        languagePair,
         this
       );
 
       if (!port) {
         lazy.console.error(
-          `Failed to create a translations port for language pair: (${fromLanguage} -> ${toLanguage})`
+          `Failed to create a translations port for language pair: (${lazy.TranslationsUtils.serializeLanguagePair(languagePair)})`
         );
         return;
       }
 
-      this.languageState.requestedTranslationPair = {
-        fromLanguage,
-        toLanguage,
-      };
+      this.languageState.requestedLanguagePair = languagePair;
 
       const preferredLanguages = TranslationsParent.getPreferredLanguages();
       const topPreferredLanguage =
@@ -2765,8 +2791,7 @@ export class TranslationsParent extends JSWindowActorParent {
       this.sendAsyncMessage(
         "Translations:TranslatePage",
         {
-          fromLanguage,
-          toLanguage,
+          languagePair,
           port,
         },
         // https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
@@ -2785,7 +2810,7 @@ export class TranslationsParent extends JSWindowActorParent {
     const windowState = this.getWindowState();
     windowState.isPageRestored = true;
     this.languageState.hasVisibleChange = false;
-    this.languageState.requestedTranslationPair = null;
+    this.languageState.requestedLanguagePair = null;
     windowState.previousDetectedLanguages =
       this.languageState.detectedLanguages;
 
@@ -2881,7 +2906,7 @@ export class TranslationsParent extends JSWindowActorParent {
    *   or `null` if no match is found.
    */
   static async findCompatibleSourceLangTag(langTag) {
-    const languagePairs = await TranslationsParent.getLanguagePairs();
+    const languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
     return TranslationsParent.findCompatibleSourceLangTagSync(
       langTag,
       languagePairs
@@ -2918,7 +2943,7 @@ export class TranslationsParent extends JSWindowActorParent {
    *   or `null` if no match is found.
    */
   static async findCompatibleTargetLangTag(langTag) {
-    const languagePairs = await TranslationsParent.getLanguagePairs();
+    const languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
     return TranslationsParent.findCompatibleTargetLangTagSync(
       langTag,
       languagePairs
@@ -2937,7 +2962,7 @@ export class TranslationsParent extends JSWindowActorParent {
       excludeLangTags,
     });
 
-    const languagePairs = await TranslationsParent.getLanguagePairs();
+    const languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
     for (const langTag of preferredLanguages) {
       const compatibleLangTag =
         TranslationsParent.findCompatibleTargetLangTagSync(
@@ -3002,7 +3027,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
     documentElementLang = this.maybeRefineMacroLanguageTag(documentElementLang);
 
-    let languagePairs = await TranslationsParent.getLanguagePairs();
+    let languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
     if (this.#isDestroyed) {
       return null;
     }
@@ -3460,7 +3485,7 @@ export class TranslationsParent extends JSWindowActorParent {
       // If the engine fails to load, ignore it since we are ending translations.
       .catch(() => null)
       .then(actor => {
-        if (actor && this.languageState.requestedTranslationPair) {
+        if (actor && this.languageState.requestedLanguagePair) {
           actor.discardTranslations(this.innerWindowId);
         }
       })
@@ -3542,8 +3567,8 @@ class TranslationsLanguageState {
   /** @type {TranslationsParent} */
   #actor;
 
-  /** @type {TranslationPair | null} */
-  #requestedTranslationPair = null;
+  /** @type {LanguagePair | null} */
+  #requestedLanguagePair = null;
 
   /** @type {LangTags | null} */
   #detectedLanguages = null;
@@ -3581,21 +3606,21 @@ class TranslationsLanguageState {
    * that the TranslationsChild should be creating a TranslationsDocument and keep
    * the page updated with the target language.
    *
-   * @returns {TranslationPair | null}
+   * @returns {LanguagePair | null}
    */
-  get requestedTranslationPair() {
-    return this.#requestedTranslationPair;
+  get requestedLanguagePair() {
+    return this.#requestedLanguagePair;
   }
 
-  set requestedTranslationPair(requestedTranslationPair) {
-    if (this.#requestedTranslationPair === requestedTranslationPair) {
+  set requestedLanguagePair(requestedLanguagePair) {
+    if (this.#requestedLanguagePair === requestedLanguagePair) {
       return;
     }
 
     this.#error = null;
     this.#isEngineReady = false;
-    this.#requestedTranslationPair = requestedTranslationPair;
-    this.dispatch({ reason: "requestedTranslationPair" });
+    this.#requestedLanguagePair = requestedLanguagePair;
+    this.dispatch({ reason: "requestedLanguagePair" });
   }
 
   /**
@@ -3683,7 +3708,7 @@ class TranslationsLanguageState {
     }
     this.#error = error;
     // Setting an error invalidates the requested translation pair.
-    this.#requestedTranslationPair = null;
+    this.#requestedLanguagePair = null;
     this.#isEngineReady = false;
     this.dispatch({ reason: "error" });
   }

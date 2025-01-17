@@ -553,7 +553,7 @@ class BergamotUtils {
       targetLanguage,
       config,
       model,
-      lex,
+      null,
       vocabList,
       qualityModel ?? null
     );
