@@ -43,23 +43,23 @@ export class GeckoViewTranslations extends GeckoViewModule {
     switch (aEvent) {
       case "GeckoView:Translations:Translate": {
         const fromLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.fromLanguage
+          aData.sourceLanguage
         );
         const toLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.toLanguage
+          aData.targetLanguage
         );
 
         if (!fromLangValid || !toLangValid) {
           aCallback.onError(
-            `The language tag ${aData.fromLanguage} or ${aData.toLanguage} is not valid.`
+            `The language tag ${aData.sourceLanguage} or ${aData.targetLanguage} is not valid.`
           );
         }
 
         try {
           this.getActor("Translations")
             .translate(
-              aData.fromLanguage,
-              aData.toLanguage,
+              aData.sourceLanguage,
+              aData.targetLanguage,
               /* reportAsAutoTranslate */ false
             )
             .then(() => {
@@ -289,11 +289,11 @@ export const GeckoViewTranslationsSettings = {
               { fromLang: "en", toLang: "es" },
               { fromLang: "es", toLang: "en" },
             ],
-            fromLanguages: [
+            sourceLanguages: [
               { langTag: "en", displayName: "English" },
               { langTag: "es", displayName: "Spanish" },
             ],
-            toLanguages: [
+            targetLanguages: [
               { langTag: "en", displayName: "English" },
               { langTag: "es", displayName: "Spanish" },
             ],
@@ -571,21 +571,21 @@ export const GeckoViewTranslationsSettings = {
         }
 
         const fromLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.fromLanguage
+          aData.sourceLanguage
         );
         const toLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.toLanguage
+          aData.targetLanguage
         );
         if (!fromLangValid || !toLangValid) {
           aCallback.onError(
-            `The language tag ${aData.fromLanguage} or ${aData.toLanguage} is not valid.`
+            `The language tag ${aData.sourceLanguage} or ${aData.targetLanguage} is not valid.`
           );
           return;
         }
 
         lazy.TranslationsParent.getExpectedTranslationDownloadSize(
-          aData.fromLanguage,
-          aData.toLanguage
+          aData.sourceLanguage,
+          aData.targetLanguage
         ).then(
           function (bytes) {
             aCallback.onSuccess({ bytes });
