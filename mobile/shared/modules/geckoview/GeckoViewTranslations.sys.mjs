@@ -42,31 +42,29 @@ export class GeckoViewTranslations extends GeckoViewModule {
     debug`onEvent: event=${aEvent}, data=${aData}`;
     switch (aEvent) {
       case "GeckoView:Translations:Translate": {
-        const fromLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.sourceLanguage
-        );
-        const toLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.targetLanguage
-        );
+        const { sourceLanguage, targetLanguage } = aData;
 
-        if (!fromLangValid || !toLangValid) {
-          aCallback.onError(
-            `The language tag ${aData.sourceLanguage} or ${aData.targetLanguage} is not valid.`
-          );
-        }
-
-        try {
+        if (
+          lazy.TranslationsUtils.isLangTagValid(sourceLanguage) &&
+          lazy.TranslationsUtils.isLangTagValid(targetLanguage)
+        ) {
           this.getActor("Translations")
             .translate(
-              aData.sourceLanguage,
-              aData.targetLanguage,
+              {
+                sourceLanguage,
+                targetLanguage,
+                // Model variants are not currently supported. See Bug 1943444.
+              },
               /* reportAsAutoTranslate */ false
             )
-            .then(() => {
-              aCallback.onSuccess();
-            });
-        } catch (error) {
-          aCallback.onError(`Could not translate: ${error}`);
+            .then(
+              () => aCallback.onSuccess(),
+              error => aCallback.onError(`Could not translate: ${error}`)
+            );
+        } else {
+          aCallback.onError(
+            `The language tag ${sourceLanguage} or ${targetLanguage} is not valid.`
+          );
         }
         break;
       }
@@ -286,16 +284,16 @@ export const GeckoViewTranslationsSettings = {
         ) {
           const mockResult = {
             languagePairs: [
-              { fromLang: "en", toLang: "es" },
-              { fromLang: "es", toLang: "en" },
+              { sourceLanguage: "en", targetLanguage: "es" },
+              { sourceLanguage: "es", targetLanguage: "en" },
             ],
             sourceLanguages: [
-              { langTag: "en", displayName: "English" },
-              { langTag: "es", displayName: "Spanish" },
+              { langTag: "en", langTagKey: "en", displayName: "English" },
+              { langTag: "es", langTagKey: "es", displayName: "Spanish" },
             ],
             targetLanguages: [
-              { langTag: "en", displayName: "English" },
-              { langTag: "es", displayName: "Spanish" },
+              { langTag: "en", langTagKey: "en", displayName: "English" },
+              { langTag: "es", langTagKey: "en", displayName: "Spanish" },
             ],
           };
           aCallback.onSuccess(mockResult);
@@ -571,21 +569,21 @@ export const GeckoViewTranslationsSettings = {
         }
 
         const fromLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.sourceLanguage
+          aData.fromLanguage
         );
         const toLangValid = lazy.TranslationsUtils.isLangTagValid(
-          aData.targetLanguage
+          aData.toLanguage
         );
         if (!fromLangValid || !toLangValid) {
           aCallback.onError(
-            `The language tag ${aData.sourceLanguage} or ${aData.targetLanguage} is not valid.`
+            `The language tag ${aData.fromLanguage} or ${aData.toLanguage} is not valid.`
           );
           return;
         }
 
         lazy.TranslationsParent.getExpectedTranslationDownloadSize(
-          aData.sourceLanguage,
-          aData.targetLanguage
+          aData.fromLanguage,
+          aData.toLanguage
         ).then(
           function (bytes) {
             aCallback.onSuccess({ bytes });
