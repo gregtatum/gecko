@@ -59,11 +59,11 @@ add_task(async function test_pivot_language_behavior() {
     Assert.deepEqual(
       sort(languagePairs),
       sort([
-        { sourceLanguage: "en", targetLanguage: "es" },
-        { sourceLanguage: "en", targetLanguage: "yue" },
-        { sourceLanguage: "es", targetLanguage: "en" },
-        { sourceLanguage: "is", targetLanguage: "en" },
-        { sourceLanguage: "yue", targetLanguage: "en" },
+        { sourceLanguage: "en", targetLanguage: "es", variant: undefined },
+        { sourceLanguage: "en", targetLanguage: "yue", variant: undefined },
+        { sourceLanguage: "es", targetLanguage: "en", variant: undefined },
+        { sourceLanguage: "is", targetLanguage: "en", variant: undefined },
+        { sourceLanguage: "yue", targetLanguage: "en", variant: undefined },
       ]),
       "Non-pivot languages were removed on debug builds."
     );
