@@ -693,7 +693,7 @@ function loadBergamot(Module) {
   var tempI64;
 
   var ASM_CONSTS = {
-    1430452($0, $1, $2, $3, $4) {
+    1430436($0, $1, $2, $3, $4) {
       if (!Module.getOrCreateSentenceSegmenter) {
         Module.getOrCreateSentenceSegmenter = (function () {
           let segmenters = new Map();
@@ -731,7 +731,14 @@ function loadBergamot(Module) {
       setValue($3, startsPtr, "i32");
       setValue($4, endsPtr, "i32");
     },
-    1431684($0, $1, $2) {
+    1431668($0, $1) {
+      const message = `!!! Growing allocator by ${$0} to ${$1}`;
+      console.trace(message);
+      ChromeUtils.addProfilerMarker(message, {
+        captureStack: true,
+      });
+    },
+    1431819($0, $1, $2) {
       const name = UTF8ToString($0);
       const size = $1;
       const pointer = $2;
