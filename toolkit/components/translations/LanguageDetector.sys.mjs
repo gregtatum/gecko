@@ -4,7 +4,7 @@
 
 import { clearTimeout, setTimeout } from "resource://gre/modules/Timer.sys.mjs";
 
-const WORKER_URL = "resource://gre/modules/translation/cld-worker.js";
+const WORKER_URL = "resource://gre/modules/translations/cld-worker.js";
 
 /**
  * The options used for when detecting a language.
@@ -59,6 +59,13 @@ const WORKER_URL = "resource://gre/modules/translation/cld-worker.js";
 const DOC_TEXT_TO_IDENTIFY_LENGTH = 1024;
 
 /**
+ * The shorter the text, the less confidence we should have in the result of the language
+ * identification. Add another heuristic to report the ID as not confident if the length
+ * of the code points of the text is less than this threshold.
+ */
+const DOC_CONFIDENCE_THRESHOLD = 200;
+
+/**
  * An internal class to manage communicating to the worker, and managing its lifecycle.
  * It's initialized once below statically to the module.
  */
@@ -74,7 +81,7 @@ class WorkerManager {
   //
   // 1.5MB. This is the approximate string length that forces heap growth for a 2MB heap.
   LARGE_STRING = 1.5 * 1024 * 1024;
-  IDLE_TIMEOUT = 10 * 1000;
+  IDLE_TIMEOUT = 10_000;
 
   /**
    * Resolvers for the detection queue.
@@ -205,7 +212,7 @@ export class LanguageDetector {
    * Attempts to determine the language in which the document's content is written.
    *
    * @param {Document} document
-   * @returns {string | null}
+   * @returns {DetectionResult}
    */
   static async detectLanguageFromDocument(document) {
     // Grab a selection of text.
@@ -216,12 +223,13 @@ export class LanguageDetector {
       .replaceAll("\r", "")
       .replaceAll("\n", " ");
 
-    const { language, confident } = await workerManager.detectLanguage({
+    const result = await workerManager.detectLanguage({
       text,
     });
 
-    workerManager.flushWorker();
-
-    return confident ? language : null;
+    if (text.length < DOC_CONFIDENCE_THRESHOLD) {
+      result.confident = false;
+    }
+    return result;
   }
 }
