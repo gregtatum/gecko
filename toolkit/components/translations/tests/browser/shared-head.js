@@ -28,6 +28,8 @@ const ENGLISH_PAGE_URL =
   URL_COM_PREFIX + DIR_PATH + "translations-tester-en.html";
 const SPANISH_PAGE_URL =
   URL_COM_PREFIX + DIR_PATH + "translations-tester-es.html";
+const SPANISH_LANG_MISMATCH_PAGE_URL =
+  URL_COM_PREFIX + DIR_PATH + "translations-tester-es-mismatch.html";
 const FRENCH_PAGE_URL =
   URL_COM_PREFIX + DIR_PATH + "translations-tester-fr.html";
 const SPANISH_PAGE_URL_2 =

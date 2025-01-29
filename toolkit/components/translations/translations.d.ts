@@ -266,6 +266,8 @@ export interface LangTags {
   isDocLangTagSupported: boolean,
   docLangTag: string | null,
   userLangTag: string | null,
+  htmlLangAttribute: string | null,
+  identifiedLangTag: string | null,
 }
 
 /**
