@@ -7,6 +7,7 @@ support-files = [
   "translations-tester-pdf-file.pdf",
   "translations-tester-en.html",
   "translations-tester-es.html",
+  "translations-tester-es-mismatch.html",
   "translations-tester-es-2.html",
   "translations-tester-fr.html",
   "translations-tester-no-tag.html",

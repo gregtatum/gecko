@@ -634,7 +634,7 @@ export class TranslationsParent extends JSWindowActorParent {
    *
    * @param {LangTags} detectedLanguages
    */
-  maybeOfferTranslations(detectedLanguages) {
+  async maybeOfferTranslations(detectedLanguages) {
     if (!this.browsingContext.currentWindowGlobal) {
       return;
     }
@@ -675,28 +675,10 @@ export class TranslationsParent extends JSWindowActorParent {
       return;
     }
 
-    let host;
-    try {
-      host = documentURI.host;
-    } catch {
-      // nsIURI.host can throw if the URI scheme doesn't have a host. In this case
-      // do not offer a translation.
-      return;
-    }
-    if (TranslationsParent.#hostsOffered.has(host)) {
-      // This host was already offered a translation.
-      lazy.console.log(
-        "maybeOfferTranslations - Host already offered a translation, so skip.",
-        documentURI.spec
-      );
-      return;
-    }
     const browser = this.browsingContext.top.embedderElement;
     if (!browser) {
       return;
     }
-    TranslationsParent.#hostsOffered.add(host);
-    const { CustomEvent } = browser.ownerGlobal;
 
     if (
       TranslationsParent.shouldNeverTranslateLanguage(
@@ -730,6 +712,75 @@ export class TranslationsParent extends JSWindowActorParent {
       return;
     }
 
+    // Before offering this translation, do a final language detection of the page.
+    // Frequently pages' lang attributes are mislabeled. If there is a mismatch between
+    // the identified and declared language, the translation icon will be shown, but the
+    // popup will not be shown.
+    if (
+      detectedLanguages.htmlLangAttribute &&
+      !detectedLanguages.identifiedLangTag
+    ) {
+      // Compare language langTagsMatch
+      let identifiedLangTag = await this.queryIdentifyLanguage();
+      if (
+        !lazy.TranslationsUtils.langTagsMatch(
+          identifiedLangTag,
+          detectedLanguages.docLangTag
+        )
+      ) {
+        identifiedLangTag = Intl.getCanonicalLocales(identifiedLangTag)[0];
+        if (
+          !lazy.TranslationsUtils.langTagsMatch(
+            identifiedLangTag,
+            detectedLanguages.docLangTag
+          )
+        ) {
+          // The identified language and the declared document language do not match.
+          // Do not offer a translation in this case.
+          const compatibleLangTag =
+            TranslationsParent.findCompatibleSourceLangTagSync(
+              identifiedLangTag,
+              await TranslationsParent.getNonPivotLanguagePairs()
+            );
+          if (compatibleLangTag) {
+            // We support the identified language, use that as the preferred
+            // target language.
+            this.languageState.detectedLanguages = {
+              ...detectedLanguages,
+              docLangTag: identifiedLangTag,
+              identifiedLangTag,
+            };
+          }
+          lazy.console.log(
+            "maybeOfferTranslations - The identified language and the declared document language do not match",
+            documentURI.spec,
+            detectedLanguages
+          );
+          return;
+        }
+      }
+    }
+
+    // Do the host check after the language identify check so that the translations popup
+    // will update the language correctly.
+    let host;
+    try {
+      host = documentURI.host;
+    } catch {
+      // nsIURI.host can throw if the URI scheme doesn't have a host. In this case
+      // do not offer a translation.
+      return;
+    }
+    if (TranslationsParent.#hostsOffered.has(host)) {
+      // This host was already offered a translation.
+      lazy.console.log(
+        "maybeOfferTranslations - Host already offered a translation, so skip.",
+        documentURI.spec
+      );
+      return;
+    }
+    TranslationsParent.#hostsOffered.add(host);
+
     // Only offer the translation if it's still the current page.
     let isCurrentPage = false;
     if (AppConstants.platform !== "android") {
@@ -748,6 +799,7 @@ export class TranslationsParent extends JSWindowActorParent {
         detectedLanguages
       );
 
+      const { CustomEvent } = browser.ownerGlobal;
       browser.dispatchEvent(
         new CustomEvent("TranslationsParent:OfferTranslation", {
           bubbles: true,
@@ -1239,9 +1291,9 @@ export class TranslationsParent extends JSWindowActorParent {
   async receiveMessage({ name, data }) {
     switch (name) {
       case "Translations:ReportLangTags": {
-        const { documentElementLang, href } = data;
+        const { htmlLangAttribute, href } = data;
         const detectedLanguages = await this.getDetectedLanguages(
-          documentElementLang,
+          htmlLangAttribute,
           href
         ).catch(error => {
           // Detecting the languages can fail if the page gets destroyed before it
@@ -1259,7 +1311,7 @@ export class TranslationsParent extends JSWindowActorParent {
 
         this.languageState.detectedLanguages = detectedLanguages;
 
-        if (this.shouldAutoTranslate(detectedLanguages)) {
+        if (await this.shouldAutoTranslate(detectedLanguages)) {
           this.translate(
             {
               sourceLanguage: detectedLanguages.docLangTag,
@@ -1268,7 +1320,9 @@ export class TranslationsParent extends JSWindowActorParent {
             true // reportAsAutoTranslate
           );
         } else {
-          this.maybeOfferTranslations(detectedLanguages);
+          this.maybeOfferTranslations(detectedLanguages).catch(error =>
+            lazy.console.error(error)
+          );
         }
         return undefined;
       }
@@ -3061,7 +3115,7 @@ export class TranslationsParent extends JSWindowActorParent {
   /**
    * @param {LangTags} langTags
    */
-  shouldAutoTranslate(langTags) {
+  async shouldAutoTranslate(langTags) {
     if (
       langTags.docLangTag &&
       langTags.userLangTag &&
@@ -3070,7 +3124,23 @@ export class TranslationsParent extends JSWindowActorParent {
       !TranslationsParent.shouldNeverTranslateLanguage(langTags.docLangTag) &&
       !this.shouldNeverTranslateSite()
     ) {
-      return true;
+      // Do a final check that the identified language matches the reported language
+      // tag to ensure that the page isn't reporting the incorrect languages. This
+      // check is deferred to now for performance considerations.
+      const identifiedLangTag = await this.queryIdentifyLanguage();
+      langTags.docLangTag = identifiedLangTag;
+      langTags.identifiedLangTag = identifiedLangTag;
+
+      if (langTags.identifiedLangTag === langTags.htmlLangAttribute) {
+        return true;
+      }
+
+      // Since there is a mismatch of the html lang attribute and the identified language,
+      // perform another check with the updated language.
+      return (
+        TranslationsParent.shouldAlwaysTranslateLanguage(langTags) &&
+        !TranslationsParent.shouldNeverTranslateLanguage(langTags.docLangTag)
+      );
     }
 
     return false;
@@ -3204,12 +3274,12 @@ export class TranslationsParent extends JSWindowActorParent {
    * Returns the lang tags that should be offered for translation. This is in the parent
    * rather than the child to remove the per-content process memory allocation amount.
    *
-   * @param {string} [documentElementLang]
+   * @param {string} [htmlLangAttribute]
    * @param {string} [href]
    * @returns {Promise<LangTags | null>} - Returns null if the actor was destroyed before
    *   the result could be resolved.
    */
-  async getDetectedLanguages(documentElementLang, href) {
+  async getDetectedLanguages(htmlLangAttribute, href) {
     if (this.languageState.detectedLanguages) {
       return this.languageState.detectedLanguages;
     }
@@ -3218,14 +3288,14 @@ export class TranslationsParent extends JSWindowActorParent {
       return null;
     }
 
-    if (documentElementLang === undefined) {
-      documentElementLang = await this.queryDocumentElementLang();
+    if (htmlLangAttribute === undefined) {
+      htmlLangAttribute = await this.queryDocumentElementLang();
       if (this.#isDestroyed) {
         return null;
       }
     }
 
-    documentElementLang = this.maybeRefineMacroLanguageTag(documentElementLang);
+    htmlLangAttribute = this.maybeRefineMacroLanguageTag(htmlLangAttribute);
 
     let languagePairs = await TranslationsParent.getNonPivotLanguagePairs();
     if (this.#isDestroyed) {
@@ -3236,6 +3306,8 @@ export class TranslationsParent extends JSWindowActorParent {
       docLangTag: null,
       userLangTag: null,
       isDocLangTagSupported: false,
+      htmlLangAttribute,
+      identifiedLangTag: null,
     };
 
     /**
@@ -3277,19 +3349,22 @@ export class TranslationsParent extends JSWindowActorParent {
     // First try to get the langTag from the document's markup.
     // Attempt to find a supported locale from highest specificity to lowest specificity.
     try {
-      langTags.docLangTag = new Intl.Locale(documentElementLang).baseName;
+      langTags.docLangTag = new Intl.Locale(htmlLangAttribute).baseName;
       maybeNormalizeDocLangTag();
     } catch (error) {
-      // Failed to create a locale from documentElementLang, continue on.
+      // Failed to create a locale from htmlLangAttribute, continue on.
     }
 
     if (!langTags.docLangTag) {
       // If the document's markup had no specified langTag, attempt to identify the page's language.
-      langTags.docLangTag = await this.queryIdentifyLanguage();
+      const identifiedLangTag = await this.queryIdentifyLanguage();
+      langTags.docLangTag = identifiedLangTag;
+      langTags.identifiedLangTag = identifiedLangTag;
       if (this.#isDestroyed) {
         return null;
       }
       maybeNormalizeDocLangTag();
+      langTags.identifiedLangTag = langTags.docLangTag;
     }
 
     if (!langTags.docLangTag) {
