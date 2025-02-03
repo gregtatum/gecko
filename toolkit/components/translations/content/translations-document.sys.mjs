@@ -680,7 +680,7 @@ export class TranslationsDocument {
 
     const addRootElements = () => {
       this.addRootElement(document.querySelector("title"));
-      this.addRootElement(document.body, true /* reportWordsInViewport */);
+      this.addRootElement(document.body);
     };
 
     if (document.body) {
@@ -1088,6 +1088,7 @@ export class TranslationsDocument {
    * of inline text can be found.
    *
    * @param {Node} node
+   * @returns {null | Array<Promise<unknown>>}
    */
   subdivideNodeForTranslations(node) {
     if (!this.#rootNodes.has(node)) {
@@ -1108,7 +1109,7 @@ export class TranslationsDocument {
             this.determineTranslationStatus(parent) ===
             NodeStatus.NOT_TRANSLATABLE
           ) {
-            return;
+            return null;
           }
         }
       }
@@ -1145,7 +1146,8 @@ export class TranslationsDocument {
     if (node.nodeName === "BODY") {
       this.reportWordsInViewport();
     }
-    this.dispatchQueuedTranslations();
+
+    return this.dispatchQueuedTranslations();
   }
 
   /**
@@ -1276,7 +1278,7 @@ export class TranslationsDocument {
       return NodeStatus.NOT_TRANSLATABLE;
     }
 
-    if (node.textContent.trim().length === 0) {
+    if (!node.textContent?.trim().length) {
       // Do not use subtrees that are empty of text. This textContent call is fairly
       // expensive.
       return !node.hasChildNodes()
@@ -1647,7 +1649,10 @@ export class TranslationsDocument {
       translationId
     );
 
-    if (this.validateTranslationResponse(node, translationId, translatedHTML)) {
+    if (
+      translatedHTML &&
+      this.validateTranslationResponse(node, translationId, translatedHTML)
+    ) {
       this.scheduleNodeUpdateWithTranslation(
         node,
         translatedHTML,
@@ -1955,18 +1960,29 @@ export class TranslationsDocument {
  * This function needs to be fairly fast since it's used on many nodes when iterating
  * over the DOM to find nodes to translate.
  *
- * @param {Text | HTMLElement} node
+ * @param {Node} node
  */
 function isNodeHidden(node) {
-  /** @type {HTMLElement} */
   const element = getElementForStyle(node);
   if (!element) {
     throw new Error("Unable to find the Element to compute the style for node");
   }
+  const { ownerGlobal } = element;
+  if (!ownerGlobal) {
+    return true;
+  }
 
   // This flushes the style, which is a performance cost.
-  const style = element.ownerGlobal.getComputedStyle(element);
-  return style.display === "none" || style.visibility === "hidden";
+  const style = ownerGlobal.getComputedStyle(element);
+  if (!style) {
+    return true;
+  }
+
+  // This is an issue with the DOM library generation.
+  // @ts-expect-error Property 'display' does not exist on type 'CSSStyleDeclaration'.ts(2339)
+  const { display, visibility } = style.display;
+
+  return display === "none" || visibility === "hidden";
 }
 
 /**
@@ -2104,11 +2120,15 @@ function updateElement(translationsDocument, element) {
     nodeValues.set(select, select.value);
   }
 
-  merge(element, translationsDocument.body.firstChild);
+  const firstChild = translationsDocument.body?.firstChild;
+  if (firstChild) {
+    merge(element, firstChild);
+  }
 
   // Restore the <select> values.
   if (element.tagName === "SELECT") {
-    element.value = nodeValues.get(element);
+    /** @type {HTMLSelectElement} */ (element).value =
+      nodeValues.get(element) ?? "";
   }
   for (const select of element.querySelectorAll("select")) {
     select.value = nodeValues.get(select);
@@ -2149,7 +2169,15 @@ function updateElement(translationsDocument, element) {
     }
 
     // The translated tree dictates the order.
-    const translatedNodes = [...translatedTree.childNodes];
+
+    /** @type {Node[]} */
+    const translatedNodes = [];
+    for (const childNode of translatedTree.childNodes) {
+      if (childNode) {
+        translatedNodes.push(childNode);
+      }
+    }
+
     for (
       let translatedIndex = 0;
       translatedIndex < translatedNodes.length;
@@ -2432,7 +2460,7 @@ function isNodeQueued(node, queuedNodes) {
   let lastNode = node;
   while ((parentNode = lastNode.parentNode)) {
     if (queuedNodes.has(parentNode)) {
-      return parentNode;
+      return true;
     }
     lastNode = parentNode;
   }
@@ -2448,14 +2476,23 @@ function isNodeQueued(node, queuedNodes) {
  * @param {Element} element
  */
 function getIsBlockLike(element) {
-  const win = element.ownerGlobal;
+  const { ownerGlobal } = element;
+  if (!ownerGlobal) {
+    return false;
+  }
   if (element.namespaceURI === "http://www.w3.org/2000/svg") {
     // SVG elements will report as inline, but there is no block layout in SVG.
     // Treat every SVG element as being block so that every node will be subdivided.
     return true;
   }
-  const { display } = win.getComputedStyle(element);
-  return display !== "inline" && display !== "none";
+  /** @type {Record<string, string> | null} */
+  // @ts-expect-error - This is a workaround for the CSSStyleDeclaration not being indexable.
+  const style = ownerGlobal.getComputedStyle(element) ?? { display: null };
+
+  if (!style) {
+    return false;
+  }
+  return style.display !== "inline" && style.display !== "none";
 }
 
 /**
@@ -2743,7 +2780,9 @@ class QueuedTranslator {
     // At this point we don't know if the page is still shown, or if the attempt
     // to get a port was successful so check again.
 
-    if (!this.#isPageShown || !this.#port) {
+    const port = this.#port;
+
+    if (!this.#isPageShown || !port) {
       // Queue the request while the page isn't shown.
       return new Promise((resolve, reject) => {
         const previousRequest = this.#queue.get(node);
@@ -2772,7 +2811,8 @@ class QueuedTranslator {
       node,
       sourceText,
       isHTML,
-      translationId
+      translationId,
+      port
     );
   }
 
@@ -2794,27 +2834,31 @@ class QueuedTranslator {
    * @param {string} sourceText
    * @param {boolean} isHTML
    * @param {number} translationId
-   * @returns {{ translateText: TranslationFunction, translateHTML: TranslationFunction}}
+   * @param {MessagePort} port
+   * @returns {Promise<string>}
    */
-  #postTranslationRequest(node, sourceText, isHTML, translationId) {
-    return new Promise((resolve, reject) => {
-      // Store the "resolve" for the promise. It will be matched back up with the
-      // `translationId` in #handlePortMessage.
-      this.#requests.set(translationId, {
-        node,
-        sourceText,
-        isHTML,
-        translationId,
-        resolve,
-        reject,
-      });
-      this.#port.postMessage({
-        type: "TranslationsPort:TranslationRequest",
-        translationId,
-        sourceText,
-        isHTML,
-      });
+  #postTranslationRequest(node, sourceText, isHTML, translationId, port) {
+    const { promise, resolve, reject } = Promise.withResolvers();
+
+    // Store the "resolve" for the promise. It will be matched back up with the
+    // `translationId` in #handlePortMessage.
+    this.#requests.set(translationId, {
+      node,
+      sourceText,
+      isHTML,
+      translationId,
+      resolve,
+      reject,
     });
+
+    port.postMessage({
+      type: "TranslationsPort:TranslationRequest",
+      translationId,
+      sourceText,
+      isHTML,
+    });
+
+    return promise;
   }
 
   /**
