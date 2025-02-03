@@ -379,7 +379,7 @@ export class TranslationsDocument {
    * and then they are dispatched for translation based on their visibility. The viewport
    * nodes are given the highest priority.
    *
-   * @type  {Map<Node, { attributeList: string[], visibility: NodeVisibility }>}
+   * @type  {Map<Node, { attributeList: Set<string>, visibility: NodeVisibility }>}
    */
   #queuedAttributeNodes = new Map();
 
@@ -405,9 +405,9 @@ export class TranslationsDocument {
    * The list of nodes that need updating with the translated Attribute HTML. These are batched
    * into an update.
    *
-   * @type {Set<{ node: Node, translation: string, attribute: string, translationId: number }>}
+   * @type {Set<{ element: Element, translation: string, attribute: string, translationId: number }>}
    */
-  #nodesWithTranslatedAttributes = new Set();
+  #elementsWithTranslatedAttributes = new Set();
 
   /**
    * The set of nodes that have been subdivided and processed for translation. They
@@ -481,7 +481,7 @@ export class TranslationsDocument {
    * A unique ID that guards against races between translations and mutations. The
    * Map<string, number> is a mapping of the node's attribute to the translation id.
    *
-   * @type {Map<Node, Map<string, number>>}
+   * @type {Map<Element, Map<string, number>>}
    */
   #pendingAttributes = new Map();
 
@@ -777,25 +777,38 @@ export class TranslationsDocument {
    */
   cancelTranslation(node, translationId) {
     this.translator.cancelSingleTranslation(translationId);
-    if (!isNodeDetached(node) && node.nodeType === Node.ELEMENT_NODE) {
-      delete node?.dataset.mozTranslationsId;
-      for (const childNode of node.querySelectorAll(
-        "[data-moz-translations-id]"
-      )) {
-        delete childNode.dataset.mozTranslationsId;
+    if (!isNodeDetached(node)) {
+      const element = /** @type {HTMLElement} */ (asHTMLElement(node));
+      if (element) {
+        const dataset = getDataset(element);
+        if (dataset) {
+          delete dataset.mozTranslationsId;
+        }
+        for (const childNode of element.querySelectorAll(
+          "[data-moz-translations-id]"
+        )) {
+          delete childNode.dataset.mozTranslationsId;
+        }
       }
     }
     this.#pendingTranslations.delete(node);
     this.#processedNodes.delete(node);
   }
 
+  /**
+   * @param {Node} node
+   */
   cancelPendingAttributes(node) {
-    const attributes = this.#pendingAttributes.get(node);
+    const element = asElement(node);
+    if (!element) {
+      return;
+    }
+    const attributes = this.#pendingAttributes.get(element);
     if (attributes) {
       for (const translationId of attributes.values()) {
         this.translator.cancelSingleTranslation(translationId);
       }
-      this.#pendingAttributes.delete(node);
+      this.#pendingAttributes.delete(element);
     }
   }
 
@@ -828,7 +841,7 @@ export class TranslationsDocument {
    * @see maybeQueueNodeForAttributeTranslation
    *
    * @param {Node} node - The node for which to translate attributes.
-   * @param {Array<string>} attributeList - A list of pre-validated, translatable attributes.
+   * @param {Set<string>} attributeList - A list of pre-validated, translatable attributes.
    */
   #queueNodeForAttributeTranslation(node, attributeList) {
     /** @type {NodeVisibility} */
@@ -852,25 +865,28 @@ export class TranslationsDocument {
    *
    * @param {Node} node - The node from which to retrieve translatable attributes.
    *
-   * @returns {null | Array<string>} - The translatable attribute names from the given node.
+   * @returns {null | Set<string>} - The translatable attribute names from the given node.
    */
   getTranslatableAttributes(node) {
-    if (node.nodeType !== Node.ELEMENT_NODE) {
+    const element = asHTMLElement(node);
+    if (!element) {
       // We only translate attributes on element node types.
       return null;
     }
 
-    if (node.closest(this.excludedNodeSelector)) {
+    if (element.closest(this.excludedNodeSelector)) {
       // Either this node or an ancestor is explicitly excluded from translations, so we should not translate.
       return null;
     }
 
-    /** @type {null | Array<string>} */
     let attributes = null;
 
     for (const attribute of TRANSLATABLE_ATTRIBUTES.keys()) {
       if (isAttributeTranslatable(node, attribute)) {
-        attributes ? attributes.push(attribute) : (attributes = [attribute]);
+        if (!attributes) {
+          attributes = new Set();
+        }
+        attributes.add(attribute);
       }
     }
 
@@ -953,27 +969,26 @@ export class TranslationsDocument {
    * kept up to date with translations. This will be the body element and title tag
    * for the document.
    *
-   * @param {Element} [node]
+   * @param {Node | null | undefined} node
    */
   addRootElement(node) {
     if (!node) {
       return;
     }
-
-    if (node.nodeType !== Node.ELEMENT_NODE) {
-      // This node is not an element, do not add it.
+    const element = asHTMLElement(node);
+    if (!element) {
       return;
     }
 
-    if (this.#rootNodes.has(node)) {
+    if (this.#rootNodes.has(element)) {
       // Exclude nodes that are already targeted.
       return;
     }
 
-    this.#rootNodes.add(node);
+    this.#rootNodes.add(element);
 
-    let viewportNodeTranslations = this.subdivideNodeForTranslations(node);
-    let viewportAttributeTranslations = this.translateAttributes(node);
+    let viewportNodeTranslations = this.subdivideNodeForTranslations(element);
+    let viewportAttributeTranslations = this.translateAttributes(element);
 
     if (!this.viewportTranslated) {
       this.viewportTranslated = Promise.allSettled([
@@ -982,15 +997,15 @@ export class TranslationsDocument {
       ]);
     }
 
-    this.observer.observe(node, MUTATION_OBSERVER_OPTIONS);
-    this.addShadowRootsToObserver(node);
+    this.observer.observe(element, MUTATION_OBSERVER_OPTIONS);
+    this.addShadowRootsToObserver(element);
   }
 
   /**
    * Add qualified nodes to queueNodeForTranslation by recursively walk
    * through the DOM tree of node, including elements in Shadow DOM.
    *
-   * @param {Element} [node]
+   * @param {Node} node
    */
   processSubdivide(node) {
     const nodeIterator = node.ownerDocument.createTreeWalker(
@@ -1034,7 +1049,7 @@ export class TranslationsDocument {
         for (let parent of getAncestorsIterator(node)) {
           // Parent is ShadowRoot. We can stop here since this is
           // the top ancestor of the shadow tree.
-          if (parent.containingShadowRoot == parent) {
+          if (asElement(parent)?.containingShadowRoot == parent) {
             break;
           }
           if (
@@ -1090,13 +1105,13 @@ export class TranslationsDocument {
    * @returns {Array<Promise<void>> | null}
    */
   translateAttributes(node) {
-    if (node.nodeType !== Node.ELEMENT_NODE) {
-      // Only element nodes may have attributes.
+    const element = asElement(node);
+    if (!element) {
       return null;
     }
-    this.maybeQueueNodeForAttributeTranslation(node);
+    this.maybeQueueNodeForAttributeTranslation(element);
 
-    const childNodesWithTranslatableAttributes = node.querySelectorAll(
+    const childNodesWithTranslatableAttributes = element.querySelectorAll(
       TRANSLATABLE_ATTRIBUTES_SELECTOR
     );
 
@@ -1123,12 +1138,13 @@ export class TranslationsDocument {
       // Text nodes are never excluded.
       return false;
     }
-    if (nodeType !== Node.ELEMENT_NODE) {
+    const element = asElement(node);
+    if (!element) {
       // Only elements and and text nodes should be considered.
       return true;
     }
 
-    const { nodeName } = node;
+    const { nodeName } = element;
 
     if (
       EXCLUDED_TAGS.has(
@@ -1140,24 +1156,24 @@ export class TranslationsDocument {
       return true;
     }
 
-    if (!this.matchesDocumentLanguage(node)) {
+    if (!this.matchesDocumentLanguage(element)) {
       // Exclude nodes that don't match the sourceLanguage.
       return true;
     }
 
-    if (node.getAttribute("translate") === "no") {
+    if (element.getAttribute("translate") === "no") {
       // This element has a translate="no" attribute.
       // https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/translate
       return true;
     }
 
-    if (node.classList.contains("notranslate")) {
+    if (element.classList.contains("notranslate")) {
       // Google Translate skips translations if the classList contains "notranslate"
       // https://cloud.google.com/translate/troubleshooting
       return true;
     }
 
-    if (node.isContentEditable) {
+    if (asHTMLElement(element)?.isContentEditable) {
       // This field is editable, and so exclude it similar to the way that form input
       // fields are excluded.
       return true;
@@ -1360,69 +1376,85 @@ export class TranslationsDocument {
    * Submit a node for Attribute translation to the translations engine.
    *
    * @param {Node} node
-   * @param {string[]} attributeList
-   * @returns {Promise<void>}
+   * @param {Set<string>} attributeList
+   * @returns {Promise<unknown>}
    */
-  async submitAttributeTranslation(node, attributeList) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      for (const attribute of attributeList) {
-        const text = node.getAttribute(attribute);
+  submitAttributeTranslation(node, attributeList) {
+    const element = asHTMLElement(node);
+    if (!element) {
+      return Promise.resolve();
+    }
 
-        if (text.trim().length === 0) {
-          continue;
-        }
-        const translationId = this.#lastTranslationId++;
+    const promises = [];
 
-        let pendingAttributes = this.#pendingAttributes.get(node);
-        if (!pendingAttributes) {
-          pendingAttributes = new Map();
-          this.#pendingAttributes.set(node, pendingAttributes);
-        }
-        pendingAttributes.set(attribute, translationId);
+    for (const attribute of attributeList) {
+      const text = element.getAttribute(attribute);
 
-        const translation = await this.maybeTranslate(
-          node,
+      if (!text?.trim().length) {
+        continue;
+      }
+      const translationId = this.#lastTranslationId++;
+
+      let pendingAttributes = this.#pendingAttributes.get(element);
+      if (!pendingAttributes) {
+        pendingAttributes = new Map();
+        this.#pendingAttributes.set(element, pendingAttributes);
+      }
+      pendingAttributes.set(attribute, translationId);
+
+      promises.push(
+        this.maybeTranslate(
+          element,
           text,
           false /*isHTML*/,
           translationId
-        );
-
-        if (
-          this.validateAttributeResponse(
-            node,
-            attribute,
-            translationId,
-            translation
-          )
-        ) {
-          this.scheduleNodeUpdateWithTranslationAttribute(
-            node,
-            translation,
-            attribute,
-            translationId
-          );
-        }
-      }
+        ).then(
+          translation => {
+            if (
+              translation &&
+              this.validateAttributeResponse(
+                element,
+                attribute,
+                translationId,
+                translation,
+                false /* removeAttribute */
+              )
+            ) {
+              this.scheduleElementUpdateWithTranslationAttribute(
+                element,
+                translation,
+                attribute,
+                translationId
+              );
+            }
+          },
+          error => {
+            lazy.console.error(error);
+          }
+        )
+      );
     }
+
+    return Promise.allSettled(promises);
   }
 
   /**
    * Schedule a node to be updated with a translation.
    *
-   * @param {Node} node
+   * @param {Element} element
    * @param {string} translation
    * @param {string} attribute
    * @param {number} translationId
    */
-  scheduleNodeUpdateWithTranslationAttribute(
-    node,
+  scheduleElementUpdateWithTranslationAttribute(
+    element,
     translation,
     attribute,
     translationId
   ) {
     // Add the nodes to be populated with the next translation update.
-    this.#nodesWithTranslatedAttributes.add({
-      node,
+    this.#elementsWithTranslatedAttributes.add({
+      element,
       translation,
       attribute,
       translationId,
@@ -1453,12 +1485,12 @@ export class TranslationsDocument {
     // Stop the mutations so that the updates won't trigger observations.
 
     this.pauseMutationObserverAndRun(() => {
-      for (const entry of this.#nodesWithTranslatedAttributes) {
-        const { node, translation, attribute, translationId } = entry;
+      for (const entry of this.#elementsWithTranslatedAttributes) {
+        const { element, translation, attribute, translationId } = entry;
 
         if (
           this.validateAttributeResponse(
-            node,
+            element,
             attribute,
             translationId,
             translation,
@@ -1466,10 +1498,10 @@ export class TranslationsDocument {
           )
         ) {
           // Update the attribute of the node with translated attribute
-          node.setAttribute(attribute, translation);
+          element.setAttribute(attribute, translation);
         }
       }
-      this.#nodesWithTranslatedAttributes.clear();
+      this.#elementsWithTranslatedAttributes.clear();
       this.#attributeUpdateTimeout = null;
     });
   }
@@ -1517,9 +1549,16 @@ export class TranslationsDocument {
   async submitTranslation(node) {
     // Give each element an id that gets passed through the translation so it can be
     // reunited later on.
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      node.querySelectorAll("*").forEach((el, i) => {
-        el.dataset.mozTranslationsId = i;
+    const element = asElement(node);
+    if (element) {
+      /** @type {Array<Element>} */
+      const elements = element.querySelectorAll("*");
+
+      elements.forEach((el, i) => {
+        const dataset = getDataset(el);
+        if (dataset) {
+          dataset.mozTranslationsId = String(i);
+        }
       });
     }
 
@@ -1528,11 +1567,11 @@ export class TranslationsDocument {
     /** @type {boolean} */
     let isHTML;
 
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      text = node.innerHTML;
+    if (element) {
+      text = /** @type {string} */ (element.innerHTML);
       isHTML = true;
     } else {
-      text = node.textContent;
+      text = node.textContent ?? "";
       isHTML = false;
     }
 
@@ -1622,7 +1661,7 @@ export class TranslationsDocument {
    * Handle stale responses, or null responses. Returns true when the translation
    * can be applied. This method has a side effect of cleaning up pending translations.
    *
-   * @param {Node} node
+   * @param {Element} element
    * @param {string} attribute
    * @param {number} translationId
    * @param {string | null} translation
@@ -1630,16 +1669,16 @@ export class TranslationsDocument {
    * @returns {boolean}
    */
   validateAttributeResponse(
-    node,
+    element,
     attribute,
     translationId,
     translation,
     removeAttribute
   ) {
-    if (isNodeDetached(node)) {
+    if (isNodeDetached(element)) {
       return false;
     }
-    const pendingAttributes = this.#pendingAttributes.get(node);
+    const pendingAttributes = this.#pendingAttributes.get(element);
     if (!pendingAttributes) {
       // The pending attribute was deleted.
       return false;
@@ -1653,17 +1692,17 @@ export class TranslationsDocument {
 
     if (translation == null) {
       // The translation had an error, remove it from the pending translations.
-      pendingAttributes.delete(node);
+      pendingAttributes.delete(attribute);
       if (pendingAttributes.size === 0) {
-        this.#pendingAttributes.delete(node);
+        this.#pendingAttributes.delete(element);
       }
       return false;
     }
 
     if (removeAttribute) {
-      pendingAttributes.delete(node);
+      pendingAttributes.delete(attribute);
       if (pendingAttributes.size === 0) {
-        this.#pendingAttributes.delete(node);
+        this.#pendingAttributes.delete(element);
       }
     }
 
@@ -1775,7 +1814,7 @@ export class TranslationsDocument {
               `<!DOCTYPE html><div>${translatedHTML}</div>`,
               "text/html"
             );
-            updateElement(translationsDocument, node);
+            updateElement(translationsDocument, ensureExists(asElement(node)));
             break;
           }
         }
@@ -1830,22 +1869,21 @@ export class TranslationsDocument {
    * @param {Node} node
    */
   matchesDocumentLanguage(node) {
-    if (!node.lang) {
+    const lang = asHTMLElement(node)?.lang;
+    if (!lang) {
       // No `lang` was present, so assume it matches the language.
       return true;
     }
 
     // First, cheaply check if language tags match, without canonicalizing.
-    if (
-      lazy.TranslationsUtils.langTagsMatch(this.documentLanguage, node.lang)
-    ) {
+    if (lazy.TranslationsUtils.langTagsMatch(this.documentLanguage, lang)) {
       return true;
     }
 
     try {
       // Make sure the local is in the canonical form, and check again. This function
       // throws, so don't trust that the language tags are formatting correctly.
-      const [language] = Intl.getCanonicalLocales(node.lang);
+      const [language] = Intl.getCanonicalLocales(lang);
 
       return lazy.TranslationsUtils.langTagsMatch(
         this.documentLanguage,
@@ -1880,10 +1918,12 @@ function isNodeHidden(node) {
  * style of node.
  *
  * @param {Node} node
-  @returns {HTMLElement} */
+ * @returns {Element | null}
+ */
 function getElementForStyle(node) {
-  if (node.nodeType != Node.TEXT_NODE) {
-    return node;
+  const element = asElement(node);
+  if (element) {
+    return element;
   }
 
   if (node.parentElement) {
@@ -1893,7 +1933,7 @@ function getElementForStyle(node) {
   // For cases like text node where its parent is ShadowRoot,
   // we'd like to use flattenedTreeParentNode
   if (node.flattenedTreeParentNode) {
-    return node.flattenedTreeParentNode;
+    return asElement(node.flattenedTreeParentNode);
   }
 
   // If the text node is not connected or doesn't have a frame.
@@ -1922,7 +1962,6 @@ function isNodeInViewport(node) {
   const window = node.ownerGlobal;
   const document = node.ownerDocument;
 
-  /** @type {HTMLElement} */
   const element = getElementForStyle(node);
   if (!element) {
     throw new Error("Unable to find the Element to compute the style for node");
@@ -1983,7 +2022,10 @@ function updateElement(translationsDocument, element) {
   //
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/option#value
   if (element.tagName === "OPTION") {
-    element.setAttribute("value", element.value);
+    element.setAttribute(
+      "value",
+      /** @type {HTMLOptionElement} */ (element).value
+    );
   }
   for (const option of element.querySelectorAll("option")) {
     option.setAttribute("value", option.value);
@@ -2027,14 +2069,22 @@ function updateElement(translationsDocument, element) {
 
     // Remove all the nodes from the liveTree, and categorize them by Text node or
     // Element node.
+    /** @type {Node | null} */
     let node;
     while ((node = liveTree.firstChild)) {
-      node.remove();
+      // This is a ChildNode with the `remove` method.
+      const childNode = /** @type {ChildNode} */ (
+        /** @type {unknown} */ (node)
+      );
+      childNode.remove();
 
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        liveElementsById.set(node.dataset.mozTranslationsId, node);
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        liveTextNodes.push(node);
+      const childElement = asElement(node);
+      const childTextNode = asTextNode(node);
+      const dataset = getDataset(childElement);
+      if (childElement && dataset) {
+        liveElementsById.set(dataset.mozTranslationsId, childElement);
+      } else if (childTextNode) {
+        liveTextNodes.push(childTextNode);
       }
     }
 
@@ -2045,21 +2095,24 @@ function updateElement(translationsDocument, element) {
       translatedIndex < translatedNodes.length;
       translatedIndex++
     ) {
-      const translatedNode = translatedNodes[translatedIndex];
+      const translatedNode = ensureExists(translatedNodes[translatedIndex]);
+      const translatedTextNode = asTextNode(translatedNode);
+      const translatedElement = asElement(translatedNode);
+      const dataset = getDataset(translatedElement);
 
-      if (translatedNode.nodeType === Node.TEXT_NODE) {
+      if (translatedTextNode) {
         // Copy the translated text to the original Text node and re-append it.
         let liveTextNode = liveTextNodes.shift();
 
         if (liveTextNode) {
-          liveTextNode.data = translatedNode.data;
+          liveTextNode.data = translatedTextNode.data;
         } else {
-          liveTextNode = translatedNode;
+          liveTextNode = translatedTextNode;
         }
 
         liveTree.appendChild(liveTextNode);
-      } else if (translatedNode.nodeType === Node.ELEMENT_NODE) {
-        const liveElementId = translatedNode.dataset.mozTranslationsId;
+      } else if (dataset) {
+        const liveElementId = dataset.mozTranslationsId;
         // Element nodes try to use the already existing DOM nodes.
 
         // Find the element in the live tree that matches the one in the translated tree.
@@ -2078,7 +2131,9 @@ function updateElement(translationsDocument, element) {
         // Has this element already been added to the list? Then duplicate it and re-add
         // it as a clone. The Translations Engine can sometimes duplicate HTML.
         if (liveElement.parentNode) {
-          liveElement = liveElement.cloneNode(true /* deep clone */);
+          liveElement = ensureExists(
+            asElement(liveElement.cloneNode(true /* deep clone */))
+          );
           clonedNodes.add(liveElementId);
           lazy.console.warn(
             "Cloning a node because it was already inserted earlier",
@@ -2113,12 +2168,13 @@ function updateElement(translationsDocument, element) {
               continue;
             }
             const sibling = translatedNodes[i];
+            const siblingDataset = getDataset(asElement(sibling));
             if (
               // Only consider other element nodes.
               sibling.nodeType === Node.ELEMENT_NODE &&
               // If the sibling's mozTranslationsId matches, then use the sibling's
               // node instead.
-              liveElementId === sibling.dataset.mozTranslationsId
+              liveElementId === siblingDataset?.mozTranslationsId
             ) {
               // This is case 1 from above. Remove this element's original text nodes,
               // since a sibling text node now has all of the text nodes.
@@ -2151,8 +2207,11 @@ function updateElement(translationsDocument, element) {
     );
 
     for (node of liveTree.querySelectorAll("*")) {
-      // Clean-up the live element ids.
-      delete node.dataset.mozTranslationsId;
+      const dataset = getDataset(asElement(node));
+      if (dataset) {
+        // Clean-up the live element ids.
+        delete dataset.mozTranslationsId;
+      }
     }
 
     if (unhandledElements.length) {
@@ -2165,9 +2224,9 @@ function updateElement(translationsDocument, element) {
           unhandledElements,
           clonedNodes,
           originalHTML,
-          translatedHTML: translationsDocument.body.innerHTML,
+          translatedHTML: translationsDocument.body?.innerHTML,
           liveTree: liveTree.outerHTML,
-          translatedTree: translatedTree.outerHTML,
+          translatedTree: asElement(translatedTree)?.outerHTML,
         }
       );
     }
@@ -2180,22 +2239,29 @@ function updateElement(translationsDocument, element) {
  * e.g. "div/div#header/p.bold.string/a"
  *
  * @param {Node} node
- * @param {Node | null} root
+ * @param {HTMLElement | null} [root]
  */
 function createNodePath(node, root) {
+  let path = "";
+  if (!node.ownerDocument) {
+    return path;
+  }
   if (root === null) {
     root = node.ownerDocument.body;
   }
-  let path =
-    node.parentNode && node.parentNode !== root
-      ? createNodePath(node.parentNode)
-      : "";
+  if (node.parentNode && node.parentNode !== root) {
+    path = createNodePath(node.parentNode);
+  }
   path += `/${node.nodeName}`;
-  if (node.id) {
-    path += `#${node.id}`;
-  } else if (node.className) {
-    for (const className of node.classList) {
-      path += "." + className;
+
+  const element = asElement(node);
+  if (element) {
+    if (element.id) {
+      path += `#${element.id}`;
+    } else if (element.className) {
+      for (const className of element.classList) {
+        path += "." + className;
+      }
     }
   }
   return path;
@@ -2206,8 +2272,9 @@ function createNodePath(node, root) {
  * @returns {boolean}
  */
 function isNodeTextEmpty(node) {
-  if ("innerText" in node) {
-    return node.innerText.trim().length === 0;
+  const htmlElement = asHTMLElement(node);
+  if (htmlElement) {
+    return htmlElement.innerText.trim().length === 0;
   }
   if (node.nodeType === Node.TEXT_NODE && node.nodeValue) {
     return node.nodeValue.trim().length === 0;
@@ -2252,8 +2319,9 @@ function hasTextNodes(node) {
   }
 
   for (const child of node.childNodes) {
-    if (child.nodeType === Node.TEXT_NODE) {
-      if (child.textContent.trim() === "") {
+    const textNode = asTextNode(child);
+    if (textNode) {
+      if (!textNode.textContent?.trim()) {
         // This is just whitespace.
         continue;
       }
@@ -2276,10 +2344,7 @@ function hasTextNodes(node) {
  * @returns {boolean}
  */
 function containsExcludedNode(node, excludedNodeSelector) {
-  return (
-    node.nodeType === Node.ELEMENT_NODE &&
-    node.querySelector(excludedNodeSelector)
-  );
+  return Boolean(asElement(node)?.querySelector(excludedNodeSelector));
 }
 
 /**
@@ -2813,12 +2878,17 @@ class QueuedTranslator {
  *
  * @see TRANSLATABLE_ATTRIBUTES
  *
- * @param {Element} element - The DOM element on which the attribute is being checked.
+ * @param {Node} node - The DOM node on which the attribute is being checked.
  * @param {string} attribute - The attribute name to check for translatability.
  *
  * @returns {boolean}
  */
-function isAttributeTranslatable(element, attribute) {
+function isAttributeTranslatable(node, attribute) {
+  const element = asHTMLElement(node);
+  if (!element) {
+    return false;
+  }
+
   if (!element.hasAttribute(attribute)) {
     // The element does not have this attribute, so there is nothing to translate.
     return false;
@@ -2867,4 +2937,76 @@ function isNodeDetached(node) {
     // Shadow DOM elements, which have a null parentElement.
     !node.flattenedTreeParentNode
   );
+}
+
+/**
+ * Use TypeScript to determine if the Node is an Element.
+ *
+ * @param {Node | null} node
+ * @returns {Element | null}
+ */
+function asElement(node) {
+  if (node?.nodeType === Node.ELEMENT_NODE) {
+    return /** @type {HTMLElement} */ (node);
+  }
+  return null;
+}
+
+/**
+ * Use TypeScript to determine if the Node is an Element.
+ *
+ * @param {Node | null} node
+ * @returns {Text | null}
+ */
+function asTextNode(node) {
+  if (node?.nodeType === Node.TEXT_NODE) {
+    return /** @type {Text} */ (node);
+  }
+  return null;
+}
+
+/**
+ * Use TypeScript to determine if the Node is an HTMLElement.
+ *
+ * @param {Node | null} node
+ * @returns {HTMLElement | null}
+ */
+function asHTMLElement(node) {
+  if (node?.nodeType === Node.ELEMENT_NODE && "lang" in node) {
+    return /** @type {HTMLElement} */ (node);
+  }
+  return null;
+}
+
+/**
+ * @template T
+ * @param {T | null | undefined} item
+ * @returns {T}
+ */
+function ensureExists(item, message = "Item did not exist") {
+  if (item === null || item === undefined) {
+    throw new Error(message);
+  }
+  return item;
+}
+
+/**
+ * Get the ShadowRoot from the chrome-only openOrClosedShadowRoot API.
+ *
+ * @param {Node} node
+ * @returns {ShadowRoot | null}
+ */
+function getShadowRoot(node) {
+  return asElement(node)?.openOrClosedShadowRoot ?? null;
+}
+
+/**
+ * Workaround the Gecko DOM TypeScript definition for dataset.
+ *
+ * @param {Element | null | undefined} element
+ * @returns {Record<string, string> | null}
+ */
+function getDataset(element) {
+  // @ts-expect-error Type 'DOMStringMap' is not assignable to type 'Record<string, string>'.
+  return element?.dataset ?? null;
 }
