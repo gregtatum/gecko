@@ -1,0 +1,25 @@
+{
+  "include": [
+    "content/translations-document.sys.mjs",
+    "translations.d.ts"
+  ],
+
+  "compilerOptions": {
+    "checkJs": true,
+    "noEmit": true,
+    "target": "es2022",
+    "types": ["gecko"],
+    "strict": true,
+
+    // prettier-ignore
+    "paths": {
+      // External.
+      "resource://gre/modules/XPCOMUtils.sys.mjs": ["../../../js/xpconnect/loader/XPCOMUtils.sys.mjs"],
+      "chrome://global/content/translations/TranslationsUtils.mjs": ["./TranslationsUtils.mjs"],
+
+      // Catch-all redirect for all other modules.
+      // "resource://gre/modules/*.sys.mjs": ["./types/globals.ts"],
+      "./*": ["./"]
+    }
+  }
+}
