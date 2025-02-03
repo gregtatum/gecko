@@ -49,6 +49,8 @@ const NodeStatus = {
 /**
  * @typedef {import("../translations").NodeVisibility} NodeVisibility
  * @typedef {import("../translations").LanguagePair} LanguagePair
+ * @typedef {import("../translations").PortToPage} PortToPage
+ * @typedef {import("../translations").EngineStatus} EngineStatus
  * @typedef {(message: string) => Promise<string>} TranslationFunction
  */
 
@@ -1783,6 +1785,7 @@ export class TranslationsDocument {
   async maybeTranslate(node, text, isHTML, translationId) {
     this.#pendingTranslationsCount++;
     try {
+      /** @type {string | null | undefined} */
       let translation = this.translationsCache.get(text, isHTML);
       if (translation === undefined) {
         translation = await this.translator.translate(
@@ -1791,7 +1794,9 @@ export class TranslationsDocument {
           isHTML,
           translationId
         );
-        this.translationsCache.set(text, translation, isHTML);
+        if (translation !== null) {
+          this.translationsCache.set(text, translation, isHTML);
+        }
       } else if (!this.hasFirstVisibleChange) {
         this.hasFirstVisibleChange = true;
         this.actorReportFirstVisibleChange();
@@ -2473,9 +2478,13 @@ function isNodeQueued(node, queuedNodes) {
  * element or not. Every element that lays out like a block should be sent in as one
  * cohesive unit to be translated.
  *
- * @param {Element} element
+ * @param {Node} node
  */
-function getIsBlockLike(element) {
+function getIsBlockLike(node) {
+  const element = asElement(node);
+  if (!element) {
+    return false;
+  }
   const { ownerGlobal } = element;
   if (!ownerGlobal) {
     return false;
@@ -2504,26 +2513,27 @@ function getIsBlockLike(element) {
  * @returns {boolean}
  */
 function nodeNeedsSubdividing(node) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    // Text nodes are fully subdivided.
+  const element = asElement(node);
+  if (!element) {
+    // Only elements need to be further subdivided.
     return false;
   }
 
-  // @ts-ignore
-  if (!getIsBlockLike(node)) {
+  if (!getIsBlockLike(element)) {
     // This element is inline, or not displayed.
     return false;
   }
 
-  for (let child of node.childNodes) {
-    // @ts-ignore
-    switch (child.nodeType) {
+  for (let childNode of element.childNodes) {
+    if (!childNode) {
+      continue;
+    }
+    switch (childNode.nodeType) {
       case Node.TEXT_NODE:
         // Keep checking for more inline or text nodes.
         continue;
       case Node.ELEMENT_NODE: {
-        // @ts-ignore
-        if (getIsBlockLike(child)) {
+        if (getIsBlockLike(childNode)) {
           // This node is a block node, so it needs further subdividing.
           return true;
         }
@@ -2545,9 +2555,11 @@ function nodeNeedsSubdividing(node) {
  */
 function* getAncestorsIterator(node) {
   const document = node.ownerDocument;
+  if (!document) {
+    return;
+  }
   for (
     let parent = node.parentNode;
-    // @ts-ignore
     parent && parent !== document.documentElement;
     parent = parent.parentNode
   ) {
@@ -2563,8 +2575,8 @@ function* getAncestorsIterator(node) {
  * @property {string} sourceText
  * @property {number} translationId
  * @property {boolean} isHTML
- * @property {Function} resolve
- * @property {Function} reject
+ * @property {(translation: PromiseLike<string> | string | null) => unknown} resolve
+ * @property {(reason: any) => unknown} reject
  */
 
 /**
@@ -2607,7 +2619,7 @@ class QueuedTranslator {
   #queue = new Map();
 
   /**
-   * @type {"uninitialized" | "ready" | "error" | "closed"}
+   * @type {EngineStatus}
    */
   engineStatus = "uninitialized";
 
@@ -2706,27 +2718,16 @@ class QueuedTranslator {
       return this.#portRequest.promise;
     }
 
-    const portRequest = { promise: null, resolve: null, reject: null };
-    // @ts-ignore
-    portRequest.promise = new Promise((resolve, reject) => {
-      // @ts-ignore
-      portRequest.resolve = resolve;
-      // @ts-ignore
-      portRequest.reject = reject;
-    });
-
-    // @ts-ignore
+    const portRequest = Promise.withResolvers();
     this.#portRequest = portRequest;
 
     // Send a request through the actor for a new port. The request response will
     // trigger the method `QueuedTranslator.prototype.acquirePort`
     this.#actorRequestNewPort();
 
-    // @ts-ignore
     this.#portRequest.promise
       .then(
         () => {
-          // @ts-ignore
           if (portRequest === this.#portRequest) {
             this.#portRequest = null;
           }
@@ -2749,13 +2750,11 @@ class QueuedTranslator {
         }
       )
       .finally(() => {
-        // @ts-ignore
         if (portRequest === this.#portRequest) {
           this.#portRequest = null;
         }
       });
 
-    // @ts-ignore
     return portRequest.promise;
   }
 
@@ -2768,7 +2767,7 @@ class QueuedTranslator {
    * @param {string} sourceText
    * @param {boolean} isHTML
    * @param {number} translationId
-   * @returns {Promise<string>}
+   * @returns {Promise<string | null>}
    */
   async translate(node, sourceText, isHTML, translationId) {
     if (this.#isPageShown && !this.#port) {
@@ -2784,6 +2783,7 @@ class QueuedTranslator {
 
     if (!this.#isPageShown || !port) {
       // Queue the request while the page isn't shown.
+
       return new Promise((resolve, reject) => {
         const previousRequest = this.#queue.get(node);
         if (previousRequest) {
@@ -2820,8 +2820,7 @@ class QueuedTranslator {
    * @param {number} translationId
    */
   async cancelSingleTranslation(translationId) {
-    // @ts-ignore
-    this.#port.postMessage({
+    this.#port?.postMessage({
       type: "TranslationsPort:CancelSingleTranslation",
       translationId,
     });
@@ -2909,8 +2908,10 @@ class QueuedTranslator {
     const portRequest = this.#portRequest;
 
     // Match up a response on the port to message that was sent.
-    // @ts-ignore
-    port.onmessage = ({ data }) => {
+    port.onmessage = event => {
+      /** @type {{data: PortToPage }} */
+      const { data } = /** @type {any} */ (event);
+
       switch (data.type) {
         case "TranslationsPort:TranslationResponse": {
           if (!this.hasFirstVisibleChange) {
@@ -2947,7 +2948,10 @@ class QueuedTranslator {
           break;
         }
         default:
-          lazy.console.error("Unknown translations port message: " + data.type);
+          lazy.console.error(
+            "Unknown translations port message: " +
+              /** @type {any} */ (data)?.type
+          );
           break;
       }
     };
@@ -2958,11 +2962,18 @@ class QueuedTranslator {
   /**
    * Re-send a list of translation requests.
    *
-   * @param {Iterator<TranslationRequest>} translationRequests
+   * @param {Iterable<TranslationRequest>} translationRequests
    *  This is either the this.#queue or this.#requests.
    */
   #repostTranslations(translationRequests) {
-    // @ts-ignore
+    const port = this.#port;
+    if (!port) {
+      lazy.console.error(
+        "Attempting to repost translations when no port is available."
+      );
+      return;
+    }
+
     for (const request of translationRequests) {
       const { node, sourceText, isHTML, translationId, resolve, reject } =
         request;
@@ -2971,12 +2982,12 @@ class QueuedTranslator {
         // will be treated as an error.
         resolve(null);
       } else {
-        // @ts-ignore
         this.#postTranslationRequest(
           node,
           sourceText,
           isHTML,
-          translationId
+          translationId,
+          port
         ).then(resolve, reject);
       }
     }
@@ -2986,8 +2997,7 @@ class QueuedTranslator {
    * Close the port and remove any pending or queued requests.
    */
   destroy() {
-    // @ts-ignore
-    this.#port.close();
+    this.#port?.close();
     this.#requests = new Map();
     this.#queue = new Map();
   }
