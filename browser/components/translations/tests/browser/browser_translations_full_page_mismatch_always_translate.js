@@ -3,27 +3,146 @@
 
 "use strict";
 
+/**
+ * ┌────┬──────────┬───────────┬───────────────────┬───────────────────┬─────────────────────────────┐
+ * │ #  │ Has HTML │ Detection │ Detection Content │ Always Translate  │ Outcome                     │
+ * │    │ Tag      │ Agrees    │ > 200 code units  │ List Contains Tag │                             │
+ * ├────┼──────────┼───────────┼───────────────────┼───────────────────┼─────────────────────────────┤
+ * │  1 │ TRUE     │ TRUE      │ TRUE              │ TRUE              │ Auto Translate Matching Tag │
+ * │  2 │ TRUE     │ TRUE      │ TRUE              │ FALSE             │ Offer Matching Tag          │
+ * │  3 │ TRUE     │ TRUE      │ FALSE             │ TRUE              │ Auto Translate Matching Tag │
+ * │  4 │ TRUE     │ TRUE      │ FALSE             │ FALSE             │ Offer Matching Tag          │
+ * │  5 │ TRUE     │ FALSE     │ TRUE              │ TRUE              │ Show Button Only            │
+ * │  6 │ TRUE     │ FALSE     │ TRUE              │ FALSE             │ Show Button Only            │
+ * │  7 │ TRUE     │ FALSE     │ FALSE             │ TRUE              │ Show Button Only            │
+ * │  8 │ TRUE     │ FALSE     │ FALSE             │ FALSE             │ Show Button Only            │
+ * │  9 │ FALSE    │ N/A       │ TRUE              │ TRUE              │ Auto Translate Detected Tag │
+ * │ 10 │ FALSE    │ N/A       │ TRUE              │ FALSE             │ Offer Detected Tag          │
+ * │ 11 │ FALSE    │ N/A       │ FALSE             │ TRUE              │ Show Button Only            │
+ * │ 12 │ FALSE    │ N/A       │ FALSE             │ FALSE             │ Show Button Only            │
+ * └────┴──────────┴───────────┴───────────────────┴───────────────────┴─────────────────────────────┘
+ */
+
+/**
+ * Definitions for the test cases.
+ *
+ * @typedef {object} Case
+ * @property {string} page - The page to load.
+ * @property {string} message - A message for the primary assertion.
+ * @property {string} [alwaysTranslateLanguages] - Set the pref: browser.translations.alwaysTranslateLanguages
+ * @property {string} [neverTranslateLanguages] - Set the pref: browser.translations.alwaysTranslateLanguages
+ *
+ * Outcomes, use only one:
+ * @property {string} [translatePage] - The page is expected to be translated.
+ * @property {string} [offerTranslation] - The page offers a translation in this language.
+ * @property {boolean} [buttonShown] - The button was shown to offer a translation.
+ */
+
+/**
+ * @type {Case[]}
+ */
 const cases = [
+  // HTML tag and (confident) detection agree.
   {
-    alwaysTranslateLanguages: "es,fr",
-    neverTranslateLanguages: "",
-    isTranslated: true,
-    message: "The page should automatically translate the detected Spanish",
-  },
-  {
+    // Case 1 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_URL,
     alwaysTranslateLanguages: "es",
-    neverTranslateLanguages: "",
-    isTranslated: false,
+    translatePage: "es",
     message:
-      'If the <html> lang attribute is not in "always translate", the page\'s language ' +
-      "will not be identified. This is a false negative, but is expected so that we " +
-      "don't have to run language identification.",
+      "Auto-translate since the declared language and identified language agree",
   },
   {
-    alwaysTranslateLanguages: "es,fr",
-    neverTranslateLanguages: "es",
-    isTranslated: false,
-    message: "Respect the never translate pref.",
+    // Case 2 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_URL,
+    offerTranslation: "es",
+    message:
+      "The declared language and identified language agree, offer a translation",
+  },
+
+  // HTML tag and (low-confidence) detection agree.
+  {
+    // Case 3 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_SHORT_URL,
+    alwaysTranslateLanguages: "es",
+    translatePage: "es",
+    message:
+      "The declared language and identified language agree, offer a translation even " +
+      "though the page has a short amount of content.",
+  },
+  {
+    // Case 4 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_SHORT_URL,
+    offerTranslation: "es",
+    message:
+      "The declared language and identified language agree, offer a translation",
+  },
+
+  // HTML tag and (confident) detection disagree.
+  {
+    // Case 5 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_URL,
+    alwaysTranslateLanguages: "es",
+    buttonShown: true,
+    message:
+      "The declared and (confident) detected language disagree. Only show the button, do not auto-translate.",
+  },
+  {
+    // Case 6 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_URL,
+    buttonShown: true,
+    message:
+      "The declared and (confident) detected language disagree. Only show the button, do not offer.",
+  },
+
+  // HTML tag and (low-confidence) detection disagree.
+  {
+    // Case 7 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_SHORT_URL,
+    alwaysTranslateLanguages: "es",
+    buttonShown: true,
+    message:
+      "The declared and (low-confidence) detected language disagree. Only show the button, do not auto-translate.",
+  },
+  {
+    // Case 8 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_SHORT_URL,
+    buttonShown: true,
+    message:
+      "The declared and (low-confidence) detected language disagree. Only show the button, do not offer.",
+  },
+
+  // Undeclared language and (high-confidence) detection.
+  {
+    // Case 9 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_URL,
+    alwaysTranslateLanguages: "es",
+    translatePage: "es",
+    message:
+      "There is no declared language, but there is high confidence in the detected language, so go ahead and auto-translate.",
+  },
+  {
+    // Case 10 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_URL,
+    offerTranslation: "es",
+    message:
+      "There is no declared language, but there is high confidence in the detected language, so go ahead and offer.",
+  },
+
+  // Undeclared language and (low-confidence) detection.
+  {
+    // Case 9 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_SHORT_URL,
+    alwaysTranslateLanguages: "es",
+    buttonShown: true,
+    message:
+      "A language was detected, but it was so low confidence only show the button.",
+  },
+  {
+    // Case 10 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_SHORT_URL,
+    buttonShown: true,
+    message:
+      "A language was detected, but it was so low confidence only show the button.",
   },
 ];
 
@@ -33,14 +152,25 @@ const cases = [
  */
 add_task(async function test_autotranslate_with_langtags_mismatch() {
   for (const {
-    alwaysTranslateLanguages,
-    isTranslated,
-    neverTranslateLanguages,
+    page,
     message,
+    alwaysTranslateLanguages,
+    neverTranslateLanguages,
+    translatePage,
+    offerTranslation,
+    buttonShown,
   } of cases) {
     TranslationsParent.testAutomaticPopup = true;
-    const { cleanup, runInPage } = await loadTestPage({
-      page: SPANISH_LANG_MISMATCH_PAGE_URL,
+    let wasPopupShown = false;
+    const popupShown = FullPageTranslationsTestUtils.waitForPanelPopupEvent(
+      "popupshown",
+      () => {}
+    ).then(() => {
+      wasPopupShown = true;
+    });
+
+    const { cleanup, runInPage, win } = await loadTestPage({
+      page,
       languagePairs: LANGUAGE_PAIRS,
       autoDownloadFromRemoteSettings: true,
       prefs: [
@@ -55,14 +185,40 @@ add_task(async function test_autotranslate_with_langtags_mismatch() {
       ],
     });
 
-    await FullPageTranslationsTestUtils.assertTranslationsButton(
-      { button: true, circleArrows: false, locale: isTranslated, icon: true },
-      "The translations button is visible."
-    );
+    let outcomes = 0;
+    if (buttonShown) {
+      outcomes++;
+    }
+    if (offerTranslation) {
+      outcomes++;
+    }
+    if (translatePage) {
+      outcomes++;
+    }
+    if (outcomes !== 1) {
+      throw new Error("Expected only 1 main outcome.");
+    }
 
-    if (isTranslated) {
+    if (buttonShown || offerTranslation) {
+      await FullPageTranslationsTestUtils.assertTranslationsButton(
+        {
+          button: true,
+          circleArrows: false,
+          locale: translatePage,
+          icon: true,
+        },
+        offerTranslation ? "The translation button is visible" : message
+      );
+    } else {
+      await FullPageTranslationsTestUtils.assertTranslationsButton(
+        { button: false },
+        "The translations button is not visible."
+      );
+    }
+
+    if (translatePage) {
       await FullPageTranslationsTestUtils.assertPageIsTranslated({
-        fromLanguage: "es",
+        fromLanguage: translatePage,
         toLanguage: "en",
         runInPage,
         message,
@@ -72,6 +228,21 @@ add_task(async function test_autotranslate_with_langtags_mismatch() {
         runInPage,
         message
       );
+    }
+
+    if (offerTranslation) {
+      await popupShown;
+      ok(wasPopupShown, message);
+      FullPageTranslationsTestUtils.assertSelectedFromLanguage({
+        win,
+        langTag: "en",
+      });
+      FullPageTranslationsTestUtils.assertSelectedToLanguage({
+        win,
+        langTag: offerTranslation,
+      });
+    } else {
+      is(wasPopupShown, false, "A translation was not offered");
     }
 
     TranslationsParent.testAutomaticPopup = false;

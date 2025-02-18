@@ -18,7 +18,7 @@ add_task(async function test_full_page_mismatch_lang_attribute() {
   });
 
   const { cleanup, runInPage } = await loadTestPage({
-    page: SPANISH_LANG_MISMATCH_PAGE_URL,
+    page: SPANISH_PAGE_MISMATCH_URL,
     languagePairs: LANGUAGE_PAIRS,
   });
 
