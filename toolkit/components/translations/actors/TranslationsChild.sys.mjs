@@ -39,10 +39,13 @@ export class TranslationsChild extends JSWindowActorChild {
     }
   }
 
-  addProfilerMarker(message) {
+  addProfilerMarker(message, startTime) {
     ChromeUtils.addProfilerMarker(
       "TranslationsChild",
-      { innerWindowId: this.contentWindow.windowGlobalChild.innerWindowId },
+      {
+        innerWindowId: this.contentWindow.windowGlobalChild.innerWindowId,
+        startTime,
+      },
       message
     );
   }
@@ -97,9 +100,16 @@ export class TranslationsChild extends JSWindowActorChild {
         }
 
         try {
-          return lazy.LanguageDetector.detectLanguageFromDocument(
-            this.document
+          const startTime = Cu.now();
+          const language =
+            await lazy.LanguageDetector.detectLanguageFromDocument(
+              this.document
+            );
+          this.addProfilerMarker(
+            `Detect language from document ${language}`,
+            startTime
           );
+          return language;
         } catch (error) {
           return null;
         }

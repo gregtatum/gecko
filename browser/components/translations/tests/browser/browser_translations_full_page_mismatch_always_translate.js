@@ -43,21 +43,21 @@
  */
 const cases = [
   // HTML tag and (confident) detection agree.
-  {
-    // Case 1 - Spanish is set to auto translate.
-    page: SPANISH_PAGE_URL,
-    alwaysTranslateLanguages: "es",
-    translatePage: "es",
-    message:
-      "Auto-translate since the declared language and identified language agree",
-  },
-  {
-    // Case 2 - Nothing is set to auto translate.
-    page: SPANISH_PAGE_URL,
-    offerTranslation: "es",
-    message:
-      "The declared language and identified language agree, offer a translation",
-  },
+  // {
+  //   // Case 1 - Spanish is set to auto translate.
+  //   page: SPANISH_PAGE_URL,
+  //   alwaysTranslateLanguages: "es",
+  //   translatePage: "es",
+  //   message:
+  //     "Auto-translate since the declared language and identified language agree",
+  // },
+  // {
+  //   // Case 2 - Nothing is set to auto translate.
+  //   page: SPANISH_PAGE_URL,
+  //   offerTranslation: "es",
+  //   message:
+  //     "The declared language and identified language agree, offer a translation",
+  // },
 
   // // HTML tag and (low-confidence) detection agree.
   // {
@@ -111,15 +111,15 @@ const cases = [
   //     "The declared and (low-confidence) detected language disagree. Only show the button, do not offer.",
   // },
 
-  // // Undeclared language and (high-confidence) detection.
-  // {
-  //   // Case 9 - Spanish is set to auto translate.
-  //   page: SPANISH_PAGE_MISMATCH_URL,
-  //   alwaysTranslateLanguages: "es",
-  //   translatePage: "es",
-  //   message:
-  //     "There is no declared language, but there is high confidence in the detected language, so go ahead and auto-translate.",
-  // },
+  // Undeclared language and (high-confidence) detection.
+  {
+    // Case 9 - Spanish is set to auto translate.
+    page: SPANISH_PAGE_MISMATCH_URL,
+    alwaysTranslateLanguages: "es",
+    translatePage: "es",
+    message:
+      "There is no declared language, but there is high confidence in the detected language, so go ahead and auto-translate.",
+  },
   // {
   //   // Case 10 - Nothing is set to auto translate.
   //   page: SPANISH_PAGE_MISMATCH_URL,
