@@ -268,6 +268,7 @@ export interface LangTags {
   userLangTag: string | null,
   htmlLangAttribute: string | null,
   identifiedLangTag: string | null,
+  identifiedLangConfident?: boolean,
 }
 
 /**

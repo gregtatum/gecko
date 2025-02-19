@@ -101,16 +101,17 @@ export class TranslationsChild extends JSWindowActorChild {
 
         try {
           const startTime = Cu.now();
-          const language =
+          const detectionResult =
             await lazy.LanguageDetector.detectLanguageFromDocument(
               this.document
             );
           this.addProfilerMarker(
-            `Detect language from document ${language}`,
+            `Detect language from document: ${detectionResult.language}`,
             startTime
           );
-          return language;
+          return detectionResult;
         } catch (error) {
+          console.error(error);
           return null;
         }
       }

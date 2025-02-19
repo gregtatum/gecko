@@ -104,6 +104,10 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 
 /**
+ * @import {DetectionResult} "../LanguageDetector.sys.mjs"
+ */
+
+/**
  * Retrieves the most recent target languages that have been requested for translation by the user.
  * Inserting into this pref should be managed by the static TranslationsParent class.
  *
@@ -731,7 +735,21 @@ export class TranslationsParent extends JSWindowActorParent {
       !detectedLanguages.identifiedLangTag
     ) {
       // Compare language langTagsMatch
-      let identifiedLangTag = await this.queryIdentifyLanguage();
+      const identifyResult = await this.queryIdentifyLanguage();
+      let identifiedLangTag = identifyResult.language;
+      if (!identifyResult.confident) {
+        this.languageState.detectedLanguages = {
+          ...detectedLanguages,
+          identifiedLangTag,
+          identifiedLangConfident: false,
+        };
+        lazy.console.log(
+          "The identified language was not confident, so don't offer a translation.",
+          this.languageState.detectedLanguages
+        );
+        return;
+      }
+
       if (
         !lazy.TranslationsUtils.langTagsMatch(
           identifiedLangTag,
@@ -745,8 +763,8 @@ export class TranslationsParent extends JSWindowActorParent {
             detectedLanguages.docLangTag
           )
         ) {
-          // The identified language and the declared document language do not match.
-          // Do not offer a translation in this case.
+          // The identified language and the declared document language do not match,
+          // but we are confident in the results of the contents of the page.
           const compatibleLangTag =
             TranslationsParent.findCompatibleSourceLangTagSync(
               identifiedLangTag,
@@ -762,11 +780,10 @@ export class TranslationsParent extends JSWindowActorParent {
             };
           }
           lazy.console.log(
-            "maybeOfferTranslations - The identified language and the declared document language do not match",
+            "maybeOfferTranslations - The document language was changed to the identified language.",
             documentURI.spec,
             detectedLanguages
           );
-          return;
         }
       }
     }
@@ -3102,6 +3119,9 @@ export class TranslationsParent extends JSWindowActorParent {
     actor?.languageState.locationChanged();
   }
 
+  /**
+   * @returns {Promise<DetectionResult>}
+   */
   async queryIdentifyLanguage() {
     if (
       TranslationsParent.isInAutomation() &&
@@ -3131,6 +3151,7 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {LangTags} langTags
    */
   async shouldAutoTranslate(langTags) {
+    console.log(`!!! shouldAutoTranslate`, langTags);
     if (
       langTags.docLangTag &&
       langTags.userLangTag &&
@@ -3139,14 +3160,17 @@ export class TranslationsParent extends JSWindowActorParent {
       !TranslationsParent.shouldNeverTranslateLanguage(langTags.docLangTag) &&
       !this.shouldNeverTranslateSite()
     ) {
+      console.log(`!!! shouldAutoTranslate inside`);
       // Do a final check that the identified language matches the reported language
       // tag to ensure that the page isn't reporting the incorrect languages. This
       // check is deferred to now for performance considerations.
-      const identifiedLangTag = await this.queryIdentifyLanguage();
-      langTags.docLangTag = identifiedLangTag;
-      langTags.identifiedLangTag = identifiedLangTag;
+      const detectionResult = await this.queryIdentifyLanguage();
+      langTags.docLangTag = detectionResult.language;
+      langTags.identifiedLangTag = detectionResult.language;
+      langTags.identifiedLangConfident = detectionResult.confident;
 
       if (langTags.identifiedLangTag === langTags.htmlLangAttribute) {
+        console.log(`!!! shouldAutoTranslate - things match`);
         return true;
       }
 
@@ -3372,9 +3396,13 @@ export class TranslationsParent extends JSWindowActorParent {
 
     if (!langTags.docLangTag) {
       // If the document's markup had no specified langTag, attempt to identify the page's language.
-      const identifiedLangTag = await this.queryIdentifyLanguage();
-      langTags.docLangTag = identifiedLangTag;
-      langTags.identifiedLangTag = identifiedLangTag;
+      const identifyResult = await this.queryIdentifyLanguage();
+      if (identifyResult.confident) {
+        // Only set this as document language if we are confident.
+        langTags.docLangTag = identifyResult.language;
+      }
+      langTags.identifiedLangTag = identifyResult.language;
+      langTags.identifiedLangConfident = identifyResult.confident;
       if (this.#isDestroyed) {
         return null;
       }

@@ -58,7 +58,6 @@ const cases = [
   //   message:
   //     "The declared language and identified language agree, offer a translation",
   // },
-
   // // HTML tag and (low-confidence) detection agree.
   // {
   //   // Case 3 - Spanish is set to auto translate.
@@ -69,14 +68,13 @@ const cases = [
   //     "The declared language and identified language agree, offer a translation even " +
   //     "though the page has a short amount of content.",
   // },
-  // {
-  //   // Case 4 - Nothing is set to auto translate.
-  //   page: SPANISH_PAGE_SHORT_URL,
-  //   offerTranslation: "es",
-  //   message:
-  //     "The declared language and identified language agree, offer a translation",
-  // },
-
+  {
+    // Case 4 - Nothing is set to auto translate.
+    page: SPANISH_PAGE_SHORT_URL,
+    offerTranslation: "es",
+    message:
+      "The declared language and identified language agree, offer a translation",
+  },
   // // HTML tag and (confident) detection disagree.
   // {
   //   // Case 5 - Spanish is set to auto translate.
@@ -93,7 +91,6 @@ const cases = [
   //   message:
   //     "The declared and (confident) detected language disagree. Only show the button, do not offer.",
   // },
-
   // // HTML tag and (low-confidence) detection disagree.
   // {
   //   // Case 7 - Spanish is set to auto translate.
@@ -110,16 +107,15 @@ const cases = [
   //   message:
   //     "The declared and (low-confidence) detected language disagree. Only show the button, do not offer.",
   // },
-
-  // Undeclared language and (high-confidence) detection.
-  {
-    // Case 9 - Spanish is set to auto translate.
-    page: SPANISH_PAGE_MISMATCH_URL,
-    alwaysTranslateLanguages: "es",
-    translatePage: "es",
-    message:
-      "There is no declared language, but there is high confidence in the detected language, so go ahead and auto-translate.",
-  },
+  // // Undeclared language and (high-confidence) detection.
+  // {
+  //   // Case 9 - Spanish is set to auto translate.
+  //   page: SPANISH_PAGE_MISMATCH_URL,
+  //   alwaysTranslateLanguages: "es,fr",
+  //   translatePage: "es",
+  //   message:
+  //     "There is no declared language, but there is high confidence in the detected language, so go ahead and auto-translate.",
+  // },
   // {
   //   // Case 10 - Nothing is set to auto translate.
   //   page: SPANISH_PAGE_MISMATCH_URL,
@@ -127,7 +123,6 @@ const cases = [
   //   message:
   //     "There is no declared language, but there is high confidence in the detected language, so go ahead and offer.",
   // },
-
   // // Undeclared language and (low-confidence) detection.
   // {
   //   // Case 9 - Spanish is set to auto translate.
