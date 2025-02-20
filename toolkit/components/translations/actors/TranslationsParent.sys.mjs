@@ -736,54 +736,67 @@ export class TranslationsParent extends JSWindowActorParent {
     ) {
       // Compare language langTagsMatch
       const identifyResult = await this.queryIdentifyLanguage();
-      let identifiedLangTag = identifyResult.language;
-      if (!identifyResult.confident) {
-        this.languageState.detectedLanguages = {
-          ...detectedLanguages,
-          identifiedLangTag,
-          identifiedLangConfident: false,
-        };
-        lazy.console.log(
-          "The identified language was not confident, so don't offer a translation.",
-          this.languageState.detectedLanguages
-        );
-        return;
-      }
+      detectedLanguages.identifiedLangTag = identifyResult.language;
+      detectedLanguages.identifiedLangConfident = identifyResult.confident;
 
       if (
         !lazy.TranslationsUtils.langTagsMatch(
-          identifiedLangTag,
+          detectedLanguages.identifiedLangTag,
           detectedLanguages.docLangTag
         )
       ) {
-        identifiedLangTag = Intl.getCanonicalLocales(identifiedLangTag)[0];
+        detectedLanguages.identifiedLangTag = Intl.getCanonicalLocales(
+          detectedLanguages.identifiedLangTag
+        )[0];
         if (
           !lazy.TranslationsUtils.langTagsMatch(
-            identifiedLangTag,
+            detectedLanguages.identifiedLangTag,
             detectedLanguages.docLangTag
           )
         ) {
+          if (!identifyResult.confident) {
+            lazy.console.log(
+              "The identified language was not confident, and the language tags don't match so don't offer a translation.",
+              this.languageState.detectedLanguages
+            );
+            return;
+          }
+
           // The identified language and the declared document language do not match,
           // but we are confident in the results of the contents of the page.
-          const compatibleLangTag =
-            TranslationsParent.findCompatibleSourceLangTagSync(
-              identifiedLangTag,
-              await TranslationsParent.getNonPivotLanguagePairs()
+
+          const originalDocLangTag = detectedLanguages.docLangTag;
+          // We support the identified language, use that as the preferred target
+          // language. Duplicate the object so that it will be dispatched to any
+          // consumers that are using it.
+          detectedLanguages = {
+            ...detectedLanguages,
+            docLangTag: detectedLanguages.identifiedLangTag,
+          };
+          this.languageState.detectedLanguages = detectedLanguages;
+
+          if (originalDocLangTag) {
+            lazy.console.log(
+              "maybeOfferTranslations - The document language tag was changed, but there was an original language, so don't offer.",
+              documentURI.spec,
+              detectedLanguages
             );
-          if (compatibleLangTag) {
-            // We support the identified language, use that as the preferred
-            // target language.
-            this.languageState.detectedLanguages = {
-              ...detectedLanguages,
-              docLangTag: identifiedLangTag,
-              identifiedLangTag,
-            };
+            return;
           }
-          lazy.console.log(
-            "maybeOfferTranslations - The document language was changed to the identified language.",
-            documentURI.spec,
-            detectedLanguages
-          );
+
+          if (
+            !TranslationsParent.findCompatibleSourceLangTagSync(
+              detectedLanguages.identifiedLangTag,
+              await TranslationsParent.getNonPivotLanguagePairs()
+            )
+          ) {
+            lazy.console.log(
+              "maybeOfferTranslations - There was no original language tag, but the detected language is not supported.",
+              documentURI.spec,
+              detectedLanguages
+            );
+            return;
+          }
         }
       }
     }
@@ -3151,7 +3164,6 @@ export class TranslationsParent extends JSWindowActorParent {
    * @param {LangTags} langTags
    */
   async shouldAutoTranslate(langTags) {
-    console.log(`!!! shouldAutoTranslate`, langTags);
     if (
       langTags.docLangTag &&
       langTags.userLangTag &&
@@ -3160,7 +3172,6 @@ export class TranslationsParent extends JSWindowActorParent {
       !TranslationsParent.shouldNeverTranslateLanguage(langTags.docLangTag) &&
       !this.shouldNeverTranslateSite()
     ) {
-      console.log(`!!! shouldAutoTranslate inside`);
       // Do a final check that the identified language matches the reported language
       // tag to ensure that the page isn't reporting the incorrect languages. This
       // check is deferred to now for performance considerations.
@@ -3170,7 +3181,6 @@ export class TranslationsParent extends JSWindowActorParent {
       langTags.identifiedLangConfident = detectionResult.confident;
 
       if (langTags.identifiedLangTag === langTags.htmlLangAttribute) {
-        console.log(`!!! shouldAutoTranslate - things match`);
         return true;
       }
 
